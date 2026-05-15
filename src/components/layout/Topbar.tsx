@@ -1,13 +1,13 @@
 import React from 'react';
 import { Search, Bell } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
-import ClientSwitcherMock from './ClientSwitcherMock';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
 
 const Topbar: React.FC = () => {
   return (
     <header className="h-16 border-b bg-card/50 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-8">
       <div className="flex items-center gap-4">
-        <ClientSwitcherMock />
+        <WorkspaceSwitcher />
         <div className="h-4 w-px bg-border mx-2" />
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Workspaces</span>

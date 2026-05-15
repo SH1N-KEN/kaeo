@@ -6,17 +6,67 @@ import {
   AlertCircle, 
   FileText, 
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Plus
 } from 'lucide-react';
 import MetricCard from '../components/ui/MetricCard';
 import StatusBadge from '../components/ui/StatusBadge';
+import { useWorkspace } from '../hooks/useWorkspace';
+import KaeoHome from './KaeoHome';
+import EmptyState from '../components/ui/EmptyState';
+import LoadingState from '../components/ui/LoadingState';
 
 const Dashboard: React.FC = () => {
+  const { organizations, activeOrg, activeClient, loading, createClient } = useWorkspace();
+
+  if (loading) {
+    return <LoadingState />;
+  }
+
+  // If no organization exists, show guided onboarding
+  if (organizations.length === 0) {
+    return <KaeoHome />;
+  }
+
+  // If organization exists but no client is selected/exists
+  if (!activeClient) {
+    return (
+      <div className="h-[70vh] flex items-center justify-center">
+        <EmptyState 
+          title="No client workspace selected"
+          description="Select an existing client or create a new one to start managing financial data."
+          action={
+            <button 
+              onClick={() => {
+                const name = prompt('Enter client name:');
+                if (name && activeOrg) createClient(name, activeOrg.id);
+              }}
+              className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Create your first client
+            </button>
+          }
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      <div>
-        <h1 className="text-3xl font-semibold mb-2">Financial Overview</h1>
-        <p className="text-muted-foreground">Real-time health of your business finances.</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold mb-2">Financial Overview</h1>
+          <p className="text-muted-foreground">Real-time health for <span className="text-foreground font-medium">{activeClient.name}</span>.</p>
+        </div>
+        <div className="flex gap-2">
+          <button className="px-4 py-2 bg-muted/50 border rounded-lg text-sm font-medium hover:bg-muted transition-colors">
+            Monthly
+          </button>
+          <button className="px-4 py-2 bg-muted/50 border rounded-lg text-sm font-medium hover:bg-muted transition-colors">
+            Custom Range
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -32,7 +82,7 @@ const Dashboard: React.FC = () => {
           title="Total Expenses"
           value="₹28,30,000"
           trend="+4.2%"
-          trendType="down" // Higher expenses is usually "down" for health but "up" in value
+          trendType="down"
           description="vs last month"
           icon={<ArrowDownRight className="w-5 h-5 text-risk" />}
         />
@@ -59,7 +109,7 @@ const Dashboard: React.FC = () => {
             <div className="flex items-center justify-between p-4 bg-background border rounded-lg">
               <div className="flex flex-col">
                 <span className="font-medium text-sm">GST Filing Overdue</span>
-                <span className="text-xs text-muted-foreground">Client: TechNova Solutions</span>
+                <span className="text-xs text-muted-foreground">Client: {activeClient.name}</span>
               </div>
               <StatusBadge status="high" label="Overdue" />
             </div>
@@ -97,21 +147,6 @@ const Dashboard: React.FC = () => {
               <AlertTriangle className="w-5 h-5 text-warning" />
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-card border rounded-xl p-6 shadow-sm flex flex-col items-center text-center">
-          <span className="text-muted-foreground text-sm mb-1">Open Risks</span>
-          <span className="text-3xl font-bold text-risk">12</span>
-        </div>
-        <div className="bg-card border rounded-xl p-6 shadow-sm flex flex-col items-center text-center">
-          <span className="text-muted-foreground text-sm mb-1">Files Uploaded</span>
-          <span className="text-3xl font-bold">156</span>
-        </div>
-        <div className="bg-card border rounded-xl p-6 shadow-sm flex flex-col items-center text-center">
-          <span className="text-muted-foreground text-sm mb-1">Data Quality Warnings</span>
-          <span className="text-3xl font-bold text-warning">8</span>
         </div>
       </div>
     </div>
