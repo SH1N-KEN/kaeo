@@ -71,9 +71,10 @@ CREATE POLICY "Users can view own profile" ON public.profiles
 CREATE POLICY "Users can update own profile" ON public.profiles
     FOR UPDATE USING (auth.uid() = id);
 
--- Organizations: Members can read
-CREATE POLICY "Members can view organizations" ON public.organizations
+-- Organizations: Members or Creator can read
+CREATE POLICY "Members or Creator can view organizations" ON public.organizations
     FOR SELECT USING (
+        created_by = auth.uid() OR
         EXISTS (
             SELECT 1 FROM public.organization_members
             WHERE organization_id = public.organizations.id

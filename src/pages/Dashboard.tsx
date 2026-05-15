@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -15,9 +15,11 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import KaeoHome from './KaeoHome';
 import EmptyState from '../components/ui/EmptyState';
 import LoadingState from '../components/ui/LoadingState';
+import CreateClientModal from '../components/ui/CreateClientModal';
 
 const Dashboard: React.FC = () => {
   const { organizations, activeOrg, activeClient, loading, createClient } = useWorkspace();
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
   if (loading) {
     return <LoadingState />;
@@ -37,16 +39,21 @@ const Dashboard: React.FC = () => {
           description="Select an existing client or create a new one to start managing financial data."
           action={
             <button 
-              onClick={() => {
-                const name = prompt('Enter client name:');
-                if (name && activeOrg) createClient(name, activeOrg.id);
-              }}
+              onClick={() => setIsClientModalOpen(true)}
               className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Create your first client
             </button>
           }
+        />
+        <CreateClientModal
+          isOpen={isClientModalOpen}
+          onClose={() => setIsClientModalOpen(false)}
+          onCreate={(name, industry, currency) => {
+            if (activeOrg) return createClient(name, activeOrg.id, industry, currency);
+            return Promise.resolve(null);
+          }}
         />
       </div>
     );

@@ -12,6 +12,8 @@ interface Client {
   id: string;
   name: string;
   organization_id: string;
+  industry?: string;
+  base_currency?: string;
 }
 
 interface WorkspaceContextType {
@@ -24,7 +26,7 @@ interface WorkspaceContextType {
   setActiveOrg: (org: Organization | null) => void;
   setActiveClient: (client: Client | null) => void;
   createOrganization: (name: string, type?: string) => Promise<Organization | null>;
-  createClient: (name: string, orgId: string) => Promise<Client | null>;
+  createClient: (name: string, orgId: string, industry?: string, currency?: string) => Promise<Client | null>;
   refresh: () => Promise<void>;
 }
 
@@ -39,10 +41,16 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchWorkspaces = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
+  const fetchWorkspaces = useCallback(async (isRefresh = false) => {
+    if (!user) {
+      console.log('useWorkspace: No user found, skipping fetch');
+      return;
+    }
+    
+    if (!isRefresh) setLoading(true);
     setError(null);
+
+    console.log('useWorkspace: Fetching workspaces for user:', user.id);
 
     try {
       // 1. Fetch Organizations
@@ -51,16 +59,22 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (orgsError) throw orgsError;
+      if (orgsError) {
+        console.error('useWorkspace: Error fetching organizations:', orgsError);
+        throw orgsError;
+      }
+      
+      console.log('useWorkspace: Organizations found:', orgs?.length || 0);
       setOrganizations(orgs || []);
 
-      // 2. Load stored selection
+      // 2. Load stored selection or pick first
       const storedOrgId = localStorage.getItem(`kaeo_org_${user.id}`);
       const storedClientId = localStorage.getItem(`kaeo_client_${user.id}`);
 
       if (orgs && orgs.length > 0) {
         const foundOrg = orgs.find(o => o.id === storedOrgId) || orgs[0];
         setActiveOrgState(foundOrg);
+        console.log('useWorkspace: Active organization set to:', foundOrg.name);
 
         // 3. Fetch Clients for active org
         const { data: cls, error: clsError } = await supabase
@@ -69,16 +83,23 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           .eq('organization_id', foundOrg.id)
           .order('name');
 
-        if (clsError) throw clsError;
+        if (clsError) {
+          console.error('useWorkspace: Error fetching clients:', clsError);
+          throw clsError;
+        }
+        
+        console.log('useWorkspace: Clients found for org:', cls?.length || 0);
         setClients(cls || []);
 
         if (cls && cls.length > 0) {
           const foundClient = cls.find(c => c.id === storedClientId) || cls[0];
           setActiveClientState(foundClient);
+          console.log('useWorkspace: Active client set to:', foundClient.name);
         } else {
           setActiveClientState(null);
         }
       } else {
+        console.log('useWorkspace: No organizations found for user');
         setActiveOrgState(null);
         setClients([]);
         setActiveClientState(null);
@@ -87,29 +108,13 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.error('Workspace fetch error:', err);
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (!isRefresh) setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
     fetchWorkspaces();
   }, [fetchWorkspaces]);
-
-  const setActiveOrg = (org: Organization | null) => {
-    setActiveOrgState(org);
-    if (org && user) {
-      localStorage.setItem(`kaeo_org_${user.id}`, org.id);
-      // Re-fetch clients for this org
-      fetchClientsForOrg(org.id);
-    }
-  };
-
-  const setActiveClient = (client: Client | null) => {
-    setActiveClientState(client);
-    if (client && user) {
-      localStorage.setItem(`kaeo_client_${user.id}`, client.id);
-    }
-  };
 
   const fetchClientsForOrg = async (orgId: string) => {
     try {
@@ -134,8 +139,30 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
+  const setActiveOrg = (org: Organization | null) => {
+    setActiveOrgState(org);
+    if (org && user) {
+      localStorage.setItem(`kaeo_org_${user.id}`, org.id);
+      fetchClientsForOrg(org.id);
+    }
+  };
+
+  const setActiveClient = (client: Client | null) => {
+    setActiveClientState(client);
+    if (client && user) {
+      localStorage.setItem(`kaeo_client_${user.id}`, client.id);
+    }
+  };
+
   const createOrganization = async (name: string, type = 'business') => {
-    if (!user) return null;
+    if (!user) {
+      setError('You must be logged in to create a workspace.');
+      return null;
+    }
+
+    console.log('createOrganization: Payload:', { name, type, created_by: user.id });
+    setError(null);
+
     try {
       // 1. Create Organization
       const { data: org, error: orgError } = await supabase
@@ -144,41 +171,83 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         .select()
         .single();
 
-      if (orgError) throw orgError;
+      if (orgError) {
+        console.error('createOrganization: organizations insert error:', orgError);
+        throw orgError;
+      }
+
+      console.log('createOrganization: Organization created:', org);
 
       // 2. Create Member (Owner)
-      const { error: memError } = await supabase
+      // IMPORTANT: We use the ID returned from the first insert
+      const { data: member, error: memError } = await supabase
         .from('organization_members')
-        .insert({ organization_id: org.id, user_id: user.id, role: 'owner' });
-
-      if (memError) throw memError;
-
-      await fetchWorkspaces();
-      return org;
-    } catch (err: any) {
-      console.error('Create organization error:', err);
-      setError(err.message);
-      return null;
-    }
-  };
-
-  const createClient = async (name: string, orgId: string) => {
-    if (!user) return null;
-    try {
-      const { data: client, error } = await supabase
-        .from('clients')
-        .insert({ name, organization_id: orgId, created_by: user.id })
+        .insert({ 
+          organization_id: org.id, 
+          user_id: user.id, 
+          role: 'owner' 
+        })
         .select()
         .single();
 
-      if (error) throw error;
+      if (memError) {
+        console.error('createOrganization: organization_members insert error:', memError);
+        throw memError;
+      }
+
+      console.log('createOrganization: Member record created:', member);
+
+      // Refresh and select
+      await fetchWorkspaces(true);
+      setActiveOrgState(org);
+      localStorage.setItem(`kaeo_org_${user.id}`, org.id);
+      
+      return org;
+    } catch (err: any) {
+      console.error('createOrganization: Exception caught:', err);
+      setError(err.message);
+      throw err; // Re-throw to let modal catch it
+    }
+  };
+
+  const createClient = async (name: string, orgId: string, industry?: string, currency = 'INR') => {
+    if (!user) {
+      setError('You must be logged in to create a client.');
+      return null;
+    }
+
+    console.log('createClient: Payload:', { name, organization_id: orgId, industry, base_currency: currency, created_by: user.id });
+    setError(null);
+
+    try {
+      const { data: client, error: clError } = await supabase
+        .from('clients')
+        .insert({ 
+          name, 
+          organization_id: orgId, 
+          industry, 
+          base_currency: currency,
+          created_by: user.id 
+        })
+        .select()
+        .single();
+
+      if (clError) {
+        console.error('createClient: clients insert error:', clError);
+        throw clError;
+      }
+
+      console.log('createClient: Client created:', client);
 
       await fetchClientsForOrg(orgId);
+      setActiveClientState(client);
+      localStorage.setItem(`kaeo_client_${user.id}`, client.id);
+      
       return client;
     } catch (err: any) {
-      console.error('Create client error:', err);
+      console.error('createClient: Exception caught:', err);
       setError(err.message);
-      return null;
+      throw err;
     }
   };
 
@@ -194,7 +263,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setActiveClient,
       createOrganization,
       createClient,
-      refresh: fetchWorkspaces
+      refresh: () => fetchWorkspaces(true)
     }}>
       {children}
     </WorkspaceContext.Provider>

@@ -9,6 +9,8 @@ import {
   Briefcase
 } from 'lucide-react';
 import { useWorkspace } from '../../hooks/useWorkspace';
+import CreateWorkspaceModal from '../ui/CreateWorkspaceModal';
+import CreateClientModal from '../ui/CreateClientModal';
 
 const WorkspaceSwitcher: React.FC = () => {
   const { 
@@ -23,27 +25,25 @@ const WorkspaceSwitcher: React.FC = () => {
   } = useWorkspace();
   
   const [isOpen, setIsOpen] = useState(false);
-
-  const handleCreateOrg = async () => {
-    const name = prompt('Enter organization name:');
-    if (name) await createOrganization(name);
-  };
-
-  const handleCreateClient = async () => {
-    if (!activeOrg) return;
-    const name = prompt('Enter client name:');
-    if (name) await createClient(name, activeOrg.id);
-  };
+  const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
   if (!activeOrg) {
     return (
-      <button 
-        onClick={handleCreateOrg}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dashed hover:border-primary hover:text-primary transition-all text-xs font-medium w-full justify-center"
-      >
-        <Plus className="w-3 h-3" />
-        Create Workspace
-      </button>
+      <>
+        <button 
+          onClick={() => setIsOrgModalOpen(true)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dashed hover:border-primary hover:text-primary transition-all text-xs font-medium w-full justify-center"
+        >
+          <Plus className="w-3 h-3" />
+          Create Workspace
+        </button>
+        <CreateWorkspaceModal 
+          isOpen={isOrgModalOpen}
+          onClose={() => setIsOrgModalOpen(false)}
+          onCreate={createOrganization}
+        />
+      </>
     );
   }
 
@@ -77,7 +77,10 @@ const WorkspaceSwitcher: React.FC = () => {
             {/* Organizations Section */}
             <div className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-between">
               Workspaces
-              <button onClick={handleCreateOrg} className="p-1 hover:bg-muted rounded transition-colors">
+              <button 
+                onClick={(e) => { e.stopPropagation(); setIsOrgModalOpen(true); setIsOpen(false); }} 
+                className="p-1 hover:bg-muted rounded transition-colors"
+              >
                 <Plus className="w-3 h-3" />
               </button>
             </div>
@@ -100,7 +103,10 @@ const WorkspaceSwitcher: React.FC = () => {
             {/* Clients Section */}
             <div className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-between">
               Clients
-              <button onClick={handleCreateClient} className="p-1 hover:bg-muted rounded transition-colors">
+              <button 
+                onClick={(e) => { e.stopPropagation(); setIsClientModalOpen(true); setIsOpen(false); }} 
+                className="p-1 hover:bg-muted rounded transition-colors"
+              >
                 <Plus className="w-3 h-3" />
               </button>
             </div>
@@ -108,7 +114,12 @@ const WorkspaceSwitcher: React.FC = () => {
               {clients.length === 0 ? (
                 <div className="px-3 py-4 text-center">
                   <p className="text-[10px] text-muted-foreground mb-2">No clients found</p>
-                  <button onClick={handleCreateClient} className="text-[10px] text-primary hover:underline">Add Client</button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setIsClientModalOpen(true); setIsOpen(false); }} 
+                    className="text-[10px] text-primary hover:underline"
+                  >
+                    Add Client
+                  </button>
                 </div>
               ) : clients.map(client => (
                 <button
@@ -134,6 +145,18 @@ const WorkspaceSwitcher: React.FC = () => {
           </div>
         </>
       )}
+
+      <CreateWorkspaceModal 
+        isOpen={isOrgModalOpen}
+        onClose={() => setIsOrgModalOpen(false)}
+        onCreate={createOrganization}
+      />
+
+      <CreateClientModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        onCreate={(name, industry, currency) => createClient(name, activeOrg.id, industry, currency)}
+      />
     </div>
   );
 };
