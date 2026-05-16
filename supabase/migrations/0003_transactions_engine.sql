@@ -1,4 +1,20 @@
--- PHASE 4: Transaction Engine
+-- PHASE 4: Transaction Engine (FIXED)
+
+-- 0. RLS HELPER FUNCTION
+-- Checks if auth.uid() is a member of the given organization_id
+CREATE OR REPLACE FUNCTION public.user_id_is_member(org_id uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.organization_members om
+    WHERE om.organization_id = org_id
+      AND om.user_id = auth.uid()
+  );
+$$;
 
 -- 1. TRANSACTIONS TABLE
 CREATE TABLE IF NOT EXISTS public.transactions (
@@ -37,15 +53,19 @@ CREATE TABLE IF NOT EXISTS public.transactions (
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
 -- POLICIES (Non-recursive)
+DROP POLICY IF EXISTS "transactions_select" ON public.transactions;
 CREATE POLICY "transactions_select" ON public.transactions
     FOR SELECT USING (user_id_is_member(organization_id));
 
+DROP POLICY IF EXISTS "transactions_insert" ON public.transactions;
 CREATE POLICY "transactions_insert" ON public.transactions
     FOR INSERT WITH CHECK (user_id_is_member(organization_id));
 
+DROP POLICY IF EXISTS "transactions_update" ON public.transactions;
 CREATE POLICY "transactions_update" ON public.transactions
     FOR UPDATE USING (user_id_is_member(organization_id));
 
+DROP POLICY IF EXISTS "transactions_delete" ON public.transactions;
 CREATE POLICY "transactions_delete" ON public.transactions
     FOR DELETE USING (user_id_is_member(organization_id));
 
