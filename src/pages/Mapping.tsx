@@ -96,6 +96,12 @@ const Mapping: React.FC = () => {
     setError(null);
 
     try {
+      // 0. Check if already imported
+      const { data: currentImport } = await supabase.from('imports').select('status').eq('id', importId).single();
+      if (currentImport?.status === 'imported') {
+        throw new Error('This file has already been imported.');
+      }
+
       // 1. Save mapping record
       const { error: mappingErr } = await supabase
         .from('import_mappings')

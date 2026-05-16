@@ -150,6 +150,11 @@ const Files: React.FC = () => {
         .single();
 
       if (fetchErr || !importData) throw new Error('Import session not found');
+      
+      // Duplicate protection
+      if (importData.status === 'imported') {
+        throw new Error('This file has already been imported.');
+      }
 
       if (autoMapping.status === 'ready_to_import' || autoMapping.status === 'review_mapping') {
         console.log('[Phase 4] Starting normalization and import...');

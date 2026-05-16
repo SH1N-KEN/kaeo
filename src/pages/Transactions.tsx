@@ -9,8 +9,6 @@ import {
   Loader2,
   AlertCircle,
   FileText,
-  ShieldAlert,
-  Trash2,
   CheckCircle2,
   X
 } from 'lucide-react';
@@ -18,7 +16,6 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
 import StatusBadge from '../components/ui/StatusBadge';
 import EmptyState from '../components/ui/EmptyState';
-import ClearTransactionsModal from '../components/ui/ClearTransactionsModal';
 
 const Transactions: React.FC = () => {
   const { activeClient, activeOrg } = useWorkspace();
@@ -28,8 +25,6 @@ const Transactions: React.FC = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
-  
-  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
 
   useEffect(() => {
     if (activeClient) fetchTransactions();
@@ -221,49 +216,6 @@ const Transactions: React.FC = () => {
         )}
       </div>
 
-      {/* Danger Zone */}
-      <div className="pt-12 border-t border-risk/10">
-        <div className="bg-risk/5 border border-risk/20 rounded-3xl overflow-hidden">
-          <div className="p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-start gap-5">
-              <div className="w-12 h-12 bg-risk/10 rounded-2xl flex items-center justify-center text-risk shrink-0 mt-1">
-                <ShieldAlert className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-xl font-black text-risk uppercase tracking-tighter">Danger Zone</h3>
-                <p className="text-sm text-risk/70 max-w-lg leading-relaxed">
-                  Clear imported transactions for this client. This is useful when testing imports or replacing a bad upload.
-                </p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setIsClearModalOpen(true)}
-              disabled={transactions.length === 0}
-              className={`px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 transition-all shadow-lg ${
-                transactions.length > 0
-                ? 'bg-risk text-white shadow-risk/20 hover:scale-[1.02] active:scale-[0.98]'
-                : 'bg-muted text-muted-foreground cursor-not-allowed grayscale opacity-50'
-              }`}
-            >
-              <Trash2 className="w-4 h-4" />
-              Clear Transactions for {activeClient.name}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <ClearTransactionsModal 
-        isOpen={isClearModalOpen}
-        onClose={() => setIsClearModalOpen(false)}
-        onSuccess={() => {
-          setSuccess(`Transactions cleared for ${activeClient.name}.`);
-          fetchTransactions();
-        }}
-        clientName={activeClient.name}
-        clientId={activeClient.id}
-        orgId={activeOrg.id}
-        transactionCount={transactions.length}
-      />
     </div>
   );
 };
