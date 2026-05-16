@@ -9,31 +9,39 @@ export const normalizeVendorName = (description: string): { normalized: string; 
   // 1. Lowercase and basic cleanup
   let name = description.toLowerCase().trim();
 
-  // 2. Remove common noise prefixes/suffixes
-  name = name.replace(/vendor payment|payment to|paid to|invoice|bill|payout|subscription|software|service|monthly|annual|weekly|daily/gi, '');
+  // 2. Remove common noise prefixes/suffixes - more aggressive
+  name = name.replace(/vendor payment|payment to|paid to|payout|subscription|software|service|monthly|annual|weekly|daily/gi, '');
   
-  // 3. Remove invoice numbers, payment IDs, dates, UTRs, and other numeric noise
+  // 3. Remove "Invoice" and following text
+  name = name.replace(/invoice.*$/gi, '');
+  
+  // 4. Remove duplicate markers and following text
+  name = name.replace(/duplicate.*$/gi, '');
+  name = name.replace(/copy.*$/gi, '');
+  name = name.replace(/re-run.*$/gi, '');
+
+  // 5. Remove numeric noise and IDs
   name = name.replace(/#\d+/g, ''); // #123
   name = name.replace(/\b\d{4,}\b/g, ''); // Long numbers like 20260501 or IDs
   name = name.replace(/\b\d{2,}-\d{2,}-\d{4,}\b/g, ''); // Dates
   name = name.replace(/\butr\d+\b/gi, ''); // UTR IDs
   name = name.replace(/\bref\d+\b/gi, ''); // Ref IDs
   
-  // 4. Remove duplicate markers
-  name = name.replace(/duplicate|copy|re-run/gi, '');
-
-  // 5. Cleanup punctuation and extra spaces
+  // 6. Cleanup punctuation and extra spaces
   name = name.replace(/[^\w\s]/g, ' ');
   name = name.replace(/\s+/g, ' ').trim();
 
-  // 6. Intelligent pruning: Most vendors are the first 1-3 meaningful words
-  const words = name.split(' ');
-  const pruned = words.slice(0, 3).join(' ');
+  // 7. Intelligent pruning: Most vendors are the first 1-3 meaningful words
+  // But we want to avoid "A", "B", "The" if they are the only words
+  const words = name.split(' ').filter(w => w.length > 1 || !['a', 'b', 'i'].includes(w));
+  
+  // If we stripped everything, fall back to original description (first word)
+  const pruned = words.length > 0 ? words.slice(0, 3).join(' ') : description.split(' ')[0];
 
-  // 7. Display name: Title Case
-  const display = pruned.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  // 8. Display name: Title Case
+  const display = pruned.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 
-  return { normalized: pruned, display };
+  return { normalized: pruned.toLowerCase(), display };
 };
 
 export const inferCategory = (name: string): string => {
@@ -125,6 +133,7 @@ export const analyzeVendorsForClient = async (orgId: string, clientId: string) =
       organization_id: orgId,
       client_id: clientId,
       name: v.name,
+      display_name: v.name, // Compatibility for older schemas
       normalized_name: v.normalized_name,
       category,
       total_spend: v.total_spend,
