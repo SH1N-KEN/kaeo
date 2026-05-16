@@ -6,77 +6,125 @@ import { normalizeVendorName } from './vendorEngine';
  * Identifies financial anomalies and risks from transaction data.
  */
 
+const normalizeForDuplicateCheck = (desc: string): string => {
+  return desc
+    .toLowerCase()
+    .replace(/duplicate|copy|re-run/gi, '')
+    .replace(/invoice|bill|#\d+/gi, '')
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 export const analyzeRisksForClient = async (orgId: string, clientId: string) => {
   // 1. Fetch all transactions
   const { data: txs, error } = await supabase
     .from('transactions')
     .select('*')
-    .eq('client_id', clientId);
+    .eq('client_id', clientId)
+    .order('transaction_date', { ascending: false });
 
   if (error) throw error;
   if (!txs || txs.length === 0) return [];
 
   const risks: any[] = [];
 
-  // --- Duplicate Detection ---
-  const seenMap: Record<string, any[]> = {};
-  txs.forEach(tx => {
-    const amt = Math.abs(tx.amount);
-    const date = new Date(tx.transaction_date).toISOString().split('T')[0];
-    const key = `${amt}-${date}`; // Exact amount and date
+  // --- 1. Duplicate Detection (Advanced) ---
+  const processedIndices = new Set<number>();
 
-    if (!seenMap[key]) seenMap[key] = [];
-    seenMap[key].push(tx);
-  });
+  for (let i = 0; i < txs.length; i++) {
+    if (processedIndices.has(i)) continue;
+    
+    const current = txs[i];
+    const currentNorm = normalizeForDuplicateCheck(current.description);
+    const currentAmt = Math.abs(current.amount);
+    const currentDate = new Date(current.transaction_date);
+    
+    const group = [current];
+    
+    for (let j = i + 1; j < txs.length; j++) {
+      if (processedIndices.has(j)) continue;
+      
+      const other = txs[j];
+      const otherNorm = normalizeForDuplicateCheck(other.description);
+      const otherAmt = Math.abs(other.amount);
+      const otherDate = new Date(other.transaction_date);
+      
+      // Match criteria:
+      // A. Explicit "duplicate" in description + same amount
+      const isExplicitDuplicate = (current.description.toLowerCase().includes('duplicate') || 
+                                  other.description.toLowerCase().includes('duplicate')) &&
+                                  Math.abs(currentAmt - otherAmt) < 0.01;
 
-  Object.values(seenMap).forEach(duplicates => {
-    if (duplicates.length > 1) {
+      // B. Same normalized description + same amount + within 7 days
+      const daysDiff = Math.abs(currentDate.getTime() - otherDate.getTime()) / (1000 * 60 * 60 * 24);
+      const isSimilar = currentNorm === otherNorm && 
+                        Math.abs(currentAmt - otherAmt) < 0.01 && 
+                        daysDiff <= 7;
+
+      if (isExplicitDuplicate || isSimilar) {
+        group.push(other);
+        processedIndices.add(j);
+      }
+    }
+
+    if (group.length > 1) {
       risks.push({
         organization_id: orgId,
         client_id: clientId,
-        title: 'Duplicate Payment Suspected',
+        title: `Duplicate Payment Suspected: ${group[0].description.replace(/ duplicate/gi, '')}`,
         severity: 'high',
         risk_type: 'duplicate_payment_suspected',
-        amount_at_risk: Math.abs(duplicates[0].amount),
+        amount_at_risk: currentAmt,
         evidence: {
-          transaction_ids: duplicates.map(d => d.id),
-          descriptions: duplicates.map(d => d.description),
-          reason: 'Identical amount and date detected across multiple entries.'
+          transaction_ids: group.map(d => d.id),
+          descriptions: group.map(d => d.description),
+          dates: group.map(d => d.transaction_date),
+          reason: group.some(d => d.description.toLowerCase().includes('duplicate')) 
+            ? 'Explicit "duplicate" marker found in transaction description.'
+            : 'Multiple entries with identical amounts and similar descriptions within a 7-day window.'
         },
-        suggested_action: 'Verify if these are distinct services or a double-billing error.',
+        suggested_action: 'Verify if these represent multiple services or a single erroneous billing event.',
         status: 'open',
-        related_transaction_ids: duplicates.map(d => d.id)
+        related_transaction_ids: group.map(d => d.id)
       });
     }
-  });
+  }
 
-  // --- Subscription Detection ---
-  const vendorClusters: Record<string, any[]> = {};
+  // --- 2. Subscription Detection (Improved) ---
+  const vendorGroups: Record<string, any[]> = {};
   txs.forEach(tx => {
     const { normalized } = normalizeVendorName(tx.description);
     if (!normalized) return;
-    if (!vendorClusters[normalized]) vendorClusters[normalized] = [];
-    vendorClusters[normalized].push(tx);
+    if (!vendorGroups[normalized]) vendorGroups[normalized] = [];
+    vendorGroups[normalized].push(tx);
   });
 
-  Object.entries(vendorClusters).forEach(([vendor, cluster]) => {
+  Object.entries(vendorGroups).forEach(([vendor, cluster]) => {
     if (cluster.length >= 2) {
-      // Check for similar amounts across different months
+      // Check for similar amounts (+/- 5%) across different months
       const months = new Set(cluster.map(tx => new Date(tx.transaction_date).getMonth()));
-      if (months.size >= 2) {
+      const years = new Set(cluster.map(tx => new Date(tx.transaction_date).getFullYear()));
+      
+      const hasMultipleMonths = months.size > 1 || years.size > 1;
+      const baseAmt = Math.abs(cluster[0].amount);
+      const consistentAmount = cluster.every(tx => Math.abs(Math.abs(tx.amount) - baseAmt) / baseAmt < 0.05);
+
+      if (hasMultipleMonths && consistentAmount) {
         risks.push({
           organization_id: orgId,
           client_id: clientId,
-          title: `Recurring Subscription: ${vendor}`,
+          title: `Recurring Subscription: ${cluster[0].description.split(' ')[0]}`,
           severity: 'low',
           risk_type: 'recurring_subscription_detected',
-          amount_at_risk: Math.abs(cluster[0].amount),
+          amount_at_risk: baseAmt,
           evidence: {
             frequency: 'Monthly (estimated)',
             transaction_count: cluster.length,
-            vendor_name: vendor
+            vendor_name: vendor,
+            consistent_amount: formatCurrency(baseAmt)
           },
-          suggested_action: 'Review if this software/service is still providing ROI.',
+          suggested_action: 'Audit this subscription to ensure continued utility and ROI.',
           status: 'open',
           related_transaction_ids: cluster.map(c => c.id)
         });
@@ -84,13 +132,13 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
     }
   });
 
-  // --- Unknown Transaction Type ---
+  // --- 3. Unknown Transaction Type ---
   const unknownTxs = txs.filter(tx => tx.type === 'unknown');
   if (unknownTxs.length > 0) {
     risks.push({
       organization_id: orgId,
       client_id: clientId,
-      title: 'Uncategorized Transactions',
+      title: 'Strategic Data Gap: Unclassified Entries',
       severity: 'medium',
       risk_type: 'unknown_transaction_type',
       amount_at_risk: unknownTxs.reduce((acc, tx) => acc + Math.abs(tx.amount), 0),
@@ -98,20 +146,38 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
         count: unknownTxs.length,
         samples: unknownTxs.slice(0, 3).map(tx => tx.description)
       },
-      suggested_action: 'Manual classification required to improve strategic accuracy.',
+      suggested_action: 'Perform manual classification to refine financial intelligence and reports.',
       status: 'open',
       related_transaction_ids: unknownTxs.map(tx => tx.id)
     });
   }
 
   // 2. Sync to database
+  // First, delete existing open risks to prevent accumulation
+  await supabase
+    .from('risk_events')
+    .delete()
+    .eq('client_id', clientId)
+    .eq('status', 'open');
+
   if (risks.length > 0) {
     const { error: insertErr } = await supabase
       .from('risk_events')
-      .upsert(risks, { onConflict: 'client_id, title, risk_type' }); // Simple conflict check
+      .insert(risks);
     
-    if (insertErr) console.error('[Risk Engine] Sync error:', insertErr);
+    if (insertErr) {
+      console.error('[Risk Engine] Insert error:', insertErr);
+      throw insertErr;
+    }
   }
 
   return risks;
+};
+
+const formatCurrency = (val: number) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+  }).format(val);
 };

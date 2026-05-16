@@ -9,7 +9,11 @@ import {
   ArrowRight,
   MoreHorizontal,
   X,
-  Plus
+  Plus,
+  CheckCircle2,
+  Terminal,
+  Database,
+  Search
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
@@ -22,9 +26,17 @@ const RiskInbox: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [risks, setRisks] = useState<any[]>([]);
+  const [txCount, setTxCount] = useState<number | null>(null);
   const [selectedRisk, setSelectedRisk] = useState<any | null>(null);
   const [notes, setNotes] = useState<any[]>([]);
   const [newNote, setNewNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<{
+    txLoaded: number;
+    risksGenerated: number;
+    lastScan: string | null;
+  }>({ txLoaded: 0, risksGenerated: 0, lastScan: null });
+
   const [stats, setStats] = useState({
     critical: 0,
     amount: 0,
@@ -32,23 +44,53 @@ const RiskInbox: React.FC = () => {
   });
 
   useEffect(() => {
-    if (activeClient) fetchRisks();
+    if (activeClient) {
+      fetchTxCount();
+      fetchRisks();
+    }
   }, [activeClient]);
+
+  const fetchTxCount = async () => {
+    if (!activeClient) return;
+    const { count } = await supabase
+      .from('transactions')
+      .select('*', { count: 'exact', head: true })
+      .eq('client_id', activeClient.id);
+    setTxCount(count || 0);
+  };
 
   const fetchRisks = async () => {
     if (!activeClient) return;
     setLoading(true);
+    setError(null);
     try {
-      const { data, error } = await supabase
+      const { data, error: fetchErr } = await supabase
         .from('risk_events')
         .select('*')
         .eq('client_id', activeClient.id)
         .order('severity', { ascending: false });
 
-      if (error) throw error;
-      setRisks(data || []);
+      if (fetchErr) throw fetchErr;
 
-      const s = (data || []).reduce((acc, r) => {
+      // Fetch note counts
+      const { data: notesData } = await supabase
+        .from('notes')
+        .select('parent_id')
+        .eq('client_id', activeClient.id);
+      
+      const noteCounts = (notesData || []).reduce((acc: any, n) => {
+        acc[n.parent_id] = (acc[n.parent_id] || 0) + 1;
+        return acc;
+      }, {});
+
+      const enrichedRisks = (data || []).map(r => ({
+        ...r,
+        notes_count: noteCounts[r.id] || 0
+      }));
+
+      setRisks(enrichedRisks);
+
+      const s = enrichedRisks.reduce((acc, r) => {
         if (r.severity === 'critical' || r.severity === 'high') acc.critical++;
         if (r.status === 'open') {
           acc.open++;
@@ -58,8 +100,9 @@ const RiskInbox: React.FC = () => {
       }, { critical: 0, amount: 0, open: 0 });
       setStats(s);
 
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Risk] Fetch error:', err);
+      setError(err.message || 'Failed to fetch risk events.');
     } finally {
       setLoading(false);
     }
@@ -68,11 +111,18 @@ const RiskInbox: React.FC = () => {
   const handleAnalyze = async () => {
     if (!activeClient || !activeOrg) return;
     setAnalyzing(true);
+    setError(null);
     try {
-      await analyzeRisksForClient(activeOrg.id, activeClient.id);
+      const generatedRisks = await analyzeRisksForClient(activeOrg.id, activeClient.id);
+      setDiagnostics({
+        txLoaded: txCount || 0,
+        risksGenerated: generatedRisks.length,
+        lastScan: new Date().toLocaleTimeString()
+      });
       await fetchRisks();
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Risk] Analysis failed:', err);
+      setError(err.message || 'Security scan failed. Check database connection.');
     } finally {
       setAnalyzing(false);
     }
@@ -115,6 +165,7 @@ const RiskInbox: React.FC = () => {
       });
       setNewNote('');
       fetchNotes(selectedRisk.id);
+      fetchRisks();
     } catch (err) {
       console.error('[Notes] Add failed:', err);
     }
@@ -152,30 +203,66 @@ const RiskInbox: React.FC = () => {
           <p className="text-sm text-muted-foreground">Automated financial anomaly detection for <span className="text-foreground font-semibold">{activeClient.name}</span></p>
         </div>
         
-        <button 
-          onClick={handleAnalyze}
-          disabled={analyzing}
-          className="px-6 py-3 bg-risk text-white rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-risk/20 disabled:opacity-50"
-        >
-          {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
-          {risks.length > 0 ? 'Run Security Scan' : 'Identify Risks'}
-        </button>
+        <div className="flex items-center gap-3">
+          {diagnostics.lastScan && (
+            <div className="hidden md:flex items-center gap-4 px-4 py-2 bg-muted/30 border border-border/50 rounded-xl text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              <span className="flex items-center gap-1.5"><Database className="w-3 h-3" /> {diagnostics.txLoaded} Txns</span>
+              <span className="w-1 h-1 bg-border rounded-full" />
+              <span className="flex items-center gap-1.5 text-risk"><ShieldAlert className="w-3 h-3" /> {diagnostics.risksGenerated} Risks</span>
+              <span className="w-1 h-1 bg-border rounded-full" />
+              <span>Last: {diagnostics.lastScan}</span>
+            </div>
+          )}
+          <button 
+            onClick={handleAnalyze}
+            disabled={analyzing}
+            className="px-6 py-3 bg-risk text-white rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-risk/20 disabled:opacity-50"
+          >
+            {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
+            {risks.length > 0 ? 'Run Security Scan' : 'Identify Risks'}
+          </button>
+        </div>
       </div>
+
+      {error && (
+        <div className="p-4 bg-risk/5 border border-risk/20 rounded-2xl flex gap-3 items-center animate-in slide-in-from-top-2">
+          <AlertCircle className="w-5 h-5 text-risk shrink-0" />
+          <div className="flex-1">
+            <p className="text-xs font-black text-risk uppercase tracking-widest mb-0.5">Scan Error</p>
+            <p className="text-xs text-risk/80 font-medium">{error}</p>
+          </div>
+          <button onClick={() => setError(null)} className="p-1 hover:bg-risk/10 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-risk" />
+          </button>
+        </div>
+      )}
 
       {loading && risks.length === 0 ? (
         <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
           <Loader2 className="w-8 h-8 animate-spin text-risk" />
           <p className="text-sm text-muted-foreground animate-pulse font-medium">Scanning ledger for anomalies...</p>
         </div>
-      ) : risks.length === 0 ? (
+      ) : txCount === 0 ? (
         <div className="bg-card/30 border border-dashed border-border/60 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5">
           <div className="w-16 h-16 bg-muted/30 rounded-2xl flex items-center justify-center border border-border/50 text-muted-foreground/30">
-            <ShieldAlert className="w-8 h-8" />
+            <Search className="w-8 h-8" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-xl font-bold tracking-tight">Clean Ledger</h3>
+            <h3 className="text-xl font-bold tracking-tight">No data to scan</h3>
             <p className="text-sm text-muted-foreground max-w-sm">
-              No financial risks detected. Run a scan if you have recently imported new transactions.
+              Import transactions first to enable automated risk monitoring.
+            </p>
+          </div>
+        </div>
+      ) : risks.length === 0 ? (
+        <div className="bg-card/30 border border-dashed border-border/60 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5">
+          <div className="w-16 h-16 bg-success/10 rounded-2xl flex items-center justify-center border border-success/20 text-success/50">
+            <CheckCircle2 className="w-8 h-8" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-xl font-bold tracking-tight text-success/80">Clean Ledger</h3>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              No financial risks detected in the latest scan of {txCount} transactions.
             </p>
           </div>
         </div>
@@ -272,7 +359,20 @@ const RiskInbox: React.FC = () => {
                         </button>
                       </div>
                       <h3 className="font-bold text-lg mb-1">{selectedRisk.title}</h3>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{selectedRisk.suggested_action}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed italic border-l-2 border-primary/30 pl-3 mb-4">
+                        {selectedRisk.suggested_action}
+                      </p>
+                      
+                      {selectedRisk.evidence && (
+                        <div className="bg-background/50 rounded-xl p-3 border border-border/50 space-y-2">
+                          <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1.5">
+                            <Terminal className="w-3 h-3" /> Risk Evidence
+                          </h4>
+                          <p className="text-[10px] text-foreground/80 leading-relaxed font-medium">
+                            {selectedRisk.evidence.reason}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-6 space-y-6">
@@ -309,7 +409,6 @@ const RiskInbox: React.FC = () => {
                       <div className="space-y-4 pt-6 border-t border-border/50">
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 flex items-center justify-between">
                           Notes & Audit Trail
-                          <span className="text-[8px] font-bold text-muted-foreground/40 italic">Phase 5</span>
                         </h4>
                         
                         <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
