@@ -4,7 +4,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
-  X
+  X,
+  Zap
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import UploadZone from '../components/files/UploadZone';
@@ -13,7 +14,7 @@ import FileHistory from '../components/files/FileHistory';
 import EmptyState from '../components/ui/EmptyState';
 import { parseCSV } from '../lib/fileParser';
 import type { ParseResult } from '../lib/fileParser';
-import { suggestMappingFromColumns } from '../lib/mappingEngine';
+import { generateBestMapping } from '../lib/mappingEngine';
 import type { MappingSuggestion } from '../lib/mappingEngine';
 import { normalizeRows } from '../lib/normalizationEngine';
 import { supabase } from '../lib/supabase';
@@ -62,7 +63,7 @@ const Files: React.FC = () => {
     setLoading(true);
     try {
       const result = await parseCSV(file);
-      console.log(`[Phase 4] Parsed ${result.rowCount} rows from ${file.name}`);
+      console.log(`[Files] Parsed ${result.rowCount} rows from ${file.name}`);
 
       if (result.errors.length > 0) {
         setError({ message: 'Parsing failed', subtext: result.errors[0] });
@@ -70,7 +71,14 @@ const Files: React.FC = () => {
         return;
       }
 
-      const mappingResult = suggestMappingFromColumns(result.headers);
+      // ORCHESTRATED INTELLIGENT MAPPING
+      const mappingResult = await generateBestMapping(
+        result.headers, 
+        result.rows, 
+        file.name, 
+        result.provider
+      );
+      
       setPendingFile(file);
       setParseResult(result);
       setAutoMapping(mappingResult);
@@ -93,6 +101,7 @@ const Files: React.FC = () => {
             row_count: result.rowCount,
             provider_detected: result.provider,
             confidence: mappingResult.confidence,
+            mapping_source: mappingResult.source,
             warnings: mappingResult.warnings
           }
         })
@@ -118,7 +127,7 @@ const Files: React.FC = () => {
         .single();
 
       if (importErr) throw importErr;
-      console.log(`[Phase 4] Created import session: ${importData.id} with status: ${importData.status}`);
+      console.log(`[Files] Created import session: ${importData.id} with source: ${mappingResult.source}`);
 
       await supabase
         .from('import_mappings')
@@ -134,7 +143,7 @@ const Files: React.FC = () => {
       fetchHistory();
 
     } catch (err: any) {
-      console.error('[Phase 4] Ingestion error:', err);
+      console.error('[Files] Ingestion error:', err);
       setError({ message: 'Ingestion sync failed', subtext: err.message });
     } finally {
       setLoading(false);
@@ -160,8 +169,8 @@ const Files: React.FC = () => {
         throw new Error('This file has already been imported.');
       }
 
-      if (autoMapping.status === 'ready_to_import' || autoMapping.status === 'review_mapping') {
-        console.log(`[Phase 4] Starting import for ${parseResult.rowCount} rows...`);
+      if (autoMapping.status === 'ready_to_import') {
+        console.log(`[Files] Importing ${parseResult.rowCount} rows via ${autoMapping.source} mapping...`);
         
         const normalized = normalizeRows(parseResult.rows, autoMapping.mapping, {
           provider: parseResult.provider,
@@ -181,7 +190,7 @@ const Files: React.FC = () => {
           .insert(transactionsToInsert);
 
         if (insertErr) throw insertErr;
-        console.log(`[Phase 4] Successfully inserted ${transactionsToInsert.length} transactions.`);
+        console.log(`[Files] Successfully inserted ${transactionsToInsert.length} transactions.`);
 
         await supabase.from('imports').update({ status: 'imported' }).eq('id', importData.id);
         await supabase.from('uploaded_files').update({ status: 'imported' }).eq('id', importData.file_id?.id);
@@ -197,18 +206,11 @@ const Files: React.FC = () => {
         }, 1500);
 
       } else {
-        navigate(`/files/${importData.id}/mapping`, { 
-          state: { 
-            headers: parseResult.headers, 
-            previewRows: parseResult.rows,
-            fileName: pendingFile?.name || '',
-            provider: parseResult.provider
-          } 
-        });
+        navigate(`/files/${importData.id}/mapping`);
       }
 
     } catch (err: any) {
-      console.error('[Phase 4] Import action failed:', err);
+      console.error('[Files] Import action failed:', err);
       setError({ message: 'Import failed', subtext: err.message });
     } finally {
       setLoading(false);
@@ -230,24 +232,24 @@ const Files: React.FC = () => {
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Finance Files</h1>
-          <p className="text-muted-foreground">Ingest and normalize data for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
+          <h1 className="text-3xl font-bold mb-2 tracking-tight">Finance Files</h1>
+          <p className="text-sm text-muted-foreground">Strategic ingestion for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-risk/5 border border-risk/20 rounded-xl flex gap-3 items-start animate-in shake-in">
-          <AlertCircle className="w-5 h-5 text-risk shrink-0 mt-0.5" />
+        <div className="p-4 bg-risk/5 border border-risk/10 rounded-xl flex gap-3 items-start animate-in shake-in">
+          <AlertCircle className="w-5 h-5 text-risk/70 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <h4 className="text-sm text-risk font-bold">{error.message}</h4>
-            {error.subtext && <p className="text-xs text-risk/80 mt-1">{error.subtext}</p>}
+            <h4 className="text-sm text-risk/80 font-bold">{error.message}</h4>
+            {error.subtext && <p className="text-xs text-risk/60 mt-1">{error.subtext}</p>}
           </div>
-          <button onClick={() => setError(null)} className="text-xs text-risk hover:underline">Dismiss</button>
+          <button onClick={() => setError(null)} className="text-[10px] font-black text-risk/60 hover:text-risk uppercase">Dismiss</button>
         </div>
       )}
 
       {success && (
-        <div className="p-4 bg-success/5 border border-success/20 rounded-xl flex gap-3 items-center animate-in slide-in-from-top-2">
+        <div className="p-4 bg-success/5 border border-success/10 rounded-xl flex gap-3 items-center animate-in slide-in-from-top-2">
           <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
           <p className="text-sm text-success font-bold flex-1">{success}</p>
           <button onClick={() => setSuccess(null)}><X className="w-4 h-4 text-success" /></button>
@@ -255,9 +257,12 @@ const Files: React.FC = () => {
       )}
 
       {loading && !parseResult && (
-        <div className="h-64 bg-card border rounded-2xl flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground font-medium">Processing finance document...</p>
+        <div className="h-64 bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl flex flex-col items-center justify-center space-y-4">
+          <div className="relative">
+            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+            <Zap className="w-4 h-4 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+          </div>
+          <p className="text-xs text-muted-foreground font-black uppercase tracking-widest">Applying intelligence engine...</p>
         </div>
       )}
 

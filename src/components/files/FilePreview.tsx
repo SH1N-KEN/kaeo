@@ -1,12 +1,12 @@
 import React from 'react';
 import { 
-  FileText, 
-  Table as TableIcon, 
-  AlertTriangle, 
-  ShieldCheck, 
+  CheckCircle2, 
+  ChevronRight, 
+  FileText,
   Zap,
-  CheckCircle2,
-  Settings2
+  Info,
+  ShieldCheck,
+  BrainCircuit
 } from 'lucide-react';
 import type { ParseResult } from '../../lib/fileParser';
 import type { MappingSuggestion } from '../../lib/mappingEngine';
@@ -19,164 +19,158 @@ interface FilePreviewProps {
   onCancel: () => void;
 }
 
-const FilePreview: React.FC<FilePreviewProps> = ({ fileName, result, autoMapping, onAction, onCancel }) => {
-  const isHighConfidence = autoMapping?.status === 'ready_to_import';
-  const confidencePercent = Math.round((autoMapping?.confidence || 0) * 100);
+const FilePreview: React.FC<FilePreviewProps> = ({ 
+  fileName, 
+  result, 
+  autoMapping,
+  onAction,
+  onCancel
+}) => {
+  const isHighConfidence = autoMapping && autoMapping.confidence >= 0.85;
+  const isMediumConfidence = autoMapping && autoMapping.confidence < 0.85 && autoMapping.confidence >= 0.5;
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
-        <div className="p-6 border-b flex items-center justify-between bg-muted/20">
+    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+      <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl overflow-hidden shadow-sm">
+        <div className="p-6 border-b border-border/50 bg-muted/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-              <FileText className="w-6 h-6" />
+            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
+              <FileText className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h3 className="font-bold text-lg">{fileName}</h3>
-              <p className="text-sm text-muted-foreground">
-                {result.rowCount} rows detected • {result.headers.length} columns
+              <h2 className="text-lg font-bold tracking-tight">{fileName}</h2>
+              <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest flex items-center gap-2">
+                {result.rowCount} rows detected • {result.provider}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="px-3 py-1 bg-success/10 text-success text-xs font-bold rounded-full flex items-center gap-1.5 border border-success/20">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              {result.provider}
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Intelligence Panel */}
-          <div className="md:col-span-1 space-y-6">
-            <div className={`p-6 rounded-2xl border-2 shadow-sm ${isHighConfidence ? 'bg-success/5 border-success/20' : 'bg-warning/5 border-warning/20'}`}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-lg ${isHighConfidence ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>
-                    <Zap className="w-4 h-4 fill-current" />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Kaeo Intelligence</span>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <h4 className={`text-xl font-bold ${isHighConfidence ? 'text-success' : 'text-warning'}`}>
-                    {isHighConfidence ? 'Ready to Import' : 'Review Recommended'}
-                  </h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Auto-mapping confidence: <span className="text-foreground font-bold">{confidencePercent}%</span>
-                  </p>
-                </div>
-
-                <div className="w-full bg-muted/50 h-1.5 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-1000 ${isHighConfidence ? 'bg-success' : 'bg-warning'}`} 
-                    style={{ width: `${confidencePercent}%` }}
-                  />
-                </div>
-                
-                {autoMapping?.warnings.length ? (
-                  <div className="space-y-2">
-                    {autoMapping.warnings.map((w, i) => (
-                      <div key={i} className="flex gap-2 text-[10px] leading-tight text-muted-foreground bg-background/50 p-2 rounded-lg border border-border/50">
-                        <AlertTriangle className={`w-3.5 h-3.5 shrink-0 ${isHighConfidence ? 'text-success/70' : 'text-warning'}`} />
-                        <span>{w}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-[10px] text-success font-bold bg-success/10 p-2 rounded-lg border border-success/20">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    All required fields mapped confidently.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-card border rounded-xl p-5 space-y-3">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                <Settings2 className="w-3 h-3" />
-                Auto-Detected Fields
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {Object.keys(autoMapping?.mapping || {}).map(key => (
-                  <div key={key} className="px-2 py-1 bg-muted/50 border border-border/50 rounded-md text-[10px] font-mono font-medium">
-                    {key}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Table Preview */}
-          <div className="md:col-span-2 space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                <TableIcon className="w-4 h-4" />
-                Source Preview
-              </h4>
-              <span className="text-[10px] text-muted-foreground font-medium bg-muted px-2 py-0.5 rounded">Showing first 20 rows</span>
-            </div>
-            
-            <div className="border rounded-xl overflow-x-auto custom-scrollbar shadow-inner bg-background/50">
-              <table className="w-full text-left border-collapse min-w-[600px]">
-                <thead>
-                  <tr className="bg-muted/30">
-                    {result.headers.map((h, i) => (
-                      <th key={i} className="px-4 py-2.5 text-[10px] font-black text-muted-foreground border-b border-r last:border-r-0 whitespace-nowrap uppercase tracking-tighter">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.rows.map((row, i) => (
-                    <tr key={i} className="hover:bg-muted/20 transition-colors">
-                      {result.headers.map((h, j) => (
-                        <td key={j} className="px-4 py-2 text-xs border-b border-r last:border-r-0 text-muted-foreground/70 whitespace-nowrap">
-                          {row[h]?.toString() || '-'}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 bg-muted/10 border-t flex items-center justify-between gap-8">
-          <button 
-            onClick={onCancel}
-            className="px-6 py-2.5 text-sm font-bold hover:bg-muted rounded-xl transition-colors text-muted-foreground hover:text-foreground"
-          >
-            Cancel Ingestion
-          </button>
           
-          <div className="flex flex-col md:flex-row items-center gap-6">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={onCancel}
+              className="px-4 py-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={onAction}
+              className="px-6 py-2.5 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-xl shadow-foreground/10"
+            >
+              {isHighConfidence ? 'Import Transactions' : 'Review Mapping'}
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Intelligence Status Card */}
+        <div className="px-6 py-5 bg-primary/5 border-b border-border/30">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex gap-4 items-start">
+              <div className={`p-2 rounded-lg shrink-0 ${isHighConfidence ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
+                {autoMapping?.source === 'ai' ? <BrainCircuit className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold flex items-center gap-2">
+                  Kaeo Intelligence: {isHighConfidence ? 'Auto-mapped' : 'Mapping Uncertain'}
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-tighter ${isHighConfidence ? 'bg-success/10 text-success border-success/20' : 'bg-warning/10 text-warning border-warning/20'}`}>
+                    {autoMapping?.source === 'ai' ? 'AI Suggestion' : 'Rule Based'}
+                  </span>
+                </h4>
+                <p className="text-xs text-muted-foreground max-w-xl">
+                  {isHighConfidence 
+                    ? `Kaeo mapped this file automatically with ${Math.round(autoMapping.confidence * 100)}% confidence. Required fields were detected successfully.` 
+                    : "Kaeo needs a quick review of your columns before importing. Some fields were ambiguous."}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6 shrink-0 bg-background/50 p-3 rounded-xl border border-border/50">
+              <div className="text-center px-4">
+                <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">Confidence</div>
+                <div className="text-lg font-black text-foreground">{Math.round((autoMapping?.confidence || 0) * 100)}%</div>
+              </div>
+              <div className="w-px h-8 bg-border/50" />
+              <div className="text-center px-4">
+                <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">Status</div>
+                <div className={`text-xs font-bold ${isHighConfidence ? 'text-success' : 'text-warning'}`}>
+                  {isHighConfidence ? 'Ready to Import' : 'Review Required'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Preview Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-muted/30 border-b border-border/30">
+              <tr>
+                {result.headers.map((h, i) => {
+                  const mappedTo = Object.entries(autoMapping?.mapping || {}).find(([_, col]) => col === h)?.[0];
+                  return (
+                    <th key={i} className="px-6 py-4">
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground truncate max-w-[150px]">{h}</div>
+                        {mappedTo ? (
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-success shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
+                            <span className="text-[10px] font-bold text-foreground bg-success/10 px-1.5 py-0.5 rounded border border-success/20 truncate max-w-[120px]">
+                              {mappedTo.replace('_', ' ')}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
+                            <span className="text-[10px] font-bold text-muted-foreground/40 italic">Ignored</span>
+                          </div>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/20">
+              {result.rows.slice(0, 5).map((row, i) => (
+                <tr key={i} className="hover:bg-muted/10 transition-colors">
+                  {result.headers.map((h, j) => (
+                    <td key={j} className="px-6 py-4 text-xs font-medium text-muted-foreground truncate max-w-[200px]">
+                      {row[h]?.toString() || '-'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="p-4 bg-muted/10 border-t border-border/20 flex items-center justify-between">
+            <p className="text-[10px] text-muted-foreground font-medium italic">Showing first 5 rows for validation</p>
             <div className="flex gap-4">
-              {isHighConfidence ? (
-                <button 
-                  onClick={onAction}
-                  className="px-10 py-3 bg-success text-white rounded-xl font-black text-sm flex items-center gap-2 hover:bg-success/90 shadow-xl shadow-success/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  Import Transactions
-                </button>
-              ) : (
-                <button 
-                  onClick={onAction}
-                  className="px-10 py-3 bg-primary text-white rounded-xl font-black text-sm flex items-center gap-2 hover:bg-primary/90 shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  <Settings2 className="w-4 h-4" />
-                  Review Mapping
-                </button>
-              )}
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground">
+                <CheckCircle2 className="w-3 h-3 text-success" /> Mapping Active
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground">
+                <Info className="w-3 h-3 text-primary" /> Valid Data Formats
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {isMediumConfidence && (
+        <div className="p-4 bg-warning/5 border border-warning/10 rounded-2xl flex gap-3 items-center">
+          <Zap className="w-5 h-5 text-warning/70" />
+          <div className="flex-1">
+            <p className="text-xs font-bold text-warning/80 tracking-tight">Intelligence Recommendation</p>
+            <p className="text-[10px] text-warning/60 mt-0.5">Confidence is {Math.round((autoMapping?.confidence || 0) * 100)}%. We recommend a manual review of mappings before importing to ensure absolute ledger accuracy.</p>
+          </div>
+          <button 
+            onClick={onAction}
+            className="px-4 py-2 bg-warning/10 text-warning text-[10px] font-black uppercase rounded-lg border border-warning/20 hover:bg-warning/20 transition-all"
+          >
+            Review Now
+          </button>
+        </div>
+      )}
     </div>
   );
 };
