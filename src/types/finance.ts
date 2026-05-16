@@ -22,6 +22,8 @@ export interface ImportMapping {
   confirmed_mapping_json: Record<string, string>;
   confirmed_by: string;
   confirmed_at: string;
+  organization_id?: string;
+  client_id?: string;
 }
 
 export interface ImportSession {
@@ -39,17 +41,19 @@ export interface Vendor {
   organization_id: string;
   client_id: string;
   name: string;
-  display_name: string;
+  normalized_name: string;
+  category: string | null;
   total_spend: number;
+  monthly_average: number;
   transaction_count: number;
   first_seen: string;
   last_seen: string;
-  monthly_average: number;
-  recurrence_pattern: 'monthly' | 'weekly' | 'irregular';
-  trend: 'increasing' | 'decreasing' | 'stable';
-  category: string | null;
-  recommendation: string | null;
-  metadata: any;
+  recurrence_pattern: 'monthly' | 'weekly' | 'quarterly' | 'annual' | 'irregular' | 'unknown';
+  trend: 'rising' | 'falling' | 'flat' | 'unknown';
+  recommendation: 'keep' | 'review' | 'downgrade' | 'replace' | 'cancel_candidate' | null;
+  recommendation_reason: string | null;
+  alternatives_json: any[];
+  metadata_json: any;
   created_at: string;
   updated_at: string;
 }
@@ -58,25 +62,34 @@ export interface RiskEvent {
   id: string;
   organization_id: string;
   client_id: string;
-  title: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  transaction_id: string | null;
+  vendor_id: string | null;
   risk_type: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  description: string | null;
   amount_at_risk: number;
-  evidence: any;
+  evidence_json: any;
   suggested_action: string | null;
   status: 'open' | 'reviewed' | 'confirmed' | 'false_positive' | 'ignored';
-  related_transaction_ids: string[];
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  assigned_to: string | null;
+  follow_up_at: string | null;
   created_at: string;
   updated_at: string;
+  // Computed fields for UI
+  notes_count?: number;
 }
 
 export interface Note {
   id: string;
   organization_id: string;
   client_id: string;
-  parent_type: string;
-  parent_id: string;
-  content: string;
-  created_by: string;
+  entity_type: string;
+  entity_id: string;
+  note: string;
+  created_by: string | null;
   created_at: string;
+  updated_at: string;
 }

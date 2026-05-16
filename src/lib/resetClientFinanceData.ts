@@ -1,98 +1,87 @@
 import { supabase } from './supabase';
 
 /**
- * Resets all finance-related data for a specific client within an organization.
- * Clears transactions, mappings, imports, and uploaded files.
+ * Resets all financial data for a specific client within an organization.
+ * This is a destructive operation used for cleaning up or re-importing data.
+ * 
+ * Order of deletion (dependencies):
+ * 1. notes (linked to risks/vendors)
+ * 2. risk_events (linked to transactions/vendors)
+ * 3. vendors (linked to transactions)
+ * 4. transactions
+ * 5. import_mappings
+ * 6. imports
+ * 7. uploaded_files
  */
-export const resetClientFinanceData = async (orgId: string, clientId: string) => {
-  if (!orgId || !clientId) throw new Error('Organization ID and Client ID are required for reset.');
+export const resetClientFinanceData = async (organizationId: string, clientId: string) => {
+  console.log(`[Reset] Starting full reset for client ${clientId} in org ${organizationId}`);
 
-  console.log(`[Data Management] Resetting finance data for client: ${clientId} in org: ${orgId}`);
+  const deleteOptions = {
+    organization_id: organizationId,
+    client_id: clientId
+  };
 
   try {
-    // 1. Delete notes
-    const { count: noteCount, error: noteErr } = await supabase
+    // 1. Delete Notes
+    const { error: notesError } = await supabase
       .from('notes')
-      .delete({ count: 'exact' })
-      .eq('organization_id', orgId)
-      .eq('client_id', clientId);
-    if (noteErr) throw noteErr;
-    console.log(`[Reset] Deleted ${noteCount || 0} notes.`);
+      .delete()
+      .match(deleteOptions);
+    if (notesError) throw notesError;
+    console.log('[Reset] Deleted notes');
 
-    // 2. Delete risk events
-    const { count: riskCount, error: riskErr } = await supabase
+    // 2. Delete Risk Events
+    const { error: riskError } = await supabase
       .from('risk_events')
-      .delete({ count: 'exact' })
-      .eq('organization_id', orgId)
-      .eq('client_id', clientId);
-    if (riskErr) throw riskErr;
-    console.log(`[Reset] Deleted ${riskCount || 0} risk events.`);
+      .delete()
+      .match(deleteOptions);
+    if (riskError) throw riskError;
+    console.log('[Reset] Deleted risk_events');
 
-    // 3. Delete vendors
-    const { count: vendorCount, error: vendorErr } = await supabase
+    // 3. Delete Vendors
+    const { error: vendorError } = await supabase
       .from('vendors')
-      .delete({ count: 'exact' })
-      .eq('organization_id', orgId)
-      .eq('client_id', clientId);
-    if (vendorErr) throw vendorErr;
-    console.log(`[Reset] Deleted ${vendorCount || 0} vendors.`);
+      .delete()
+      .match(deleteOptions);
+    if (vendorError) throw vendorError;
+    console.log('[Reset] Deleted vendors');
 
-    // 4. Delete transactions (Dependent on imports/files)
-    const { count: txCount, error: txErr } = await supabase
+    // 4. Delete Transactions
+    const { error: txError } = await supabase
       .from('transactions')
-      .delete({ count: 'exact' })
-      .eq('organization_id', orgId)
-      .eq('client_id', clientId);
-    if (txErr) throw txErr;
-    console.log(`[Reset] Deleted ${txCount || 0} transactions.`);
+      .delete()
+      .match(deleteOptions);
+    if (txError) throw txError;
+    console.log('[Reset] Deleted transactions');
 
-    // 5. Delete import mappings (Dependent on imports)
-    const { count: mapCount, error: mapErr } = await supabase
+    // 5. Delete Import Mappings
+    const { error: mappingError } = await supabase
       .from('import_mappings')
-      .delete({ count: 'exact' })
-      .eq('organization_id', orgId)
-      .eq('client_id', clientId);
-    if (mapErr) {
-      console.warn('[Reset] import_mappings delete failed, table might lack direct org/client cols. Attempting subquery deletion...');
-      
-      // Fallback: Delete mappings where import_id belongs to this client
-      const { data: clientImports } = await supabase.from('imports').select('id').eq('client_id', clientId);
-      const importIds = clientImports?.map(i => i.id) || [];
-      
-      if (importIds.length > 0) {
-        const { count: subMapCount, error: subMapErr } = await supabase
-          .from('import_mappings')
-          .delete({ count: 'exact' })
-          .in('import_id', importIds);
-        if (subMapErr) throw subMapErr;
-        console.log(`[Reset] Deleted ${subMapCount || 0} mappings via subquery.`);
-      }
-    } else {
-      console.log(`[Reset] Deleted ${mapCount || 0} mappings.`);
-    }
+      .delete()
+      .match(deleteOptions);
+    if (mappingError) throw mappingError;
+    console.log('[Reset] Deleted import_mappings');
 
-    // 6. Delete imports (Dependent on uploaded_files)
-    const { count: impCount, error: impErr } = await supabase
+    // 6. Delete Import Sessions
+    const { error: importError } = await supabase
       .from('imports')
-      .delete({ count: 'exact' })
-      .eq('organization_id', orgId)
-      .eq('client_id', clientId);
-    if (impErr) throw impErr;
-    console.log(`[Reset] Deleted ${impCount || 0} imports.`);
+      .delete()
+      .match(deleteOptions);
+    if (importError) throw importError;
+    console.log('[Reset] Deleted imports');
 
-    // 7. Delete uploaded_files
-    const { count: fileCount, error: fileErr } = await supabase
+    // 7. Delete Uploaded Files
+    const { error: fileError } = await supabase
       .from('uploaded_files')
-      .delete({ count: 'exact' })
-      .eq('organization_id', orgId)
-      .eq('client_id', clientId);
-    if (fileErr) throw fileErr;
-    console.log(`[Reset] Deleted ${fileCount || 0} files.`);
+      .delete()
+      .match(deleteOptions);
+    if (fileError) throw fileError;
+    console.log('[Reset] Deleted uploaded_files');
 
-    console.log('[Data Management] Client finance data reset successfully.');
+    console.log('[Reset] Full client data reset completed successfully');
     return { success: true };
   } catch (err: any) {
-    console.error('[Data Management] Reset failed:', err);
-    throw err;
+    console.error('[Reset] Critical error during data reset:', err);
+    throw new Error(`Reset failed: ${err.message}`);
   }
 };

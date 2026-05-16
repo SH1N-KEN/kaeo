@@ -22,8 +22,9 @@ const isGenericVendorPaymentDescription = (desc: string): boolean => {
     'payment to vendor',
     'supplier payment',
     'invoice payment',
-    'vendor payout',
     'service payment',
+    'vendor payout',
+    'bill payment',
     'payout to',
     'paid to'
   ];
@@ -51,9 +52,9 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
     if (processedIndices.has(i)) continue;
     
     const current = txs[i];
-    const currentNorm = normalizeForDuplicateCheck(current.description);
     const currentAmt = Math.abs(current.amount);
     const currentDate = new Date(current.transaction_date);
+    const currentNorm = normalizeForDuplicateCheck(current.description);
     const currentIsGeneric = isGenericVendorPaymentDescription(current.description);
     
     const group = [current];
@@ -63,11 +64,12 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
       if (processedIndices.has(j)) continue;
       
       const other = txs[j];
-      const otherNorm = normalizeForDuplicateCheck(other.description);
       const otherAmt = Math.abs(other.amount);
       const otherDate = new Date(other.transaction_date);
+      const otherNorm = normalizeForDuplicateCheck(other.description);
       const otherIsGeneric = isGenericVendorPaymentDescription(other.description);
       
+      // Match criteria:
       // Tier 1 — Strong duplicate, high severity
       const isExplicitDuplicate = (current.description.toLowerCase().includes('duplicate') || 
                                   other.description.toLowerCase().includes('duplicate')) &&
@@ -100,7 +102,6 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
 
     if (group.length > 1) {
       const isPossible = tier === 'medium';
-      
       risks.push({
         organization_id: orgId,
         client_id: clientId,
@@ -110,15 +111,18 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
         severity: tier,
         risk_type: 'duplicate_payment_suspected',
         amount_at_risk: currentAmt,
-        evidence: {
+        description: isPossible 
+          ? 'Multiple generic vendor payments with identical amounts found on the same date.'
+          : 'Multiple entries with identical amounts and similar descriptions within a 7-day window.',
+        evidence_json: {
           transaction_ids: group.map(d => d.id),
           descriptions: group.map(d => d.description),
           dates: group.map(d => d.transaction_date),
           reason: isPossible 
-            ? 'Multiple generic vendor payments with identical amounts found on the same date.'
+            ? 'Generic vendor labels found with matching financials on the same day.'
             : group.some(d => d.description.toLowerCase().includes('duplicate')) 
               ? 'Explicit "duplicate" marker found in transaction description.'
-              : 'Multiple entries with identical amounts and similar descriptions within a 7-day window.'
+              : 'Structural similarity in description and financial data.'
         },
         suggested_action: isPossible
           ? 'Verify whether these payments were made to distinct vendors or if one is a duplicate entry.'
@@ -129,7 +133,7 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
     }
   }
 
-  // --- 2. Subscription Detection (Improved) ---
+  // --- 2. Subscription Detection ---
   const vendorGroups: Record<string, any[]> = {};
   txs.forEach(tx => {
     const { normalized } = normalizeVendorName(tx.description);
@@ -140,10 +144,8 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
 
   Object.entries(vendorGroups).forEach(([vendor, cluster]) => {
     if (cluster.length >= 2) {
-      // Check for similar amounts (+/- 5%) across different months
       const months = new Set(cluster.map(tx => new Date(tx.transaction_date).getMonth()));
       const years = new Set(cluster.map(tx => new Date(tx.transaction_date).getFullYear()));
-      
       const hasMultipleMonths = months.size > 1 || years.size > 1;
       const baseAmt = Math.abs(cluster[0].amount);
       const consistentAmount = cluster.every(tx => Math.abs(Math.abs(tx.amount) - baseAmt) / baseAmt < 0.05);
@@ -156,7 +158,8 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
           severity: 'low',
           risk_type: 'recurring_subscription_detected',
           amount_at_risk: baseAmt,
-          evidence: {
+          description: `Detected ${cluster.length} recurring payments for ${vendor}.`,
+          evidence_json: {
             frequency: 'Monthly (estimated)',
             transaction_count: cluster.length,
             vendor_name: vendor,
@@ -180,7 +183,8 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
       severity: 'medium',
       risk_type: 'unknown_transaction_type',
       amount_at_risk: unknownTxs.reduce((acc, tx) => acc + Math.abs(tx.amount), 0),
-      evidence: {
+      description: `${unknownTxs.length} transactions could not be automatically classified.`,
+      evidence_json: {
         count: unknownTxs.length,
         samples: unknownTxs.slice(0, 3).map(tx => tx.description)
       },
@@ -190,8 +194,38 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
     });
   }
 
+  // --- 4. Unusual Vendor Payment (MVP) ---
+  const expenses = txs.filter(tx => tx.amount < 0).map(tx => Math.abs(tx.amount));
+  if (expenses.length > 5) {
+    const sorted = [...expenses].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    
+    txs.filter(tx => tx.type === 'vendor_payment' || tx.type === 'expense').forEach(tx => {
+      const amt = Math.abs(tx.amount);
+      if (amt > median * 10 && amt > 100000) {
+        risks.push({
+          organization_id: orgId,
+          client_id: clientId,
+          title: `Unusual High-Value Payment: ${tx.description.split(' ')[0]}`,
+          severity: 'high',
+          risk_type: 'unusual_vendor_payment',
+          amount_at_risk: amt,
+          description: `Payment of ${formatCurrency(amt)} is 10x higher than your median expense.`,
+          evidence_json: {
+            median_expense: formatCurrency(median),
+            actual_expense: formatCurrency(amt),
+            transaction_id: tx.id
+          },
+          suggested_action: 'Confirm this large outflow was planned and has proper authorization.',
+          status: 'open',
+          related_transaction_ids: [tx.id]
+        });
+      }
+    });
+  }
+
   // 2. Sync to database
-  // First, delete existing open risks to prevent accumulation
+  // Delete existing open risks to prevent accumulation
   await supabase
     .from('risk_events')
     .delete()

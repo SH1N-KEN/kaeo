@@ -10,25 +10,27 @@ import {
   MoreHorizontal,
   X,
   Plus,
-  CheckCircle2,
   Terminal,
   Database,
-  Search
+  Search,
+  CheckCircle2,
+  User
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
 import { analyzeRisksForClient } from '../lib/riskEngine';
 import EmptyState from '../components/ui/EmptyState';
 import MetricCard from '../components/ui/MetricCard';
+import type { RiskEvent, Note } from '../types/finance';
 
 const RiskInbox: React.FC = () => {
   const { activeClient, activeOrg } = useWorkspace();
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
-  const [risks, setRisks] = useState<any[]>([]);
+  const [risks, setRisks] = useState<RiskEvent[]>([]);
   const [txCount, setTxCount] = useState<number | null>(null);
-  const [selectedRisk, setSelectedRisk] = useState<any | null>(null);
-  const [notes, setNotes] = useState<any[]>([]);
+  const [selectedRisk, setSelectedRisk] = useState<RiskEvent | null>(null);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<{
@@ -75,11 +77,12 @@ const RiskInbox: React.FC = () => {
       // Fetch note counts
       const { data: notesData } = await supabase
         .from('notes')
-        .select('parent_id')
-        .eq('client_id', activeClient.id);
+        .select('entity_id')
+        .eq('client_id', activeClient.id)
+        .eq('entity_type', 'risk_event');
       
       const noteCounts = (notesData || []).reduce((acc: any, n) => {
-        acc[n.parent_id] = (acc[n.parent_id] || 0) + 1;
+        acc[n.entity_id] = (acc[n.entity_id] || 0) + 1;
         return acc;
       }, {});
 
@@ -128,13 +131,35 @@ const RiskInbox: React.FC = () => {
     }
   };
 
-  const updateStatus = async (riskId: string, status: string) => {
+  const updateStatus = async (riskId: string, status: RiskEvent['status']) => {
     try {
-      await supabase.from('risk_events').update({ status }).eq('id', riskId);
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('User not authenticated');
+
+      const { error: updateErr } = await supabase
+        .from('risk_events')
+        .update({ 
+          status,
+          reviewed_by: userData.user.id,
+          reviewed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', riskId);
+      
+      if (updateErr) throw updateErr;
+      
       fetchRisks();
-      if (selectedRisk?.id === riskId) setSelectedRisk({ ...selectedRisk, status });
-    } catch (err) {
+      if (selectedRisk?.id === riskId) {
+        setSelectedRisk({ 
+          ...selectedRisk, 
+          status,
+          reviewed_by: userData.user?.id,
+          reviewed_at: new Date().toISOString()
+        });
+      }
+    } catch (err: any) {
       console.error('[Risk] Update status failed:', err);
+      setError('Failed to update status: ' + err.message);
     }
   };
 
@@ -143,7 +168,8 @@ const RiskInbox: React.FC = () => {
       const { data } = await supabase
         .from('notes')
         .select('*')
-        .eq('parent_id', riskId)
+        .eq('entity_id', riskId)
+        .eq('entity_type', 'risk_event')
         .order('created_at', { ascending: false });
       setNotes(data || []);
     } catch (err) {
@@ -154,20 +180,26 @@ const RiskInbox: React.FC = () => {
   const addNote = async () => {
     if (!newNote.trim() || !selectedRisk || !activeOrg || !activeClient) return;
     try {
-      const { data: user } = await supabase.auth.getUser();
-      await supabase.from('notes').insert({
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('User not authenticated');
+
+      const { error: insertErr } = await supabase.from('notes').insert({
         organization_id: activeOrg.id,
         client_id: activeClient.id,
-        parent_type: 'risk_event',
-        parent_id: selectedRisk.id,
-        content: newNote,
-        created_by: user.user?.id
+        entity_type: 'risk_event',
+        entity_id: selectedRisk.id,
+        note: newNote,
+        created_by: userData.user.id
       });
+
+      if (insertErr) throw insertErr;
+
       setNewNote('');
       fetchNotes(selectedRisk.id);
       fetchRisks();
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Notes] Add failed:', err);
+      setError('Failed to add note: ' + err.message);
     }
   };
 
@@ -302,7 +334,7 @@ const RiskInbox: React.FC = () => {
                 >
                   {risk.status !== 'open' && (
                     <div className="absolute top-0 right-0 px-3 py-1 bg-success/10 text-success text-[8px] font-black uppercase tracking-tighter rounded-bl-lg border-l border-b border-success/20">
-                      Resolved
+                      {risk.status.replace(/_/g, ' ')}
                     </div>
                   )}
                   
@@ -320,7 +352,7 @@ const RiskInbox: React.FC = () => {
                               {risk.severity}
                             </span>
                           </div>
-                          <p className="text-xs text-muted-foreground line-clamp-1">{risk.suggested_action}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">{risk.description || risk.suggested_action}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-black text-foreground">{formatCurrency(risk.amount_at_risk)}</p>
@@ -363,14 +395,17 @@ const RiskInbox: React.FC = () => {
                         {selectedRisk.suggested_action}
                       </p>
                       
-                      {selectedRisk.evidence && (
+                      {selectedRisk.evidence_json && (
                         <div className="bg-background/50 rounded-xl p-3 border border-border/50 space-y-2">
                           <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1.5">
                             <Terminal className="w-3 h-3" /> Risk Evidence
                           </h4>
-                          <p className="text-[10px] text-foreground/80 leading-relaxed font-medium">
-                            {selectedRisk.evidence.reason}
-                          </p>
+                          <div className="text-[10px] text-foreground/80 leading-relaxed font-medium">
+                            <p className="mb-2">{selectedRisk.description}</p>
+                            {selectedRisk.evidence_json.reason && <p className="opacity-70">• {selectedRisk.evidence_json.reason}</p>}
+                            {selectedRisk.evidence_json.vendor_name && <p className="opacity-70">• Vendor: {selectedRisk.evidence_json.vendor_name}</p>}
+                            {selectedRisk.evidence_json.transaction_count && <p className="opacity-70">• Occurrences: {selectedRisk.evidence_json.transaction_count}</p>}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -389,7 +424,7 @@ const RiskInbox: React.FC = () => {
                             onClick={() => updateStatus(selectedRisk.id, 'reviewed')}
                             className={`px-3 py-2 rounded-lg text-[10px] font-bold border transition-all ${selectedRisk.status === 'reviewed' ? 'bg-success/10 border-success/40 text-success' : 'bg-muted/50 border-border hover:border-success/30 text-muted-foreground'}`}
                           >
-                            Reviewed
+                            Mark Reviewed
                           </button>
                           <button 
                             onClick={() => updateStatus(selectedRisk.id, 'false_positive')}
@@ -417,10 +452,11 @@ const RiskInbox: React.FC = () => {
                           ) : (
                             notes.map(note => (
                               <div key={note.id} className="p-3 bg-muted/30 rounded-xl space-y-1 border border-border/30">
-                                <p className="text-xs text-foreground/90 leading-relaxed font-medium">{note.content}</p>
-                                <p className="text-[8px] text-muted-foreground/60 uppercase font-black tracking-tighter">
-                                  {new Date(note.created_at).toLocaleDateString()} at {new Date(note.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </p>
+                                <p className="text-xs text-foreground/90 leading-relaxed font-medium">{note.note}</p>
+                                <div className="flex items-center justify-between text-[8px] text-muted-foreground/60 uppercase font-black tracking-tighter">
+                                  <div className="flex items-center gap-1"><User className="w-2 h-2" /> You</div>
+                                  <div>{new Date(note.created_at).toLocaleDateString()} at {new Date(note.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                </div>
                               </div>
                             ))
                           )}
