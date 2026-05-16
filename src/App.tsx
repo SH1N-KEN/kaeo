@@ -6,6 +6,7 @@ import AppShell from './components/layout/AppShell';
 import Dashboard from './pages/Dashboard';
 import AskKaeo from './pages/AskKaeo';
 import Files from './pages/Files';
+import Mapping from './pages/Mapping';
 import Transactions from './pages/Transactions';
 import Vendors from './pages/Vendors';
 import RiskInbox from './pages/RiskInbox';
@@ -66,6 +67,7 @@ function App() {
               <Route index element={<Dashboard />} />
               <Route path="ask-kaeo" element={<AskKaeo />} />
               <Route path="files" element={<Files />} />
+              <Route path="files/:importId/mapping" element={<Mapping />} />
               <Route path="transactions" element={<Transactions />} />
               <Route path="vendors" element={<Vendors />} />
               <Route path="risk-inbox" element={<RiskInbox />} />
