@@ -6,47 +6,51 @@ import type { NormalizedTransaction } from '../types/finance';
  */
 
 const KEYWORDS = {
-  expense: [
-    'ads', 'google', 'meta', 'facebook', 'invoice', 'service', 'office', 'supplies', 'rent', 
-    'subscription', 'software', 'cloud', 'aws', 'azure', 'digitalocean', 'uber', 'ola', 
-    'swiggy', 'zomato', 'utility', 'electricity', 'water', 'internet'
+  // Strong Income Phrases (Checked first)
+  income_strong: [
+    'client payment', 'customer payment', 'payment received', 'received from', 'received payment',
+    'sales', 'revenue', 'payout', 'settlement received', 'invoice paid by client', 'credit', 'deposit'
   ],
-  vendor_payment: [
-    'vendor', 'payment', 'payout', 'zenith', 'acme', 'corp', 'limited', 'services', 'consultant'
+  // Vendor Specific Phrases
+  vendor_strong: [
+    'vendor payment', 'payment to', 'paid to'
   ],
-  income: [
-    'revenue', 'income', 'customer', 'payment received', 'sales', 'credit', 'interest', 'dividend'
+  // Strong Expense Phrases
+  expense_strong: [
+    'google ads', 'meta ads', 'facebook ads', 'salary', 'payroll', 'rent', 'office supplies', 
+    'subscription', 'software', 'aws', 'cloud', 'bill', 'purchase', 'expense', 'debit', 'invoice'
   ],
   refund: [
-    'refund', 'reversal', 'cashback'
+    'refund', 'refunded', 'reversal', 'cashback', 'chargeback'
   ],
   failed: [
-    'failed', 'declined', 'rejected', 'cancelled'
+    'failed', 'declined', 'rejected', 'cancelled', 'bounced'
   ]
 };
 
-export const inferTransactionType = (description: string, amount: number): NormalizedTransaction['type'] => {
+export const inferTransactionType = (description: string, amount: number, rawType?: string): NormalizedTransaction['type'] => {
   const desc = description.toLowerCase();
-  
-  // Priority 1: Failed
-  if (KEYWORDS.failed.some(k => desc.includes(k))) return 'failed';
+  const rType = rawType?.toLowerCase() || '';
 
-  // Priority 2: Refund
+  // 1. Explicit debit/credit/type column if present
+  if (['credit', 'income', 'received', 'deposit'].some(k => rType.includes(k))) return 'income';
+  if (['debit', 'expense', 'paid', 'withdrawal'].some(k => rType.includes(k))) return 'expense';
+
+  // 2. Refund/failed special cases
   if (KEYWORDS.refund.some(k => desc.includes(k))) return 'refund';
+  if (KEYWORDS.failed.some(k => desc.includes(k))) return 'failed_payment';
 
-  // Priority 3: Vendor Payment
-  if (KEYWORDS.vendor_payment.some(k => desc.includes(k))) return 'vendor_payment';
+  // 3. Strong income phrases BEFORE generic payment phrases
+  if (KEYWORDS.income_strong.some(k => desc.includes(k))) return 'income';
 
-  // Priority 4: General Expense
-  if (KEYWORDS.expense.some(k => desc.includes(k))) return 'expense';
+  // 4. Strong expense/vendor phrases
+  if (KEYWORDS.vendor_strong.some(k => desc.includes(k))) return 'vendor_payment';
+  if (KEYWORDS.expense_strong.some(k => desc.includes(k))) return 'expense';
 
-  // Priority 5: Income
-  if (KEYWORDS.income.some(k => desc.includes(k))) return 'income';
-
-  // Fallback to sign
+  // 5. If amount is negative → expense
   if (amount < 0) return 'expense';
   
-  // If positive but no income keywords, we mark as unknown to prevent false revenue
+  // 6. If amount is positive but context is unclear → unknown, not income
   return 'unknown';
 };
 
@@ -60,12 +64,13 @@ export const normalizeRows = (
     const rawDate = row[mapping['transaction_date']];
     const rawDesc = row[mapping['description']] || '';
     const rawAmount = row[mapping['amount']];
+    const rawType = mapping['type'] ? row[mapping['type']] : undefined;
     
     // Clean amount (remove symbols, handles strings)
     const cleanAmountStr = rawAmount?.toString().replace(/[^\d.-]/g, '') || '0';
     const amount = parseFloat(cleanAmountStr);
     
-    const type = inferTransactionType(rawDesc, amount);
+    const type = inferTransactionType(rawDesc, amount, rawType);
     
     return {
       transaction_date: new Date(rawDate).toISOString(),

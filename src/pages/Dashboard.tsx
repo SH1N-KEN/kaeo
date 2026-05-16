@@ -33,6 +33,7 @@ const Dashboard: React.FC = () => {
     unknownCount: 0,
     vendorPaymentCount: 0,
     refundCount: 0,
+    failedCount: 0,
     topVendor: { name: '', amount: 0 }
   });
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
@@ -66,8 +67,8 @@ const Dashboard: React.FC = () => {
           acc.expenseCount++;
           if (tx.type === 'vendor_payment') acc.vendorPaymentCount++;
           
-          // Track vendor - prioritized heuristic
-          const name = tx.description.split(' ').filter((w: string) => w.length > 2 && !/\d/.test(w))[0] || tx.description.split(' ')[0];
+          // Track vendor - prioritized heuristic for expenses only
+          const name = tx.description.replace(/vendor payment|payment to|paid to|google ads|meta ads|facebook ads/gi, '').trim().split(' ').filter((w: string) => w.length > 2 && !/\d/.test(w))[0] || tx.description.split(' ')[0];
           vendors[name] = (vendors[name] || 0) + amt;
         }
         else if (tx.type === 'refund') {
@@ -76,6 +77,9 @@ const Dashboard: React.FC = () => {
         }
         else if (tx.type === 'unknown') {
           acc.unknownCount++;
+        }
+        else if (tx.type === 'failed' || tx.type === 'failed_payment') {
+          acc.failedCount++;
         }
         
         acc.count++;
@@ -88,7 +92,8 @@ const Dashboard: React.FC = () => {
         expenseCount: 0, 
         unknownCount: 0,
         vendorPaymentCount: 0,
-        refundCount: 0
+        refundCount: 0,
+        failedCount: 0
       });
 
       let topVendor = { name: '', amount: 0 };
@@ -153,6 +158,7 @@ const Dashboard: React.FC = () => {
 
   const hasTransactions = metrics.count > 0;
   const isExpenseOnly = hasTransactions && metrics.incomeCount === 0;
+  const isMixed = hasTransactions && metrics.incomeCount > 0 && metrics.expenseCount > 0;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-700">
@@ -192,7 +198,7 @@ const Dashboard: React.FC = () => {
         <MetricCard 
           title="Total Revenue" 
           value={hasTransactions ? formatCurrency(metrics.income) : '—'} 
-          description={hasTransactions ? (metrics.incomeCount > 0 ? "From customer payments" : "No income rows detected") : "No data yet"}
+          description={hasTransactions ? (metrics.incomeCount > 0 ? "From customer payments" : "No income rows detected in this import") : "No data yet"}
           icon={<TrendingUp className={`w-4 h-4 ${metrics.incomeCount > 0 ? 'text-success' : 'text-muted-foreground'}`} />} 
         />
         <MetricCard 
@@ -238,7 +244,7 @@ const Dashboard: React.FC = () => {
           {/* Main Content */}
           <div className="lg:col-span-8 space-y-6">
             {/* File Interpretation Card */}
-            {isExpenseOnly && (
+            {hasTransactions && (
               <div className="bg-primary/5 border border-primary/10 rounded-2xl p-5 flex gap-4 items-start animate-in slide-in-from-bottom-2 duration-500">
                 <div className="p-2 bg-primary/10 rounded-lg shrink-0">
                   <Zap className="w-5 h-5 text-primary" />
@@ -247,21 +253,36 @@ const Dashboard: React.FC = () => {
                   <div>
                     <h4 className="text-sm font-bold text-foreground">File Interpretation</h4>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      Kaeo detected this as an <span className="text-foreground font-semibold">expense-only file</span>. To calculate revenue, upload a file containing sales, payouts, client payments, deposits, or credit entries.
+                      {isExpenseOnly ? (
+                        <>Kaeo detected this as an <span className="text-foreground font-semibold">expense-only file</span>. To calculate revenue, upload a file containing sales, payouts, client payments, deposits, or credit entries.</>
+                      ) : isMixed ? (
+                        <>Kaeo detected a <span className="text-foreground font-semibold">mixed income and expense file</span>. Strategic breakdown of revenue and costs is now active.</>
+                      ) : (
+                        <>Kaeo has categorized your ledger entries. You can view the full breakdown in the ledger below.</>
+                      )}
                     </p>
                   </div>
-                  <div className="flex gap-4">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Income Rows</span>
-                      <span className="text-sm font-bold">{metrics.incomeCount}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Expense Rows</span>
-                      <span className="text-sm font-bold">{metrics.expenseCount}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Unknown Rows</span>
-                      <span className="text-sm font-bold">{metrics.unknownCount}</span>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Composition:</p>
+                    <div className="flex gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase">Income rows</span>
+                        <span className="text-sm font-bold">{metrics.incomeCount}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase">Expense rows</span>
+                        <span className="text-sm font-bold">{metrics.expenseCount}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase">Unknown rows</span>
+                        <span className="text-sm font-bold">{metrics.unknownCount}</span>
+                      </div>
+                      {metrics.failedCount > 0 && (
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase">Failed rows</span>
+                          <span className="text-sm font-bold">{metrics.failedCount}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -341,12 +362,17 @@ const Dashboard: React.FC = () => {
                     <span className="text-[10px] font-black text-muted-foreground">{metrics.count} Rows</span>
                   </div>
 
-                  {isExpenseOnly && (
+                  {isExpenseOnly ? (
                     <div className="flex items-center gap-2 p-3 bg-risk/5 rounded-xl border border-risk/10">
                       <AlertCircle className="w-3.5 h-3.5 text-risk/60" />
                       <span className="text-[11px] font-bold text-risk/80">Expense-only file detected</span>
                     </div>
-                  )}
+                  ) : isMixed ? (
+                    <div className="flex items-center gap-2 p-3 bg-success/5 rounded-xl border border-success/10">
+                      <TrendingUp className="w-3.5 h-3.5 text-success/60" />
+                      <span className="text-[11px] font-bold text-success/80">Mixed income and expense file</span>
+                    </div>
+                  ) : null}
 
                   {metrics.unknownCount > 0 && (
                     <div className="flex items-center justify-between p-3 bg-warning/5 rounded-xl border border-warning/10">
