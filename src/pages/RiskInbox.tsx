@@ -105,7 +105,11 @@ const RiskInbox: React.FC = () => {
 
     } catch (err: any) {
       console.error('[Risk] Fetch error:', err);
-      setError(err.message || 'Failed to fetch risk events.');
+      if (err.message?.includes('column') && err.message?.includes('does not exist')) {
+        setError('Database schema is out of date. Run latest Phase 5 repair migration (0007).');
+      } else {
+        setError(err.message || 'Failed to fetch risk events.');
+      }
     } finally {
       setLoading(false);
     }
@@ -125,7 +129,11 @@ const RiskInbox: React.FC = () => {
       await fetchRisks();
     } catch (err: any) {
       console.error('[Risk] Analysis failed:', err);
-      setError(err.message || 'Security scan failed. Check database connection.');
+      if (err.message?.includes('column') && err.message?.includes('does not exist')) {
+        setError('Database schema is out of date. Run latest Phase 5 repair migration (0007).');
+      } else {
+        setError(err.message || 'Security scan failed. Check database connection.');
+      }
     } finally {
       setAnalyzing(false);
     }
@@ -192,7 +200,12 @@ const RiskInbox: React.FC = () => {
         created_by: userData.user.id
       });
 
-      if (insertErr) throw insertErr;
+      if (insertErr) {
+        if (insertErr.message?.includes('column') && insertErr.message?.includes('does not exist')) {
+          throw new Error('Database schema is out of date. Run latest Phase 5 repair migration (0007).');
+        }
+        throw insertErr;
+      }
 
       setNewNote('');
       fetchNotes(selectedRisk.id);

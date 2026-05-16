@@ -143,11 +143,21 @@ export const analyzeVendorsForClient = async (orgId: string, clientId: string) =
 
   // 2. Sync to database
   if (results.length > 0) {
-    const { error: upsertErr } = await supabase
-      .from('vendors')
-      .upsert(results, { onConflict: 'client_id, normalized_name' });
-    
-    if (upsertErr) console.error('[Vendor Engine] Sync error:', upsertErr);
+    try {
+      const { error: upsertErr } = await supabase
+        .from('vendors')
+        .upsert(results, { onConflict: 'client_id, normalized_name' });
+      
+      if (upsertErr) {
+        if (upsertErr.message?.includes('column') && upsertErr.message?.includes('does not exist')) {
+          throw new Error('Database schema is out of date. Run latest Phase 5 repair migration (0007).');
+        }
+        throw upsertErr;
+      }
+    } catch (err: any) {
+      console.error('[Vendor Engine] Sync error:', err);
+      throw err;
+    }
   }
 
   return results;

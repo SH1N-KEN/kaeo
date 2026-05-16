@@ -233,13 +233,20 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
     .eq('status', 'open');
 
   if (risks.length > 0) {
-    const { error: insertErr } = await supabase
-      .from('risk_events')
-      .insert(risks);
-    
-    if (insertErr) {
-      console.error('[Risk Engine] Insert error:', insertErr);
-      throw insertErr;
+    try {
+      const { error: insertErr } = await supabase
+        .from('risk_events')
+        .insert(risks);
+      
+      if (insertErr) {
+        if (insertErr.message?.includes('column') && insertErr.message?.includes('does not exist')) {
+          throw new Error('Database schema is out of date. Run latest Phase 5 repair migration (0007).');
+        }
+        throw insertErr;
+      }
+    } catch (err: any) {
+      console.error('[Risk Engine] Sync error:', err);
+      throw err;
     }
   }
 

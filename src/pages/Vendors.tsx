@@ -59,7 +59,11 @@ const Vendors: React.FC = () => {
       setVendors(data || []);
     } catch (err: any) {
       console.error('[Vendors] Fetch error:', err);
-      setError(err.message);
+      if (err.message?.includes('column') && err.message?.includes('does not exist')) {
+        setError('Database schema is out of date. Run latest Phase 5 repair migration (0007).');
+      } else {
+        setError(err.message || 'Failed to fetch vendor intelligence.');
+      }
     } finally {
       setLoading(false);
     }
@@ -74,7 +78,11 @@ const Vendors: React.FC = () => {
       await fetchVendors();
     } catch (err: any) {
       console.error('[Vendors] Analysis failed:', err);
-      setError('Strategic analysis failed: ' + err.message);
+      if (err.message?.includes('column') && err.message?.includes('does not exist')) {
+        setError('Database schema is out of date. Run latest Phase 5 repair migration (0007).');
+      } else {
+        setError('Strategic analysis failed: ' + err.message);
+      }
     } finally {
       setAnalyzing(false);
     }
