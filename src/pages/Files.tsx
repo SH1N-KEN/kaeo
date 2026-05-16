@@ -46,7 +46,7 @@ const Files: React.FC = () => {
       .order('created_at', { ascending: false })
       .limit(10);
     
-    if (data) setHistory(data);
+    setHistory(data || []);
   };
 
   const handleFileSelect = async (file: File) => {
@@ -62,6 +62,8 @@ const Files: React.FC = () => {
     setLoading(true);
     try {
       const result = await parseCSV(file);
+      console.log(`[Phase 4] Parsed ${result.rowCount} rows from ${file.name}`);
+
       if (result.errors.length > 0) {
         setError({ message: 'Parsing failed', subtext: result.errors[0] });
         setLoading(false);
@@ -116,10 +118,13 @@ const Files: React.FC = () => {
         .single();
 
       if (importErr) throw importErr;
+      console.log(`[Phase 4] Created import session: ${importData.id} with status: ${importData.status}`);
 
       await supabase
         .from('import_mappings')
         .insert({
+          organization_id: activeOrg.id,
+          client_id: activeClient.id,
           import_id: importData.id,
           confirmed_mapping_json: mappingResult.mapping,
           confirmed_by: user?.id,
@@ -129,6 +134,7 @@ const Files: React.FC = () => {
       fetchHistory();
 
     } catch (err: any) {
+      console.error('[Phase 4] Ingestion error:', err);
       setError({ message: 'Ingestion sync failed', subtext: err.message });
     } finally {
       setLoading(false);
@@ -140,7 +146,6 @@ const Files: React.FC = () => {
 
     setLoading(true);
     try {
-      // 1. Get the import record
       const { data: importData, error: fetchErr } = await supabase
         .from('imports')
         .select('*, file_id(id)')
@@ -151,21 +156,18 @@ const Files: React.FC = () => {
 
       if (fetchErr || !importData) throw new Error('Import session not found');
       
-      // Duplicate protection
       if (importData.status === 'imported') {
         throw new Error('This file has already been imported.');
       }
 
       if (autoMapping.status === 'ready_to_import' || autoMapping.status === 'review_mapping') {
-        console.log('[Phase 4] Starting normalization and import...');
+        console.log(`[Phase 4] Starting import for ${parseResult.rowCount} rows...`);
         
-        // 2. Normalize all rows
         const normalized = normalizeRows(parseResult.rows, autoMapping.mapping, {
           provider: parseResult.provider,
           currency: activeClient.base_currency || 'INR'
         });
 
-        // 3. Batch insert into transactions
         const transactionsToInsert = normalized.map(tx => ({
           organization_id: activeOrg.id,
           client_id: activeClient.id,
@@ -179,26 +181,22 @@ const Files: React.FC = () => {
           .insert(transactionsToInsert);
 
         if (insertErr) throw insertErr;
+        console.log(`[Phase 4] Successfully inserted ${transactionsToInsert.length} transactions.`);
 
-        // 4. Update statuses
         await supabase.from('imports').update({ status: 'imported' }).eq('id', importData.id);
         await supabase.from('uploaded_files').update({ status: 'imported' }).eq('id', importData.file_id?.id);
 
-        console.log('[Phase 4] Import complete. Rows:', transactionsToInsert.length);
-        
         setSuccess(`Successfully imported ${transactionsToInsert.length} transactions!`);
         setPendingFile(null);
         setParseResult(null);
         setAutoMapping(null);
         fetchHistory();
         
-        // Short delay then navigate to transactions
         setTimeout(() => {
           navigate('/transactions');
         }, 1500);
 
       } else {
-        // Redirect to manual mapping
         navigate(`/files/${importData.id}/mapping`, { 
           state: { 
             headers: parseResult.headers, 
@@ -210,6 +208,7 @@ const Files: React.FC = () => {
       }
 
     } catch (err: any) {
+      console.error('[Phase 4] Import action failed:', err);
       setError({ message: 'Import failed', subtext: err.message });
     } finally {
       setLoading(false);

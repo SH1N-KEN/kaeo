@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Check, 
@@ -15,7 +15,6 @@ import { supabase } from '../lib/supabase';
 
 const Mapping: React.FC = () => {
   const { importId } = useParams();
-  const location = useLocation();
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
@@ -27,6 +26,8 @@ const Mapping: React.FC = () => {
     previewRows: any[];
     fileName: string;
     provider: string;
+    orgId: string;
+    clientId: string;
   } | null>(null);
   
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -50,42 +51,30 @@ const Mapping: React.FC = () => {
         headers: data.raw_columns_json || [],
         previewRows: data.preview_rows_json || [],
         fileName: data.file_id?.file_name || 'Finance File',
-        provider: data.provider_detected || 'Unknown'
+        provider: data.provider_detected || 'Unknown',
+        orgId: data.organization_id,
+        clientId: data.client_id
       };
 
       setImportData(payload);
       
-      // Auto-suggest using new engine
       const suggestion = suggestMappingFromColumns(payload.headers);
       setMapping(suggestion.mapping);
       setConfidence(Math.round(suggestion.confidence * 100));
 
     } catch (err: any) {
-      setError(err.message.includes('relation') ? 'Database tables missing. Please run migration 0002.' : err.message);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   }, [importId]);
 
   useEffect(() => {
-    if (location.state?.headers) {
-      const state = location.state;
-      setImportData({
-        headers: state.headers,
-        previewRows: state.previewRows,
-        fileName: state.fileName,
-        provider: state.provider
-      });
-      const suggestion = suggestMappingFromColumns(state.headers);
-      setMapping(suggestion.mapping);
-      setConfidence(Math.round(suggestion.confidence * 100));
-      setLoading(false);
-    } else {
-      fetchImportData();
-    }
-  }, [location.state, fetchImportData]);
+    fetchImportData();
+  }, [fetchImportData]);
 
   const handleSaveMapping = async () => {
+    if (!importData) return;
     const validationErrors = validateMapping(mapping);
     if (validationErrors.length > 0) {
       setError(validationErrors[0]);
@@ -96,16 +85,16 @@ const Mapping: React.FC = () => {
     setError(null);
 
     try {
-      // 0. Check if already imported
       const { data: currentImport } = await supabase.from('imports').select('status').eq('id', importId).single();
       if (currentImport?.status === 'imported') {
         throw new Error('This file has already been imported.');
       }
 
-      // 1. Save mapping record
       const { error: mappingErr } = await supabase
         .from('import_mappings')
         .insert({
+          organization_id: importData.orgId,
+          client_id: importData.clientId,
           import_id: importId,
           confirmed_mapping_json: mapping,
           confirmed_by: (await supabase.auth.getUser()).data.user?.id,
@@ -114,7 +103,6 @@ const Mapping: React.FC = () => {
 
       if (mappingErr) throw mappingErr;
 
-      // 2. Update import status
       const { error: importErr } = await supabase
         .from('imports')
         .update({ status: 'mapped' })
@@ -167,7 +155,7 @@ const Mapping: React.FC = () => {
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-2xl font-bold">Field Mapping</h1>
               <div className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full border border-primary/20 uppercase tracking-wider">
-                Phase 3 Intelligence
+                Intelligence Engine
               </div>
             </div>
             <p className="text-sm text-muted-foreground flex items-center gap-2">

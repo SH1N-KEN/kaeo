@@ -47,6 +47,8 @@ const Dashboard: React.FC = () => {
 
       if (metricsErr) throw metricsErr;
 
+      console.log(`[Dashboard] Calculating metrics for ${allTransactions?.length || 0} transactions.`);
+
       const vendors: Record<string, number> = {};
 
       const stats = (allTransactions || []).reduce((acc, tx) => {
@@ -58,7 +60,7 @@ const Dashboard: React.FC = () => {
         else if (['expense', 'vendor_payment', 'subscription'].includes(tx.type)) {
           acc.expenses += amt;
           
-          // Better vendor heuristic: ignore common short words or numbers
+          // Track vendor - prioritized heuristic
           const name = tx.description.split(' ').filter((w: string) => w.length > 2 && !/\d/.test(w))[0] || tx.description.split(' ')[0];
           vendors[name] = (vendors[name] || 0) + amt;
         }
