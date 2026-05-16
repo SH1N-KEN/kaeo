@@ -10,7 +10,34 @@ export const resetClientFinanceData = async (orgId: string, clientId: string) =>
   console.log(`[Data Management] Resetting finance data for client: ${clientId} in org: ${orgId}`);
 
   try {
-    // 1. Delete transactions (Dependent on imports/files)
+    // 1. Delete notes
+    const { count: noteCount, error: noteErr } = await supabase
+      .from('notes')
+      .delete({ count: 'exact' })
+      .eq('organization_id', orgId)
+      .eq('client_id', clientId);
+    if (noteErr) throw noteErr;
+    console.log(`[Reset] Deleted ${noteCount || 0} notes.`);
+
+    // 2. Delete risk events
+    const { count: riskCount, error: riskErr } = await supabase
+      .from('risk_events')
+      .delete({ count: 'exact' })
+      .eq('organization_id', orgId)
+      .eq('client_id', clientId);
+    if (riskErr) throw riskErr;
+    console.log(`[Reset] Deleted ${riskCount || 0} risk events.`);
+
+    // 3. Delete vendors
+    const { count: vendorCount, error: vendorErr } = await supabase
+      .from('vendors')
+      .delete({ count: 'exact' })
+      .eq('organization_id', orgId)
+      .eq('client_id', clientId);
+    if (vendorErr) throw vendorErr;
+    console.log(`[Reset] Deleted ${vendorCount || 0} vendors.`);
+
+    // 4. Delete transactions (Dependent on imports/files)
     const { count: txCount, error: txErr } = await supabase
       .from('transactions')
       .delete({ count: 'exact' })
@@ -19,7 +46,7 @@ export const resetClientFinanceData = async (orgId: string, clientId: string) =>
     if (txErr) throw txErr;
     console.log(`[Reset] Deleted ${txCount || 0} transactions.`);
 
-    // 2. Delete import mappings (Dependent on imports)
+    // 5. Delete import mappings (Dependent on imports)
     const { count: mapCount, error: mapErr } = await supabase
       .from('import_mappings')
       .delete({ count: 'exact' })
@@ -44,7 +71,7 @@ export const resetClientFinanceData = async (orgId: string, clientId: string) =>
       console.log(`[Reset] Deleted ${mapCount || 0} mappings.`);
     }
 
-    // 3. Delete imports (Dependent on uploaded_files)
+    // 6. Delete imports (Dependent on uploaded_files)
     const { count: impCount, error: impErr } = await supabase
       .from('imports')
       .delete({ count: 'exact' })
@@ -53,7 +80,7 @@ export const resetClientFinanceData = async (orgId: string, clientId: string) =>
     if (impErr) throw impErr;
     console.log(`[Reset] Deleted ${impCount || 0} imports.`);
 
-    // 4. Delete uploaded_files
+    // 7. Delete uploaded_files
     const { count: fileCount, error: fileErr } = await supabase
       .from('uploaded_files')
       .delete({ count: 'exact' })

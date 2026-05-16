@@ -33,3 +33,50 @@ export interface ImportSession {
   row_count: number;
   provider_detected: string;
 }
+
+export interface Vendor {
+  id: string;
+  organization_id: string;
+  client_id: string;
+  name: string;
+  display_name: string;
+  total_spend: number;
+  transaction_count: number;
+  first_seen: string;
+  last_seen: string;
+  monthly_average: number;
+  recurrence_pattern: 'monthly' | 'weekly' | 'irregular';
+  trend: 'increasing' | 'decreasing' | 'stable';
+  category: string | null;
+  recommendation: string | null;
+  metadata: any;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RiskEvent {
+  id: string;
+  organization_id: string;
+  client_id: string;
+  title: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  risk_type: string;
+  amount_at_risk: number;
+  evidence: any;
+  suggested_action: string | null;
+  status: 'open' | 'reviewed' | 'confirmed' | 'false_positive' | 'ignored';
+  related_transaction_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Note {
+  id: string;
+  organization_id: string;
+  client_id: string;
+  parent_type: string;
+  parent_id: string;
+  content: string;
+  created_by: string;
+  created_at: string;
+}
