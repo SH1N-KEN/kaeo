@@ -35,9 +35,7 @@ const Mapping: React.FC = () => {
   const fetchImportData = useCallback(async () => {
     if (!importId) return;
     
-    console.log('[Phase 3] Fetching import data for ID:', importId);
     setLoading(true);
-    
     try {
       const { data, error: fetchErr } = await supabase
         .from('imports')
@@ -48,8 +46,6 @@ const Mapping: React.FC = () => {
       if (fetchErr) throw fetchErr;
       if (!data) throw new Error('Import not found');
 
-      console.log('[Phase 3] Import data loaded:', data);
-      
       const payload = {
         headers: data.raw_columns_json || [],
         previewRows: data.preview_rows_json || [],
@@ -59,13 +55,12 @@ const Mapping: React.FC = () => {
 
       setImportData(payload);
       
-      // Auto-suggest mapping if not already set
+      // Auto-suggest using new engine
       const suggestion = suggestMappingFromColumns(payload.headers);
-      setMapping(suggestion);
-      setConfidence(calculateMappingConfidence(suggestion, payload.headers));
+      setMapping(suggestion.mapping);
+      setConfidence(Math.round(suggestion.confidence * 100));
 
     } catch (err: any) {
-      console.error('[Phase 3] Failed to load import data:', err);
       setError(err.message.includes('relation') ? 'Database tables missing. Please run migration 0002.' : err.message);
     } finally {
       setLoading(false);
@@ -73,9 +68,7 @@ const Mapping: React.FC = () => {
   }, [importId]);
 
   useEffect(() => {
-    // If we have state from navigation, use it immediately
     if (location.state?.headers) {
-      console.log('[Phase 3] Using navigation state for mapping');
       const state = location.state;
       setImportData({
         headers: state.headers,
@@ -84,11 +77,10 @@ const Mapping: React.FC = () => {
         provider: state.provider
       });
       const suggestion = suggestMappingFromColumns(state.headers);
-      setMapping(suggestion);
-      setConfidence(calculateMappingConfidence(suggestion, state.headers));
+      setMapping(suggestion.mapping);
+      setConfidence(Math.round(suggestion.confidence * 100));
       setLoading(false);
     } else {
-      // Otherwise fetch from DB
       fetchImportData();
     }
   }, [location.state, fetchImportData]);
@@ -104,8 +96,6 @@ const Mapping: React.FC = () => {
     setError(null);
 
     try {
-      console.log('[Phase 3] Saving confirmed mapping...');
-      
       // 1. Save mapping record
       const { error: mappingErr } = await supabase
         .from('import_mappings')
@@ -126,11 +116,9 @@ const Mapping: React.FC = () => {
 
       if (importErr) throw importErr;
 
-      console.log('[Phase 3] Mapping confirmed and saved.');
       navigate('/files', { state: { success: 'Mapping saved successfully!' } });
 
     } catch (err: any) {
-      console.error('[Phase 3] Failed to save mapping:', err);
       setError('Failed to save mapping: ' + err.message);
     } finally {
       setSaving(false);
@@ -141,7 +129,7 @@ const Mapping: React.FC = () => {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse font-medium">Loading ingestion workspace...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Loading mapping workspace...</p>
       </div>
     );
   }
@@ -151,14 +139,9 @@ const Mapping: React.FC = () => {
       <div className="h-[60vh] flex flex-col items-center justify-center text-center p-6">
         <AlertCircle className="w-12 h-12 text-risk mb-4" />
         <h2 className="text-xl font-bold mb-2">Import preview not found</h2>
-        <p className="text-muted-foreground mb-6 max-w-md">
-          {error || 'The import session could not be retrieved. Return to Files and upload again.'}
-        </p>
-        <button 
-          onClick={() => navigate('/files')}
-          className="flex items-center gap-2 px-6 py-2 bg-muted rounded-xl hover:bg-muted/80 transition-colors font-semibold"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Files
+        <p className="text-muted-foreground mb-6 max-w-md">{error}</p>
+        <button onClick={() => navigate('/files')} className="px-6 py-2 bg-muted rounded-xl hover:bg-muted/80 transition-colors font-semibold">
+          Back to Files
         </button>
       </div>
     );
@@ -178,7 +161,7 @@ const Mapping: React.FC = () => {
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-2xl font-bold">Field Mapping</h1>
               <div className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full border border-primary/20 uppercase tracking-wider">
-                Phase 3 Stable
+                Phase 3 Intelligence
               </div>
             </div>
             <p className="text-sm text-muted-foreground flex items-center gap-2">
@@ -189,11 +172,11 @@ const Mapping: React.FC = () => {
 
         <div className="flex items-center gap-6">
           <div className="text-right hidden md:block">
-            <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">AI Confidence</div>
+            <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Mapping Confidence</div>
             <div className="flex items-center gap-2">
               <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                 <div 
-                  className={`h-full transition-all duration-1000 ${confidence > 70 ? 'bg-success' : confidence > 40 ? 'bg-warning' : 'bg-risk'}`} 
+                  className={`h-full transition-all duration-1000 ${confidence > 80 ? 'bg-success' : confidence > 60 ? 'bg-warning' : 'bg-risk'}`} 
                   style={{ width: `${confidence}%` }}
                 />
               </div>
@@ -210,13 +193,6 @@ const Mapping: React.FC = () => {
         </div>
       </div>
 
-      {error && (
-        <div className="p-4 bg-risk/5 border border-risk/20 rounded-xl flex gap-3 items-center animate-in shake-in">
-          <AlertCircle className="w-5 h-5 text-risk shrink-0" />
-          <span className="text-sm text-risk font-medium">{error}</span>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-card border rounded-2xl shadow-sm overflow-hidden">
@@ -228,8 +204,8 @@ const Mapping: React.FC = () => {
               <button 
                 onClick={() => {
                   const suggestion = suggestMappingFromColumns(importData.headers);
-                  setMapping(suggestion);
-                  setConfidence(calculateMappingConfidence(suggestion, importData.headers));
+                  setMapping(suggestion.mapping);
+                  setConfidence(Math.round(suggestion.confidence * 100));
                 }}
                 className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
               >
@@ -264,15 +240,11 @@ const Mapping: React.FC = () => {
                         }}
                       >
                         <option value="">(Ignore Field)</option>
-                        {importData.headers.map((h: string, i: number) => (
+                        {importData.headers.map((h, i) => (
                           <option key={i} value={h}>{h}</option>
                         ))}
                       </select>
-                      {mapping[field.id] && (
-                        <div className="w-6 h-6 bg-success/10 text-success rounded-full flex items-center justify-center shrink-0">
-                          <Check className="w-4 h-4" />
-                        </div>
-                      )}
+                      {mapping[field.id] && <div className="w-6 h-6 bg-success/10 text-success rounded-full flex items-center justify-center shrink-0"><Check className="w-4 h-4" /></div>}
                     </div>
                   </div>
                 ))}
@@ -294,9 +266,7 @@ const Mapping: React.FC = () => {
                 return (
                   <div key={f.id} className="p-3 bg-muted/30 rounded-xl border border-border/50">
                     <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{f.label}</div>
-                    <div className="text-sm font-mono truncate">
-                      {sampleValue ? sampleValue.toString() : <span className="italic text-muted-foreground opacity-50">Not mapped</span>}
-                    </div>
+                    <div className="text-sm font-mono truncate">{sampleValue?.toString() || '-'}</div>
                   </div>
                 );
               })}

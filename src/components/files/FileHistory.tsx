@@ -50,14 +50,16 @@ const FileHistory: React.FC<FileHistoryProps> = ({ history }) => {
             <div className="flex items-center gap-4">
               <StatusBadge 
                 status={
-                  item.status === 'mapped' || item.status === 'imported' ? 'success' : 
+                  item.status === 'ready_to_import' || item.status === 'mapped' || item.status === 'imported' ? 'success' : 
                   item.status === 'failed' ? 'high' : 
                   'medium'
                 } 
                 label={
-                  item.status === 'parsed' ? 'MAPPING REQUIRED' :
-                  item.status === 'preview_ready' ? 'READY' :
-                  item.status.toUpperCase()
+                  item.status === 'ready_to_import' ? 'READY TO IMPORT' :
+                  item.status === 'review_mapping' ? 'REVIEW RECOMMENDED' :
+                  item.status === 'mapping_required' ? 'MAPPING REQUIRED' :
+                  item.status === 'parsed' ? 'PARSED' :
+                  item.status.toUpperCase().replace('_', ' ')
                 } 
               />
               <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0" />
