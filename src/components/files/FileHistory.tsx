@@ -55,6 +55,7 @@ const FileHistory: React.FC<FileHistoryProps> = ({ history }) => {
                   'medium'
                 } 
                 label={
+                  item.status === 'imported' ? 'IMPORTED' :
                   item.status === 'ready_to_import' ? 'READY TO IMPORT' :
                   item.status === 'review_mapping' ? 'REVIEW RECOMMENDED' :
                   item.status === 'mapping_required' ? 'MAPPING REQUIRED' :

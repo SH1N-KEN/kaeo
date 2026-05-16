@@ -1,8 +1,212 @@
-const PagePlaceholder = ({ title }: { title: string }) => (
-  <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in slide-in-from-bottom-4 duration-500">
-    <h1 className="text-4xl font-bold mb-4">{title}</h1>
-    <p className="text-muted-foreground text-lg">This page is currently under construction in Phase 1.</p>
-  </div>
-);
-const Transactions = () => <PagePlaceholder title="Transactions" />;
+import React, { useState, useEffect } from 'react';
+import { 
+  Search, 
+  ArrowUpRight, 
+  ArrowDownLeft,
+  Calendar,
+  Tag,
+  MoreHorizontal,
+  Loader2,
+  AlertCircle,
+  FileText
+} from 'lucide-react';
+import { useWorkspace } from '../hooks/useWorkspace';
+import { supabase } from '../lib/supabase';
+import StatusBadge from '../components/ui/StatusBadge';
+import EmptyState from '../components/ui/EmptyState';
+
+const Transactions: React.FC = () => {
+  const { activeClient } = useWorkspace();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all');
+
+  useEffect(() => {
+    if (activeClient) fetchTransactions();
+  }, [activeClient, filterType]);
+
+  const fetchTransactions = async () => {
+    if (!activeClient) return;
+    setLoading(true);
+    try {
+      let query = supabase
+        .from('transactions')
+        .select('*')
+        .eq('client_id', activeClient.id)
+        .order('transaction_date', { ascending: false });
+
+      if (filterType !== 'all') {
+        query = query.eq('type', filterType);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      setTransactions(data || []);
+    } catch (err: any) {
+      console.error('[Phase 4] Fetch transactions error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredTransactions = transactions.filter(tx => 
+    tx.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (tx.counterparty_name && tx.counterparty_name.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  if (!activeClient) {
+    return (
+      <div className="h-[70vh] flex items-center justify-center">
+        <EmptyState 
+          title="No client workspace selected"
+          description="Select a client workspace to view transaction history."
+        />
+      </div>
+    );
+  }
+
+  if (loading && transactions.length === 0) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <p className="text-muted-foreground animate-pulse font-medium">Loading transactions...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Transactions</h1>
+          <p className="text-muted-foreground">Detailed ledger for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="p-4 bg-risk/5 border border-risk/20 rounded-xl flex gap-3 items-center text-risk">
+          <AlertCircle className="w-5 h-5" />
+          <p className="text-sm font-bold">{error}</p>
+        </div>
+      )}
+
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="relative w-full md:w-96 group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Search by description or counterparty..." 
+            className="w-full bg-card border rounded-xl py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+          {['all', 'income', 'expense', 'transfer', 'refund'].map((type) => (
+            <button 
+              key={type}
+              onClick={() => setFilterType(type)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all border ${
+                filterType === type 
+                ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20' 
+                : 'bg-card text-muted-foreground border-border hover:bg-muted'
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filteredTransactions.length === 0 ? (
+        <div className="bg-card border rounded-2xl p-12 text-center space-y-4">
+          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-2">
+            <FileText className="w-8 h-8 text-muted-foreground/50" />
+          </div>
+          <h3 className="text-xl font-bold">No transactions found</h3>
+          <p className="text-muted-foreground max-w-sm mx-auto">
+            Try adjusting your search or filter, or upload a new finance file to ingest data.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[800px]">
+              <thead>
+                <tr className="bg-muted/50">
+                  <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b">Date</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b">Description</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b">Category</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b text-right">Amount</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b text-center">Status</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b">Source</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {filteredTransactions.map((tx) => (
+                  <tr key={tx.id} className="hover:bg-muted/30 transition-colors group">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2 text-xs font-medium">
+                        <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                        {new Date(tx.transaction_date).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 max-w-xs">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">
+                          {tx.description}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1 mt-0.5">
+                          {tx.counterparty_name || 'No counterparty'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2 px-2.5 py-1 bg-muted/50 rounded-lg w-fit border border-border/50">
+                        <Tag className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{tx.category || 'Uncategorized'}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                      <div className="flex flex-col items-end">
+                        <span className={`text-sm font-black flex items-center gap-1.5 ${tx.amount < 0 ? 'text-risk' : 'text-success'}`}>
+                          {tx.amount < 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownLeft className="w-3.5 h-3.5" />}
+                          {tx.amount < 0 ? '-' : '+'}{tx.currency} {Math.abs(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                        {tx.fee_amount > 0 && (
+                          <span className="text-[9px] text-muted-foreground font-medium">Fee: {tx.currency} {tx.fee_amount}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                      <StatusBadge 
+                        status={tx.type === 'income' ? 'success' : tx.type === 'expense' ? 'medium' : 'low'} 
+                        label={tx.type.toUpperCase()} 
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                        {tx.source_provider || 'Manual'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default Transactions;

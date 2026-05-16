@@ -6,8 +6,7 @@ import {
   ShieldCheck, 
   Zap,
   CheckCircle2,
-  Settings2,
-  Lock
+  Settings2
 } from 'lucide-react';
 import type { ParseResult } from '../../lib/fileParser';
 import type { MappingSuggestion } from '../../lib/mappingEngine';
@@ -156,13 +155,6 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileName, result, autoMapping
           </button>
           
           <div className="flex flex-col md:flex-row items-center gap-6">
-            {isHighConfidence && (
-              <div className="flex items-center gap-2 text-warning font-bold bg-warning/5 px-4 py-2 rounded-lg border border-warning/10 text-[10px] uppercase tracking-wider">
-                <Lock className="w-3 h-3" />
-                Transaction import starts in Phase 4
-              </div>
-            )}
-            
             <div className="flex gap-4">
               {isHighConfidence ? (
                 <button 
