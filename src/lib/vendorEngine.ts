@@ -9,33 +9,32 @@ export const normalizeVendorName = (description: string): { normalized: string; 
   // 1. Lowercase and basic cleanup
   let name = description.toLowerCase().trim();
 
-  // 2. Remove common noise prefixes/suffixes - more aggressive
-  name = name.replace(/vendor payment|payment to|paid to|payout|subscription|software|service|monthly|annual|weekly|daily/gi, '');
+  // 2. Remove common transaction noise prefixes/suffixes
+  // We remove generic payment labels but NOT "service" or "software" yet as they are core to names like "Acme Services"
+  name = name.replace(/vendor payment|payment to|paid to|payout|monthly|annual|weekly|daily/gi, '');
   
-  // 3. Remove "Invoice" and following text
+  // 3. Remove "Invoice", "Reference", "UTR" and following numeric/text noise
   name = name.replace(/invoice.*$/gi, '');
+  name = name.replace(/ref.*$/gi, '');
+  name = name.replace(/#\d+/g, ''); 
   
   // 4. Remove duplicate markers and following text
   name = name.replace(/duplicate.*$/gi, '');
   name = name.replace(/copy.*$/gi, '');
   name = name.replace(/re-run.*$/gi, '');
 
-  // 5. Remove numeric noise and IDs
-  name = name.replace(/#\d+/g, ''); // #123
-  name = name.replace(/\b\d{4,}\b/g, ''); // Long numbers like 20260501 or IDs
-  name = name.replace(/\b\d{2,}-\d{2,}-\d{4,}\b/g, ''); // Dates
-  name = name.replace(/\butr\d+\b/gi, ''); // UTR IDs
-  name = name.replace(/\bref\d+\b/gi, ''); // Ref IDs
+  // 5. Remove long numeric IDs, Dates, and UTRs
+  name = name.replace(/\b\d{4,}\b/g, ''); 
+  name = name.replace(/\b\d{2,}-\d{2,}-\d{4,}\b/g, ''); 
+  name = name.replace(/\butr\d+\b/gi, ''); 
   
   // 6. Cleanup punctuation and extra spaces
   name = name.replace(/[^\w\s]/g, ' ');
   name = name.replace(/\s+/g, ' ').trim();
 
-  // 7. Intelligent pruning: Most vendors are the first 1-3 meaningful words
-  // But we want to avoid "A", "B", "The" if they are the only words
-  const words = name.split(' ').filter(w => w.length > 1 || !['a', 'b', 'i'].includes(w));
+  // 7. Intelligent pruning: Keep first 2-3 meaningful words
+  const words = name.split(' ').filter(w => w.length > 1 || !['a', 'b', 'i', 'to', 'of'].includes(w));
   
-  // If we stripped everything, fall back to original description (first word)
   const pruned = words.length > 0 ? words.slice(0, 3).join(' ') : description.split(' ')[0];
 
   // 8. Display name: Title Case
@@ -50,7 +49,7 @@ export const inferCategory = (name: string): string => {
   if (n.includes('google workspace') || n.includes('slack') || n.includes('notion') || n.includes('figma') || n.includes('canva') || n.includes('zoho') || n.includes('microsoft')) return 'SaaS / Software';
   if (n.includes('salary') || n.includes('payroll') || n.includes('bonus')) return 'Payroll';
   if (n.includes('aws') || n.includes('amazon web') || n.includes('gcp') || n.includes('azure') || n.includes('vercel') || n.includes('supabase') || n.includes('digitalocean')) return 'Cloud / Infrastructure';
-  if (n.includes('office') || n.includes('stationery') || n.includes('pantry')) return 'Office';
+  if (n.includes('office') || n.includes('stationery') || n.includes('pantry') || n.includes('supplies')) return 'Office';
   if (n.includes('rent') || n.includes('electricity') || n.includes('water')) return 'Utilities';
   if (n.includes('travel') || n.includes('uber') || n.includes('ola') || n.includes('flight') || n.includes('hotel')) return 'Travel';
   
@@ -82,31 +81,40 @@ export const analyzeVendorsForClient = async (orgId: string, clientId: string) =
         transaction_count: 0,
         first_seen: tx.transaction_date,
         last_seen: tx.transaction_date,
+        unique_months: new Set<string>(),
         transactions: []
       };
     }
 
     const v = vendorMap[normalized];
+    const txDate = new Date(tx.transaction_date);
+    const monthKey = `${txDate.getFullYear()}-${txDate.getMonth()}`;
+    
     v.total_spend += Math.abs(tx.amount);
     v.transaction_count += 1;
+    v.unique_months.add(monthKey);
     v.transactions.push(tx);
     
-    if (new Date(tx.transaction_date) < new Date(v.first_seen)) v.first_seen = tx.transaction_date;
-    if (new Date(tx.transaction_date) > new Date(v.last_seen)) v.last_seen = tx.transaction_date;
+    if (txDate < new Date(v.first_seen)) v.first_seen = tx.transaction_date;
+    if (txDate > new Date(v.last_seen)) v.last_seen = tx.transaction_date;
   });
 
   const results: any[] = Object.values(vendorMap).map(v => {
     const first = new Date(v.first_seen);
     const last = new Date(v.last_seen);
     const monthsDiff = Math.max(1, (last.getFullYear() - first.getFullYear()) * 12 + (last.getMonth() - first.getMonth()) + 1);
-    const monthly_average = v.total_spend / monthsDiff;
+    const uniqueMonthCount = v.unique_months.size;
     
     // Recurrence Pattern
+    // A vendor is monthly ONLY if it appears in multiple months and has consistent frequency
     let recurrence_pattern = 'irregular';
-    if (v.transaction_count >= 2) {
+    if (uniqueMonthCount >= 2) {
       if (v.transaction_count >= monthsDiff * 0.8) recurrence_pattern = 'monthly';
       else if (v.transaction_count >= monthsDiff * 0.2) recurrence_pattern = 'quarterly';
     }
+
+    // Calculate monthly average: only for recurring vendors to avoid inflating commitments
+    const monthly_average = recurrence_pattern === 'monthly' ? v.total_spend / monthsDiff : 0;
 
     // Category
     const category = inferCategory(v.normalized_name);
