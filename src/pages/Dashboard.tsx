@@ -10,7 +10,9 @@ import {
   ArrowDownLeft,
   Loader2,
   Zap,
-  Clock
+  Clock,
+  Lock,
+  Download
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import EmptyState from '../components/ui/EmptyState';
@@ -38,7 +40,6 @@ const Dashboard: React.FC = () => {
     if (!activeClient) return;
     setLoading(true);
     try {
-      // 1. Fetch all transactions for metrics
       const { data: allTransactions, error: metricsErr } = await supabase
         .from('transactions')
         .select('amount, type, description')
@@ -51,21 +52,18 @@ const Dashboard: React.FC = () => {
       const stats = (allTransactions || []).reduce((acc, tx) => {
         const amt = Math.abs(Number(tx.amount));
         
-        // Income total = sum amount where type = income
         if (tx.type === 'income') {
           acc.income += amt;
         } 
-        // Expenses total = sum amount where type in expense/vendor_payment/subscription
         else if (['expense', 'vendor_payment', 'subscription'].includes(tx.type)) {
           acc.expenses += amt;
           
-          // Track vendor
-          const vendorName = tx.description.split(' ')[0]; // Basic heuristic
-          vendors[vendorName] = (vendors[vendorName] || 0) + amt;
+          // Better vendor heuristic: ignore common short words or numbers
+          const name = tx.description.split(' ').filter((w: string) => w.length > 2 && !/\d/.test(w))[0] || tx.description.split(' ')[0];
+          vendors[name] = (vendors[name] || 0) + amt;
         }
-        // Refunds (assuming outgoing for now, or handle based on context)
         else if (tx.type === 'refund') {
-          acc.expenses -= amt; // Refund reduces expense if it's a refund received
+          acc.expenses -= amt; 
         }
         
         if (tx.type === 'unknown') acc.unknownCount++;
@@ -73,7 +71,6 @@ const Dashboard: React.FC = () => {
         return acc;
       }, { income: 0, expenses: 0, count: 0, unknownCount: 0 });
 
-      // Find top vendor
       let topVendor = { name: '', amount: 0 };
       Object.entries(vendors).forEach(([name, amount]) => {
         if (amount > topVendor.amount) topVendor = { name, amount };
@@ -85,7 +82,6 @@ const Dashboard: React.FC = () => {
         topVendor
       });
 
-      // 2. Fetch latest 5 transactions
       const { data: recent, error: recentErr } = await supabase
         .from('transactions')
         .select('*')
@@ -101,6 +97,18 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatCurrency = (val: number) => {
+    const isNegative = val < 0;
+    const absVal = Math.abs(val);
+    const formatted = new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(absVal);
+    
+    return isNegative ? `-${formatted}` : formatted;
   };
 
   if (!activeClient) {
@@ -123,15 +131,8 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(val);
-  };
-
-  const hasData = metrics.count > 0;
+  const hasTransactions = metrics.count > 0;
+  const hasIncome = metrics.income > 0;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -141,11 +142,19 @@ const Dashboard: React.FC = () => {
           <p className="text-muted-foreground">Real-time intelligence for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
         </div>
         <div className="flex gap-3">
-          <button className="px-4 py-2 bg-muted hover:bg-muted/80 rounded-xl text-sm font-semibold transition-all">
-            Download Report
+          <button 
+            disabled 
+            className="px-4 py-2 bg-muted text-muted-foreground rounded-xl text-sm font-semibold flex items-center gap-2 cursor-not-allowed opacity-60"
+          >
+            <Download className="w-4 h-4" /> Download Report
+            <span className="text-[10px] font-black uppercase tracking-tighter bg-background px-1.5 py-0.5 rounded ml-1">Soon</span>
           </button>
-          <button className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
+          <button 
+            disabled
+            className="px-4 py-2 bg-primary/20 text-primary-foreground/50 rounded-xl text-sm font-bold flex items-center gap-2 cursor-not-allowed border border-primary/10"
+          >
             <Plus className="w-4 h-4" /> Add Transaction
+            <Lock className="w-3 h-3" />
           </button>
         </div>
       </div>
@@ -153,34 +162,31 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard 
           title="Total Revenue" 
-          value={hasData && metrics.income > 0 ? formatCurrency(metrics.income) : '—'} 
-          trend={hasData ? "Real data" : "0%"} 
-          trendType="up" 
-          icon={<TrendingUp className="w-5 h-5 text-success" />} 
+          value={hasTransactions ? formatCurrency(metrics.income) : '—'} 
+          description={hasTransactions ? (hasIncome ? "From customer payments" : "No income detected") : ""}
+          icon={<TrendingUp className={`w-5 h-5 ${hasIncome ? 'text-success' : 'text-muted-foreground'}`} />} 
         />
         <MetricCard 
           title="Total Expenses" 
-          value={hasData && metrics.expenses > 0 ? formatCurrency(metrics.expenses) : '—'} 
-          trend={hasData ? "Real data" : "0%"} 
-          trendType="down" 
-          icon={<TrendingDown className="w-5 h-5 text-risk" />} 
+          value={hasTransactions ? formatCurrency(metrics.expenses) : '—'} 
+          description={hasTransactions ? "From imported transactions" : ""}
+          icon={<TrendingDown className={`w-5 h-5 ${metrics.expenses > 0 ? 'text-risk' : 'text-muted-foreground'}`} />} 
         />
         <MetricCard 
           title="Net Cash Movement" 
-          value={hasData ? formatCurrency(metrics.net) : '—'} 
-          trend={hasData ? "Real data" : "0%"} 
-          trendType={metrics.net >= 0 ? 'up' : 'down'} 
-          icon={<DollarSign className="w-5 h-5 text-primary" />} 
+          value={hasTransactions ? formatCurrency(metrics.net) : '—'} 
+          description={hasTransactions ? (metrics.net >= 0 ? "Income exceeds expenses" : "Expenses exceed income") : "No data yet"}
+          icon={<DollarSign className={`w-5 h-5 ${hasTransactions ? (metrics.net >= 0 ? 'text-success' : 'text-risk') : 'text-muted-foreground'}`} />} 
         />
         <MetricCard 
           title="Transactions" 
-          value={hasData ? metrics.count.toString() : '—'} 
-          description={metrics.unknownCount > 0 ? `${metrics.unknownCount} need review` : "All reconciled"} 
-          icon={<AlertCircle className={`w-5 h-5 ${metrics.unknownCount > 0 ? 'text-warning' : 'text-success'}`} />} 
+          value={hasTransactions ? metrics.count.toString() : '—'} 
+          description={hasTransactions ? "Imported transactions" : ""} 
+          icon={<FileText className="w-5 h-5 text-primary" />} 
         />
       </div>
 
-      {!hasData ? (
+      {!hasTransactions ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 bg-card border rounded-2xl p-12 flex flex-col items-center justify-center min-h-[400px] text-center space-y-4">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-2">
@@ -188,7 +194,7 @@ const Dashboard: React.FC = () => {
             </div>
             <h3 className="text-xl font-bold">No financial data yet</h3>
             <p className="text-muted-foreground max-w-sm mx-auto">
-              Import transactions from a finance file to activate your real-time dashboard and AI CFO insights.
+              Upload and import a finance file to activate your dashboard.
             </p>
             <button 
               onClick={() => window.location.href = '/files'}
@@ -199,7 +205,7 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div className="bg-card border rounded-2xl p-6 space-y-6">
-            <h3 className="font-bold text-lg">Kaeo Insights</h3>
+            <h3 className="font-bold text-lg">Transaction Insights</h3>
             <div className="p-8 text-center bg-muted/20 rounded-xl border border-dashed">
               <Zap className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -222,53 +228,68 @@ const Dashboard: React.FC = () => {
                 </button>
               </div>
               <div className="divide-y divide-border/50">
-                {recentTransactions.map((tx) => (
-                  <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${['expense', 'vendor_payment', 'subscription'].includes(tx.type) ? 'bg-risk/10 text-risk' : tx.type === 'income' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
-                        {['expense', 'vendor_payment', 'subscription'].includes(tx.type) ? <ArrowUpRight className="w-5 h-5" /> : tx.type === 'income' ? <ArrowDownLeft className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+                {recentTransactions.map((tx) => {
+                  const isExpense = ['expense', 'vendor_payment', 'subscription'].includes(tx.type);
+                  const isIncome = tx.type === 'income';
+                  
+                  return (
+                    <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isExpense ? 'bg-risk/10 text-risk' : isIncome ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                          {isExpense ? <ArrowUpRight className="w-5 h-5" /> : isIncome ? <ArrowDownLeft className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold truncate max-w-[200px] md:max-w-md">{tx.description}</div>
+                          <div className={`text-[10px] font-black tracking-widest uppercase ${isExpense ? 'text-risk' : isIncome ? 'text-success' : 'text-muted-foreground'}`}>
+                            {tx.type.replace('_', ' ')}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-sm font-bold truncate max-w-[200px] md:max-w-md">{tx.description}</div>
-                        <div className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{tx.type.replace('_', ' ')}</div>
+                      <div className="text-right">
+                        <div className={`text-sm font-black ${isExpense ? 'text-risk' : isIncome ? 'text-success' : 'text-foreground'}`}>
+                          {isExpense ? '-' : isIncome ? '+' : ''}{formatCurrency(Math.abs(tx.amount))}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">{new Date(tx.transaction_date).toLocaleDateString()}</div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className={`text-sm font-black ${['expense', 'vendor_payment', 'subscription'].includes(tx.type) ? 'text-risk' : tx.type === 'income' ? 'text-success' : 'text-foreground'}`}>
-                        {['expense', 'vendor_payment', 'subscription'].includes(tx.type) ? '-' : tx.type === 'income' ? '+' : ''}{formatCurrency(Math.abs(tx.amount))}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">{new Date(tx.transaction_date).toLocaleDateString()}</div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
 
           <div className="bg-card border rounded-2xl p-6 space-y-6">
-            <h3 className="font-bold text-lg">Kaeo Insights</h3>
+            <h3 className="font-bold text-lg">Transaction Insights</h3>
             
             {metrics.topVendor.amount > 0 ? (
               <div className="space-y-6">
                 <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Top Vendor</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Top Expense Source</p>
                   <p className="text-lg font-black text-foreground">{metrics.topVendor.name}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Total spend: <span className="font-bold">{formatCurrency(metrics.topVendor.amount)}</span>
+                    Total spend: <span className="font-bold text-foreground">{formatCurrency(metrics.topVendor.amount)}</span>
                   </p>
                 </div>
 
                 <div className="space-y-4">
                   <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Data Quality</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold">{metrics.unknownCount} Unknown types</span>
-                      <button 
-                        onClick={() => window.location.href = '/transactions'}
-                        className="text-[10px] font-black text-primary hover:underline"
-                      >
-                        RECONCILE
-                      </button>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Health Metrics</p>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold">{metrics.unknownCount} Unknown types</span>
+                        <button 
+                          onClick={() => window.location.href = '/transactions'}
+                          className="text-[10px] font-black text-primary hover:underline"
+                        >
+                          FIX
+                        </button>
+                      </div>
+                      {!hasIncome && (
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-warning">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          Expense-only file detected
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
