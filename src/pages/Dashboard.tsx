@@ -1,158 +1,114 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
-  ArrowUpRight, 
-  ArrowDownRight, 
   TrendingUp, 
-  AlertCircle, 
-  FileText, 
-  CheckCircle2,
-  AlertTriangle,
+  TrendingDown, 
+  DollarSign, 
+  AlertCircle,
+  FileText,
   Plus
 } from 'lucide-react';
-import MetricCard from '../components/ui/MetricCard';
-import StatusBadge from '../components/ui/StatusBadge';
 import { useWorkspace } from '../hooks/useWorkspace';
-import KaeoHome from './KaeoHome';
 import EmptyState from '../components/ui/EmptyState';
-import LoadingState from '../components/ui/LoadingState';
-import CreateClientModal from '../components/ui/CreateClientModal';
+import MetricCard from '../components/ui/MetricCard';
 
 const Dashboard: React.FC = () => {
-  const { organizations, activeOrg, activeClient, loading, createClient } = useWorkspace();
-  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const { activeClient } = useWorkspace();
 
-  if (loading) {
-    return <LoadingState />;
-  }
-
-  // If no organization exists, show guided onboarding
-  if (organizations.length === 0) {
-    return <KaeoHome />;
-  }
-
-  // If organization exists but no client is selected/exists
   if (!activeClient) {
     return (
       <div className="h-[70vh] flex items-center justify-center">
         <EmptyState 
           title="No client workspace selected"
-          description="Select an existing client or create a new one to start managing financial data."
-          action={
-            <button 
-              onClick={() => setIsClientModalOpen(true)}
-              className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Create your first client
-            </button>
-          }
-        />
-        <CreateClientModal
-          isOpen={isClientModalOpen}
-          onClose={() => setIsClientModalOpen(false)}
-          onCreate={(name, industry, currency) => {
-            if (activeOrg) return createClient(name, activeOrg.id, industry, currency);
-            return Promise.resolve(null);
-          }}
+          description="Create or select a client workspace to view financial insights."
         />
       </div>
     );
   }
 
+  // Phase 3 Dashboard: No fake numbers.
+  // We'll show empty states or placeholders for metrics until Phase 4.
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold mb-2">Financial Overview</h1>
-          <p className="text-muted-foreground">Real-time health for <span className="text-foreground font-medium">{activeClient.name}</span>.</p>
+          <h1 className="text-3xl font-bold mb-2">Financial Overview</h1>
+          <p className="text-muted-foreground">Insights and intelligence for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
         </div>
-        <div className="flex gap-2">
-          <button className="px-4 py-2 bg-muted/50 border rounded-lg text-sm font-medium hover:bg-muted transition-colors">
-            Monthly
+        <div className="flex gap-3">
+          <button className="px-4 py-2 bg-muted hover:bg-muted/80 rounded-xl text-sm font-semibold transition-all">
+            Download Report
           </button>
-          <button className="px-4 py-2 bg-muted/50 border rounded-lg text-sm font-medium hover:bg-muted transition-colors">
-            Custom Range
+          <button className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
+            <Plus className="w-4 h-4" /> Add Transaction
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <MetricCard
-          title="Total Revenue"
-          value="₹42,50,000"
-          trend="+12.5%"
-          trendType="up"
-          description="vs last month"
-          icon={<TrendingUp className="w-5 h-5 text-success" />}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard 
+          title="Total Revenue" 
+          value="—" 
+          trend="0%" 
+          trendType="up" 
+          icon={<TrendingUp className="w-5 h-5 text-success" />} 
         />
-        <MetricCard
-          title="Total Expenses"
-          value="₹28,30,000"
-          trend="+4.2%"
-          trendType="down"
-          description="vs last month"
-          icon={<ArrowDownRight className="w-5 h-5 text-risk" />}
+        <MetricCard 
+          title="Total Expenses" 
+          value="—" 
+          trend="0%" 
+          trendType="down" 
+          icon={<TrendingDown className="w-5 h-5 text-risk" />} 
         />
-        <MetricCard
-          title="Net Cash Movement"
-          value="₹14,20,000"
-          trend="+18.3%"
-          trendType="up"
-          description="vs last month"
-          icon={<ArrowUpRight className="w-5 h-5 text-info" />}
+        <MetricCard 
+          title="Net Cash Movement" 
+          value="—" 
+          trend="0%" 
+          trendType="neutral" 
+          icon={<DollarSign className="w-5 h-5 text-primary" />} 
+        />
+        <MetricCard 
+          title="Risk Level" 
+          value="None" 
+          description="Safe" 
+          icon={<AlertCircle className="w-5 h-5 text-muted-foreground" />} 
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-card border rounded-xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-warning" />
-              Critical Risks
-            </h2>
-            <button className="text-sm text-primary hover:underline">View all</button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-card border rounded-2xl p-8 flex flex-col items-center justify-center min-h-[400px] text-center space-y-4">
+          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-2">
+            <FileText className="w-8 h-8 text-muted-foreground/50" />
           </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-background border rounded-lg">
-              <div className="flex flex-col">
-                <span className="font-medium text-sm">GST Filing Overdue</span>
-                <span className="text-xs text-muted-foreground">Client: {activeClient.name}</span>
-              </div>
-              <StatusBadge status="high" label="Overdue" />
-            </div>
-            <div className="flex items-center justify-between p-4 bg-background border rounded-lg">
-              <div className="flex flex-col">
-                <span className="font-medium text-sm">Suspicious Transaction</span>
-                <span className="text-xs text-muted-foreground">Amount: ₹1,50,000</span>
-              </div>
-              <StatusBadge status="medium" label="Flagged" />
-            </div>
-          </div>
+          <h3 className="text-xl font-bold">No financial data yet</h3>
+          <p className="text-muted-foreground max-w-sm mx-auto">
+            Upload and map a finance file to start building your dashboard insights and AI CFO reports.
+          </p>
+          <button 
+            onClick={() => window.location.href = '/files'}
+            className="mt-4 px-6 py-2.5 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-all"
+          >
+            Upload Finance File
+          </button>
         </div>
 
-        <div className="bg-card border rounded-xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <FileText className="w-5 h-5 text-info" />
-              Recent Files
-            </h2>
-            <button className="text-sm text-primary hover:underline">Manage files</button>
+        <div className="bg-card border rounded-2xl p-6 space-y-6">
+          <h3 className="font-bold text-lg">AI CFO Insights</h3>
+          <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Once you upload transaction data, I'll start analyzing your burn rate, runway, and vendor spending patterns.
+            </p>
           </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-background border rounded-lg">
-              <div className="flex flex-col">
-                <span className="font-medium text-sm">HDFC_Bank_Stmt_Apr24.pdf</span>
-                <span className="text-xs text-muted-foreground">Uploaded 2h ago • 124 transactions</span>
+          <div className="space-y-4 opacity-50">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex gap-4 items-start">
+                <div className="w-10 h-10 bg-muted rounded-lg shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-muted rounded w-3/4" />
+                  <div className="h-3 bg-muted rounded w-1/2" />
+                </div>
               </div>
-              <CheckCircle2 className="w-5 h-5 text-success" />
-            </div>
-            <div className="flex items-center justify-between p-4 bg-background border rounded-lg">
-              <div className="flex flex-col">
-                <span className="font-medium text-sm">Invoice_VND_882.png</span>
-                <span className="text-xs text-muted-foreground">Uploaded 5h ago • Missing vendor info</span>
-              </div>
-              <AlertTriangle className="w-5 h-5 text-warning" />
-            </div>
+            ))}
           </div>
         </div>
       </div>

@@ -7,7 +7,10 @@ interface HistoryItem {
   file_name: string;
   status: string;
   created_at: string;
-  row_count?: number;
+  metadata?: {
+    row_count?: number;
+    provider_detected?: string;
+  };
 }
 
 interface FileHistoryProps {
@@ -40,14 +43,22 @@ const FileHistory: React.FC<FileHistoryProps> = ({ history }) => {
               <div>
                 <h4 className="font-semibold text-sm group-hover:text-primary transition-colors">{item.file_name}</h4>
                 <p className="text-xs text-muted-foreground flex items-center gap-2">
-                  {new Date(item.created_at).toLocaleDateString()} • {item.row_count || 0} rows
+                  {new Date(item.created_at).toLocaleDateString()} • {item.metadata?.row_count || 0} rows
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <StatusBadge 
-                status={item.status === 'imported' ? 'success' : item.status === 'error' ? 'high' : 'medium'} 
-                label={item.status.toUpperCase()} 
+                status={
+                  item.status === 'mapped' || item.status === 'imported' ? 'success' : 
+                  item.status === 'failed' ? 'high' : 
+                  'medium'
+                } 
+                label={
+                  item.status === 'parsed' ? 'MAPPING REQUIRED' :
+                  item.status === 'preview_ready' ? 'READY' :
+                  item.status.toUpperCase()
+                } 
               />
               <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0" />
             </div>
