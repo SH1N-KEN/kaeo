@@ -8,7 +8,9 @@ import {
   Plus,
   ArrowUpRight,
   ArrowDownLeft,
-  Loader2
+  Loader2,
+  Zap,
+  Clock
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import EmptyState from '../components/ui/EmptyState';
@@ -23,7 +25,8 @@ const Dashboard: React.FC = () => {
     expenses: 0,
     net: 0,
     count: 0,
-    unknownCount: 0
+    unknownCount: 0,
+    topVendor: { name: '', amount: 0 }
   });
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
 
@@ -38,24 +41,48 @@ const Dashboard: React.FC = () => {
       // 1. Fetch all transactions for metrics
       const { data: allTransactions, error: metricsErr } = await supabase
         .from('transactions')
-        .select('amount, type')
+        .select('amount, type, description')
         .eq('client_id', activeClient.id);
 
       if (metricsErr) throw metricsErr;
 
+      const vendors: Record<string, number> = {};
+
       const stats = (allTransactions || []).reduce((acc, tx) => {
-        const amt = Number(tx.amount);
-        if (tx.type === 'income' || amt > 0) acc.income += amt;
-        else if (tx.type === 'expense' || amt < 0) acc.expenses += Math.abs(amt);
+        const amt = Math.abs(Number(tx.amount));
+        
+        // Income total = sum amount where type = income
+        if (tx.type === 'income') {
+          acc.income += amt;
+        } 
+        // Expenses total = sum amount where type in expense/vendor_payment/subscription
+        else if (['expense', 'vendor_payment', 'subscription'].includes(tx.type)) {
+          acc.expenses += amt;
+          
+          // Track vendor
+          const vendorName = tx.description.split(' ')[0]; // Basic heuristic
+          vendors[vendorName] = (vendors[vendorName] || 0) + amt;
+        }
+        // Refunds (assuming outgoing for now, or handle based on context)
+        else if (tx.type === 'refund') {
+          acc.expenses -= amt; // Refund reduces expense if it's a refund received
+        }
         
         if (tx.type === 'unknown') acc.unknownCount++;
         acc.count++;
         return acc;
       }, { income: 0, expenses: 0, count: 0, unknownCount: 0 });
 
+      // Find top vendor
+      let topVendor = { name: '', amount: 0 };
+      Object.entries(vendors).forEach(([name, amount]) => {
+        if (amount > topVendor.amount) topVendor = { name, amount };
+      });
+
       setMetrics({
         ...stats,
-        net: stats.income - stats.expenses
+        net: stats.income - stats.expenses,
+        topVendor
       });
 
       // 2. Fetch latest 5 transactions
@@ -126,14 +153,14 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard 
           title="Total Revenue" 
-          value={hasData ? formatCurrency(metrics.income) : '—'} 
+          value={hasData && metrics.income > 0 ? formatCurrency(metrics.income) : '—'} 
           trend={hasData ? "Real data" : "0%"} 
           trendType="up" 
           icon={<TrendingUp className="w-5 h-5 text-success" />} 
         />
         <MetricCard 
           title="Total Expenses" 
-          value={hasData ? formatCurrency(metrics.expenses) : '—'} 
+          value={hasData && metrics.expenses > 0 ? formatCurrency(metrics.expenses) : '—'} 
           trend={hasData ? "Real data" : "0%"} 
           trendType="down" 
           icon={<TrendingDown className="w-5 h-5 text-risk" />} 
@@ -172,22 +199,12 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div className="bg-card border rounded-2xl p-6 space-y-6">
-            <h3 className="font-bold text-lg">AI CFO Insights</h3>
-            <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Once you import transaction data, I'll start analyzing your burn rate, runway, and vendor spending patterns.
+            <h3 className="font-bold text-lg">Kaeo Insights</h3>
+            <div className="p-8 text-center bg-muted/20 rounded-xl border border-dashed">
+              <Zap className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Insights will appear after more transactions are imported.
               </p>
-            </div>
-            <div className="space-y-4 opacity-50">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="flex gap-4 items-start">
-                  <div className="w-10 h-10 bg-muted rounded-lg shrink-0" />
-                  <div className="space-y-2 flex-1">
-                    <div className="h-4 bg-muted rounded w-3/4" />
-                    <div className="h-3 bg-muted rounded w-1/2" />
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </div>
@@ -208,19 +225,19 @@ const Dashboard: React.FC = () => {
                 {recentTransactions.map((tx) => (
                   <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tx.amount < 0 ? 'bg-risk/10 text-risk' : 'bg-success/10 text-success'}`}>
-                        {tx.amount < 0 ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownLeft className="w-5 h-5" />}
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${['expense', 'vendor_payment', 'subscription'].includes(tx.type) ? 'bg-risk/10 text-risk' : tx.type === 'income' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                        {['expense', 'vendor_payment', 'subscription'].includes(tx.type) ? <ArrowUpRight className="w-5 h-5" /> : tx.type === 'income' ? <ArrowDownLeft className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
                       </div>
                       <div>
                         <div className="text-sm font-bold truncate max-w-[200px] md:max-w-md">{tx.description}</div>
-                        <div className="text-[10px] text-muted-foreground">{new Date(tx.transaction_date).toLocaleDateString()}</div>
+                        <div className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{tx.type.replace('_', ' ')}</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`text-sm font-black ${tx.amount < 0 ? 'text-risk' : 'text-success'}`}>
-                        {tx.amount < 0 ? '-' : '+'}{formatCurrency(Math.abs(tx.amount))}
+                      <div className={`text-sm font-black ${['expense', 'vendor_payment', 'subscription'].includes(tx.type) ? 'text-risk' : tx.type === 'income' ? 'text-success' : 'text-foreground'}`}>
+                        {['expense', 'vendor_payment', 'subscription'].includes(tx.type) ? '-' : tx.type === 'income' ? '+' : ''}{formatCurrency(Math.abs(tx.amount))}
                       </div>
-                      <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{tx.type}</div>
+                      <div className="text-[10px] text-muted-foreground">{new Date(tx.transaction_date).toLocaleDateString()}</div>
                     </div>
                   </div>
                 ))}
@@ -229,23 +246,41 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div className="bg-card border rounded-2xl p-6 space-y-6">
-            <h3 className="font-bold text-lg">AI CFO Insights</h3>
-            <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-              <p className="text-sm text-primary font-bold mb-1">Burn Analysis</p>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Based on your last import, your average monthly expense is <span className="text-foreground font-bold">{formatCurrency(metrics.expenses / 1)}</span>.
-              </p>
-            </div>
-            <div className="space-y-4">
-              <div className="p-3 bg-muted/30 rounded-xl border border-border/50">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Cash Runway</p>
-                <p className="text-sm font-bold">12.4 Months</p>
+            <h3 className="font-bold text-lg">Kaeo Insights</h3>
+            
+            {metrics.topVendor.amount > 0 ? (
+              <div className="space-y-6">
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Top Vendor</p>
+                  <p className="text-lg font-black text-foreground">{metrics.topVendor.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Total spend: <span className="font-bold">{formatCurrency(metrics.topVendor.amount)}</span>
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Data Quality</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold">{metrics.unknownCount} Unknown types</span>
+                      <button 
+                        onClick={() => window.location.href = '/transactions'}
+                        className="text-[10px] font-black text-primary hover:underline"
+                      >
+                        RECONCILE
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="p-3 bg-muted/30 rounded-xl border border-border/50">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Top Vendor</p>
-                <p className="text-sm font-bold">Amazon Web Services</p>
+            ) : (
+              <div className="p-8 text-center bg-muted/20 rounded-xl border border-dashed">
+                <Zap className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Insights will appear after more transactions are imported.
+                </p>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}

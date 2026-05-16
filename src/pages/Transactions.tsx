@@ -113,7 +113,7 @@ const Transactions: React.FC = () => {
             />
           </div>
           <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-            {['all', 'income', 'expense', 'transfer', 'refund'].map((type) => (
+            {['all', 'income', 'expense', 'vendor_payment', 'subscription', 'transfer', 'refund'].map((type) => (
               <button 
                 key={type}
                 onClick={() => setFilterType(type)}
@@ -194,8 +194,12 @@ const Transactions: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-center whitespace-nowrap">
                         <StatusBadge 
-                          status={tx.type === 'income' ? 'success' : tx.type === 'expense' ? 'medium' : 'low'} 
-                          label={tx.type.toUpperCase()} 
+                          status={
+                            tx.type === 'income' ? 'success' : 
+                            ['expense', 'vendor_payment', 'subscription'].includes(tx.type) ? 'medium' : 
+                            'low'
+                          } 
+                          label={tx.type.toUpperCase().replace('_', ' ')} 
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
