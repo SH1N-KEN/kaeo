@@ -160,8 +160,8 @@ const Files: React.FC = () => {
     if (!data) return;
 
     if (autoMapping.status === 'ready_to_import') {
-      // Phase 4 placeholder
-      alert('Intelligent Auto-Mapping Complete!\n\nStatus: Ready to Import\nConfidence: ' + (autoMapping.confidence * 100) + '%\n\nTransaction ingestion starts in Phase 4.');
+      // Phase 4 placeholder: We've already shown the status in the UI.
+      // Just reset the local state and let the user see the file in History.
       setPendingFile(null);
       setParseResult(null);
       setAutoMapping(null);
