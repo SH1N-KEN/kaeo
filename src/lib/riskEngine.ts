@@ -16,6 +16,21 @@ const normalizeForDuplicateCheck = (desc: string): string => {
     .trim();
 };
 
+const isGenericVendorPaymentDescription = (desc: string): boolean => {
+  const genericTerms = [
+    'vendor payment',
+    'payment to vendor',
+    'supplier payment',
+    'invoice payment',
+    'vendor payout',
+    'service payment',
+    'payout to',
+    'paid to'
+  ];
+  const normalized = desc.toLowerCase().trim();
+  return genericTerms.some(term => normalized.includes(term));
+};
+
 export const analyzeRisksForClient = async (orgId: string, clientId: string) => {
   // 1. Fetch all transactions
   const { data: txs, error } = await supabase
@@ -29,7 +44,7 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
 
   const risks: any[] = [];
 
-  // --- 1. Duplicate Detection (Advanced) ---
+  // --- 1. Duplicate Detection (Multi-Tier) ---
   const processedIndices = new Set<number>();
 
   for (let i = 0; i < txs.length; i++) {
@@ -39,8 +54,10 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
     const currentNorm = normalizeForDuplicateCheck(current.description);
     const currentAmt = Math.abs(current.amount);
     const currentDate = new Date(current.transaction_date);
+    const currentIsGeneric = isGenericVendorPaymentDescription(current.description);
     
     const group = [current];
+    let tier: 'high' | 'medium' = 'high';
     
     for (let j = i + 1; j < txs.length; j++) {
       if (processedIndices.has(j)) continue;
@@ -49,14 +66,13 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
       const otherNorm = normalizeForDuplicateCheck(other.description);
       const otherAmt = Math.abs(other.amount);
       const otherDate = new Date(other.transaction_date);
+      const otherIsGeneric = isGenericVendorPaymentDescription(other.description);
       
-      // Match criteria:
-      // A. Explicit "duplicate" in description + same amount
+      // Tier 1 — Strong duplicate, high severity
       const isExplicitDuplicate = (current.description.toLowerCase().includes('duplicate') || 
                                   other.description.toLowerCase().includes('duplicate')) &&
                                   Math.abs(currentAmt - otherAmt) < 0.01;
 
-      // B. Same normalized description + same amount + within 7 days
       const daysDiff = Math.abs(currentDate.getTime() - otherDate.getTime()) / (1000 * 60 * 60 * 24);
       const isSimilar = currentNorm === otherNorm && 
                         Math.abs(currentAmt - otherAmt) < 0.01 && 
@@ -65,26 +81,48 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
       if (isExplicitDuplicate || isSimilar) {
         group.push(other);
         processedIndices.add(j);
+        tier = 'high';
+        continue;
+      }
+
+      // Tier 2 — Possible duplicate, medium severity
+      const isSameDate = currentDate.getTime() === otherDate.getTime();
+      const isSameAmount = Math.abs(currentAmt - otherAmt) < 0.01;
+      const bothExpenseLike = ['expense', 'vendor_payment', 'subscription'].includes(current.type) && 
+                              ['expense', 'vendor_payment', 'subscription'].includes(other.type);
+      
+      if (isSameDate && isSameAmount && bothExpenseLike && (currentIsGeneric || otherIsGeneric)) {
+        group.push(other);
+        processedIndices.add(j);
+        tier = 'medium';
       }
     }
 
     if (group.length > 1) {
+      const isPossible = tier === 'medium';
+      
       risks.push({
         organization_id: orgId,
         client_id: clientId,
-        title: `Duplicate Payment Suspected: ${group[0].description.replace(/ duplicate/gi, '')}`,
-        severity: 'high',
+        title: isPossible 
+          ? `Possible duplicate vendor payment` 
+          : `Duplicate Payment Suspected: ${group[0].description.replace(/ duplicate/gi, '')}`,
+        severity: tier,
         risk_type: 'duplicate_payment_suspected',
         amount_at_risk: currentAmt,
         evidence: {
           transaction_ids: group.map(d => d.id),
           descriptions: group.map(d => d.description),
           dates: group.map(d => d.transaction_date),
-          reason: group.some(d => d.description.toLowerCase().includes('duplicate')) 
-            ? 'Explicit "duplicate" marker found in transaction description.'
-            : 'Multiple entries with identical amounts and similar descriptions within a 7-day window.'
+          reason: isPossible 
+            ? 'Multiple generic vendor payments with identical amounts found on the same date.'
+            : group.some(d => d.description.toLowerCase().includes('duplicate')) 
+              ? 'Explicit "duplicate" marker found in transaction description.'
+              : 'Multiple entries with identical amounts and similar descriptions within a 7-day window.'
         },
-        suggested_action: 'Verify if these represent multiple services or a single erroneous billing event.',
+        suggested_action: isPossible
+          ? 'Verify whether these payments were made to distinct vendors or if one is a duplicate entry.'
+          : 'Verify if these represent multiple services or a single erroneous billing event.',
         status: 'open',
         related_transaction_ids: group.map(d => d.id)
       });
