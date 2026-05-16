@@ -264,7 +264,7 @@ const RiskInbox: React.FC = () => {
             className="px-6 py-3 bg-risk text-white rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-risk/20 disabled:opacity-50"
           >
             {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
-            {risks.length > 0 ? 'Run Security Scan' : 'Identify Risks'}
+            Identify Risks
           </button>
         </div>
       </div>
@@ -321,7 +321,7 @@ const RiskInbox: React.FC = () => {
               icon={<ShieldAlert className="w-4 h-4 text-risk" />} 
             />
             <MetricCard 
-              title="Amount at Risk" 
+              title="Review Exposure" 
               value={formatCurrency(stats.amount)} 
               description="Potential leakage/loss"
               icon={<Zap className="w-4 h-4 text-warning" />} 
