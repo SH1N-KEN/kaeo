@@ -9,8 +9,11 @@ export const normalizeVendorName = (description: string): { normalized: string; 
   // 1. Lowercase and basic cleanup
   let name = description.toLowerCase().trim();
 
+  // 1.5 Remove month names and common trailing words
+  name = name.replace(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/gi, '');
+  name = name.replace(/\b(campaign|software subscription|team subscription|subscription|software)\b/gi, '');
+
   // 2. Remove common transaction noise prefixes/suffixes
-  // We remove generic payment labels but NOT "service" or "software" yet as they are core to names like "Acme Services"
   name = name.replace(/vendor payment|payment to|paid to|payout|monthly|annual|weekly|daily/gi, '');
   
   // 3. Remove "Invoice", "Reference", "UTR" and following numeric/text noise
@@ -38,7 +41,8 @@ export const normalizeVendorName = (description: string): { normalized: string; 
   const pruned = words.length > 0 ? words.slice(0, 3).join(' ') : description.split(' ')[0];
 
   // 8. Display name: Title Case
-  const display = pruned.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  let display = pruned.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  display = display.replace(/\bAws\b/g, 'AWS');
 
   return { normalized: pruned.toLowerCase(), display };
 };
@@ -105,8 +109,10 @@ export const analyzeVendorsForClient = async (orgId: string, clientId: string) =
     const monthsDiff = Math.max(1, (last.getFullYear() - first.getFullYear()) * 12 + (last.getMonth() - first.getMonth()) + 1);
     const uniqueMonthCount = v.unique_months.size;
     
+    // Category
+    const category = inferCategory(v.normalized_name);
+    
     // Recurrence Pattern
-    // A vendor is monthly ONLY if it appears in multiple months and has consistent frequency
     let recurrence_pattern = 'irregular';
     const isSubscriptionKeyword = v.normalized_name.includes('subscription') || 
                                   v.normalized_name.includes('monthly') || 
@@ -126,6 +132,13 @@ export const analyzeVendorsForClient = async (orgId: string, clientId: string) =
       recurrence_pattern = 'monthly';
     }
 
+    // Do not mark as recurring just because it appears monthly if category is:
+    // Payroll, Vendor / Services, Marketing campaign, Office, Generic vendor payment
+    const excludeRecurring = ['Payroll', 'Vendor / Services', 'Marketing', 'Office'].includes(category);
+    if (excludeRecurring && recurrence_pattern !== 'irregular') {
+      recurrence_pattern = 'irregular';
+    }
+
     // Calculate monthly average: use median transaction amount for recurring subscriptions
     let monthly_average = 0;
     if (recurrence_pattern === 'monthly') {
@@ -133,9 +146,6 @@ export const analyzeVendorsForClient = async (orgId: string, clientId: string) =
       const sortedAmts = [...amounts].sort((a, b) => a - b);
       monthly_average = sortedAmts[Math.floor(sortedAmts.length / 2)] || 0;
     }
-
-    // Category
-    const category = inferCategory(v.normalized_name);
 
     // Recommendation & Reason (CFO-style)
     let recommendation = 'keep';

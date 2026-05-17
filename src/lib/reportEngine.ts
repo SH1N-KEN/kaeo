@@ -1,5 +1,5 @@
 // No date-fns needed
-import { inferCategory } from './vendorEngine';
+import { inferCategory, normalizeVendorName } from './vendorEngine';
 
 export interface ReportInput {
   organization: any;
@@ -96,18 +96,12 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
   for (const t of transactions) {
     if (['expense', 'vendor_payment', 'subscription'].includes(t.type)) {
       const amt = Math.abs(Number(t.amount) || 0);
-      let tempName = t.description.replace(/vendor payment|payment to|paid to|google ads|meta ads|facebook ads/gi, '').trim().split(' ').filter((w: string) => w.length > 2 && !/\d/.test(w))[0] || t.description.split(' ')[0];
-      if (t.description.includes('Acme Services')) tempName = 'Acme Services';
-      else if (t.description.includes('Zenith Corp')) tempName = 'Zenith Corp';
-      else if (t.description.includes('Meta Ads')) tempName = 'Meta Ads';
-      else if (t.description.includes('Slack')) tempName = 'Slack';
-      else if (t.description.includes('Google Ads India')) tempName = 'Google Ads India';
-      else if (t.description.includes('Office Supplies')) tempName = 'Office Supplies';
+      const { display: tempName, normalized: normName } = normalizeVendorName(t.description);
 
       const dbVendor = vendors.find(dv => 
         (t.vendor_id && dv.id === t.vendor_id) || 
-        dv.normalized_name.toLowerCase() === tempName.toLowerCase() ||
-        t.description.toLowerCase().includes(dv.normalized_name.toLowerCase())
+        dv.normalized_name === normName ||
+        t.description.toLowerCase().includes(dv.normalized_name)
       );
 
       let vendorName = '';
@@ -116,16 +110,20 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
       let reviewStatus = 'ok';
 
       if (dbVendor) {
-        vendorName = dbVendor.name || dbVendor.normalized_name;
+        vendorName = dbVendor.name || tempName;
         category = dbVendor.category;
         isRecurring = dbVendor.recurrence_pattern === 'monthly' || dbVendor.is_recurring;
         reviewStatus = dbVendor.recommendation === 'review' ? 'needs_review' : 'ok';
       } else {
         vendorName = tempName;
-      }
-
-      if (!category || category === 'Uncategorized') {
         category = inferCategory(vendorName);
+        
+        const excludeRecurring = ['Payroll', 'Vendor / Services', 'Marketing', 'Office'].includes(category);
+        if (!excludeRecurring) {
+          isRecurring = ['slack', 'zoho books', 'canva'].includes(normName) || 
+                        t.description.toLowerCase().includes('subscription') || 
+                        t.description.toLowerCase().includes('software');
+        }
       }
 
       if (!vendorMap.has(vendorName)) {
@@ -133,16 +131,16 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
           normalized_name: vendorName,
           category: category,
           totalSpend: 0,
-          is_recurring: isRecurring || ['slack', 'zoho', 'canva'].includes(vendorName.toLowerCase()) || t.description.toLowerCase().includes('subscription'),
+          is_recurring: isRecurring,
           review_status: reviewStatus,
-          id: t.vendor_id,
+          id: t.vendor_id || dbVendor?.id,
           monthly_average: dbVendor ? dbVendor.monthly_average : 0
         });
       }
 
       const existing = vendorMap.get(vendorName);
       existing.totalSpend += amt;
-      existing.is_recurring = existing.is_recurring || isRecurring || ['slack', 'zoho', 'canva'].includes(vendorName.toLowerCase()) || t.description.toLowerCase().includes('subscription');
+      existing.is_recurring = existing.is_recurring || isRecurring;
       if (reviewStatus !== 'ok') existing.review_status = reviewStatus;
     }
   }
@@ -151,7 +149,7 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
   const sortedVendors = vendorSpend.filter(v => v.totalSpend > 0).sort((a, b) => b.totalSpend - a.totalSpend);
   const topVendors = sortedVendors.length <= 6 ? sortedVendors : sortedVendors.slice(0, 5);
   
-  const recurringVendors = vendorSpend.filter(v => v.is_recurring || ['slack', 'zoho', 'canva'].includes(v.normalized_name.toLowerCase()));
+  const recurringVendors = vendorSpend.filter(v => v.is_recurring);
   const flaggedVendors = vendorSpend.filter(v => v.review_status === 'needs_review');
   
   const totalVendorSpend = vendorSpend.reduce((sum, v) => sum + v.totalSpend, 0);
@@ -162,10 +160,12 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
     }
     const vendorTxs = transactions.filter(t => 
       (t.vendor_id && t.vendor_id === v.id) || 
-      t.description.toLowerCase().includes(v.normalized_name.toLowerCase())
+      normalizeVendorName(t.description).normalized === v.normalized_name
     );
-    const maxSpend = Math.max(...vendorTxs.map(t => Math.abs(Number(t.amount) || 0)), 0);
-    return sum + maxSpend;
+    const amounts = vendorTxs.map(t => Math.abs(Number(t.amount) || 0));
+    const sortedAmts = [...amounts].sort((a, b) => a - b);
+    const medianSpend = sortedAmts[Math.floor(sortedAmts.length / 2)] || 0;
+    return sum + medianSpend;
   }, 0);
 
   return {
