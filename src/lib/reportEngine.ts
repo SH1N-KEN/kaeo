@@ -1,4 +1,5 @@
 // No date-fns needed
+import { inferCategory } from './vendorEngine';
 
 export interface ReportInput {
   organization: any;
@@ -91,11 +92,13 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
       let vendorName = '';
       let isRecurring = false;
       let reviewStatus = 'ok';
+      let category = '';
 
       if (t.vendor_id) {
         const v = vendors.find(v => v.id === t.vendor_id);
         if (v) {
           vendorName = v.normalized_name;
+          category = v.category;
           isRecurring = v.is_recurring;
           reviewStatus = v.review_status;
         }
@@ -112,10 +115,14 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
       else if (t.description.includes('Google Ads India')) vendorName = 'Google Ads India';
       else if (t.description.includes('Office Supplies')) vendorName = 'Office Supplies';
 
+      if (!category || category === 'Uncategorized') {
+        category = inferCategory(vendorName);
+      }
+
       if (!vendorMap.has(vendorName)) {
         vendorMap.set(vendorName, {
           normalized_name: vendorName,
-          category: 'Uncategorized',
+          category: category,
           totalSpend: 0,
           is_recurring: isRecurring,
           review_status: reviewStatus,
@@ -132,7 +139,7 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
 
   const vendorSpend = Array.from(vendorMap.values());
   const sortedVendors = vendorSpend.filter(v => v.totalSpend > 0).sort((a, b) => b.totalSpend - a.totalSpend);
-  const topVendors = sortedVendors.slice(0, 5);
+  const topVendors = sortedVendors.length <= 6 ? sortedVendors : sortedVendors.slice(0, 5);
   
   const recurringVendors = vendorSpend.filter(v => v.is_recurring || v.normalized_name === 'Slack');
   const flaggedVendors = vendorSpend.filter(v => v.review_status === 'needs_review');

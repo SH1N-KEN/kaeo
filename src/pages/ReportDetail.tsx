@@ -170,7 +170,9 @@ export default function ReportDetail() {
             <h2 className="text-2xl font-bold border-b pb-2 mb-6">Vendor Analysis</h2>
             
             <div className="flex justify-between items-end mb-4">
-              <h3 className="text-lg font-semibold">Top Expense Sources</h3>
+              <h3 className="text-lg font-semibold">
+                {sections.vendorSummary.topVendors.length === 5 ? 'Top 5 Expense Sources' : 'Top Expense Sources'}
+              </h3>
               {summary.recurringCommitment > 0 && (
                 <div className="text-sm font-medium bg-muted px-3 py-1 rounded-full">
                   Estimated Recurring Commitment: <span className="text-foreground">{formatReportCurrency(summary.recurringCommitment)} /mo</span>
