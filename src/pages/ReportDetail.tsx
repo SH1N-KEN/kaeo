@@ -241,7 +241,7 @@ export default function ReportDetail() {
                           </span>
                         </td>
                         <td className="px-4 py-3 capitalize text-muted-foreground">{risk.status.replace('_', ' ')}</td>
-                        <td className="px-4 py-3 text-right">{risk.amount_involved ? formatReportCurrency(risk.amount_involved) : '-'}</td>
+                        <td className="px-4 py-3 text-right">{risk.amount_at_risk ? formatReportCurrency(risk.amount_at_risk) : '-'}</td>
                       </tr>
                     ))}
                   </tbody>
