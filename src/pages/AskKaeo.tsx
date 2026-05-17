@@ -383,11 +383,8 @@ const AskKaeo = () => {
             <Send className="h-4 w-4" />
           </button>
         </form>
-        <div className="text-center mt-2 flex flex-col gap-1 items-center justify-center">
-          <p className="text-[10px] text-muted-foreground">Kaeo answers are generated from your imported data. Local analytics are fully deterministic; AI reasons safely on context.</p>
-          <div className="text-[9px] text-muted-foreground/75 bg-muted/30 px-2 py-0.5 rounded border border-border/30">
-            Local Setup: <code className="bg-muted px-1 py-0.2 rounded select-all font-mono">supabase functions serve ask-kaeo-ai --env-file ./supabase/.env.local</code>
-          </div>
+        <div className="text-center mt-2">
+          <p className="text-[10px] text-muted-foreground">Kaeo uses your uploaded business data to keep answers grounded.</p>
         </div>
       </div>
     </div>

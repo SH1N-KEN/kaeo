@@ -51,7 +51,8 @@ export async function categorizeQuestion(query: string): Promise<AskKaeoCategory
   // 1. Casual check-in mappings
   if (
     q === 'yo' || q === 'yoo' || q === 'wsg' || q === 'bro' || q === 'hmm' || 
-    q === 'idk' || q === 'help' || q === 'lol' || q === 'hey' || q === 'okay' || q === 'damn'
+    q === 'idk' || q === 'help' || q === 'lol' || q === 'hey' || q === 'okay' || q === 'damn' ||
+    q === 'bruh' || q === 'man' || q === 'fam' || q === 'gosh'
   ) {
     return 'casual_check_in';
   }
@@ -510,12 +511,9 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     case 'unknown_general':
     case 'tax_or_legal_sensitive':
     case 'unsupported_needs_ai_or_web':
+    case 'casual_check_in':
     default: {
-      responseText = `This specific query requires external market research, predictive modeling, or deeper contextual reasoning.\n\n` +
-      `Breakdown:\n- Requested capability: External knowledge / AI reasoning\n\n` +
-      `What this means:\nI am currently operating using verified data only. I can perfectly analyze your imported transactions, vendors, and risks, but I cannot invent market data, search the web, or give tax advice.\n\n` +
-      `Recommended next step:\nTry asking me about your internal data: "What is my net cash?", "Who is my top vendor?", or "What should I review first?".\n\n` +
-      `Source:\nAnswered from verified Kaeo data.`;
+      responseText = `I'm here. AI is unavailable right now, but I can still answer from verified Kaeo data. Ask me about cash, vendors, risks, or reports.`;
       break;
     }
   }
