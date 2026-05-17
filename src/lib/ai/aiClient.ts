@@ -11,6 +11,10 @@ export interface AIStructuredContext {
     refunds: number;
     expenses: number;
     netCash: number;
+    net_cash_movement?: number;
+    transaction_count?: number;
+    period_start?: string | null;
+    period_end?: string | null;
   };
   top_vendors: Array<{ name: string; spend: number; category?: string }>;
   recurring_spend: {
@@ -27,6 +31,7 @@ export interface AIStructuredContext {
     vendors: number;
     risks: number;
   };
+  approved_extra_numbers?: number[];
 }
 
 export const askKaeoAi = async (context: AIStructuredContext): Promise<AskKaeoAIResponse | null> => {

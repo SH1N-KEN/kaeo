@@ -81,6 +81,19 @@ const checkAIContradictions = (aiText: string, context: AIStructuredContext): bo
   ]);
   
   context.top_vendors.forEach(v => approvedNumbers.add(Math.round(v.spend)));
+
+  if (context.approved_extra_numbers) {
+    context.approved_extra_numbers.forEach(n => approvedNumbers.add(Math.round(n)));
+  }
+
+  // Also approve any numbers mentioned in the user question
+  const numbersInQuery = context.question.replace(/202[0-9]/g, '').match(/\d[\d,.]*/g) || [];
+  numbersInQuery.forEach(numStr => {
+    const cleanDigits = numStr.replace(/[^\d]/g, '');
+    if (cleanDigits.length >= 3) {
+      approvedNumbers.add(parseInt(cleanDigits, 10));
+    }
+  });
   
   const approvedStrings = new Set<string>();
   approvedNumbers.forEach(n => {
@@ -136,7 +149,6 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   const netCash = income + refunds - expenses;
 
   const vendorSummary = summarizeVendors(vendors, transactions);
-  const txCount = transactions.length;
 
   // FETCH ADDITIONAL SECURE SERVER CONTEXT FOR AI
   const { data: clientData } = await supabase
@@ -162,6 +174,19 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     .eq('client_id', clientId);
   const relevantNotes = (notesData || []).map(n => n.note).filter(Boolean);
 
+  const txCount = transactions.length;
+  const transaction_count = txCount;
+  const period_start = transactions.length > 0 ? transactions[transactions.length - 1].transaction_date : null;
+  const period_end = transactions.length > 0 ? transactions[0].transaction_date : null;
+
+  // Extract all existing vendor monthly averages, spends, transaction amounts, and risk amounts to prevent false positives
+  const approved_extra_numbers = [
+    ...vendors.map(v => Math.round(Number(v.monthly_average || 0))),
+    ...vendors.map(v => Math.round(Number(v.total_spend || v.spend || 0))),
+    ...transactions.map(t => Math.round(Math.abs(Number(t.amount || 0)))),
+    ...risks.map(r => Math.round(Number(r.amount_at_risk || 0)))
+  ].filter(n => n > 0);
+
   // BUILD STRUCTURED CONTEXT FOR AI
   const structuredContext: AIStructuredContext = {
     question: query,
@@ -171,11 +196,16 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       income,
       refunds,
       expenses,
-      netCash
+      netCash,
+      net_cash_movement: netCash,
+      transaction_count,
+      period_start,
+      period_end
     },
     top_vendors: vendorSummary.topVendors.slice(0, 5).map(v => ({
       name: v.normalized_name,
-      spend: v.totalSpend
+      spend: v.totalSpend,
+      category: v.category
     })),
     recurring_spend: {
       commitment: vendorSummary.recurringCommitment,
@@ -197,7 +227,8 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       transactions: transactions.length,
       vendors: vendors.length,
       risks: risks.length
-    }
+    },
+    approved_extra_numbers
   };
 
   // TRY CALLING THE AI CLIENT
