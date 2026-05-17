@@ -159,8 +159,6 @@ h1, h2, h3, h4, h5, h6 {
 
   /* Page breaks */
   .print-section {
-    page-break-inside: avoid;
-    break-inside: avoid;
     margin-bottom: 2rem !important;
   }
   

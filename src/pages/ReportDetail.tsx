@@ -75,7 +75,7 @@ export default function ReportDetail() {
   // Render logic for print layout vs screen layout is mostly CSS, but we can structure the HTML properly.
 
   return (
-    <div className="pb-24">
+    <div className="pb-24 print:pb-0 print:block">
       {/* Screen only top bar */}
       <div className="print:hidden max-w-5xl mx-auto mb-6 flex justify-between items-center">
         <button
@@ -132,10 +132,10 @@ export default function ReportDetail() {
           </div>
         </div>
 
-        <div className="p-8 md:p-12 space-y-12 print-content">
+        <div className="p-8 md:p-12 space-y-12 print-content print:block print:space-y-0">
           
           {/* EXECUTIVE SUMMARY */}
-          <section className="print-section">
+          <section className="print-section print:break-inside-avoid">
             <h2 className="text-2xl font-bold border-b pb-2 mb-4">Executive Summary</h2>
             <p className="text-lg leading-relaxed text-foreground/90">
               {sections.deterministicText}
@@ -143,7 +143,7 @@ export default function ReportDetail() {
           </section>
 
           {/* FINANCIAL SUMMARY */}
-          <section className="print-section">
+          <section className="print-section print:break-inside-avoid">
             <h2 className="text-2xl font-bold border-b pb-2 mb-6">Financial Summary</h2>
             <div className={`grid grid-cols-1 md:${sections.financialSummary.refunds > 0 ? 'grid-cols-4' : 'grid-cols-3'} gap-6`}>
               <div className="bg-muted/30 p-6 rounded-lg border">
