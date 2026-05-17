@@ -221,7 +221,7 @@ const AskKaeo = () => {
               ) : (
                 <span className="inline-flex items-center gap-1 text-[10px] text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full font-medium border border-blue-500/20">
                   <Shield className="w-2.5 h-2.5" />
-                  Deterministic Mode
+                  Verified Kaeo Data
                 </span>
               )}
             </p>
@@ -266,7 +266,7 @@ const AskKaeo = () => {
                       </span>
                       {fallbackReason && (
                         <span className="text-[9px] text-yellow-500 bg-yellow-500/5 px-2 py-0.5 rounded-full border border-yellow-500/20 font-medium">
-                          AI unavailable — using verified Kaeo data
+                          Verified Kaeo Data
                         </span>
                       )}
                     </div>
@@ -327,7 +327,7 @@ const AskKaeo = () => {
                   <div className="px-2 mt-1">
                     <p className="text-[10px] text-muted-foreground/80 italic flex items-center gap-1">
                       <Shield className="w-3 h-3 text-muted-foreground/75 shrink-0" />
-                      AI unavailable — using verified Kaeo data
+                      AI was unavailable, so Kaeo answered directly from verified internal data.
                     </p>
                   </div>
                 )}
