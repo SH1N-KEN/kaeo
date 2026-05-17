@@ -12,7 +12,9 @@ export type AskKaeoCategory =
   | 'service_alternatives' 
   | 'business_advice' 
   | 'operational_next_steps' 
-  | 'casual_check_in' 
+  | 'casual_check_in'
+  | 'tax_or_legal_sensitive'
+  | 'unknown_general'
   | 'unsupported_needs_ai_or_web';
 
 interface AskKaeoResponse {
@@ -32,34 +34,53 @@ const formatReportCurrency = (val: number) => {
 export async function categorizeQuestion(query: string): Promise<AskKaeoCategory> {
   const q = query.toLowerCase().trim();
   
+  // 0. Strict external live web needs
+  if (
+    q.includes('market price') || q.includes('exchange rate') || q.includes('latest news') || 
+    q.includes('competitor') || q.includes('real time') || q.includes('real-time') || 
+    q.includes('product feature updates') || q.includes('product rankings')
+  ) {
+    return 'unsupported_needs_ai_or_web';
+  }
+
+  // 0.5 Tax or Legal
+  if (q.includes('tax') || q.includes('legal') || q.includes('law') || q.includes('evasion')) {
+    return 'tax_or_legal_sensitive';
+  }
+
   // 1. Casual check-in mappings
   if (
     q === 'yo' || q === 'yoo' || q === 'wsg' || q === 'bro' || q === 'hmm' || 
-    q === 'idk' || q === 'help' || q === 'lol' || q === 'hey' || q === 'okay' || q === 'damn' ||
-    q.includes('what now') || q.includes('are we cooked')
+    q === 'idk' || q === 'help' || q === 'lol' || q === 'hey' || q === 'okay' || q === 'damn'
   ) {
     return 'casual_check_in';
   }
 
-  // 2. Exact strategic overrides
-  if (q.includes('worry') || q.includes('what worries you') || q.includes('what do you think') || q.includes('is this bad')) {
+  // 2. Exact strategic overrides for business advice
+  if (
+    q.includes('worry') || q.includes('what worries you') || q.includes('what do you think') || 
+    q.includes('is this bad') || q.includes('how bad are our numbers') || q.includes('are our numbers bad') || 
+    q.includes('is this good or bad') || q.includes('is the business healthy') || 
+    q.includes('give me a read') || q.includes('how bad is this') || q.includes('should i worry') || 
+    q.includes('give me the truth') || q.includes('honest') || q.includes('how are we doing') || 
+    q.includes('what’s the situation') || q.includes('how do things look') || q.includes('are we cooked') || 
+    q.includes('are we okay') || q.includes('advice') || q.includes('should i') || q.includes('worth it') || 
+    q.includes('negotiate')
+  ) {
     return 'business_advice';
   }
 
+  // 3. Operational next steps
   if (
     q.includes('what should i do') || q.includes('what’s the move') || q.includes('whats the move') || 
-    q.includes('are we okay') || q.includes('what should i review first') || q.includes('review first') || 
-    q.includes('priority') || q.includes('next steps')
+    q.includes('what should i review first') || q.includes('review first') || 
+    q.includes('priority') || q.includes('next steps') || q.includes('what now')
   ) {
     return 'operational_next_steps';
   }
   
   if (q.includes('alternative') || q.includes('replace') || q.includes('better than') || q.includes('cheaper than')) {
     return 'service_alternatives';
-  }
-  
-  if (q.includes('advice') || q.includes('should i') || q.includes('worth it') || q.includes('negotiate')) {
-    return 'business_advice';
   }
   
   if (q.includes('risk') || q.includes('duplicate') || q.includes('unusual')) {
@@ -82,7 +103,7 @@ export async function categorizeQuestion(query: string): Promise<AskKaeoCategory
     return 'finance_summary';
   }
   
-  return 'unsupported_needs_ai_or_web';
+  return 'unknown_general';
 }
 
 const checkAIContradictions = (aiText: string, context: AIStructuredContext): boolean => {
@@ -480,19 +501,21 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       responseText = `Based on your internal financial profile, the primary directive is to resolve operational blind spots and secure your cash flow.\n\n` +
       `Breakdown:\n- Financial Health: ${netCash >= 0 ? 'Positive' : 'Negative'} cash flow (${formatReportCurrency(netCash)})\n- Open Risks: ${risks.length} pending items\n- Spending Concentration: Top vendor is ${vendorSummary.topVendors[0]?.normalized_name || 'N/A'}\n- Recurring Commitments: ${formatReportCurrency(vendorSummary.recurringCommitment)}/mo\n\n` +
       `What this means:\nYour business data has anomalies. CFOs rely on high-fidelity data. Until the risk inbox is cleared and unknown transactions are categorized, your executive reporting contains a margin of error.\n\n` +
-      `Recommended next step:\nClear your Risk Inbox and categorize unknown transactions. Once Phase 8 introduces real AI, I will be able to cross-reference your spend with live market benchmarks for deeper operational advice.\n\n` +
-      `Source:\nBased strictly on ${txCount} imported transactions and your local Kaeo risk profile.`;
+      `Recommended next step:\nClear your Risk Inbox and categorize unknown transactions.\n\n` +
+      `Source:\nBased strictly on ${txCount} imported transactions and your verified Kaeo risk profile.`;
       sourceJson = { netCash, risks: risks.length };
       break;
     }
     
+    case 'unknown_general':
+    case 'tax_or_legal_sensitive':
     case 'unsupported_needs_ai_or_web':
     default: {
       responseText = `This specific query requires external market research, predictive modeling, or deeper contextual reasoning.\n\n` +
-      `Breakdown:\n- Requested capability: External knowledge / AI reasoning\n- Current state: Phase 7 Deterministic Engine\n\n` +
-      `What this means:\nI am currently operating in a secure, local-data-only mode. I can perfectly analyze your imported transactions, vendors, and risks, but I cannot yet invent market data or search the web.\n\n` +
-      `Recommended next step:\nTry asking me about your internal data: "What is my net cash?", "Who is my top vendor?", or "What should I review first?". Live market/pricing research is not enabled yet. I can evaluate this service using your internal Kaeo data and give comparison criteria.\n\n` +
-      `Source:\nKaeo Phase 7 Engine.`;
+      `Breakdown:\n- Requested capability: External knowledge / AI reasoning\n\n` +
+      `What this means:\nI am currently operating using verified data only. I can perfectly analyze your imported transactions, vendors, and risks, but I cannot invent market data, search the web, or give tax advice.\n\n` +
+      `Recommended next step:\nTry asking me about your internal data: "What is my net cash?", "Who is my top vendor?", or "What should I review first?".\n\n` +
+      `Source:\nAnswered from verified Kaeo data.`;
       break;
     }
   }

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
 import { askKaeo } from '../lib/askKaeoEngine';
-import { Send, AlertCircle, Bot, User, Sparkles, Shield, Layers, CheckCircle } from 'lucide-react';
+import { Send, AlertCircle, Bot, User, Sparkles, Shield, Layers } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -20,7 +20,6 @@ const AskKaeo = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [dbError, setDbError] = useState<boolean>(false);
-  const [latestMode, setLatestMode] = useState<'ai_assisted' | 'ai_assisted_locked_numbers' | 'deterministic' | null>(null);
   const [showMetadata, setShowMetadata] = useState(false);
   
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
@@ -70,14 +69,7 @@ const AskKaeo = () => {
           }
         });
         
-        // Determine the latest message mode
-        const assistantMsgs = (msgData || []).filter(m => m.role === 'assistant');
-        if (assistantMsgs.length > 0) {
-          const lastMsg = assistantMsgs[assistantMsgs.length - 1];
-          if (lastMsg.source_json?.mode) {
-            setLatestMode(lastMsg.source_json.mode);
-          }
-        }
+        // Removed determining latest message mode
         setDbError(false);
       } else {
         // 2. Create a new thread
@@ -98,12 +90,11 @@ const AskKaeo = () => {
             {
               id: 'init',
               role: 'assistant',
-              content: 'Hello. I am Kaeo, your CEO/CFO strategic business advisor. I can analyze your financial summaries, top vendor spend, recurring commitments, and risk profile based on your deterministic ledger data. What strategic questions can I answer for you today?',
+              content: 'Hello. I am Kaeo, your AI business advisor. I can analyze your financial summaries, top vendor spend, recurring commitments, and risk profile based on your verified data. What strategic questions can I answer for you today?',
               created_at: new Date().toISOString(),
-              source_json: { mode: 'deterministic' }
+              source_json: { mode: 'ai_assisted' }
             }
           ]);
-          setLatestMode('deterministic');
           setDbError(false);
         }
       }
@@ -114,12 +105,11 @@ const AskKaeo = () => {
         {
           id: 'init-mem',
           role: 'assistant',
-          content: 'Hello. I am Kaeo, your CEO/CFO strategic business advisor. I can analyze your financial summaries, top vendor spend, recurring commitments, and risk profile based on your deterministic ledger data. What strategic questions can I answer for you today?',
+          content: 'Hello. I am Kaeo, your AI business advisor. I can analyze your financial summaries, top vendor spend, recurring commitments, and risk profile based on your verified data. What strategic questions can I answer for you today?',
           created_at: new Date().toISOString(),
-          source_json: { mode: 'deterministic' }
+          source_json: { mode: 'ai_assisted' }
         }
       ]);
-      setLatestMode('deterministic');
     }
   };
 
@@ -166,9 +156,7 @@ const AskKaeo = () => {
       };
 
       setMessages(prev => [...prev, asstMsg]);
-      if (kaeoReply.source_json?.mode) {
-        setLatestMode(kaeoReply.source_json.mode);
-      }
+      // Mode setting removed
       if (kaeoReply.source_json?.fallback_reason) {
         console.warn(`[Ask Kaeo Fallback] Raw Reason: ${kaeoReply.source_json.fallback_reason}`);
       }
@@ -195,7 +183,6 @@ const AskKaeo = () => {
         created_at: new Date().toISOString(),
         source_json: { mode: 'deterministic' }
       }]);
-      setLatestMode('deterministic');
     } finally {
       setIsTyping(false);
     }
@@ -213,18 +200,6 @@ const AskKaeo = () => {
             <h2 className="font-semibold tracking-tight">Ask Kaeo</h2>
             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
               CFO Advisor
-              <span className="w-1.5 h-1.5 rounded-full bg-border"></span>
-              {(latestMode === 'ai_assisted' || latestMode === 'ai_assisted_locked_numbers') ? (
-                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full font-medium border border-emerald-500/20">
-                  <CheckCircle className="w-2.5 h-2.5" />
-                  AI-Assisted, Data-Grounded
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-[10px] text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full font-medium border border-blue-500/20">
-                  <Shield className="w-2.5 h-2.5" />
-                  Verified Kaeo Data
-                </span>
-              )}
             </p>
           </div>
         </div>
@@ -273,15 +248,20 @@ const AskKaeo = () => {
               
               <div className="flex flex-col gap-1.5 max-w-[85%] md:max-w-[75%]">
                 <div className={`rounded-2xl px-5 py-4 ${isUser ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-card border rounded-tl-sm shadow-sm'}`}>
-                  {msg.intent && (
-                    <div className="text-[10px] font-mono uppercase text-muted-foreground mb-2 flex justify-between items-center">
-                      <span className="flex items-center gap-1">
-                        <span className={`inline-block w-1.5 h-1.5 rounded-full ${isAi ? 'bg-emerald-500' : 'bg-primary'}`}></span>
-                        {msg.intent.replace(/_/g, ' ')}
-                      </span>
+                  {showMetadata && msg.intent && (
+                    <div className="text-[10px] font-mono uppercase text-muted-foreground mb-2 flex flex-wrap gap-2 justify-between items-center bg-muted/30 p-2 rounded border border-border/40">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1 font-semibold">
+                          <span className={`inline-block w-1.5 h-1.5 rounded-full ${isAi ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
+                          Intent: {msg.intent.replace(/_/g, ' ')}
+                        </span>
+                        <span className="flex items-center gap-1 font-semibold">
+                          Mode: {msg.source_json?.mode || 'deterministic'}
+                        </span>
+                      </div>
                       {fallbackReason && (
-                        <span className="text-[9px] text-yellow-500 bg-yellow-500/5 px-2 py-0.5 rounded-full border border-yellow-500/20 font-medium">
-                          Verified Kaeo Data
+                        <span className="text-[9px] text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20 font-medium">
+                          Fallback Reason: {fallbackReason}
                         </span>
                       )}
                     </div>
@@ -289,6 +269,12 @@ const AskKaeo = () => {
                   <div className="text-sm whitespace-pre-wrap leading-relaxed opacity-95">
                     {msg.content}
                   </div>
+                  {!isUser && !isAi && (
+                    <div className="mt-3 pt-3 border-t border-border/50 text-[10px] text-muted-foreground flex items-center gap-1.5">
+                      <Shield className="w-3 h-3 text-blue-500/70" />
+                      Answered from verified Kaeo data.
+                    </div>
+                  )}
                 </div>
 
                 {/* AI METADATA FOOTER (IF AI MODE) */}
