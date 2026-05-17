@@ -107,3 +107,62 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb {
   @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
 }
+
+/* Print Styles for Reports */
+@media print {
+  /* Hide UI elements */
+  nav, header, aside, .sidebar, .topbar, button:not(.print-keep) {
+    display: none !important;
+  }
+  
+  /* Force light theme for print */
+  body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-container {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .print-content {
+    padding: 0 !important;
+  }
+
+  /* Typography for print */
+  * {
+    color: black !important;
+  }
+  
+  /* Retain some background colors for specific highlight elements if needed */
+  .bg-muted\/30, .bg-muted\/50 {
+    background-color: #f8fafc !important; /* light slate */
+  }
+
+  .text-success {
+    color: #16a34a !important; /* darker green for contrast */
+  }
+
+  .text-risk {
+    color: #dc2626 !important; /* red */
+  }
+
+  /* Page breaks */
+  .print-section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 2rem !important;
+  }
+  
+  .print-break-before {
+    page-break-before: always;
+    break-before: page;
+  }
+}
+

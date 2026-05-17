@@ -8,10 +8,11 @@ import { supabase } from './supabase';
  * 1. notes           — linked to risks/vendors
  * 2. risk_events     — linked to transactions/vendors
  * 3. vendors         — linked to transactions
- * 4. transactions    — linked to imports/files
- * 5. import_mappings — linked to imports (via org/client or import_id fallback)
- * 6. imports         — linked to uploaded_files
- * 7. uploaded_files
+ * 4. reports         — linked to organizations/clients
+ * 5. transactions    — linked to imports/files
+ * 6. import_mappings — linked to imports (via org/client or import_id fallback)
+ * 7. imports         — linked to uploaded_files
+ * 8. uploaded_files
  *
  * Every delete is scoped to organization_id + client_id. Never global.
  */
@@ -28,18 +29,21 @@ export const resetClientFinanceData = async (organizationId: string, clientId: s
     // 3. Vendors
     await safeDelete('vendors', organizationId, clientId);
 
-    // 4. Transactions
+    // 4. Reports
+    await safeDelete('reports', organizationId, clientId);
+
+    // 5. Transactions
     await safeDelete('transactions', organizationId, clientId);
 
-    // 5. Import Mappings
+    // 6. Import Mappings
     // Preferred: direct org/client columns (added in migration 0006)
     // Fallback:  delete by import_id belonging to this client
     await deleteMappings(organizationId, clientId);
 
-    // 6. Imports
+    // 7. Imports
     await safeDelete('imports', organizationId, clientId);
 
-    // 7. Uploaded Files
+    // 8. Uploaded Files
     await safeDelete('uploaded_files', organizationId, clientId);
 
     console.log('[Reset] Full client data reset completed successfully');

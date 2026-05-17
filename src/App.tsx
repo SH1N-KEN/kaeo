@@ -11,6 +11,7 @@ import Transactions from './pages/Transactions';
 import Vendors from './pages/Vendors';
 import RiskInbox from './pages/RiskInbox';
 import Reports from './pages/Reports';
+import ReportDetail from './pages/ReportDetail';
 import Clients from './pages/Clients';
 import Settings from './pages/Settings';
 import Billing from './pages/Billing';
@@ -72,6 +73,7 @@ function App() {
               <Route path="vendors" element={<Vendors />} />
               <Route path="risk-inbox" element={<RiskInbox />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="reports/:reportId" element={<ReportDetail />} />
               <Route path="clients" element={<Clients />} />
               <Route path="settings" element={<Settings />} />
               <Route path="billing" element={<Billing />} />
