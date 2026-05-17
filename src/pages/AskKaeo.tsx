@@ -21,6 +21,7 @@ const AskKaeo = () => {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [dbError, setDbError] = useState<boolean>(false);
   const [latestMode, setLatestMode] = useState<'ai_assisted' | 'ai_assisted_locked_numbers' | 'deterministic' | null>(null);
+  const [showMetadata, setShowMetadata] = useState(false);
   
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
@@ -227,12 +228,26 @@ const AskKaeo = () => {
             </p>
           </div>
         </div>
-        {dbError && (
-          <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 px-3 py-1.5 rounded-full border border-warning/20">
-            <AlertCircle className="h-3.5 w-3.5" />
-            <span>Chat not saved. Your answer still works.</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {dbError && (
+            <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 px-3 py-1.5 rounded-full border border-warning/20">
+              <AlertCircle className="h-3.5 w-3.5" />
+              <span>Chat not saved. Your answer still works.</span>
+            </div>
+          )}
+          
+          <button 
+            onClick={() => setShowMetadata(!showMetadata)} 
+            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all duration-200 flex items-center gap-1.5 shadow-sm ${
+              showMetadata 
+                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20' 
+                : 'text-muted-foreground hover:text-foreground border-border hover:bg-muted'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            {showMetadata ? 'Hide Audit Log' : 'Show Audit Log'}
+          </button>
+        </div>
       </div>
 
       {/* CHAT AREA */}
@@ -277,7 +292,7 @@ const AskKaeo = () => {
                 </div>
 
                 {/* AI METADATA FOOTER (IF AI MODE) */}
-                {!isUser && isAi && (
+                {!isUser && isAi && showMetadata && (
                   <div className="px-2 mt-1 space-y-2">
                     {/* Upper Metadata Row */}
                     <div className="flex flex-wrap gap-2 items-center text-[10px] text-muted-foreground">

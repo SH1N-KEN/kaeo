@@ -318,9 +318,9 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     aiResult = await askKaeoAi(structuredContext);
     rawAiResponse = aiResult;
     if (aiResult) {
-      // 1. Sanitize $ to ₹
-      aiResult.answer = aiResult.answer.replace(/\$/g, '₹');
-      aiResult.reasoning_summary = aiResult.reasoning_summary.replace(/\$/g, '₹');
+      // 1. Sanitize $ to ₹ and remove double hyphens
+      aiResult.answer = aiResult.answer.replace(/\$/g, '₹').replace(/--/g, '—');
+      aiResult.reasoning_summary = aiResult.reasoning_summary.replace(/\$/g, '₹').replace(/--/g, '—');
 
       // 2. Auto-inject math formula for net cash if omitted
       if (intent === 'finance_summary') {
