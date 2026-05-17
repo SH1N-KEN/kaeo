@@ -145,12 +145,19 @@ export default function ReportDetail() {
           {/* FINANCIAL SUMMARY */}
           <section className="print-section">
             <h2 className="text-2xl font-bold border-b pb-2 mb-6">Financial Summary</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className={`grid grid-cols-1 md:${sections.financialSummary.refunds > 0 ? 'grid-cols-4' : 'grid-cols-3'} gap-6`}>
               <div className="bg-muted/30 p-6 rounded-lg border">
                 <p className="text-muted-foreground text-sm font-medium mb-1">Total Income</p>
                 <p className="text-3xl font-bold text-success">{formatReportCurrency(sections.financialSummary.income)}</p>
                 <p className="text-xs text-muted-foreground mt-2">{sections.financialSummary.incomeCount} transactions</p>
               </div>
+              {sections.financialSummary.refunds > 0 && (
+                <div className="bg-muted/30 p-6 rounded-lg border">
+                  <p className="text-muted-foreground text-sm font-medium mb-1">Refunds / Recoveries</p>
+                  <p className="text-3xl font-bold text-success">{formatReportCurrency(sections.financialSummary.refunds)}</p>
+                  <p className="text-xs text-muted-foreground mt-2">{sections.financialSummary.refundCount || 0} transactions</p>
+                </div>
+              )}
               <div className="bg-muted/30 p-6 rounded-lg border">
                 <p className="text-muted-foreground text-sm font-medium mb-1">Total Expenses</p>
                 <p className="text-3xl font-bold">{formatReportCurrency(sections.financialSummary.expenses)}</p>

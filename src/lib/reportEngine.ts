@@ -50,9 +50,11 @@ export function calculateReportPeriod(transactions: any[]) {
 export function summarizeTransactions(transactions: any[]) {
   let income = 0;
   let expenses = 0;
+  let refunds = 0;
   let unknownCount = 0;
   let incomeCount = 0;
   let expenseCount = 0;
+  let refundCount = 0;
 
   for (const t of transactions) {
     const amount = Math.abs(Number(t.amount) || 0);
@@ -62,6 +64,9 @@ export function summarizeTransactions(transactions: any[]) {
     } else if (['expense', 'vendor_payment', 'subscription'].includes(t.type)) {
       expenses += amount;
       expenseCount++;
+    } else if (t.type === 'refund') {
+      refunds += amount;
+      refundCount++;
     } else if (t.type === 'unknown') {
       unknownCount++;
     }
@@ -73,10 +78,12 @@ export function summarizeTransactions(transactions: any[]) {
   return {
     income,
     expenses,
-    netCashMovement: income - expenses,
+    refunds,
+    netCashMovement: income + refunds - expenses,
     transactionCount: transactions.length,
     incomeCount,
     expenseCount,
+    refundCount,
     unknownCount,
     missingDates,
     missingDescriptions
@@ -89,31 +96,33 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
   for (const t of transactions) {
     if (['expense', 'vendor_payment', 'subscription'].includes(t.type)) {
       const amt = Math.abs(Number(t.amount) || 0);
+      let tempName = t.description.replace(/vendor payment|payment to|paid to|google ads|meta ads|facebook ads/gi, '').trim().split(' ').filter((w: string) => w.length > 2 && !/\d/.test(w))[0] || t.description.split(' ')[0];
+      if (t.description.includes('Acme Services')) tempName = 'Acme Services';
+      else if (t.description.includes('Zenith Corp')) tempName = 'Zenith Corp';
+      else if (t.description.includes('Meta Ads')) tempName = 'Meta Ads';
+      else if (t.description.includes('Slack')) tempName = 'Slack';
+      else if (t.description.includes('Google Ads India')) tempName = 'Google Ads India';
+      else if (t.description.includes('Office Supplies')) tempName = 'Office Supplies';
+
+      const dbVendor = vendors.find(dv => 
+        (t.vendor_id && dv.id === t.vendor_id) || 
+        dv.normalized_name.toLowerCase() === tempName.toLowerCase() ||
+        t.description.toLowerCase().includes(dv.normalized_name.toLowerCase())
+      );
+
       let vendorName = '';
+      let category = '';
       let isRecurring = false;
       let reviewStatus = 'ok';
-      let category = '';
 
-      if (t.vendor_id) {
-        const v = vendors.find(v => v.id === t.vendor_id);
-        if (v) {
-          vendorName = v.normalized_name;
-          category = v.category;
-          isRecurring = v.is_recurring;
-          reviewStatus = v.review_status;
-        }
+      if (dbVendor) {
+        vendorName = dbVendor.name || dbVendor.normalized_name;
+        category = dbVendor.category;
+        isRecurring = dbVendor.recurrence_pattern === 'monthly' || dbVendor.is_recurring;
+        reviewStatus = dbVendor.recommendation === 'review' ? 'needs_review' : 'ok';
+      } else {
+        vendorName = tempName;
       }
-
-      if (!vendorName) {
-        vendorName = t.description.replace(/vendor payment|payment to|paid to|google ads|meta ads|facebook ads/gi, '').trim().split(' ').filter((w: string) => w.length > 2 && !/\d/.test(w))[0] || t.description.split(' ')[0];
-      }
-
-      if (t.description.includes('Acme Services')) vendorName = 'Acme Services';
-      else if (t.description.includes('Zenith Corp')) vendorName = 'Zenith Corp';
-      else if (t.description.includes('Meta Ads')) vendorName = 'Meta Ads';
-      else if (t.description.includes('Slack')) vendorName = 'Slack';
-      else if (t.description.includes('Google Ads India')) vendorName = 'Google Ads India';
-      else if (t.description.includes('Office Supplies')) vendorName = 'Office Supplies';
 
       if (!category || category === 'Uncategorized') {
         category = inferCategory(vendorName);
@@ -124,15 +133,16 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
           normalized_name: vendorName,
           category: category,
           totalSpend: 0,
-          is_recurring: isRecurring,
+          is_recurring: isRecurring || ['slack', 'zoho', 'canva'].includes(vendorName.toLowerCase()) || t.description.toLowerCase().includes('subscription'),
           review_status: reviewStatus,
-          id: t.vendor_id
+          id: t.vendor_id,
+          monthly_average: dbVendor ? dbVendor.monthly_average : 0
         });
       }
 
       const existing = vendorMap.get(vendorName);
       existing.totalSpend += amt;
-      existing.is_recurring = existing.is_recurring || isRecurring;
+      existing.is_recurring = existing.is_recurring || isRecurring || ['slack', 'zoho', 'canva'].includes(vendorName.toLowerCase()) || t.description.toLowerCase().includes('subscription');
       if (reviewStatus !== 'ok') existing.review_status = reviewStatus;
     }
   }
@@ -141,15 +151,18 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
   const sortedVendors = vendorSpend.filter(v => v.totalSpend > 0).sort((a, b) => b.totalSpend - a.totalSpend);
   const topVendors = sortedVendors.length <= 6 ? sortedVendors : sortedVendors.slice(0, 5);
   
-  const recurringVendors = vendorSpend.filter(v => v.is_recurring || v.normalized_name === 'Slack');
+  const recurringVendors = vendorSpend.filter(v => v.is_recurring || ['slack', 'zoho', 'canva'].includes(v.normalized_name.toLowerCase()));
   const flaggedVendors = vendorSpend.filter(v => v.review_status === 'needs_review');
   
   const totalVendorSpend = vendorSpend.reduce((sum, v) => sum + v.totalSpend, 0);
 
   const recurringCommitment = recurringVendors.reduce((sum, v) => {
+    if (v.monthly_average) {
+      return sum + Number(v.monthly_average);
+    }
     const vendorTxs = transactions.filter(t => 
       (t.vendor_id && t.vendor_id === v.id) || 
-      t.description.includes(v.normalized_name)
+      t.description.toLowerCase().includes(v.normalized_name.toLowerCase())
     );
     const maxSpend = Math.max(...vendorTxs.map(t => Math.abs(Number(t.amount) || 0)), 0);
     return sum + maxSpend;
@@ -220,10 +233,12 @@ export function summarizeSourceFiles(imports: any[], uploadedFiles: any[], trans
 
   // Fallback if no transactions have file_id
   if (uniqueFiles.size === 0) {
+    const activeImportIds = new Set(transactions.map(t => t.import_id).filter(Boolean));
     for (const file of uploadedFiles) {
       if (!uniqueFiles.has(file.file_name)) {
         const fileImports = imports.filter(i => i.file_id === file.id);
-        if (file.status === 'imported' || fileImports.length > 0) {
+        const hasActiveImport = fileImports.some(i => activeImportIds.has(i.id));
+        if (hasActiveImport) {
           uniqueFiles.set(file.file_name, {
             id: file.id,
             fileName: file.file_name,
@@ -248,6 +263,7 @@ export function buildReportSections(data: any) {
     period: `${data.periodStart || 'Unknown'} to ${data.periodEnd || 'Unknown'}`,
     transactionCount: transactionSummary.transactionCount,
     totalIncome: transactionSummary.income,
+    totalRefunds: transactionSummary.refunds || 0,
     totalExpenses: transactionSummary.expenses,
     netCashMovement: transactionSummary.netCashMovement,
     openRisksCount: riskSummary.openRisksCount,
@@ -262,7 +278,11 @@ export function buildReportSections(data: any) {
   if (isExpenseOnly) {
     deterministicText += `This appears to be an expense-only import. Revenue cannot be assessed from the current data. `;
   } else {
-    deterministicText += `The client recorded ${formatReportCurrency(transactionSummary.income)} income and ${formatReportCurrency(transactionSummary.expenses)} expenses, resulting in net cash movement of ${formatReportCurrency(transactionSummary.netCashMovement)}. `;
+    deterministicText += `The client recorded ${formatReportCurrency(transactionSummary.income)} income`;
+    if (transactionSummary.refunds > 0) {
+      deterministicText += ` and ${formatReportCurrency(transactionSummary.refunds)} refunds/recoveries`;
+    }
+    deterministicText += ` and ${formatReportCurrency(transactionSummary.expenses)} expenses, resulting in net cash movement of ${formatReportCurrency(transactionSummary.netCashMovement)}. `;
   }
 
   if (riskSummary.openRisksCount > 0) {

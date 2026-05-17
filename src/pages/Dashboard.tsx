@@ -72,7 +72,7 @@ const Dashboard: React.FC = () => {
           vendors[name] = (vendors[name] || 0) + amt;
         }
         else if (tx.type === 'refund') {
-          acc.expenses -= amt;
+          acc.refunds += amt;
           acc.refundCount++;
         }
         else if (tx.type === 'unknown') {
@@ -87,6 +87,7 @@ const Dashboard: React.FC = () => {
       }, { 
         income: 0, 
         expenses: 0, 
+        refunds: 0, 
         count: 0, 
         incomeCount: 0, 
         expenseCount: 0, 
@@ -103,7 +104,7 @@ const Dashboard: React.FC = () => {
 
       setMetrics({
         ...stats,
-        net: stats.income - stats.expenses,
+        net: stats.income + stats.refunds - stats.expenses,
         topVendor
       });
 
@@ -269,6 +270,12 @@ const Dashboard: React.FC = () => {
                         <span className="text-[9px] font-bold text-muted-foreground uppercase">Income rows</span>
                         <span className="text-sm font-bold">{metrics.incomeCount}</span>
                       </div>
+                      {metrics.refundCount > 0 && (
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase">Refund rows</span>
+                          <span className="text-sm font-bold">{metrics.refundCount}</span>
+                        </div>
+                      )}
                       <div className="flex flex-col">
                         <span className="text-[9px] font-bold text-muted-foreground uppercase">Expense rows</span>
                         <span className="text-sm font-bold">{metrics.expenseCount}</span>

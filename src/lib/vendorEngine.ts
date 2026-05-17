@@ -108,13 +108,31 @@ export const analyzeVendorsForClient = async (orgId: string, clientId: string) =
     // Recurrence Pattern
     // A vendor is monthly ONLY if it appears in multiple months and has consistent frequency
     let recurrence_pattern = 'irregular';
+    const isSubscriptionKeyword = v.normalized_name.includes('subscription') || 
+                                  v.normalized_name.includes('monthly') || 
+                                  v.normalized_name.includes('software') ||
+                                  ['slack', 'zoho', 'canva'].includes(v.normalized_name.toLowerCase()) ||
+                                  v.transactions.some((tx: any) => 
+                                    tx.description.toLowerCase().includes('subscription') ||
+                                    tx.description.toLowerCase().includes('monthly') ||
+                                    tx.description.toLowerCase().includes('software') ||
+                                    tx.description.toLowerCase().includes('sub')
+                                  );
+
     if (uniqueMonthCount >= 2) {
-      if (v.transaction_count >= monthsDiff * 0.8) recurrence_pattern = 'monthly';
+      if (v.transaction_count >= monthsDiff * 0.8 || isSubscriptionKeyword) recurrence_pattern = 'monthly';
       else if (v.transaction_count >= monthsDiff * 0.2) recurrence_pattern = 'quarterly';
+    } else if (uniqueMonthCount === 1 && isSubscriptionKeyword) {
+      recurrence_pattern = 'monthly';
     }
 
-    // Calculate monthly average: only for recurring vendors to avoid inflating commitments
-    const monthly_average = recurrence_pattern === 'monthly' ? v.total_spend / monthsDiff : 0;
+    // Calculate monthly average: use median transaction amount for recurring subscriptions
+    let monthly_average = 0;
+    if (recurrence_pattern === 'monthly') {
+      const amounts = v.transactions.map((tx: any) => Math.abs(tx.amount));
+      const sortedAmts = [...amounts].sort((a, b) => a - b);
+      monthly_average = sortedAmts[Math.floor(sortedAmts.length / 2)] || 0;
+    }
 
     // Category
     const category = inferCategory(v.normalized_name);
