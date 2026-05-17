@@ -2,7 +2,8 @@ import Papa from 'papaparse';
 
 export interface ParseResult {
   headers: string[];
-  rows: any[];
+  rows: any[]; // preview rows
+  allRows: any[]; // full parsed rows
   rowCount: number;
   provider: string;
   sourceType: string;
@@ -68,6 +69,7 @@ export const parseCSV = (file: File): Promise<ParseResult> => {
         resolve({
           headers,
           rows: rows.slice(0, 20), // Only return preview rows
+          allRows: rows, // Return full dataset
           rowCount,
           provider,
           sourceType,
@@ -79,6 +81,7 @@ export const parseCSV = (file: File): Promise<ParseResult> => {
         resolve({
           headers: [],
           rows: [],
+          allRows: [],
           rowCount: 0,
           provider: 'Unknown',
           sourceType: 'unknown',

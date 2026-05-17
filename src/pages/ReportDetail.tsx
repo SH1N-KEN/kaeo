@@ -250,7 +250,11 @@ export default function ReportDetail() {
                 </table>
               </div>
             ) : (
-              <p className="text-muted-foreground italic">No risk events detected in this period.</p>
+              <p className="text-muted-foreground italic">
+                {sections.riskSummary.totalRisksCount === 0
+                  ? 'No risk events have been generated. Run Identify Risks from Risk Inbox.'
+                  : 'No risk events detected.'}
+              </p>
             )}
           </section>
 

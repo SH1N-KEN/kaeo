@@ -121,6 +121,7 @@ const Files: React.FC = () => {
           row_count: result.rowCount,
           raw_columns_json: result.headers,
           preview_rows_json: result.rows,
+          parsed_rows_json: result.allRows,
           status: mappingResult.status === 'ready_to_import' ? 'ready_to_import' : 'mapping_required'
         })
         .select()
@@ -170,9 +171,13 @@ const Files: React.FC = () => {
       }
 
       if (autoMapping.status === 'ready_to_import') {
-        console.log(`[Files] Importing ${parseResult.rowCount} rows via ${autoMapping.source} mapping...`);
+        const rowsToImport = importData.parsed_rows_json && importData.parsed_rows_json.length > 0 
+          ? importData.parsed_rows_json 
+          : parseResult.allRows;
+          
+        console.log(`[Files] Importing ${rowsToImport.length} rows via ${autoMapping.source} mapping...`);
         
-        const normalized = normalizeRows(parseResult.rows, autoMapping.mapping, {
+        const normalized = normalizeRows(rowsToImport, autoMapping.mapping, {
           provider: parseResult.provider,
           currency: activeClient.base_currency || 'INR'
         });

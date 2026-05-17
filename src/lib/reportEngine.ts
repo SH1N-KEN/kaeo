@@ -181,6 +181,7 @@ export function summarizeRisks(riskEvents: any[]) {
     reviewedRisksCount,
     openRisksCount: openRisks.length,
     reviewExposure,
+    totalRisksCount: riskEvents.length,
     allRisks: [...riskEvents].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   };
 }
