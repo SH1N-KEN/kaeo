@@ -125,19 +125,49 @@ const checkAIContradictions = (aiText: string, context: AIStructuredContext): bo
   // Remove 4-digit years (like 2026, 2024, etc.) to prevent false alarms
   const sanitizedText = aiText.replace(/\b20\d{2}\b/g, '');
 
-  // Extract all numbers that are not followed by %
-  const numberRegex = /\d[\d,.]*/g;
-  let match;
   const numbersInText: string[] = [];
-  
-  while ((match = numberRegex.exec(sanitizedText)) !== null) {
-    const numStr = match[0];
-    const endIndex = match.index + numStr.length;
-    const nextChar = sanitizedText.substring(endIndex).trim().charAt(0);
-    if (nextChar === '%') {
-      continue; // Skip percentage numbers
+
+  // If non-numeric intent, we ONLY check numbers formatted as currency (e.g., prefixed/suffixed with currency signs)
+  // or large financial numbers (e.g. >= 1000) to ignore seat counts/days/options.
+  const isNonNumericIntent = ['service_alternatives', 'business_advice', 'operational_next_steps', 'cost_optimization', 'casual_check_in'].includes(context.intent);
+
+  if (isNonNumericIntent) {
+    // Extract numbers that are explicitly currency formatted (preceded by ₹, $, Rs., INR) 
+    // or are >= 1000 (which are likely financial claims, while ignoring small user/day counts)
+    const currencyOrLargeRegex = /(?:[₹$]|Rs\.?|INR)\s*(\d[\d,.]*)\b|\b(\d[\d,.]+)\b/gi;
+    let currencyMatch;
+    while ((currencyMatch = currencyOrLargeRegex.exec(sanitizedText)) !== null) {
+      const numStr = currencyMatch[1] || currencyMatch[2];
+      if (!numStr) continue;
+      
+      const cleanDigits = numStr.replace(/[^\d]/g, '');
+      const val = parseInt(cleanDigits, 10);
+      if (isNaN(val)) continue;
+      
+      const hasSymbol = currencyMatch[0].match(/[₹$]|Rs|INR/i);
+      if (hasSymbol || val >= 1000) {
+        // Skip percentage numbers
+        const endIndex = currencyMatch.index + currencyMatch[0].length;
+        const nextChar = sanitizedText.substring(endIndex).trim().charAt(0);
+        if (nextChar === '%') {
+          continue;
+        }
+        numbersInText.push(numStr);
+      }
     }
-    numbersInText.push(numStr);
+  } else {
+    // For numeric/finance intents, extract all numbers not followed by %
+    const numberRegex = /\d[\d,.]*/g;
+    let match;
+    while ((match = numberRegex.exec(sanitizedText)) !== null) {
+      const numStr = match[0];
+      const endIndex = match.index + numStr.length;
+      const nextChar = sanitizedText.substring(endIndex).trim().charAt(0);
+      if (nextChar === '%') {
+        continue;
+      }
+      numbersInText.push(numStr);
+    }
   }
 
   for (const numStr of numbersInText) {
@@ -281,9 +311,12 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   // TRY CALLING THE AI CLIENT
   let aiResult = null;
   let fallbackReason = '';
+  let rawAiResponse: any = null;
+  let checkContradictionResult: boolean | null = null;
   
   try {
     aiResult = await askKaeoAi(structuredContext);
+    rawAiResponse = aiResult;
     if (aiResult) {
       // 1. Sanitize $ to ₹
       aiResult.answer = aiResult.answer.replace(/\$/g, '₹');
@@ -300,16 +333,27 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
 
       // 3. Run contradiction check
       const hasContradiction = checkAIContradictions(aiResult.answer + " " + aiResult.reasoning_summary, structuredContext);
+      checkContradictionResult = hasContradiction;
       if (hasContradiction) {
         aiResult = null;
         fallbackReason = 'AI response contained numeric contradictions with deterministic totals';
       }
     } else {
-      fallbackReason = 'AI server returned null or failed validation';
+      fallbackReason = 'AI server returned null or failed validation/repair checks';
     }
   } catch (err: any) {
     console.warn('[Ask Kaeo Engine] Real AI call failed, falling back to deterministic answer.', err);
     fallbackReason = err.message || 'AI request threw error';
+  }
+
+  // IF AI GENUINELY FAILS OR WAS SHUNTED, PRINT AN OPERATOR DEBUG LOG
+  if (!aiResult) {
+    console.warn('[Ask Kaeo Engine Fallback Triggered]', {
+      intent,
+      fallback_reason: fallbackReason,
+      raw_ai_response: rawAiResponse,
+      contradiction_result: checkContradictionResult
+    });
   }
 
   // IF REAL AI SUCCEEDS, USE IT
