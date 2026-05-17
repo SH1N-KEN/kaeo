@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
 import { askKaeo } from '../lib/askKaeoEngine';
-import { Send, AlertCircle, Bot, User, Sparkles } from 'lucide-react';
+import { Send, AlertCircle, Bot, User, Sparkles, Shield, Layers, CheckCircle } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -10,6 +10,7 @@ interface ChatMessage {
   content: string;
   intent?: string;
   created_at: string;
+  source_json?: any;
 }
 
 const AskKaeo = () => {
@@ -19,6 +20,7 @@ const AskKaeo = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [dbError, setDbError] = useState<boolean>(false);
+  const [latestMode, setLatestMode] = useState<'ai_assisted' | 'deterministic' | null>(null);
   
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
@@ -59,6 +61,15 @@ const AskKaeo = () => {
           
         if (msgError) throw msgError;
         setMessages(msgData || []);
+        
+        // Determine the latest message mode
+        const assistantMsgs = (msgData || []).filter(m => m.role === 'assistant');
+        if (assistantMsgs.length > 0) {
+          const lastMsg = assistantMsgs[assistantMsgs.length - 1];
+          if (lastMsg.source_json?.mode) {
+            setLatestMode(lastMsg.source_json.mode);
+          }
+        }
         setDbError(false);
       } else {
         // 2. Create a new thread
@@ -79,10 +90,12 @@ const AskKaeo = () => {
             {
               id: 'init',
               role: 'assistant',
-              content: 'Hello. I am Kaeo. I can analyze your financial summary, top vendors, and risk profile based on your imported data. What would you like to review?',
-              created_at: new Date().toISOString()
+              content: 'Hello. I am Kaeo, your CEO/CFO strategic business advisor. I can analyze your financial summaries, top vendor spend, recurring commitments, and risk profile based on your deterministic ledger data. What strategic questions can I answer for you today?',
+              created_at: new Date().toISOString(),
+              source_json: { mode: 'deterministic' }
             }
           ]);
+          setLatestMode('deterministic');
           setDbError(false);
         }
       }
@@ -93,10 +106,12 @@ const AskKaeo = () => {
         {
           id: 'init-mem',
           role: 'assistant',
-          content: 'Hello. I am Kaeo. I can analyze your financial summary, top vendors, and risk profile based on your imported data. What would you like to review?',
-          created_at: new Date().toISOString()
+          content: 'Hello. I am Kaeo, your CEO/CFO strategic business advisor. I can analyze your financial summaries, top vendor spend, recurring commitments, and risk profile based on your deterministic ledger data. What strategic questions can I answer for you today?',
+          created_at: new Date().toISOString(),
+          source_json: { mode: 'deterministic' }
         }
       ]);
+      setLatestMode('deterministic');
     }
   };
 
@@ -138,10 +153,14 @@ const AskKaeo = () => {
         role: 'assistant',
         content: kaeoReply.text,
         intent: kaeoReply.intent,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        source_json: kaeoReply.source_json
       };
 
       setMessages(prev => [...prev, asstMsg]);
+      if (kaeoReply.source_json?.mode) {
+        setLatestMode(kaeoReply.source_json.mode);
+      }
       
       // Save Assistant Msg
       if (threadId && !dbError) {
@@ -162,8 +181,10 @@ const AskKaeo = () => {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: "I encountered an error processing that request. Please ensure you have imported transaction data.",
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        source_json: { mode: 'deterministic' }
       }]);
+      setLatestMode('deterministic');
     } finally {
       setIsTyping(false);
     }
@@ -179,8 +200,20 @@ const AskKaeo = () => {
           </div>
           <div>
             <h2 className="font-semibold tracking-tight">Ask Kaeo</h2>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              Deterministic CFO Advisor <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[10px] uppercase font-bold">Phase 7</span>
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              CFO Advisor
+              <span className="w-1.5 h-1.5 rounded-full bg-border"></span>
+              {latestMode === 'ai_assisted' ? (
+                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full font-medium border border-emerald-500/20">
+                  <CheckCircle className="w-2.5 h-2.5" />
+                  AI-Assisted, Data-Grounded
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full font-medium border border-blue-500/20">
+                  <Shield className="w-2.5 h-2.5" />
+                  Deterministic Mode
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -196,26 +229,89 @@ const AskKaeo = () => {
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
         {messages.map((msg, idx) => {
           const isUser = msg.role === 'user';
+          const isAi = msg.source_json?.mode === 'ai_assisted';
+          const aiConfidence = msg.source_json?.ai_confidence;
+          const aiCaveats = msg.source_json?.caveats || [];
+          const sourceSummary = msg.source_json?.source_summary;
+          const needsExt = msg.source_json?.needs_external_research;
+          const fallbackReason = msg.source_json?.fallback_reason;
+
           return (
             <div key={msg.id || idx} className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
               {!isUser && (
                 <div className="flex-shrink-0 mt-1">
-                  <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
-                    <Bot className="h-4 w-4 text-primary" />
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center border ${isAi ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-primary/20 border-primary/30'}`}>
+                    <Bot className={`h-4 w-4 ${isAi ? 'text-emerald-500' : 'text-primary'}`} />
                   </div>
                 </div>
               )}
               
-              <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-4 ${isUser ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-card border rounded-tl-sm shadow-sm'}`}>
-                {msg.intent && (
-                  <div className="text-[10px] font-mono uppercase text-muted-foreground mb-2 flex items-center gap-1">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/50"></span>
-                    {msg.intent.replace(/_/g, ' ')}
+              <div className="flex flex-col gap-1.5 max-w-[85%] md:max-w-[75%]">
+                <div className={`rounded-2xl px-5 py-4 ${isUser ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-card border rounded-tl-sm shadow-sm'}`}>
+                  {msg.intent && (
+                    <div className="text-[10px] font-mono uppercase text-muted-foreground mb-2 flex justify-between items-center">
+                      <span className="flex items-center gap-1">
+                        <span className={`inline-block w-1.5 h-1.5 rounded-full ${isAi ? 'bg-emerald-500' : 'bg-primary'}`}></span>
+                        {msg.intent.replace(/_/g, ' ')}
+                      </span>
+                      {fallbackReason && (
+                        <span className="text-[9px] text-yellow-500 italic lowercase bg-yellow-500/5 px-1.5 py-0.5 rounded border border-yellow-500/10">
+                          {fallbackReason} (fallback)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <div className="text-sm whitespace-pre-wrap leading-relaxed opacity-95">
+                    {msg.content}
+                  </div>
+                </div>
+
+                {/* AI METADATA FOOTER (IF AI MODE) */}
+                {!isUser && isAi && (
+                  <div className="px-2 mt-1 space-y-2">
+                    {/* Upper Metadata Row */}
+                    <div className="flex flex-wrap gap-2 items-center text-[10px] text-muted-foreground">
+                      <span className={`px-2 py-0.5 rounded border font-medium uppercase ${
+                        aiConfidence === 'high' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                        aiConfidence === 'medium' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' :
+                        'bg-red-500/10 text-red-500 border-red-500/20'
+                      }`}>
+                        Confidence: {aiConfidence || 'medium'}
+                      </span>
+                      {needsExt && (
+                        <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-2 py-0.5 rounded font-medium">
+                          Live Research Unavailable
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Source Summary Counts */}
+                    {sourceSummary && (
+                      <div className="flex items-center gap-2 text-[9px] text-muted-foreground bg-muted/40 p-2 rounded-lg border border-border/40">
+                        <Layers className="w-3 h-3 text-muted-foreground/70" />
+                        <span>Sources analyzed:</span>
+                        <span className="font-semibold text-foreground">{sourceSummary.transactions_used} txs</span>
+                        <span className="w-1 h-1 rounded-full bg-border"></span>
+                        <span className="font-semibold text-foreground">{sourceSummary.vendors_used} vendors</span>
+                        <span className="w-1 h-1 rounded-full bg-border"></span>
+                        <span className="font-semibold text-foreground">{sourceSummary.risks_used} risks</span>
+                      </div>
+                    )}
+
+                    {/* Caveats list */}
+                    {aiCaveats.length > 0 && (
+                      <div className="mt-1 text-[9px] text-muted-foreground/80 space-y-0.5 bg-muted/20 p-2 rounded border border-border/20">
+                        <span className="font-semibold text-[10px] block mb-1 text-foreground/80">CFO Notes:</span>
+                        {aiCaveats.map((cav: string, cavIdx: number) => (
+                          <div key={cavIdx} className="flex gap-1.5 items-start">
+                            <span className="text-[8px] mt-0.5">•</span>
+                            <span>{cav}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
-                <div className="text-sm whitespace-pre-wrap leading-relaxed opacity-90">
-                  {msg.content}
-                </div>
               </div>
 
               {isUser && (
@@ -267,8 +363,11 @@ const AskKaeo = () => {
             <Send className="h-4 w-4" />
           </button>
         </form>
-        <div className="text-center mt-2">
-          <p className="text-[10px] text-muted-foreground">Kaeo answers are generated from your imported data. AI market research will be enabled in Phase 8.</p>
+        <div className="text-center mt-2 flex flex-col gap-1 items-center justify-center">
+          <p className="text-[10px] text-muted-foreground">Kaeo answers are generated from your imported data. Local analytics are fully deterministic; AI reasons safely on context.</p>
+          <div className="text-[9px] text-muted-foreground/75 bg-muted/30 px-2 py-0.5 rounded border border-border/30">
+            Local Setup: <code className="bg-muted px-1 py-0.2 rounded select-all font-mono">supabase functions serve ask-kaeo-ai --env-file ./supabase/.env.local</code>
+          </div>
         </div>
       </div>
     </div>

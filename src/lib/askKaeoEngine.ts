@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
 import { summarizeVendors } from './reportEngine';
+import { askKaeoAi } from './ai/aiClient';
+import type { AIStructuredContext } from './ai/aiClient';
 
 export type AskKaeoCategory = 
   | 'finance_summary' 
@@ -64,6 +66,45 @@ export async function categorizeQuestion(query: string): Promise<AskKaeoCategory
   return 'unsupported_needs_ai_or_web';
 }
 
+const checkAIContradictions = (aiText: string, context: AIStructuredContext): boolean => {
+  const approvedNumbers = new Set<number>([
+    Math.round(context.financial_summary.income),
+    Math.round(context.financial_summary.refunds),
+    Math.round(context.financial_summary.expenses),
+    Math.round(context.financial_summary.netCash),
+    Math.round(context.recurring_spend.commitment),
+    context.recurring_spend.active_vendors,
+    context.high_priority_risks,
+    context.counts.transactions,
+    context.counts.vendors,
+    context.counts.risks
+  ]);
+  
+  context.top_vendors.forEach(v => approvedNumbers.add(Math.round(v.spend)));
+  
+  const approvedStrings = new Set<string>();
+  approvedNumbers.forEach(n => {
+    if (n >= 0) {
+      approvedStrings.add(String(n));
+      approvedStrings.add(formatReportCurrency(n).replace(/[^\d]/g, ''));
+    }
+  });
+
+  const numbersInText = aiText.replace(/202[0-9]/g, '').match(/\d[\d,.]*/g) || [];
+  for (const numStr of numbersInText) {
+    const cleanDigits = numStr.replace(/[^\d]/g, '');
+    if (cleanDigits.length >= 3) {
+      const val = parseInt(cleanDigits, 10);
+      if (val > 100 && !approvedStrings.has(cleanDigits)) {
+        console.warn(`[AI Contradiction Checker] AI output contained unapproved number: ${numStr} (digits: ${cleanDigits}). Falling back.`);
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
 export async function askKaeo(query: string, clientId: string, _orgId: string): Promise<AskKaeoResponse> {
   const intent = await categorizeQuestion(query);
 
@@ -95,11 +136,113 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   const netCash = income + refunds - expenses;
 
   const vendorSummary = summarizeVendors(vendors, transactions);
+  const txCount = transactions.length;
 
+  // FETCH ADDITIONAL SECURE SERVER CONTEXT FOR AI
+  const { data: clientData } = await supabase
+    .from('clients')
+    .select('name')
+    .eq('id', clientId)
+    .single();
+  const activeClientName = clientData?.name || 'Active Client';
+
+  const { data: latestReport } = await supabase
+    .from('reports')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  const latestReportSummary = latestReport && latestReport.length > 0
+    ? (latestReport[0].summary_json?.executive_summary || JSON.stringify(latestReport[0].summary_json))
+    : null;
+
+  const { data: notesData } = await supabase
+    .from('notes')
+    .select('note')
+    .eq('client_id', clientId);
+  const relevantNotes = (notesData || []).map(n => n.note).filter(Boolean);
+
+  // BUILD STRUCTURED CONTEXT FOR AI
+  const structuredContext: AIStructuredContext = {
+    question: query,
+    intent,
+    active_client_name: activeClientName,
+    financial_summary: {
+      income,
+      refunds,
+      expenses,
+      netCash
+    },
+    top_vendors: vendorSummary.topVendors.slice(0, 5).map(v => ({
+      name: v.normalized_name,
+      spend: v.totalSpend
+    })),
+    recurring_spend: {
+      commitment: vendorSummary.recurringCommitment,
+      active_vendors: vendorSummary.recurringVendors.length
+    },
+    open_risks: risks.map(r => ({
+      title: r.title,
+      severity: r.severity,
+      amount: r.amount_at_risk
+    })),
+    high_priority_risks: risks.filter(r => r.severity === 'high').length,
+    latest_report_summary: latestReportSummary,
+    relevant_notes: relevantNotes.slice(0, 10),
+    caveats: [
+      "AI explanations are for informational purposes only. Use validated reports for official decisions.",
+      "Calculations are strictly grounded in deterministic database aggregates."
+    ],
+    counts: {
+      transactions: transactions.length,
+      vendors: vendors.length,
+      risks: risks.length
+    }
+  };
+
+  // TRY CALLING THE AI CLIENT
+  let aiResult = null;
+  let fallbackReason = '';
+  
+  try {
+    aiResult = await askKaeoAi(structuredContext);
+    if (aiResult) {
+      // Run contradiction check
+      const hasContradiction = checkAIContradictions(aiResult.answer + " " + aiResult.reasoning_summary, structuredContext);
+      if (hasContradiction) {
+        aiResult = null;
+        fallbackReason = 'AI response contained numeric contradictions with deterministic totals';
+      }
+    } else {
+      fallbackReason = 'AI server returned null or failed validation';
+    }
+  } catch (err: any) {
+    console.warn('[Ask Kaeo Engine] Real AI call failed, falling back to deterministic answer.', err);
+    fallbackReason = err.message || 'AI request threw error';
+  }
+
+  // IF REAL AI SUCCEEDS, USE IT
+  if (aiResult) {
+    const formattedText = `${aiResult.answer}\n\nBreakdown / Reasoning:\n${aiResult.reasoning_summary}\n\nRecommended next steps:\n${aiResult.recommended_actions.map(a => `- ${a}`).join('\n')}\n\nCaveats:\n${aiResult.caveats.map(c => `- ${c}`).join('\n')}`;
+    
+    return {
+      intent,
+      text: formattedText,
+      source_json: {
+        mode: "ai_assisted",
+        intent,
+        ai_confidence: aiResult.confidence,
+        caveats: aiResult.caveats,
+        needs_external_research: aiResult.needs_external_research,
+        source_summary: aiResult.source_summary,
+        ai_raw_response: aiResult
+      }
+    };
+  }
+
+  // OTHERWISE, FALLBACK TO THE POLISHED DETERMINISTIC PHASE 7 ANSWERS
   let responseText = '';
   let sourceJson: any = {};
-  
-  const txCount = transactions.length;
 
   switch (intent) {
     case 'finance_summary': {
@@ -143,14 +286,14 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
         responseText = `You are currently spending ${formatReportCurrency(spend)} on ${mentionedVendor.display_name || mentionedVendor.name}.\n\n` +
         `Breakdown:\n- Vendor: ${mentionedVendor.display_name || mentionedVendor.name}\n- Category: ${mentionedVendor.category || 'Vendor'}\n- Detected Spend: ${formatReportCurrency(spend)}\n\n` +
         `What this means:\nThis service is a measurable component of your operational overhead. Replacing it could yield cost savings, but might also incur switching costs or productivity downtime for your team.\n\n` +
-        `Recommended next step:\nBefore switching, audit your active user seats for ${mentionedVendor.name} to see if you can reduce the current tier. Real external alternative research (pricing, feature parity, competitor analysis) will be enabled in Phase 8.\n\n` +
+        `Recommended next step:\nBefore switching, audit your active user seats for ${mentionedVendor.name} to see if you can reduce the current tier. Live market/pricing research is not enabled yet. I can evaluate this service using your internal Kaeo data and give comparison criteria.\n\n` +
         `Source:\nBased on historical vendor extraction from your imported transactions.`;
         sourceJson = { vendor: mentionedVendor.name, spend };
       } else {
         responseText = `I cannot identify the specific service you want to replace based on your imported data.\n\n` +
         `Breakdown:\nNo vendor matching your query was found in the active data context.\n\n` +
         `What this means:\nI can only analyze spending patterns and alternatives for vendors you are actively paying according to the imported statements.\n\n` +
-        `Recommended next step:\nEnsure you have imported recent transactions for this tool. Once real AI market research is enabled in Phase 8, I will be able to search the web for alternatives regardless of your current spend.\n\n` +
+        `Recommended next step:\nEnsure you have imported recent transactions for this tool. Live market/pricing research is not enabled yet. I can evaluate this service using your internal Kaeo data and give comparison criteria.\n\n` +
         `Source:\nBased on ${vendors.length} active vendors.`;
       }
       break;
@@ -212,7 +355,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       responseText = `This specific query requires external market research, predictive modeling, or deeper contextual reasoning.\n\n` +
       `Breakdown:\n- Requested capability: External knowledge / AI reasoning\n- Current state: Phase 7 Deterministic Engine\n\n` +
       `What this means:\nI am currently operating in a secure, local-data-only mode. I can perfectly analyze your imported transactions, vendors, and risks, but I cannot yet invent market data or search the web.\n\n` +
-      `Recommended next step:\nTry asking me about your internal data: "What is my net cash?", "Who is my top vendor?", or "What should I review first?". Phase 8 will unlock external AI reasoning.\n\n` +
+      `Recommended next step:\nTry asking me about your internal data: "What is my net cash?", "Who is my top vendor?", or "What should I review first?". Live market/pricing research is not enabled yet. I can evaluate this service using your internal Kaeo data and give comparison criteria.\n\n` +
       `Source:\nKaeo Phase 7 Engine.`;
       break;
     }
@@ -221,6 +364,11 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   return {
     intent,
     text: responseText,
-    source_json: sourceJson
+    source_json: {
+      mode: "deterministic",
+      intent,
+      fallback_reason: fallbackReason,
+      ...sourceJson
+    }
   };
 }
