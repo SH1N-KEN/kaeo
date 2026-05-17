@@ -12,6 +12,7 @@ export type AskKaeoCategory =
   | 'service_alternatives' 
   | 'business_advice' 
   | 'operational_next_steps' 
+  | 'casual_check_in' 
   | 'unsupported_needs_ai_or_web';
 
 interface AskKaeoResponse {
@@ -29,21 +30,39 @@ const formatReportCurrency = (val: number) => {
 };
 
 export async function categorizeQuestion(query: string): Promise<AskKaeoCategory> {
-  const q = query.toLowerCase();
+  const q = query.toLowerCase().trim();
+  
+  // 1. Casual check-in mappings
+  if (
+    q === 'yo' || q === 'yoo' || q === 'wsg' || q === 'bro' || q === 'hmm' || 
+    q === 'idk' || q === 'help' || q === 'lol' || q === 'hey' || q === 'okay' || q === 'damn' ||
+    q.includes('what now') || q.includes('are we cooked')
+  ) {
+    return 'casual_check_in';
+  }
+
+  // 2. Exact strategic overrides
+  if (q.includes('worry') || q.includes('what worries you') || q.includes('what do you think') || q.includes('is this bad')) {
+    return 'business_advice';
+  }
+
+  if (
+    q.includes('what should i do') || q.includes('what’s the move') || q.includes('whats the move') || 
+    q.includes('are we okay') || q.includes('what should i review first') || q.includes('review first') || 
+    q.includes('priority') || q.includes('next steps')
+  ) {
+    return 'operational_next_steps';
+  }
   
   if (q.includes('alternative') || q.includes('replace') || q.includes('better than') || q.includes('cheaper than')) {
     return 'service_alternatives';
-  }
-  
-  if (q.includes('what should i do') || q.includes('next steps') || q.includes('priority')) {
-    return 'operational_next_steps';
   }
   
   if (q.includes('advice') || q.includes('should i') || q.includes('worth it') || q.includes('negotiate')) {
     return 'business_advice';
   }
   
-  if (q.includes('risk') || q.includes('duplicate') || q.includes('unusual') || q.includes('worry')) {
+  if (q.includes('risk') || q.includes('duplicate') || q.includes('unusual')) {
     return 'risk_review';
   }
   
