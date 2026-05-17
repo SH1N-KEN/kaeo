@@ -98,47 +98,61 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
 
   let responseText = '';
   let sourceJson: any = {};
+  
+  const txCount = transactions.length;
 
   switch (intent) {
-    case 'service_alternatives': {
-      // Find the specific vendor they might be asking about
-      const mentionedVendor = vendors.find(v => query.toLowerCase().includes(v.normalized_name.toLowerCase()));
-      if (mentionedVendor) {
-        responseText = `Based on your imported data, ${mentionedVendor.display_name || mentionedVendor.name} is currently a ${mentionedVendor.category || 'Vendor'} cost of ${formatReportCurrency(mentionedVendor.monthly_average || vendorSummary.topVendors.find(tv => tv.normalized_name === mentionedVendor.normalized_name)?.totalSpend || 0)}. I cannot verify live alternatives yet without the real AI/web layer, but this is a good candidate for review. In Phase 8, I’ll be able to compare alternatives like pricing, features, and fit. For now, I recommend checking whether all paid seats are active before switching tools.`;
-        sourceJson = { vendor: mentionedVendor.name, spend: mentionedVendor.monthly_average };
-      } else {
-        responseText = `I can help compare alternatives once real AI/web research is enabled in Phase 8. From your imported data, I can first show how much you spend on this service and whether it appears recurring, but I couldn't identify a specific vendor in your question.`;
-      }
+    case 'finance_summary': {
+      const netCashPositive = netCash >= 0;
+      responseText = `Your net cash movement is ${netCashPositive ? 'positive' : 'negative'} at ${formatReportCurrency(netCash)}. That means the client ${netCashPositive ? 'brought in more cash than it spent' : 'spent more cash than it brought in'} during this imported period.\n\n` +
+      `Breakdown:\n- Income: ${formatReportCurrency(income)}\n- Refunds / Recoveries: ${formatReportCurrency(refunds)}\n- Expenses: ${formatReportCurrency(expenses)}\n\n` +
+      `Formula:\n${formatReportCurrency(income)} + ${formatReportCurrency(refunds)} - ${formatReportCurrency(expenses)} = ${formatReportCurrency(netCash)}\n\n` +
+      `What this means:\nThe business is cash-${netCashPositive ? 'positive' : 'negative'} in this period, but the quality of that cash movement still depends on whether the open risks are resolved. Duplicate vendor payments and unclassified bank adjustments can distort the true picture.\n\n` +
+      `Recommended next step:\nReview the highest-value risks first before treating this as final CFO-grade cash movement.\n\n` +
+      `Source:\nBased on ${txCount} imported transactions for this active client.`;
+      
+      sourceJson = { income, refunds, expenses, netCash };
       break;
     }
     
-    case 'operational_next_steps': {
+    case 'operational_next_steps':
+    case 'risk_review': {
       const highSeverityRisks = risks.filter(r => r.severity === 'high');
-      
-      responseText = `Based on your financial data and Risk Inbox, I recommend prioritizing the following:\n`;
-      if (highSeverityRisks.length > 0) {
-        responseText += `\n1. Review ${highSeverityRisks.length} High-Severity Risk(s), such as: ${highSeverityRisks[0].title}.`;
-      }
       const unknownTxs = transactions.filter(t => t.type === 'unknown');
-      if (unknownTxs.length > 0) {
-        responseText += `\n2. Classify ${unknownTxs.length} unknown transactions to ensure reporting accuracy.`;
-      }
-      if (vendorSummary.recurringCommitment > 0) {
-        responseText += `\n3. Audit your ${formatReportCurrency(vendorSummary.recurringCommitment)}/mo recurring SaaS commitment.`;
-      }
-      if (vendorSummary.topVendors.length > 0) {
-        responseText += `\n4. Review spend with your top vendor, ${vendorSummary.topVendors[0].normalized_name}.`;
-      }
-      if (!responseText.includes('1.')) {
-        responseText = `Your current financial hygiene looks strong. There are no high-severity risks or major unclassified transactions. I recommend continuing to monitor your top vendors for unusual spikes.`;
-      }
-      sourceJson = { risks: highSeverityRisks.length, unknown: unknownTxs.length };
+      const recurringCount = vendorSummary.recurringVendors.length;
+      
+      responseText = `You have ${risks.length} open risk events and ${unknownTxs.length} unclassified transactions that need attention.\n\n` +
+      `Breakdown:\n` +
+      `1. High-severity risks: ${highSeverityRisks.length > 0 ? highSeverityRisks.map(r => r.title).join(', ') : 'None'}\n` +
+      `2. Possible duplicate vendor payments: ${risks.filter(r => r.title.toLowerCase().includes('duplicate')).length} detected\n` +
+      `3. Unknown transactions: ${unknownTxs.length} items (${formatReportCurrency(unknownTxs.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0))})\n` +
+      `4. Recurring SaaS commitments: ${recurringCount} active vendors\n` +
+      `5. High spend vendors: Your top vendor is ${vendorSummary.topVendors[0]?.normalized_name || 'N/A'}\n\n` +
+      `What this means:\nLeaving high-severity risks and unknown transactions unreviewed means your financial reports (like Net Cash and Vendor Analysis) may be inaccurate. Duplicate payments in particular represent direct capital leakage.\n\n` +
+      `Recommended next step:\nInvestigate the high-severity duplicate risks in your Risk Inbox immediately. Then classify the unknown transactions to clean up your ledger.\n\n` +
+      `Source:\nBased on ${risks.length} active risks and ${txCount} imported transactions.`;
+      
+      sourceJson = { risks: risks.length, highSeverity: highSeverityRisks.length, unknown: unknownTxs.length };
       break;
     }
 
-    case 'finance_summary': {
-      responseText = `Based on the latest imported data, your total cash inflow is ${formatReportCurrency(income + refunds)} (including refunds) against total expenses of ${formatReportCurrency(expenses)}. Your Net Cash Movement stands at ${formatReportCurrency(netCash)}.\n\nNext Action: Ensure all recent bank statements are imported to keep this view accurate.`;
-      sourceJson = { income, refunds, expenses, netCash };
+    case 'service_alternatives': {
+      const mentionedVendor = vendors.find(v => query.toLowerCase().includes(v.normalized_name.toLowerCase()));
+      if (mentionedVendor) {
+        const spend = mentionedVendor.monthly_average || vendorSummary.topVendors.find(tv => tv.normalized_name === mentionedVendor.normalized_name)?.totalSpend || 0;
+        responseText = `You are currently spending ${formatReportCurrency(spend)} on ${mentionedVendor.display_name || mentionedVendor.name}.\n\n` +
+        `Breakdown:\n- Vendor: ${mentionedVendor.display_name || mentionedVendor.name}\n- Category: ${mentionedVendor.category || 'Vendor'}\n- Detected Spend: ${formatReportCurrency(spend)}\n\n` +
+        `What this means:\nThis service is a measurable component of your operational overhead. Replacing it could yield cost savings, but might also incur switching costs or productivity downtime for your team.\n\n` +
+        `Recommended next step:\nBefore switching, audit your active user seats for ${mentionedVendor.name} to see if you can reduce the current tier. Real external alternative research (pricing, feature parity, competitor analysis) will be enabled in Phase 8.\n\n` +
+        `Source:\nBased on historical vendor extraction from your imported transactions.`;
+        sourceJson = { vendor: mentionedVendor.name, spend };
+      } else {
+        responseText = `I cannot identify the specific service you want to replace based on your imported data.\n\n` +
+        `Breakdown:\nNo vendor matching your query was found in the active data context.\n\n` +
+        `What this means:\nI can only analyze spending patterns and alternatives for vendors you are actively paying according to the imported statements.\n\n` +
+        `Recommended next step:\nEnsure you have imported recent transactions for this tool. Once real AI market research is enabled in Phase 8, I will be able to search the web for alternatives regardless of your current spend.\n\n` +
+        `Source:\nBased on ${vendors.length} active vendors.`;
+      }
       break;
     }
     
@@ -146,54 +160,60 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       const mentionedVendor = vendors.find(v => query.toLowerCase().includes(v.normalized_name.toLowerCase()));
       if (mentionedVendor) {
         const spend = vendorSummary.topVendors.find(tv => tv.normalized_name === mentionedVendor.normalized_name)?.totalSpend || 0;
-        responseText = `Your total spend with ${mentionedVendor.display_name || mentionedVendor.name} is ${formatReportCurrency(spend)}. It is categorized under ${mentionedVendor.category}.\n\nNext Action: Review if this spend aligns with your current operational needs.`;
+        responseText = `Your recorded spend with ${mentionedVendor.display_name || mentionedVendor.name} is ${formatReportCurrency(spend)}.\n\n` +
+        `Breakdown:\n- Vendor Name: ${mentionedVendor.display_name || mentionedVendor.name}\n- Categorization: ${mentionedVendor.category || 'Uncategorized'}\n- Total Spend: ${formatReportCurrency(spend)}\n\n` +
+        `What this means:\nThis represents a direct operational expense. If this vendor is categorized as 'Generic Vendor Payments', it may obscure the true nature of the spend.\n\n` +
+        `Recommended next step:\nReview if this spend is a one-time project cost or a recurring necessity. If it is recurring, consider negotiating an annual contract for a discount.\n\n` +
+        `Source:\nBased on ${txCount} imported transactions.`;
         sourceJson = { vendor: mentionedVendor.name, spend };
-      } else if (vendorSummary.topVendors.length > 0) {
+      } else {
         const top = vendorSummary.topVendors[0];
-        responseText = `Your largest expense source is currently ${top.normalized_name} at ${formatReportCurrency(top.totalSpend)}.\n\nNext Action: Check the Spend Advisor to see the full breakdown of your top 5 vendors.`;
-        sourceJson = { topVendor: top.normalized_name, spend: top.totalSpend };
-      } else {
-        responseText = `I couldn't identify any significant vendor spend in your imported data. Ensure you have imported and classified your expense transactions.`;
+        if (top) {
+          responseText = `Your highest capital concentration is with ${top.normalized_name}, totaling ${formatReportCurrency(top.totalSpend)}.\n\n` +
+          `Breakdown:\n- Top Vendor: ${top.normalized_name}\n- Spend: ${formatReportCurrency(top.totalSpend)}\n- Total Identified Vendors: ${vendors.length}\n\n` +
+          `What this means:\nHeavy reliance on a single vendor can represent both operational leverage and strategic risk. If this is a core service (like payroll or cloud hosting), the spend is expected. If it's an agency or variable cost, it warrants close monitoring.\n\n` +
+          `Recommended next step:\nOpen the Spend Advisor to review the top 5 vendor breakdown and ensure no unusual billing spikes occurred.\n\n` +
+          `Source:\nBased on ${txCount} imported transactions.`;
+          sourceJson = { topVendor: top.normalized_name, spend: top.totalSpend };
+        } else {
+          responseText = `No vendor spend has been clearly identified in your data.\n\n` +
+          `Breakdown:\n- Extracted Vendors: 0\n- Expense Transactions: ${transactions.filter(t => t.type === 'expense').length}\n\n` +
+          `What this means:\nEither no payments have been made, or the uploaded bank statements lack clear merchant identifiers.\n\n` +
+          `Recommended next step:\nEnsure your transactions are properly classified as expenses rather than unknown adjustments.\n\n` +
+          `Source:\nBased on ${txCount} imported transactions.`;
+        }
       }
       break;
     }
     
-    case 'risk_review': {
-      if (risks.length > 0) {
-        const high = risks.filter(r => r.severity === 'high').length;
-        responseText = `You currently have ${risks.length} open risk events in your inbox. ${high > 0 ? `Critically, ${high} of these are high-severity and require immediate attention.` : 'Most of these are routine reviews or recurring subscriptions.'}\n\nNext Action: Open the Risk Inbox to investigate and clear these items.`;
-        sourceJson = { totalRisks: risks.length, highSeverity: high };
-      } else {
-        responseText = `Your Risk Inbox is currently clear. No duplicate payments or unusual spikes have been detected in the active data.\n\nNext Action: No immediate action required.`;
-      }
-      break;
-    }
-    
-    case 'recurring_spend': {
-      if (vendorSummary.recurringVendors.length > 0) {
-        responseText = `You have an estimated recurring commitment of ${formatReportCurrency(vendorSummary.recurringCommitment)} per month across ${vendorSummary.recurringVendors.length} subscriptions/services.\n\nNext Action: Audit these subscriptions in the Spend Advisor to cancel unused seats or dormant services.`;
-        sourceJson = { commitment: vendorSummary.recurringCommitment, count: vendorSummary.recurringVendors.length };
-      } else {
-        responseText = `I don't see any fixed recurring SaaS or subscription commitments in your current data.\n\nNext Action: Continue importing data to allow the engine to detect month-over-month patterns.`;
-      }
-      break;
-    }
-    
+    case 'recurring_spend':
     case 'cost_optimization': {
-      responseText = `While I cannot generate external cost-saving benchmarks until Phase 8, looking at your internal data, your largest optimization opportunity lies in reviewing your top vendors (${vendorSummary.topVendors[0]?.normalized_name || 'N/A'}) and your recurring SaaS commitments (${formatReportCurrency(vendorSummary.recurringCommitment)}/mo).\n\nNext Action: Perform a seat audit on your SaaS tools and consolidate overlapping vendors.`;
-      sourceJson = { recurring: vendorSummary.recurringCommitment };
+      responseText = `Your estimated recurring commitment is ${formatReportCurrency(vendorSummary.recurringCommitment)} per month.\n\n` +
+      `Breakdown:\n- Recurring Subscriptions: ${vendorSummary.recurringVendors.length} active\n- Total Monthly Commitment: ${formatReportCurrency(vendorSummary.recurringCommitment)}\n- Top SaaS Vendor: ${vendorSummary.recurringVendors[0]?.normalized_name || 'None'}\n\n` +
+      `What this means:\nThis is your "burn floor" — the fixed operational cost you must pay every month regardless of revenue. High recurring commitments reduce your capital flexibility.\n\n` +
+      `Recommended next step:\nPerform a seat audit on your active SaaS tools. Cancel any dormant accounts or duplicate services performing the same function.\n\n` +
+      `Source:\nBased on heuristic detection of recurring payments across ${txCount} imported transactions.`;
+      sourceJson = { commitment: vendorSummary.recurringCommitment, count: vendorSummary.recurringVendors.length };
       break;
     }
     
     case 'business_advice': {
-      responseText = `Based on your internal spend and risks, my advice is to maintain tight control over your operational cash flow. You have ${formatReportCurrency(netCash)} in net cash movement and ${risks.length} pending risks.\n\nOnce Phase 8 is enabled with real AI and market research, I can provide deeper strategic advice on capital efficiency.\n\nNext Action: Clear your Risk Inbox and review your CFO Report.`;
+      responseText = `Based on your internal financial profile, the primary directive is to resolve operational blind spots and secure your cash flow.\n\n` +
+      `Breakdown:\n- Financial Health: ${netCash >= 0 ? 'Positive' : 'Negative'} cash flow (${formatReportCurrency(netCash)})\n- Open Risks: ${risks.length} pending items\n- Spending Concentration: Top vendor is ${vendorSummary.topVendors[0]?.normalized_name || 'N/A'}\n- Recurring Commitments: ${formatReportCurrency(vendorSummary.recurringCommitment)}/mo\n\n` +
+      `What this means:\nYour business data has anomalies. CFOs rely on high-fidelity data. Until the risk inbox is cleared and unknown transactions are categorized, your executive reporting contains a margin of error.\n\n` +
+      `Recommended next step:\nClear your Risk Inbox and categorize unknown transactions. Once Phase 8 introduces real AI, I will be able to cross-reference your spend with live market benchmarks for deeper operational advice.\n\n` +
+      `Source:\nBased strictly on ${txCount} imported transactions and your local Kaeo risk profile.`;
       sourceJson = { netCash, risks: risks.length };
       break;
     }
     
     case 'unsupported_needs_ai_or_web':
     default: {
-      responseText = `This specific query requires external market research or deeper contextual reasoning. Phase 8 will connect real AI/web-backed reasoning to handle this. For now, I can analyze your internal spend, recurring commitments, and financial risks.\n\nNext Action: Try asking me about your top vendors, net cash, or open risks.`;
+      responseText = `This specific query requires external market research, predictive modeling, or deeper contextual reasoning.\n\n` +
+      `Breakdown:\n- Requested capability: External knowledge / AI reasoning\n- Current state: Phase 7 Deterministic Engine\n\n` +
+      `What this means:\nI am currently operating in a secure, local-data-only mode. I can perfectly analyze your imported transactions, vendors, and risks, but I cannot yet invent market data or search the web.\n\n` +
+      `Recommended next step:\nTry asking me about your internal data: "What is my net cash?", "Who is my top vendor?", or "What should I review first?". Phase 8 will unlock external AI reasoning.\n\n` +
+      `Source:\nKaeo Phase 7 Engine.`;
       break;
     }
   }
