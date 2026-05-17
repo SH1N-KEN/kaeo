@@ -293,6 +293,12 @@ export default function ReportDetail() {
                   {sections.caveats.unknownCount > 0 && (
                     <li>{sections.caveats.unknownCount} transactions could not be reliably classified as income or expense.</li>
                   )}
+                  {sections.caveats.missingDates > 0 && (
+                    <li>{sections.caveats.missingDates} transactions are missing dates.</li>
+                  )}
+                  {sections.caveats.missingDescriptions > 0 && (
+                    <li>{sections.caveats.missingDescriptions} transactions are missing descriptions.</li>
+                  )}
                 </ul>
               </div>
             </div>

@@ -29,7 +29,10 @@ export function calculateReportPeriod(transactions: any[]) {
   }
 
   const dates = transactions
-    .map(t => t.date ? new Date(t.date) : null)
+    .map(t => {
+      const d = t.transaction_date || t.date;
+      return d ? new Date(d) : null;
+    })
     .filter(d => d !== null) as Date[];
 
   if (dates.length === 0) return { periodStart: null, periodEnd: null };
@@ -51,17 +54,20 @@ export function summarizeTransactions(transactions: any[]) {
   let expenseCount = 0;
 
   for (const t of transactions) {
-    const amount = Number(t.amount) || 0;
-    if (t.normalized_type === 'income') {
+    const amount = Math.abs(Number(t.amount) || 0);
+    if (t.type === 'income') {
       income += amount;
       incomeCount++;
-    } else if (t.normalized_type === 'expense') {
+    } else if (['expense', 'vendor_payment', 'subscription'].includes(t.type)) {
       expenses += amount;
       expenseCount++;
-    } else {
+    } else if (t.type === 'unknown') {
       unknownCount++;
     }
   }
+
+  const missingDates = transactions.filter(t => !t.transaction_date && !t.date).length;
+  const missingDescriptions = transactions.filter(t => !t.description).length;
 
   return {
     income,
@@ -70,21 +76,23 @@ export function summarizeTransactions(transactions: any[]) {
     transactionCount: transactions.length,
     incomeCount,
     expenseCount,
-    unknownCount
+    unknownCount,
+    missingDates,
+    missingDescriptions
   };
 }
 
 export function summarizeVendors(vendors: any[], transactions: any[]) {
   const vendorSpend = vendors.map(v => {
-    const vendorTxs = transactions.filter(t => t.vendor_id === v.id && t.normalized_type === 'expense');
-    const totalSpend = vendorTxs.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const vendorTxs = transactions.filter(t => t.vendor_id === v.id && ['expense', 'vendor_payment', 'subscription'].includes(t.type));
+    const totalSpend = vendorTxs.reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
     return {
       ...v,
       totalSpend
     };
   });
 
-  const sortedVendors = [...vendorSpend].sort((a, b) => b.totalSpend - a.totalSpend);
+  const sortedVendors = vendorSpend.filter(v => v.totalSpend > 0).sort((a, b) => b.totalSpend - a.totalSpend);
   const topVendors = sortedVendors.slice(0, 5);
   
   const recurringVendors = vendors.filter(v => v.is_recurring);
@@ -93,11 +101,11 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
   const totalVendorSpend = vendorSpend.reduce((sum, v) => sum + v.totalSpend, 0);
 
   const recurringCommitment = recurringVendors.reduce((sum, v) => {
-    const vendorTxs = transactions.filter(t => t.vendor_id === v.id && t.normalized_type === 'expense');
+    const vendorTxs = transactions.filter(t => t.vendor_id === v.id && ['expense', 'vendor_payment', 'subscription'].includes(t.type));
     if (vendorTxs.length > 0) {
       // rough average per month or just use the latest transaction as commitment
       // For deterministic simplicity, just take max amount for recurring commitment
-      const maxSpend = Math.max(...vendorTxs.map(t => Number(t.amount) || 0), 0);
+      const maxSpend = Math.max(...vendorTxs.map(t => Math.abs(Number(t.amount) || 0)), 0);
       return sum + maxSpend;
     }
     return sum;
@@ -119,7 +127,7 @@ export function summarizeRisks(riskEvents: any[]) {
   const ignoredRisks = riskEvents.filter(r => r.status === 'ignored');
 
   const reviewedRisksCount = confirmedRisks.length + falsePositives.length + ignoredRisks.length;
-  const reviewExposure = openRisks.reduce((sum, r) => sum + (Number(r.amount_involved) || 0), 0);
+  const reviewExposure = openRisks.reduce((sum, r) => sum + (Number(r.amount_at_risk) || 0), 0);
 
   return {
     openRisks,
@@ -138,7 +146,7 @@ export function summarizeNotes(notes: any[], riskEvents: any[]) {
     const risk = riskEvents.find(r => r.id === note.entity_id);
     return {
       id: note.id,
-      text: note.content,
+      text: note.note,
       relatedRiskTitle: risk?.title || 'Unknown Risk',
       created_at: note.created_at,
       author: 'Accountant' // Placeholder if no user info is joined
@@ -149,16 +157,22 @@ export function summarizeNotes(notes: any[], riskEvents: any[]) {
 }
 
 export function summarizeSourceFiles(imports: any[], uploadedFiles: any[]) {
-  return uploadedFiles.map(file => {
-    const fileImports = imports.filter(i => i.file_id === file.id);
-    return {
-      fileName: file.file_name,
-      rowCount: file.row_count,
-      status: file.status,
-      generatedTimestamp: file.created_at,
-      importsCount: fileImports.length
-    };
-  });
+  const uniqueFiles = new Map();
+  for (const file of uploadedFiles) {
+    if (!uniqueFiles.has(file.file_name)) {
+      const fileImports = imports.filter(i => i.file_id === file.id);
+      if (file.status === 'imported' || fileImports.length > 0) {
+        uniqueFiles.set(file.file_name, {
+          fileName: file.file_name,
+          rowCount: file.row_count,
+          status: file.status,
+          generatedTimestamp: file.created_at,
+          importsCount: fileImports.length
+        });
+      }
+    }
+  }
+  return Array.from(uniqueFiles.values());
 }
 
 export function buildReportSections(data: any) {
@@ -196,6 +210,8 @@ export function buildReportSections(data: any) {
 
   const caveats = {
     unknownCount: transactionSummary.unknownCount,
+    missingDates: transactionSummary.missingDates,
+    missingDescriptions: transactionSummary.missingDescriptions,
     warnings: [],
     expenseOnly: isExpenseOnly,
     importedDataCaveat: "This report is based only on uploaded/imported files for this client."
