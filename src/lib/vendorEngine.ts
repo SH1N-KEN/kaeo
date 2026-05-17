@@ -38,11 +38,16 @@ export const normalizeVendorName = (description: string): { normalized: string; 
   // 7. Intelligent pruning: Keep first 2-3 meaningful words
   const words = name.split(' ').filter(w => w.length > 1 || !['a', 'b', 'i', 'to', 'of'].includes(w));
   
-  const pruned = words.length > 0 ? words.slice(0, 3).join(' ') : description.split(' ')[0];
+  let pruned = words.length > 0 ? words.slice(0, 3).join(' ') : description.split(' ')[0];
 
   // 8. Display name: Title Case
   let display = pruned.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
   display = display.replace(/\bAws\b/g, 'AWS');
+
+  if (display.toLowerCase() === 'vendor' || display.trim() === '') {
+    display = 'Generic Vendor Payments';
+    pruned = 'generic vendor payments';
+  }
 
   return { normalized: pruned.toLowerCase(), display };
 };
@@ -112,6 +117,10 @@ export const analyzeVendorsForClient = async (orgId: string, clientId: string) =
     // Category
     const category = inferCategory(v.normalized_name);
     
+    // Consistency check
+    const baseAmt = Math.abs(v.transactions[0]?.amount || 0);
+    const consistentAmount = v.transactions.every((tx: any) => baseAmt > 0 && Math.abs(Math.abs(tx.amount) - baseAmt) / baseAmt < 0.05);
+
     // Recurrence Pattern
     let recurrence_pattern = 'irregular';
     const isSubscriptionKeyword = v.normalized_name.includes('subscription') || 
@@ -126,7 +135,7 @@ export const analyzeVendorsForClient = async (orgId: string, clientId: string) =
                                   );
 
     if (uniqueMonthCount >= 2) {
-      if (v.transaction_count >= monthsDiff * 0.8 || isSubscriptionKeyword) recurrence_pattern = 'monthly';
+      if ((v.transaction_count >= monthsDiff * 0.8 && consistentAmount) || isSubscriptionKeyword) recurrence_pattern = 'monthly';
       else if (v.transaction_count >= monthsDiff * 0.2) recurrence_pattern = 'quarterly';
     } else if (uniqueMonthCount === 1 && isSubscriptionKeyword) {
       recurrence_pattern = 'monthly';
@@ -136,6 +145,10 @@ export const analyzeVendorsForClient = async (orgId: string, clientId: string) =
     // Payroll, Vendor / Services, Marketing campaign, Office, Generic vendor payment
     const excludeRecurring = ['Payroll', 'Vendor / Services', 'Marketing', 'Office'].includes(category);
     if (excludeRecurring && recurrence_pattern !== 'irregular') {
+      recurrence_pattern = 'irregular';
+    }
+    
+    if (category === 'Cloud / Infrastructure' && !consistentAmount) {
       recurrence_pattern = 'irregular';
     }
 

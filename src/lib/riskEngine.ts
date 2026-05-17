@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { normalizeVendorName } from './vendorEngine';
+import { normalizeVendorName, inferCategory } from './vendorEngine';
 
 /**
  * Risk Detection Engine
@@ -135,12 +135,13 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
 
   // --- 2. Subscription Detection ---
   const vendorGroups: Record<string, any[]> = {};
-  txs.forEach(tx => {
-    const { normalized } = normalizeVendorName(tx.description);
-    if (!normalized) return;
-    if (!vendorGroups[normalized]) vendorGroups[normalized] = [];
-    vendorGroups[normalized].push(tx);
-  });
+  txs.filter(tx => ['expense', 'vendor_payment', 'subscription'].includes(tx.type))
+     .forEach(tx => {
+       const { normalized } = normalizeVendorName(tx.description);
+       if (!normalized) return;
+       if (!vendorGroups[normalized]) vendorGroups[normalized] = [];
+       vendorGroups[normalized].push(tx);
+     });
 
   Object.entries(vendorGroups).forEach(([vendor, cluster]) => {
     if (cluster.length >= 2) {
@@ -150,7 +151,23 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
       const baseAmt = Math.abs(cluster[0].amount);
       const consistentAmount = cluster.every(tx => Math.abs(Math.abs(tx.amount) - baseAmt) / baseAmt < 0.05);
 
-      if (hasMultipleMonths && consistentAmount) {
+      const category = inferCategory(vendor);
+      const isSubscriptionKeyword = vendor.includes('subscription') || 
+                                    vendor.includes('monthly') || 
+                                    vendor.includes('software') ||
+                                    ['slack', 'zoho', 'canva'].includes(vendor.toLowerCase()) ||
+                                    cluster.some((tx: any) => 
+                                      tx.description.toLowerCase().includes('subscription') ||
+                                      tx.description.toLowerCase().includes('monthly') ||
+                                      tx.description.toLowerCase().includes('software') ||
+                                      tx.description.toLowerCase().includes('sub')
+                                    );
+
+      const excludeRecurring = ['Payroll', 'Vendor / Services', 'Marketing', 'Office'].includes(category);
+      
+      const isRecurring = hasMultipleMonths && consistentAmount && (!excludeRecurring || isSubscriptionKeyword);
+
+      if (isRecurring) {
         risks.push({
           organization_id: orgId,
           client_id: clientId,
