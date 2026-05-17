@@ -95,7 +95,7 @@ export default function ReportDetail() {
       </div>
 
       {/* The Printable Report Container */}
-      <div className="print-container bg-card md:border rounded-lg shadow-sm max-w-5xl mx-auto overflow-hidden">
+      <div className="print-container bg-card md:border rounded-lg shadow-sm max-w-5xl mx-auto overflow-hidden print:overflow-visible">
         
         {/* HEADER */}
         <div className="p-8 md:p-12 border-b">
@@ -173,7 +173,7 @@ export default function ReportDetail() {
           </section>
 
           {/* VENDOR SUMMARY */}
-          <section className="print-section print-break-inside-avoid">
+          <section className="print-section print:break-inside-auto">
             <h2 className="text-2xl font-bold border-b pb-2 mb-6">Vendor Analysis</h2>
             
             <div className="flex justify-between items-end mb-4">
@@ -188,7 +188,7 @@ export default function ReportDetail() {
             </div>
 
             {sections.vendorSummary.topVendors && sections.vendorSummary.topVendors.length > 0 ? (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-hidden print:overflow-visible">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-muted/50 text-muted-foreground uppercase text-xs">
                     <tr>
@@ -218,7 +218,7 @@ export default function ReportDetail() {
           </section>
 
           {/* RISK SUMMARY */}
-          <section className="print-section print-break-inside-avoid">
+          <section className="print-section print:break-inside-auto print:break-before-page">
             <h2 className="text-2xl font-bold border-b pb-2 mb-6 flex items-center">
               Risk Assessment
               {summary.openRisksCount > 0 && (
@@ -230,7 +230,7 @@ export default function ReportDetail() {
             </h2>
 
             {sections.riskSummary.allRisks && sections.riskSummary.allRisks.length > 0 ? (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-hidden print:overflow-visible">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-muted/50 text-muted-foreground uppercase text-xs">
                     <tr>
@@ -267,7 +267,7 @@ export default function ReportDetail() {
 
           {/* NOTES / REVIEW LOG */}
           {sections.noteSummary && sections.noteSummary.length > 0 && (
-            <section className="print-section print-break-inside-avoid">
+            <section className="print-section print:break-inside-auto">
               <h2 className="text-2xl font-bold border-b pb-2 mb-6 flex items-center">
                 Review Notes
               </h2>
@@ -293,7 +293,7 @@ export default function ReportDetail() {
           )}
 
           {/* DATA QUALITY & CAVEATS */}
-          <section className="print-section print-break-inside-avoid text-sm">
+          <section className="print-section print:break-inside-avoid text-sm">
             <h2 className="text-xl font-bold border-b pb-2 mb-4">Data Quality & Caveats</h2>
             <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600/90 dark:text-amber-500 rounded-lg p-5">
               <div className="flex items-start">
@@ -318,7 +318,7 @@ export default function ReportDetail() {
           </section>
 
           {/* SOURCE FILES */}
-          <section className="print-section print-break-inside-avoid text-sm pt-8 border-t">
+          <section className="print-section print:break-before-page print:break-inside-auto text-sm pt-8 border-t print:border-t-0 print:pt-0">
             <p className="text-muted-foreground font-medium mb-3">Source Files Included in Report:</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {sections.sourceFiles && sections.sourceFiles.length > 0 ? (
