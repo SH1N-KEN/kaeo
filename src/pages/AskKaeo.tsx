@@ -255,8 +255,8 @@ const AskKaeo = () => {
                         {msg.intent.replace(/_/g, ' ')}
                       </span>
                       {fallbackReason && (
-                        <span className="text-[9px] text-yellow-500 italic lowercase bg-yellow-500/5 px-1.5 py-0.5 rounded border border-yellow-500/10">
-                          {fallbackReason} (fallback)
+                        <span className="text-[9px] text-yellow-500 bg-yellow-500/5 px-2 py-0.5 rounded-full border border-yellow-500/20 font-medium">
+                          Deterministic Fallback
                         </span>
                       )}
                     </div>
@@ -310,6 +310,15 @@ const AskKaeo = () => {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+                
+                {!isUser && !isAi && fallbackReason && (
+                  <div className="px-2 mt-1">
+                    <p className="text-[10px] text-muted-foreground/80 italic flex items-center gap-1">
+                      <Shield className="w-3 h-3 text-muted-foreground/75 shrink-0" />
+                      Kaeo answered from verified internal data because AI assistance is unavailable.
+                    </p>
                   </div>
                 )}
               </div>
