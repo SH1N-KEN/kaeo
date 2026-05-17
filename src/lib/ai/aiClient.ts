@@ -32,6 +32,13 @@ export interface AIStructuredContext {
     risks: number;
   };
   approved_extra_numbers?: number[];
+  matching_vendor?: {
+    name: string;
+    display_name: string;
+    total_spend: number;
+    monthly_average: number;
+    category: string;
+  } | null;
 }
 
 export const askKaeoAi = async (context: AIStructuredContext): Promise<AskKaeoAIResponse | null> => {

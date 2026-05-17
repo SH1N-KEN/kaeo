@@ -106,7 +106,7 @@ const checkAIContradictions = (aiText: string, context: AIStructuredContext): bo
   }
 
   // Also approve any numbers mentioned in the user question
-  const numbersInQuery = context.question.replace(/202[0-9]/g, '').match(/\d[\d,.]*/g) || [];
+  const numbersInQuery = context.question.replace(/\b20\d{2}\b/g, '').match(/\d[\d,.]*/g) || [];
   numbersInQuery.forEach(numStr => {
     const cleanDigits = numStr.replace(/[^\d]/g, '');
     if (cleanDigits.length >= 3) {
@@ -122,7 +122,24 @@ const checkAIContradictions = (aiText: string, context: AIStructuredContext): bo
     }
   });
 
-  const numbersInText = aiText.replace(/202[0-9]/g, '').match(/\d[\d,.]*/g) || [];
+  // Remove 4-digit years (like 2026, 2024, etc.) to prevent false alarms
+  const sanitizedText = aiText.replace(/\b20\d{2}\b/g, '');
+
+  // Extract all numbers that are not followed by %
+  const numberRegex = /\d[\d,.]*/g;
+  let match;
+  const numbersInText: string[] = [];
+  
+  while ((match = numberRegex.exec(sanitizedText)) !== null) {
+    const numStr = match[0];
+    const endIndex = match.index + numStr.length;
+    const nextChar = sanitizedText.substring(endIndex).trim().charAt(0);
+    if (nextChar === '%') {
+      continue; // Skip percentage numbers
+    }
+    numbersInText.push(numStr);
+  }
+
   for (const numStr of numbersInText) {
     const cleanDigits = numStr.replace(/[^\d]/g, '');
     if (cleanDigits.length >= 3) {
@@ -206,6 +223,16 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     ...risks.map(r => Math.round(Number(r.amount_at_risk || 0)))
   ].filter(n => n > 0);
 
+  // Extract matching vendor details
+  const matchingVendor = vendors.find(v => query.toLowerCase().includes(v.normalized_name.toLowerCase()));
+  const matching_vendor = matchingVendor ? {
+    name: matchingVendor.normalized_name,
+    display_name: matchingVendor.display_name || matchingVendor.name,
+    total_spend: vendorSummary.topVendors.find(tv => tv.normalized_name === matchingVendor.normalized_name)?.totalSpend || 0,
+    monthly_average: matchingVendor.monthly_average || 0,
+    category: matchingVendor.category || 'SaaS'
+  } : null;
+
   // BUILD STRUCTURED CONTEXT FOR AI
   const structuredContext: AIStructuredContext = {
     question: query,
@@ -247,7 +274,8 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       vendors: vendors.length,
       risks: risks.length
     },
-    approved_extra_numbers
+    approved_extra_numbers,
+    matching_vendor
   };
 
   // TRY CALLING THE AI CLIENT
@@ -257,7 +285,20 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   try {
     aiResult = await askKaeoAi(structuredContext);
     if (aiResult) {
-      // Run contradiction check
+      // 1. Sanitize $ to ₹
+      aiResult.answer = aiResult.answer.replace(/\$/g, '₹');
+      aiResult.reasoning_summary = aiResult.reasoning_summary.replace(/\$/g, '₹');
+
+      // 2. Auto-inject math formula for net cash if omitted
+      if (intent === 'finance_summary') {
+        const hasMath = aiResult.reasoning_summary.includes('=') && 
+                        (aiResult.reasoning_summary.toLowerCase().includes('net cash') || aiResult.reasoning_summary.toLowerCase().includes('math'));
+        if (!hasMath) {
+          aiResult.reasoning_summary += `\n\nHere’s the math:\n${formatReportCurrency(income)} (Income) + ${formatReportCurrency(refunds)} (Refunds) - ${formatReportCurrency(expenses)} (Expenses) = ${formatReportCurrency(netCash)} (Net Cash).`;
+        }
+      }
+
+      // 3. Run contradiction check
       const hasContradiction = checkAIContradictions(aiResult.answer + " " + aiResult.reasoning_summary, structuredContext);
       if (hasContradiction) {
         aiResult = null;
@@ -274,12 +315,13 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   // IF REAL AI SUCCEEDS, USE IT
   if (aiResult) {
     const formattedText = `${aiResult.answer}\n\nBreakdown / Reasoning:\n${aiResult.reasoning_summary}\n\nRecommended next steps:\n${aiResult.recommended_actions.map(a => `- ${a}`).join('\n')}\n\nCaveats:\n${aiResult.caveats.map(c => `- ${c}`).join('\n')}`;
+    const mode = intent === 'finance_summary' ? 'ai_assisted_locked_numbers' : 'ai_assisted';
     
     return {
       intent,
       text: formattedText,
       source_json: {
-        mode: "ai_assisted",
+        mode,
         intent,
         ai_confidence: aiResult.confidence,
         caveats: aiResult.caveats,

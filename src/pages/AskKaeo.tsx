@@ -20,7 +20,7 @@ const AskKaeo = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [dbError, setDbError] = useState<boolean>(false);
-  const [latestMode, setLatestMode] = useState<'ai_assisted' | 'deterministic' | null>(null);
+  const [latestMode, setLatestMode] = useState<'ai_assisted' | 'ai_assisted_locked_numbers' | 'deterministic' | null>(null);
   
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
@@ -213,7 +213,7 @@ const AskKaeo = () => {
             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
               CFO Advisor
               <span className="w-1.5 h-1.5 rounded-full bg-border"></span>
-              {latestMode === 'ai_assisted' ? (
+              {(latestMode === 'ai_assisted' || latestMode === 'ai_assisted_locked_numbers') ? (
                 <span className="inline-flex items-center gap-1 text-[10px] text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full font-medium border border-emerald-500/20">
                   <CheckCircle className="w-2.5 h-2.5" />
                   AI-Assisted, Data-Grounded
@@ -239,7 +239,7 @@ const AskKaeo = () => {
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
         {messages.map((msg, idx) => {
           const isUser = msg.role === 'user';
-          const isAi = msg.source_json?.mode === 'ai_assisted';
+          const isAi = msg.source_json?.mode === 'ai_assisted' || msg.source_json?.mode === 'ai_assisted_locked_numbers';
           const aiConfidence = msg.source_json?.ai_confidence;
           const aiCaveats = msg.source_json?.caveats || [];
           const sourceSummary = msg.source_json?.source_summary;
