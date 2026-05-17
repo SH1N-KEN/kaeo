@@ -62,6 +62,13 @@ const AskKaeo = () => {
         if (msgError) throw msgError;
         setMessages(msgData || []);
         
+        // Log fallback reasons to console
+        msgData?.forEach(m => {
+          if (m.role === 'assistant' && m.source_json?.fallback_reason) {
+            console.warn(`[Ask Kaeo Loaded Fallback] Message ${m.id}: ${m.source_json.fallback_reason}`);
+          }
+        });
+        
         // Determine the latest message mode
         const assistantMsgs = (msgData || []).filter(m => m.role === 'assistant');
         if (assistantMsgs.length > 0) {
@@ -161,6 +168,9 @@ const AskKaeo = () => {
       if (kaeoReply.source_json?.mode) {
         setLatestMode(kaeoReply.source_json.mode);
       }
+      if (kaeoReply.source_json?.fallback_reason) {
+        console.warn(`[Ask Kaeo Fallback] Raw Reason: ${kaeoReply.source_json.fallback_reason}`);
+      }
       
       // Save Assistant Msg
       if (threadId && !dbError) {
@@ -256,7 +266,7 @@ const AskKaeo = () => {
                       </span>
                       {fallbackReason && (
                         <span className="text-[9px] text-yellow-500 bg-yellow-500/5 px-2 py-0.5 rounded-full border border-yellow-500/20 font-medium">
-                          Deterministic Fallback
+                          AI unavailable — using verified Kaeo data
                         </span>
                       )}
                     </div>
@@ -317,7 +327,7 @@ const AskKaeo = () => {
                   <div className="px-2 mt-1">
                     <p className="text-[10px] text-muted-foreground/80 italic flex items-center gap-1">
                       <Shield className="w-3 h-3 text-muted-foreground/75 shrink-0" />
-                      Kaeo answered from verified internal data because AI assistance is unavailable.
+                      AI unavailable — using verified Kaeo data
                     </p>
                   </div>
                 )}
