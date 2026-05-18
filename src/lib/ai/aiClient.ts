@@ -5,6 +5,7 @@ import type { AskKaeoAIResponse } from './schemas';
 export interface AIStructuredContext {
   question: string;
   intent: string;
+  needs_web_research: boolean;
   active_client_name: string;
   financial_summary: {
     income: number;
