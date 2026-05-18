@@ -296,3 +296,55 @@ export const formatPlanPrice = (plan: Plan, isYearly: boolean = false): string =
   }
   return plan.price_monthly_inr === 0 ? 'Free' : `₹${plan.price_monthly_inr.toLocaleString('en-IN')}/mo`;
 };
+
+export interface RazorpayCheckoutInput {
+  organizationId: string;
+  planId: string;
+  billingCycle: 'monthly' | 'yearly';
+}
+
+export interface RazorpayCheckoutResult {
+  checkoutUrl: string;
+  razorpaySubscriptionId: string;
+  status: string;
+}
+
+/**
+ * Initiates Razorpay payment checkout by calling our Supabase Edge Function
+ */
+export const startRazorpayCheckout = async (
+  input: RazorpayCheckoutInput
+): Promise<RazorpayCheckoutResult> => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('User is not authenticated. Please log in first.');
+  }
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/create-razorpay-subscription`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      'apikey': anonKey
+    },
+    body: JSON.stringify({
+      organization_id: input.organizationId,
+      plan_id: input.planId,
+      billing_cycle: input.billingCycle
+    })
+  });
+
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.error || 'Failed to initialize Razorpay checkout.');
+  }
+
+  return {
+    checkoutUrl: result.checkout_url,
+    razorpaySubscriptionId: result.razorpay_subscription_id,
+    status: result.status
+  };
+};

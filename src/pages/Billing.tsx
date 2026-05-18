@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useBilling } from '../hooks/useBilling';
 import { useWorkspace } from '../hooks/useWorkspace';
-import { getPlanLimit } from '../lib/billing';
+import { getPlanLimit, startRazorpayCheckout } from '../lib/billing';
 import type { Plan, BillingUsageEventType } from '../lib/billing';
 
 const Billing: React.FC = () => {
@@ -36,6 +36,51 @@ const Billing: React.FC = () => {
   } = useBilling();
 
   const [isYearly, setIsYearly] = useState(false);
+  const [upgradingPlanId, setUpgradingPlanId] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  const handleUpgrade = async (planId: string) => {
+    if (!activeOrg) return;
+    setUpgradingPlanId(planId);
+    setCheckoutError(null);
+    try {
+      const billingCycle = isYearly ? 'yearly' : 'monthly';
+      const result = await startRazorpayCheckout({
+        organizationId: activeOrg.id,
+        planId,
+        billingCycle
+      });
+      
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+      } else {
+        throw new Error("No payment checkout URL returned from gateway.");
+      }
+    } catch (err: any) {
+      console.error("[Upgrade checkout failed]", err);
+      setCheckoutError(err.message || "Razorpay setup missing. Add Razorpay secrets and retry.");
+    } finally {
+      setUpgradingPlanId(null);
+    }
+  };
+
+  const getStatusCopy = (status?: string) => {
+    if (!status) return "Your plan is active.";
+    switch (status) {
+      case 'pending_payment':
+        return "Payment started. Complete Razorpay checkout to activate.";
+      case 'active':
+        return "Your plan is active.";
+      case 'trialing':
+        return "You are in the free trial period.";
+      case 'cancelled':
+        return "Subscription cancelled.";
+      case 'failed':
+        return "Payment failed. Retry upgrade.";
+      default:
+        return `Status: ${status.replace('_', ' ').toUpperCase()}`;
+    }
+  };
 
   // Loading spinner
   if (loading) {
@@ -178,10 +223,10 @@ const Billing: React.FC = () => {
         </div>
       </div>
 
-      {error && (
+      {(error || checkoutError) && (
         <div className="p-4 bg-risk/5 border border-risk/20 rounded-2xl flex gap-3 items-center">
           <AlertTriangle className="w-5 h-5 text-risk shrink-0" />
-          <p className="text-sm text-risk font-semibold">{error}</p>
+          <p className="text-sm text-risk font-semibold">{error || checkoutError}</p>
         </div>
       )}
 
@@ -198,7 +243,12 @@ const Billing: React.FC = () => {
                 <h3 className="text-xl font-black text-foreground flex items-center gap-2">
                   {currentPlan?.name || 'Free'} Plan
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase ${
-                    subscription?.status === 'trialing' ? 'bg-blue-500/10 text-blue-500' : 'bg-emerald-500/10 text-emerald-500'
+                    subscription?.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' :
+                    subscription?.status === 'trialing' ? 'bg-blue-500/10 text-blue-500' :
+                    subscription?.status === 'pending_payment' ? 'bg-amber-500/10 text-amber-500 animate-pulse' :
+                    subscription?.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
+                    subscription?.status === 'failed' ? 'bg-rose-500/10 text-rose-500' :
+                    'bg-muted text-muted-foreground'
                   }`}>
                     {subscription?.status || 'active'}
                   </span>
@@ -226,11 +276,16 @@ const Billing: React.FC = () => {
 
           <div className="bg-muted/40 border p-5 rounded-2xl space-y-2 shrink-0 md:max-w-sm w-full">
             <div className="flex items-center gap-2 text-xs font-bold text-foreground">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Razorpay Core Status: Ready
+              <span className={`inline-block w-2 h-2 rounded-full ${
+                subscription?.status === 'active' ? 'bg-emerald-500' :
+                subscription?.status === 'trialing' ? 'bg-blue-500' :
+                subscription?.status === 'pending_payment' ? 'bg-amber-500 animate-pulse' :
+                'bg-rose-500'
+              }`}></span>
+              Status: {subscription?.status ? subscription.status.replace('_', ' ').toUpperCase() : 'ACTIVE'}
             </div>
             <p className="text-[10px] text-muted-foreground leading-relaxed">
-              Your organization profile has been pre-configured with Razorpay-ready variables. Checkout connections are pending Phase 10 integration.
+              {getStatusCopy(subscription?.status)}
             </p>
           </div>
         </div>
@@ -392,15 +447,27 @@ const Billing: React.FC = () => {
                     <div className="w-full text-center py-2.5 bg-muted rounded-xl text-xs font-bold text-muted-foreground border">
                       Active Plan
                     </div>
-                  ) : (
+                  ) : plan.id === 'free' ? (
                     <button 
                       disabled
-                      className="w-full text-center py-2.5 bg-muted text-muted-foreground/60 border rounded-xl text-xs font-black uppercase tracking-wider cursor-not-allowed group relative"
+                      className="w-full text-center py-2.5 bg-muted text-muted-foreground/60 border rounded-xl text-xs font-bold cursor-not-allowed"
                     >
-                      <span>Upgrade Tier</span>
-                      <div className="absolute inset-0 bg-background/90 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-xl text-[10px] text-primary font-black uppercase transition-all duration-300">
-                        Connect Razorpay in Phase 10
-                      </div>
+                      Free Plan
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => handleUpgrade(plan.id)}
+                      disabled={upgradingPlanId !== null}
+                      className="w-full text-center py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-xl text-xs uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      {upgradingPlanId === plan.id ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <span>Upgrade to {plan.name}</span>
+                      )}
                     </button>
                   )}
                 </div>
