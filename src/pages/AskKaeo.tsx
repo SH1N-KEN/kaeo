@@ -290,8 +290,8 @@ const AskKaeo = () => {
                         Confidence: {aiConfidence || 'medium'}
                       </span>
                       {needsExt && (
-                        <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-2 py-0.5 rounded font-medium">
-                          Live Research Unavailable
+                        <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-2 py-0.5 rounded font-medium">
+                          Live Research Triggered
                         </span>
                       )}
                     </div>
@@ -384,7 +384,7 @@ const AskKaeo = () => {
           </button>
         </form>
         <div className="text-center mt-2">
-          <p className="text-[10px] text-muted-foreground">Kaeo uses your uploaded business data to keep answers grounded.</p>
+          <p className="text-[10px] text-muted-foreground">Kaeo uses your business data and live research when needed to keep answers useful and grounded.</p>
         </div>
       </div>
     </div>
