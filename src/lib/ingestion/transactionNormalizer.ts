@@ -158,17 +158,57 @@ export const normalizeIngestedRows = (
     const debitCol = mapping['debit'];
     const creditCol = mapping['credit'];
 
-    if (debitCol && row[debitCol] !== undefined && row[debitCol] !== null && row[debitCol].toString().trim() !== '') {
-      const { amount: parsedDebit } = cleanAmount(row[debitCol]);
-      if (parsedDebit > 0) {
-        amount = -parsedDebit; // Debit represents expense
-        explicitExpense = true;
+    if (debitCol || creditCol) {
+      let parsedDebit = 0;
+      let parsedCredit = 0;
+      let hasDebit = false;
+      let hasCredit = false;
+
+      if (debitCol && row[debitCol] !== undefined && row[debitCol] !== null) {
+        const valStr = row[debitCol].toString().trim();
+        // Ignore standard placeholders like '-', '0', '0.00'
+        if (valStr !== '' && valStr !== '-' && valStr !== '0' && valStr !== '0.00') {
+          const { amount: rawAmt } = cleanAmount(row[debitCol]);
+          const absAmt = Math.abs(rawAmt);
+          if (absAmt > 0) {
+            parsedDebit = absAmt;
+            hasDebit = true;
+          }
+        }
       }
-    } else if (creditCol && row[creditCol] !== undefined && row[creditCol] !== null && row[creditCol].toString().trim() !== '') {
-      const { amount: parsedCredit } = cleanAmount(row[creditCol]);
-      if (parsedCredit > 0) {
-        amount = parsedCredit; // Credit represents income
+
+      if (creditCol && row[creditCol] !== undefined && row[creditCol] !== null) {
+        const valStr = row[creditCol].toString().trim();
+        // Ignore standard placeholders like '-', '0', '0.00'
+        if (valStr !== '' && valStr !== '-' && valStr !== '0' && valStr !== '0.00') {
+          const { amount: rawAmt } = cleanAmount(row[creditCol]);
+          const absAmt = Math.abs(rawAmt);
+          if (absAmt > 0) {
+            parsedCredit = absAmt;
+            hasCredit = true;
+          }
+        }
+      }
+
+      if (hasDebit && hasCredit) {
+        // If both are non-zero, net them.
+        amount = parsedCredit - parsedDebit;
+        if (amount < 0) {
+          explicitExpense = true;
+          amount = -Math.abs(amount);
+        } else if (amount > 0) {
+          explicitIncome = true;
+          amount = Math.abs(amount);
+        }
+      } else if (hasDebit) {
+        amount = -parsedDebit; // Negative represents expense
+        explicitExpense = true;
+      } else if (hasCredit) {
+        amount = parsedCredit; // Positive represents income
         explicitIncome = true;
+      } else {
+        // Both columns are empty or resolved to 0 (ignored placeholders like '-' or '0')
+        amount = 0;
       }
     } else {
       // Single amount column mapping

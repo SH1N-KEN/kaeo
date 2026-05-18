@@ -26,6 +26,7 @@ const Dashboard: React.FC = () => {
   const [metrics, setMetrics] = useState({
     income: 0,
     expenses: 0,
+    refunds: 0,
     net: 0,
     count: 0,
     incomeCount: 0,
@@ -195,13 +196,21 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${metrics.refunds > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
         <MetricCard 
           title="Total Revenue" 
           value={hasTransactions ? formatCurrency(metrics.income) : '—'} 
           description={hasTransactions ? (metrics.incomeCount > 0 ? "From customer payments" : "No income rows detected in this import") : "No data yet"}
           icon={<TrendingUp className={`w-4 h-4 ${metrics.incomeCount > 0 ? 'text-success' : 'text-muted-foreground'}`} />} 
         />
+        {metrics.refunds > 0 && (
+          <MetricCard 
+            title="Refunds & Recoveries" 
+            value={hasTransactions ? formatCurrency(metrics.refunds) : '—'} 
+            description={hasTransactions ? `From ${metrics.refundCount} refund/reversal entries` : ""}
+            icon={<TrendingUp className="w-4 h-4 text-success" />} 
+          />
+        )}
         <MetricCard 
           title="Total Expenses" 
           value={hasTransactions ? formatCurrency(metrics.expenses) : '—'} 
@@ -211,7 +220,7 @@ const Dashboard: React.FC = () => {
         <MetricCard 
           title="Net Cash Movement" 
           value={hasTransactions ? formatCurrency(metrics.net) : '—'} 
-          description={hasTransactions ? (metrics.net > 0 ? "Income exceeds expenses" : metrics.net < 0 ? "Expenses exceed income" : "Balanced") : "No data yet"}
+          description={hasTransactions ? (metrics.net > 0 ? "Net cash positive" : metrics.net < 0 ? "Net cash negative" : "Balanced") : "No data yet"}
           icon={<DollarSign className={`w-4 h-4 ${hasTransactions ? (metrics.net >= 0 ? 'text-success' : 'text-risk/70') : 'text-muted-foreground'}`} />} 
         />
         <MetricCard 

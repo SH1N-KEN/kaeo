@@ -9,7 +9,8 @@ const KEYWORDS = {
   // Strong Income Phrases (Checked first)
   income_strong: [
     'client payment', 'customer payment', 'payment received', 'received from', 'received payment',
-    'sales', 'revenue', 'payout', 'settlement received', 'invoice paid by client', 'credit', 'deposit'
+    'sales', 'revenue', 'payout', 'settlement received', 'invoice paid by client', 'credit', 'deposit',
+    'inflow', 'received', 'cr', 'amount cr'
   ],
   // Vendor Specific Phrases
   vendor_strong: [
@@ -18,10 +19,12 @@ const KEYWORDS = {
   // Strong Expense Phrases
   expense_strong: [
     'google ads', 'meta ads', 'facebook ads', 'salary', 'payroll', 'rent', 'office supplies', 
-    'subscription', 'software', 'aws', 'cloud', 'bill', 'purchase', 'expense', 'debit', 'invoice'
+    'subscription', 'software', 'aws', 'cloud', 'bill', 'purchase', 'expense', 'debit', 'invoice',
+    'withdrawal', 'paid', 'payment', 'dr', 'amount dr', 'withdrawal dr', 'debit amount', 'outflow',
+    'charges', 'fee', 'rtgs debit', 'neft debit', 'upi payment', 'imps payment'
   ],
   refund: [
-    'refund', 'refunded', 'reversal', 'cashback', 'chargeback'
+    'refund', 'refunded', 'reversal', 'cashback', 'reimbursement', 'recovery', 'returned', 'chargeback'
   ],
   failed: [
     'failed', 'declined', 'rejected', 'cancelled', 'bounced'
@@ -32,13 +35,17 @@ export const inferTransactionType = (description: string, amount: number, rawTyp
   const desc = description.toLowerCase();
   const rType = rawType?.toLowerCase() || '';
 
-  // 1. Explicit debit/credit/type column if present
-  if (['credit', 'income', 'received', 'deposit'].some(k => rType.includes(k))) return 'income';
-  if (['debit', 'expense', 'paid', 'withdrawal'].some(k => rType.includes(k))) return 'expense';
-
-  // 2. Refund/failed special cases
+  // 1. Check refund/recovery FIRST (Task 3: Separated when description contains refund keywords)
   if (KEYWORDS.refund.some(k => desc.includes(k))) return 'refund';
   if (KEYWORDS.failed.some(k => desc.includes(k))) return 'failed_payment';
+
+  // 2. Explicit debit/credit/type column if present (Task 5: type = expense if debit value, type = income or refund if credit value)
+  if (['credit', 'income', 'received', 'deposit', 'cr', 'amount cr', 'inflow'].some(k => rType === k || rType.includes(k))) {
+    return 'income';
+  }
+  if (['debit', 'expense', 'paid', 'withdrawal', 'dr', 'amount dr', 'withdrawal dr', 'debit amount', 'outflow'].some(k => rType === k || rType.includes(k))) {
+    return 'expense';
+  }
 
   // 3. Strong income phrases BEFORE generic payment phrases
   if (KEYWORDS.income_strong.some(k => desc.includes(k))) return 'income';
