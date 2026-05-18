@@ -18,6 +18,7 @@ import { generateBestMapping } from '../lib/mappingEngine';
 import type { MappingSuggestion } from '../lib/mappingEngine';
 import { normalizeRows } from '../lib/normalizationEngine';
 import { supabase } from '../lib/supabase';
+import { trackUsageEvent } from '../lib/billing';
 
 const Files: React.FC = () => {
   const { activeClient, activeOrg } = useWorkspace();
@@ -110,6 +111,17 @@ const Files: React.FC = () => {
 
       if (fileErr) throw fileErr;
 
+      // Track usage: file uploaded
+      if (activeOrg && activeClient) {
+        trackUsageEvent({
+          organizationId: activeOrg.id,
+          clientId: activeClient.id,
+          eventType: 'file_uploaded',
+          quantity: 1,
+          userId: user?.id
+        });
+      }
+
       const { data: importData, error: importErr } = await supabase
         .from('imports')
         .insert({
@@ -196,6 +208,16 @@ const Files: React.FC = () => {
 
         if (insertErr) throw insertErr;
         console.log(`[Files] Successfully inserted ${transactionsToInsert.length} transactions.`);
+
+        // Track usage: transactions imported
+        const { data: userData } = await supabase.auth.getUser();
+        trackUsageEvent({
+          organizationId: activeOrg.id,
+          clientId: activeClient.id,
+          eventType: 'transaction_imported',
+          quantity: transactionsToInsert.length,
+          userId: userData?.user?.id
+        });
 
         await supabase.from('imports').update({ status: 'imported' }).eq('id', importData.id);
         await supabase.from('uploaded_files').update({ status: 'imported' }).eq('id', importData.file_id?.id);

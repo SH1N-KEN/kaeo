@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
+import { trackUsageEvent } from '../lib/billing';
 
 interface Organization {
   id: string;
@@ -238,6 +239,15 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       console.log('createClient: Client created:', client);
+
+      // Track usage: client created
+      trackUsageEvent({
+        organizationId: orgId,
+        clientId: client.id,
+        eventType: 'client_created',
+        quantity: 1,
+        userId: user.id
+      });
 
       await fetchClientsForOrg(orgId);
       setActiveClientState(client);

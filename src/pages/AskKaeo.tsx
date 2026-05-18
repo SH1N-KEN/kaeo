@@ -3,6 +3,7 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
 import { askKaeo } from '../lib/askKaeoEngine';
 import { Send, AlertCircle, Bot, User, Sparkles, Shield, Layers } from 'lucide-react';
+import { trackUsageEvent } from '../lib/billing';
 
 interface ChatMessage {
   id: string;
@@ -129,6 +130,16 @@ const AskKaeo = () => {
     
     setMessages(prev => [...prev, userMsg]);
     setIsTyping(true);
+
+    // Track usage: AI message sent
+    if (activeOrg) {
+      trackUsageEvent({
+        organizationId: activeOrg.id,
+        clientId: activeClient.id,
+        eventType: 'ai_message_sent',
+        quantity: 1
+      });
+    }
 
     // Save User Msg
     if (threadId && !dbError) {

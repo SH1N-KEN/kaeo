@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { generateCFOReport } from '../lib/reportEngine';
 import { FileText, Plus, AlertCircle, Eye, Calendar, Layers, ShieldAlert, Loader2 } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
+import { trackUsageEvent } from '../lib/billing';
 
 export default function Reports() {
   const { activeOrg, activeClient } = useWorkspace();
@@ -128,6 +129,17 @@ export default function Reports() {
           return;
         }
         throw insertError;
+      }
+
+      // Track usage: report generated
+      if (activeOrg && activeClient) {
+        trackUsageEvent({
+          organizationId: activeOrg.id,
+          clientId: activeClient.id,
+          eventType: 'report_generated',
+          quantity: 1,
+          userId: user.id
+        });
       }
 
       // 4. Navigate to new report
