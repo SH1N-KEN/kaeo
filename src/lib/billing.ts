@@ -361,3 +361,68 @@ export const startRazorpayCheckout = async (
     status: result.status
   };
 };
+
+export interface SyncPaymentLinkInput {
+  organizationId: string;
+  subscriptionId?: string;
+  paymentLinkId?: string;
+}
+
+export interface SyncPaymentLinkResult {
+  synced: boolean;
+  razorpay_status: string;
+  subscription_status: string;
+  plan_id: string;
+}
+
+/**
+ * Direct sync verification with Razorpay payment status
+ */
+export const syncRazorpayPaymentStatus = async (
+  input: SyncPaymentLinkInput
+): Promise<SyncPaymentLinkResult> => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('User is not authenticated. Please log in first.');
+  }
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/sync-razorpay-payment-link`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      'apikey': anonKey
+    },
+    body: JSON.stringify({
+      organization_id: input.organizationId,
+      subscription_id: input.subscriptionId,
+      razorpay_payment_link_id: input.paymentLinkId
+    })
+  });
+
+  let result: any;
+  try {
+    result = await response.json();
+  } catch (parseErr) {
+    result = { error: 'Failed to parse response body' };
+  }
+
+  if (!response.ok) {
+    console.warn('[Sync Payment Status Failure Debug Info]', {
+      statusCode: response.status,
+      responseBody: result,
+      inputSent: input
+    });
+    throw new Error(result.error || 'Failed to sync Razorpay payment status.');
+  }
+
+  return {
+    synced: result.synced,
+    razorpay_status: result.razorpay_status,
+    subscription_status: result.subscription_status,
+    plan_id: result.plan_id
+  };
+};

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   Sparkles, 
@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useBilling } from '../hooks/useBilling';
 import { useWorkspace } from '../hooks/useWorkspace';
-import { getPlanLimit, startRazorpayCheckout } from '../lib/billing';
+import { getPlanLimit, startRazorpayCheckout, syncRazorpayPaymentStatus } from '../lib/billing';
 import type { Plan, BillingUsageEventType } from '../lib/billing';
 import CreateWorkspaceModal from '../components/ui/CreateWorkspaceModal';
 
@@ -34,13 +34,69 @@ const Billing: React.FC = () => {
     error, 
     schemaMissing, 
     isOverLimit, 
-    getUsagePercent 
+    getUsagePercent,
+    refreshBilling
   } = useBilling();
 
   const [isYearly, setIsYearly] = useState(false);
   const [upgradingPlanId, setUpgradingPlanId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
+
+  // Sync state
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
+
+  const handleSync = async (silent = false) => {
+    if (!activeOrg) return;
+    if (!silent) {
+      setSyncing(true);
+      setSyncMessage(null);
+    }
+    try {
+      const res = await syncRazorpayPaymentStatus({
+        organizationId: activeOrg.id,
+        subscriptionId: subscription?.id || undefined,
+        paymentLinkId: subscription?.razorpay_payment_link_id || undefined
+      });
+
+      if (res.synced) {
+        setSyncMessage({ text: "Payment confirmed. Your plan is active.", type: 'success' });
+        await refreshBilling();
+      } else {
+        if (!silent) {
+          setSyncMessage({ 
+            text: "Payment not confirmed yet. Try again in a few seconds.", 
+            type: 'info' 
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error("[Sync error]", err);
+      if (!silent) {
+        setSyncMessage({ 
+          text: err.message || "Failed to verify status. Please retry.", 
+          type: 'error' 
+        });
+      }
+    } finally {
+      if (!silent) {
+        setSyncing(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'razorpay_return') {
+      // Auto-trigger silent sync
+      handleSync(true);
+      
+      // Clean up search params to avoid repeated trigger on page refreshes
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, [activeOrg?.id, subscription?.id]);
 
   const handleUpgrade = async (planId: string) => {
     if (!activeOrg) return;
@@ -265,9 +321,26 @@ const Billing: React.FC = () => {
       </div>
 
       {(error || checkoutError) && (
-        <div className="p-4 bg-risk/5 border border-risk/20 rounded-2xl flex gap-3 items-center">
+        <div className="p-4 bg-risk/5 border border-risk/20 rounded-2xl flex gap-3 items-center animate-in fade-in duration-300">
           <AlertTriangle className="w-5 h-5 text-risk shrink-0" />
           <p className="text-sm text-risk font-semibold">{error || checkoutError}</p>
+        </div>
+      )}
+
+      {syncMessage && (
+        <div className={`p-4 border rounded-2xl flex gap-3 items-center animate-in fade-in duration-300 ${
+          syncMessage.type === 'success' ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500' :
+          syncMessage.type === 'error' ? 'bg-risk/5 border-risk/20 text-risk' :
+          'bg-amber-500/5 border-amber-500/20 text-amber-500'
+        }`}>
+          {syncMessage.type === 'success' ? (
+            <Check className="w-5 h-5 shrink-0" />
+          ) : syncMessage.type === 'error' ? (
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+          ) : (
+            <Info className="w-5 h-5 shrink-0" />
+          )}
+          <p className="text-sm font-semibold">{syncMessage.text}</p>
         </div>
       )}
 
@@ -325,9 +398,25 @@ const Billing: React.FC = () => {
               }`}></span>
               Status: {subscription?.status ? subscription.status.replace('_', ' ').toUpperCase() : 'ACTIVE'}
             </div>
-            <p className="text-[10px] text-muted-foreground leading-relaxed">
+            <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">
               {getStatusCopy(subscription?.status)}
             </p>
+            {subscription?.status === 'pending_payment' && (
+              <div className="pt-2 animate-in fade-in duration-300">
+                <button
+                  disabled={syncing}
+                  onClick={() => handleSync(false)}
+                  className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-500/90 disabled:bg-amber-500/50 text-black font-black rounded-xl text-xs uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-amber-500/10"
+                >
+                  {syncing ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Bot className="w-3.5 h-3.5" />
+                  )}
+                  <span>{syncing ? 'Verifying...' : 'Refresh payment status'}</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
