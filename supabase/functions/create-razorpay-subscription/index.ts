@@ -79,14 +79,23 @@ serve(async (req) => {
     const { data: member, error: memberErr } = await adminClient
       .from("organization_members")
       .select("role")
-      .eq("org_id", organization_id)
+      .eq("organization_id", organization_id)
       .eq("user_id", user.id)
       .single();
 
-    if (memberErr || !member) {
-      console.error(`User ${user.id} is not a member of organization ${organization_id}:`, memberErr);
+    if (memberErr || !member || !["owner", "admin", "member"].includes(member.role || "")) {
+      console.error(`User ${user.id} is not an authorized member of organization ${organization_id}:`, memberErr);
       return new Response(
-        JSON.stringify({ error: "Unauthorized access to this organization." }),
+        JSON.stringify({ 
+          error: "Unauthorized access to this organization.",
+          debug: {
+            organization_id_received: organization_id,
+            user_id: user.id,
+            membership_found: !!member,
+            member_role: member?.role || null,
+            error_details: memberErr?.message || null
+          }
+        }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

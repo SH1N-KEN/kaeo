@@ -337,8 +337,21 @@ export const startRazorpayCheckout = async (
     })
   });
 
-  const result = await response.json();
+  let result: any;
+  try {
+    result = await response.json();
+  } catch (parseErr) {
+    result = { error: 'Failed to parse response body' };
+  }
+
   if (!response.ok) {
+    console.warn('[Razorpay Checkout Failure Debug Info]', {
+      statusCode: response.status,
+      responseBody: result,
+      organizationIdSent: input.organizationId,
+      planIdSent: input.planId,
+      billingCycleSent: input.billingCycle
+    });
     throw new Error(result.error || 'Failed to initialize Razorpay checkout.');
   }
 
