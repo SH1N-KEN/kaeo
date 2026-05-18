@@ -14,15 +14,17 @@ import {
   Loader2, 
   CreditCard,
   Info,
-  ExternalLink
+  ExternalLink,
+  Plus
 } from 'lucide-react';
 import { useBilling } from '../hooks/useBilling';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { getPlanLimit, startRazorpayCheckout } from '../lib/billing';
 import type { Plan, BillingUsageEventType } from '../lib/billing';
+import CreateWorkspaceModal from '../components/ui/CreateWorkspaceModal';
 
 const Billing: React.FC = () => {
-  const { activeOrg } = useWorkspace();
+  const { activeOrg, createOrganization } = useWorkspace();
   const { 
     plans, 
     subscription, 
@@ -38,6 +40,7 @@ const Billing: React.FC = () => {
   const [isYearly, setIsYearly] = useState(false);
   const [upgradingPlanId, setUpgradingPlanId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
 
   const handleUpgrade = async (planId: string) => {
     if (!activeOrg) return;
@@ -92,8 +95,46 @@ const Billing: React.FC = () => {
     );
   }
 
-  // Schema missing fallback screen
-  if (schemaMissing || !activeOrg) {
+  // 1. No Active Workspace fallback screen
+  if (!activeOrg) {
+    return (
+      <div className="max-w-xl mx-auto my-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="bg-card border border-border rounded-3xl p-8 shadow-2xl space-y-6 text-center relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-ocean-mist to-primary" />
+          
+          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mx-auto group-hover:scale-110 transition-transform duration-300">
+            <Building2 className="w-8 h-8" />
+          </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black tracking-tight text-foreground">Create a workspace first</h2>
+            <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto">
+              Billing is managed at the workspace level. Create a workspace to choose a plan, track usage, and connect Razorpay billing.
+            </p>
+          </div>
+          
+          <div className="pt-4 max-w-xs mx-auto">
+            <button 
+              onClick={() => setIsOrgModalOpen(true)}
+              className="w-full py-3 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-xl text-sm uppercase tracking-wider transition-all duration-200 shadow-lg shadow-primary/20 hover:shadow-primary/30 flex items-center justify-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Workspace</span>
+            </button>
+          </div>
+        </div>
+
+        <CreateWorkspaceModal 
+          isOpen={isOrgModalOpen}
+          onClose={() => setIsOrgModalOpen(false)}
+          onCreate={createOrganization}
+        />
+      </div>
+    );
+  }
+
+  // 2. Schema missing fallback screen
+  if (schemaMissing) {
     return (
       <div className="max-w-xl mx-auto my-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="bg-card border border-border rounded-3xl p-8 shadow-2xl space-y-6 text-center">
@@ -101,7 +142,7 @@ const Billing: React.FC = () => {
             <ShieldAlert className="w-10 h-10" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-2xl font-black tracking-tight text-foreground">Billing Schema Required</h2>
+            <h2 className="text-2xl font-black tracking-tight text-foreground">Billing schema required</h2>
             <p className="text-muted-foreground text-sm leading-relaxed">
               The billing plan tables and subscription triggers have not been deployed to your database.
             </p>
