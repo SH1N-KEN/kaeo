@@ -109,7 +109,9 @@ serve(async (req) => {
     } else {
       // Find Organization Id if possible in payload notes
       let eventOrgId: string | null = null;
-      const notes = payload.payload?.subscription?.entity?.notes || payload.payload?.payment?.entity?.notes;
+      const notes = payload.payload?.subscription?.entity?.notes || 
+                    payload.payload?.payment?.entity?.notes || 
+                    payload.payload?.payment_link?.entity?.notes;
       if (notes?.organization_id) {
         eventOrgId = notes.organization_id;
       }
@@ -120,7 +122,9 @@ serve(async (req) => {
           organization_id: eventOrgId,
           event_id: eventId,
           event_type: eventType,
-          razorpay_entity_id: payload.payload?.subscription?.entity?.id || payload.payload?.payment?.entity?.id,
+          razorpay_entity_id: payload.payload?.subscription?.entity?.id || 
+                              payload.payload?.payment?.entity?.id || 
+                              payload.payload?.payment_link?.entity?.id,
           payload_json: payload,
           processed: false,
         })
@@ -217,80 +221,200 @@ serve(async (req) => {
         }
         console.log(`Successfully updated Kaeo subscription for org: ${orgId} to: ${localStatus}`);
 
-      } else if (eventType === "payment.captured") {
-        const paymentEntity = payload.payload.payment.entity;
-        const paymentId = paymentEntity.id;
-        const amountPaisa = paymentEntity.amount;
-        const currency = paymentEntity.currency;
-        const paymentStatus = paymentEntity.status;
-        const orderId = paymentEntity.order_id;
-        const invoiceId = paymentEntity.invoice_id;
-        const subscriptionId = paymentEntity.subscription_id;
-        const paymentLinkId = paymentEntity.payment_link_id;
-        const notes = paymentEntity.notes;
+      } else if (eventType === "payment_link.paid" || eventType === "payment.captured") {
+        const paymentLinkEntity = payload.payload?.payment_link?.entity;
+        const paymentEntity = payload.payload?.payment?.entity;
 
-        console.log(`Processing Payment Captured: ${paymentId} - Subscription: ${subscriptionId}`);
+        const paymentLinkId = paymentLinkEntity?.id || paymentEntity?.payment_link_id || null;
+        const paymentId = paymentEntity?.id || null;
+        const amountPaisa = paymentEntity?.amount || paymentLinkEntity?.amount || 0;
+        const currency = paymentEntity?.currency || paymentLinkEntity?.currency || "INR";
+        const paymentStatus = paymentEntity?.status || paymentLinkEntity?.status || "captured";
+        const orderId = paymentEntity?.order_id || null;
+        const invoiceId = paymentEntity?.invoice_id || null;
+        const subscriptionId = paymentEntity?.subscription_id || null;
 
-        // Try to match org and client sub
-        let orgId = notes?.organization_id;
-        let planId = notes?.plan_id;
-        let subUUID: string | null = null;
+        // Extract metadata from notes
+        const notes = paymentLinkEntity?.notes || paymentEntity?.notes || {};
+        let orgId = notes.organization_id;
+        let planId = notes.plan_id;
+        let billingCycle = notes.billing_cycle;
+        let kaeoSubId = notes.kaeo_subscription_id;
 
-        if (subscriptionId) {
-          const { data: matchedSub } = await adminClient
-            .from("subscriptions")
-            .select("id, organization_id, plan_id")
-            .eq("razorpay_subscription_id", subscriptionId)
-            .maybeSingle();
+        console.log(`Processing Payment/Link Event [${eventType}]: PaymentLink: ${paymentLinkId}, Payment: ${paymentId}`);
 
-          if (matchedSub) {
-            subUUID = matchedSub.id;
-            orgId = orgId || matchedSub.organization_id;
-            planId = planId || matchedSub.plan_id;
-          }
-        }
-
+        // Try to match org and client sub if not in notes
         if (!orgId && paymentLinkId) {
           const { data: matchedSub } = await adminClient
             .from("subscriptions")
-            .select("id, organization_id, plan_id")
+            .select("id, organization_id, plan_id, billing_cycle")
             .eq("razorpay_payment_link_id", paymentLinkId)
             .maybeSingle();
 
           if (matchedSub) {
-            subUUID = matchedSub.id;
-            orgId = orgId || matchedSub.organization_id;
+            kaeoSubId = matchedSub.id;
+            orgId = matchedSub.organization_id;
             planId = planId || matchedSub.plan_id;
+            billingCycle = billingCycle || matchedSub.billing_cycle;
+          }
+        }
+
+        if (!orgId && subscriptionId) {
+          const { data: matchedSub } = await adminClient
+            .from("subscriptions")
+            .select("id, organization_id, plan_id, billing_cycle")
+            .eq("razorpay_subscription_id", subscriptionId)
+            .maybeSingle();
+
+          if (matchedSub) {
+            kaeoSubId = matchedSub.id;
+            orgId = matchedSub.organization_id;
+            planId = planId || matchedSub.plan_id;
+            billingCycle = billingCycle || matchedSub.billing_cycle;
           }
         }
 
         if (!orgId) {
-          throw new Error(`Could not resolve Organization for payment ID ${paymentId}`);
+          throw new Error(`Could not resolve Organization for event ${eventId}`);
         }
 
-        // Insert payment audit log
-        const amountINR = Math.round(amountPaisa / 100);
-        const { error: payErr } = await adminClient
-          .from("billing_payments")
-          .upsert({
-            organization_id: orgId,
-            subscription_id: subUUID,
-            plan_id: planId || "starter",
-            amount_inr: amountINR,
-            currency: currency,
-            status: paymentStatus,
-            provider: "razorpay",
-            razorpay_payment_id: paymentId,
-            razorpay_order_id: orderId,
-            razorpay_invoice_id: invoiceId,
-            razorpay_subscription_id: subscriptionId,
-            razorpay_payment_link_id: paymentLinkId,
-            payload_json: paymentEntity,
-            updated_at: new Date().toISOString()
-          }, { onConflict: "razorpay_payment_id" });
+        // Determine activation period bounds
+        const periodStart = new Date().toISOString();
+        const daysToAdd = (billingCycle === "yearly") ? 365 : 30;
+        const periodEnd = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000).toISOString();
 
-        if (payErr) throw payErr;
-        console.log(`Payment successfully logged: ${paymentId} for amount ₹${amountINR}`);
+        // Update Kaeo local subscriptions
+        const updatePayload = {
+          plan_id: planId || "starter",
+          status: "active",
+          billing_cycle: billingCycle || "monthly",
+          current_period_start: periodStart,
+          current_period_end: periodEnd,
+          razorpay_payment_link_id: paymentLinkId,
+          updated_at: new Date().toISOString()
+        };
+
+        if (kaeoSubId) {
+          const { error: subErr } = await adminClient
+            .from("subscriptions")
+            .update(updatePayload)
+            .eq("id", kaeoSubId);
+          if (subErr) throw subErr;
+        } else {
+          // If no subscription row exists, insert one
+          const { error: subErr } = await adminClient
+            .from("subscriptions")
+            .insert({
+              ...updatePayload,
+              organization_id: orgId
+            });
+          if (subErr) throw subErr;
+        }
+        console.log(`Successfully activated Kaeo subscription for org: ${orgId} to active plan: ${planId}`);
+
+        // Insert or update payment audit log
+        const amountINR = Math.round(amountPaisa / 100);
+        if (paymentId) {
+          const { error: payErr } = await adminClient
+            .from("billing_payments")
+            .upsert({
+              organization_id: orgId,
+              subscription_id: kaeoSubId || null,
+              plan_id: planId || "starter",
+              amount_inr: amountINR,
+              currency: currency,
+              status: "paid",
+              provider: "razorpay",
+              razorpay_payment_id: paymentId,
+              razorpay_order_id: orderId,
+              razorpay_invoice_id: invoiceId,
+              razorpay_subscription_id: subscriptionId,
+              razorpay_payment_link_id: paymentLinkId,
+              payload_json: payload,
+              updated_at: new Date().toISOString()
+            }, { onConflict: "razorpay_payment_id" });
+
+          if (payErr) throw payErr;
+          console.log(`Logged payment details in billing_payments: ${paymentId}`);
+        } else if (paymentLinkId) {
+          // If we only have paymentLinkId but no specific paymentId yet (e.g. initial processing)
+          const { error: payErr } = await adminClient
+            .from("billing_payments")
+            .update({
+              status: "paid",
+              payload_json: payload,
+              updated_at: new Date().toISOString()
+            })
+            .eq("razorpay_payment_link_id", paymentLinkId);
+
+          if (payErr) {
+            console.warn("Could not update billing_payments by paymentLinkId:", payErr);
+          }
+        }
+      } else if (eventType === "payment.failed") {
+        const paymentEntity = payload.payload?.payment?.entity;
+        const paymentLinkId = paymentEntity?.payment_link_id || null;
+        const paymentId = paymentEntity?.id || null;
+        const notes = paymentEntity?.notes || {};
+        let orgId = notes.organization_id;
+        let kaeoSubId = notes.kaeo_subscription_id;
+
+        console.log(`Processing Payment Failed Event: ${paymentId}`);
+
+        if (!orgId && paymentLinkId) {
+          const { data: matchedSub } = await adminClient
+            .from("subscriptions")
+            .select("id, organization_id")
+            .eq("razorpay_payment_link_id", paymentLinkId)
+            .maybeSingle();
+
+          if (matchedSub) {
+            kaeoSubId = matchedSub.id;
+            orgId = matchedSub.organization_id;
+          }
+        }
+
+        if (orgId) {
+          // Mark subscription as unpaid or failed
+          const { error: subErr } = await adminClient
+            .from("subscriptions")
+            .update({
+              status: "unpaid",
+              updated_at: new Date().toISOString()
+            })
+            .eq("organization_id", orgId);
+
+          if (subErr) {
+            console.error("Failed to update subscription status on payment failure:", subErr);
+          }
+        }
+
+        // Log failed payment if paymentId exists
+        if (orgId && paymentId) {
+          const amountPaisa = paymentEntity?.amount || 0;
+          const currency = paymentEntity?.currency || "INR";
+          const amountINR = Math.round(amountPaisa / 100);
+
+          const { error: payErr } = await adminClient
+            .from("billing_payments")
+            .upsert({
+              organization_id: orgId,
+              subscription_id: kaeoSubId || null,
+              plan_id: notes.plan_id || "starter",
+              amount_inr: amountINR,
+              currency: currency,
+              status: "failed",
+              provider: "razorpay",
+              razorpay_payment_id: paymentId,
+              razorpay_payment_link_id: paymentLinkId,
+              payload_json: payload,
+              updated_at: new Date().toISOString()
+            }, { onConflict: "razorpay_payment_id" });
+
+          if (payErr) {
+            console.error("Failed to log failed payment to DB:", payErr);
+          }
+        }
       }
     } catch (err: any) {
       console.error(`Processing error on event ${eventId}:`, err);

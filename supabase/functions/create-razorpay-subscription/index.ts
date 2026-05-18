@@ -199,87 +199,128 @@ serve(async (req) => {
       }
     }
 
-    // 7. Create Subscription in Razorpay
-    console.log(`Creating subscription in Razorpay for plan: ${razorpayPlanId}, customer: ${customerId}...`);
-    const totalCount = billing_cycle === "yearly" ? 5 : 60; // 5 years of support
-    
-    const subRes = await fetch("https://api.razorpay.com/v1/subscriptions", {
-      method: "POST",
-      headers: razorpayHeaders,
-      body: JSON.stringify({
-        plan_id: razorpayPlanId,
-        total_count: totalCount,
-        quantity: 1,
-        customer_id: customerId,
-        notify_info: {
-          notify_phone: null,
-          notify_email: user.email
-        },
-        addons: [],
-        notes: {
-          organization_id: organization_id,
-          plan_id: plan_id,
-          billing_cycle: billing_cycle
-        }
-      }),
-    });
-
-    if (!subRes.ok) {
-      const errText = await subRes.text();
-      console.error("Razorpay Subscription creation failed:", errText);
-      throw new Error(`Razorpay subscription creation failed: ${errText}`);
-    }
-
-    const subData = await subRes.json();
-    console.log(`Razorpay subscription successfully created: ${subData.id}, status: ${subData.status}`);
-
-    // 8. Update Kaeo local subscriptions table
-    // Fetch if a subscription row already exists for this org
+    // 7. Obtain Kaeo local Subscription ID (inserting if absent)
     const { data: existingSubData } = await adminClient
       .from("subscriptions")
       .select("id")
       .eq("organization_id", organization_id)
       .limit(1);
 
+    let kaeoSubId = "";
     const subscriptionPayload = {
       organization_id,
       plan_id,
       status: "pending_payment",
       billing_cycle,
       razorpay_customer_id: customerId,
-      razorpay_subscription_id: subData.id,
       razorpay_plan_id: razorpayPlanId,
-      razorpay_payment_link_id: subData.short_url ? subData.id : null, // Store subscription ID as link identifier
       updated_at: new Date().toISOString()
     };
 
     if (existingSubData && existingSubData.length > 0) {
-      console.log(`Updating existing local subscription: ${existingSubData[0].id}`);
-      const { error: updateSubErr } = await adminClient
-        .from("subscriptions")
-        .update(subscriptionPayload)
-        .eq("id", existingSubData[0].id);
-
-      if (updateSubErr) throw updateSubErr;
+      kaeoSubId = existingSubData[0].id;
+      console.log(`Using existing local subscription: ${kaeoSubId}`);
     } else {
-      console.log("Inserting new local subscription...");
-      const { error: insertSubErr } = await adminClient
+      console.log("Inserting placeholder local subscription to obtain ID...");
+      const { data: newSubRow, error: insertSubErr } = await adminClient
         .from("subscriptions")
         .insert({
           ...subscriptionPayload,
           current_period_start: new Date().toISOString(),
           current_period_end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // Default 14 days
-        });
+        })
+        .select("id")
+        .single();
 
-      if (insertSubErr) throw insertSubErr;
+      if (insertSubErr || !newSubRow) {
+        throw new Error(`Failed to create local subscription record: ${insertSubErr?.message}`);
+      }
+      kaeoSubId = newSubRow.id;
+    }
+
+    // 8. Create Payment Link in Razorpay
+    const amountInINR = billing_cycle === "yearly" ? plan.price_yearly_inr : plan.price_monthly_inr;
+    const priceInPaise = amountInINR * 100;
+    const reqHeaderOrigin = req.headers.get("origin");
+    const APP_URL = reqHeaderOrigin || "http://localhost:5173";
+
+    console.log(`Creating Razorpay Payment Link for plan: ${plan.name}, amount: ${amountInINR} INR...`);
+    const paymentLinkRes = await fetch("https://api.razorpay.com/v1/payment_links", {
+      method: "POST",
+      headers: razorpayHeaders,
+      body: JSON.stringify({
+        amount: priceInPaise,
+        currency: "INR",
+        accept_partial: false,
+        description: `Kaeo ${plan.name} Plan - ${billing_cycle}`,
+        customer: {
+          name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Kaeo Customer",
+          email: user.email
+        },
+        notify: {
+          sms: false,
+          email: true
+        },
+        reminder_enable: true,
+        notes: {
+          organization_id: organization_id,
+          plan_id: plan_id,
+          billing_cycle: billing_cycle,
+          kaeo_subscription_id: kaeoSubId
+        },
+        callback_url: `${APP_URL}/billing?payment=razorpay_return`,
+        callback_method: "get"
+      }),
+    });
+
+    if (!paymentLinkRes.ok) {
+      const errText = await paymentLinkRes.text();
+      console.error("Razorpay Payment Link creation failed:", errText);
+      throw new Error(`Razorpay Payment Link creation failed: ${errText}`);
+    }
+
+    const paymentLinkData = await paymentLinkRes.json();
+    console.log(`Razorpay Payment Link created: ${paymentLinkData.id}, short_url: ${paymentLinkData.short_url}`);
+
+    // Update local subscription table
+    const { error: updateSubLinkErr } = await adminClient
+      .from("subscriptions")
+      .update({
+        status: "pending_payment",
+        razorpay_payment_link_id: paymentLinkData.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", kaeoSubId);
+
+    if (updateSubLinkErr) {
+      console.error("Failed to update subscription link ID locally:", updateSubLinkErr);
+    }
+
+    // Create billing_payments entry for audit trail
+    console.log("Creating billing_payments entry for audit trail...");
+    const { error: paymentErr } = await adminClient
+      .from("billing_payments")
+      .insert({
+        organization_id,
+        subscription_id: kaeoSubId,
+        plan_id,
+        amount_inr: amountInINR,
+        status: paymentLinkData.status || "created",
+        provider: "razorpay",
+        razorpay_payment_link_id: paymentLinkData.id,
+        payload_json: paymentLinkData
+      });
+
+    if (paymentErr) {
+      console.error("Failed to insert billing payment audit record:", paymentErr);
     }
 
     // 9. Return the hosted redirect URL
     return new Response(
       JSON.stringify({
-        checkout_url: subData.short_url,
-        razorpay_subscription_id: subData.id,
-        status: subData.status
+        checkout_url: paymentLinkData.short_url,
+        razorpay_payment_link_id: paymentLinkData.id,
+        status: paymentLinkData.status
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

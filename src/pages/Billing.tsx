@@ -68,13 +68,13 @@ const Billing: React.FC = () => {
     if (!status) return "Your plan is active.";
     switch (status) {
       case 'pending_payment':
-        return "Payment started. Complete Razorpay checkout to activate.";
+        return "Payment link generated. Complete the Razorpay Payment Link checkout to activate.";
       case 'active':
         return "Your plan is active.";
       case 'trialing':
         return "You are in the free trial period.";
       case 'cancelled':
-        return "Subscription cancelled.";
+        return "Plan cancelled.";
       case 'failed':
         return "Payment failed. Retry upgrade.";
       default:
@@ -485,7 +485,7 @@ const Billing: React.FC = () => {
             Razorpay Billing Gateway Gateway Architecture
           </h4>
           <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
-            Kaeo is fully Razorpay-first. This setup maps essential Razorpay subscription metadata (`razorpay_customer_id`, `razorpay_subscription_id`, `razorpay_plan_id`) directly to organizations. In Phase 10, your active billing accounts will sync automatically to capture payments and dispatch webhooks.
+            Kaeo is fully Razorpay-first. This setup maps essential Razorpay payment metadata (`razorpay_customer_id`, `razorpay_payment_link_id`, `razorpay_plan_id`) directly to organizations. Your active billing accounts will sync automatically to capture payments and dispatch webhooks via Razorpay Payment Links.
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
