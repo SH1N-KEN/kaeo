@@ -66,7 +66,7 @@ const Billing: React.FC = () => {
       } else {
         if (!silent) {
           setSyncMessage({ 
-            text: "Payment not confirmed yet. Try again in a few seconds.", 
+            text: "Payment may take a few seconds to sync.", 
             type: 'info' 
           });
         }
@@ -127,7 +127,7 @@ const Billing: React.FC = () => {
     if (!status) return "Your plan is active.";
     switch (status) {
       case 'pending_payment':
-        return "Payment link generated. Complete the Razorpay Payment Link checkout to activate.";
+        return "Payment may take a few seconds to sync.";
       case 'active':
         return "Your plan is active.";
       case 'trialing':

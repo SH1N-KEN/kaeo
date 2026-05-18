@@ -108,14 +108,21 @@ serve(async (req) => {
       eventLogId = existingEvent.id;
     } else {
       // Find Organization Id if possible in payload notes from all possible locations
-      let eventOrgId: string | null = null;
-      const notes = payload.payload?.subscription?.entity?.notes || 
-                    payload.payload?.payment?.entity?.notes || 
-                    payload.payload?.payment_link?.entity?.notes ||
-                    payload.payload?.order?.entity?.notes;
-      if (notes?.organization_id) {
-        eventOrgId = notes.organization_id;
-      }
+      const getInitialNotes = () => {
+        const p = payload.payload || {};
+        return p.payment_link?.entity?.notes || 
+               p.payment?.entity?.notes || 
+               p.order?.entity?.notes || 
+               p.subscription?.entity?.notes ||
+               p.payment_link?.notes || 
+               p.payment?.notes || 
+               p.order?.notes || 
+               p.subscription?.notes ||
+               payload.notes || 
+               {};
+      };
+      const notes = getInitialNotes();
+      let eventOrgId: string | null = notes?.organization_id || null;
 
       const { data: newLog, error: logErr } = await adminClient
         .from("razorpay_events")
@@ -236,10 +243,20 @@ serve(async (req) => {
         const subscriptionId = paymentEntity?.subscription_id || null;
 
         // Extract metadata from notes in all possible locations
-        const notes = paymentLinkEntity?.notes || 
-                      paymentEntity?.notes || 
-                      orderEntity?.notes || 
-                      payload.payload?.subscription?.entity?.notes || {};
+        const getNotes = () => {
+          const p = payload.payload || {};
+          return p.payment_link?.entity?.notes || 
+                 p.payment?.entity?.notes || 
+                 p.order?.entity?.notes || 
+                 p.subscription?.entity?.notes ||
+                 p.payment_link?.notes || 
+                 p.payment?.notes || 
+                 p.order?.notes || 
+                 p.subscription?.notes ||
+                 payload.notes || 
+                 {};
+        };
+        const notes = getNotes();
 
         console.log(`[Webhook Event: ${eventType}] Extracted Notes:`, JSON.stringify(notes));
 

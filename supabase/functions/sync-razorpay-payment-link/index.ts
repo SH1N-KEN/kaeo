@@ -167,7 +167,7 @@ serve(async (req) => {
 
     // 6. If Paid, update DB subscriptions and billing_payments
     if (razorpayStatus === "paid") {
-      const notes = linkData.notes || {};
+      const notes = linkData.notes || linkData.entity?.notes || {};
       const notesOrgId = notes.organization_id || organization_id;
       const notesPlanId = notes.plan_id || "starter";
       const notesBillingCycle = notes.billing_cycle || "monthly";
@@ -190,24 +190,48 @@ serve(async (req) => {
         updated_at: new Date().toISOString()
       };
 
+      let subUpdateSuccess = false;
       if (notesKaeoSubId) {
-        const { error: subErr } = await adminClient
+        const { data: updatedSub, error: subErr } = await adminClient
           .from("subscriptions")
           .update(updatePayload)
-          .eq("id", notesKaeoSubId);
-
-        if (subErr) throw subErr;
-        subscriptionStatus = "active";
-      } else {
-        const { error: subErr } = await adminClient
-          .from("subscriptions")
-          .update(updatePayload)
-          .eq("organization_id", notesOrgId);
-
-        if (subErr) throw subErr;
-        subscriptionStatus = "active";
+          .eq("id", notesKaeoSubId)
+          .select("id");
+        
+        if (subErr) {
+          console.error("Error updating subscription by kaeo_subscription_id:", subErr);
+        } else if (updatedSub && updatedSub.length > 0) {
+          subUpdateSuccess = true;
+        }
       }
 
+      if (!subUpdateSuccess) {
+        const { data: updatedSub, error: subErr } = await adminClient
+          .from("subscriptions")
+          .update(updatePayload)
+          .eq("organization_id", notesOrgId)
+          .select("id");
+
+        if (subErr) {
+          console.error("Error updating subscription by organization_id:", subErr);
+        } else if (updatedSub && updatedSub.length > 0) {
+          subUpdateSuccess = true;
+        }
+      }
+
+      if (!subUpdateSuccess) {
+        console.log("No existing subscription row found to update. Inserting new subscription row...");
+        const { error: subErr } = await adminClient
+          .from("subscriptions")
+          .insert({
+            ...updatePayload,
+            organization_id: notesOrgId
+          });
+
+        if (subErr) throw subErr;
+      }
+
+      subscriptionStatus = "active";
       console.log(`Successfully activated Kaeo subscription to plan: ${notesPlanId}`);
 
       // Extract payment ID if available
@@ -238,19 +262,32 @@ serve(async (req) => {
         // Fallback: If no existing audit row is found for this link, insert one
         console.log("No existing audit row found during sync, inserting new paid record in billing_payments...");
         const amountINR = Math.round((linkData.amount || 0) / 100);
-        const { error: payInsertErr } = await adminClient
-          .from("billing_payments")
-          .insert({
-            organization_id: notesOrgId,
-            subscription_id: notesKaeoSubId || null,
-            plan_id: notesPlanId,
-            amount_inr: amountINR,
-            status: "paid",
-            provider: "razorpay",
-            razorpay_payment_link_id: paymentLinkId,
-            razorpay_payment_id: razorpayPaymentId,
-            payload_json: linkData
-          });
+        
+        const insertPayload = {
+          organization_id: notesOrgId,
+          subscription_id: notesKaeoSubId || null,
+          plan_id: notesPlanId,
+          amount_inr: amountINR,
+          status: "paid",
+          provider: "razorpay",
+          razorpay_payment_link_id: paymentLinkId,
+          razorpay_payment_id: razorpayPaymentId,
+          payload_json: linkData,
+          updated_at: new Date().toISOString()
+        };
+
+        let payInsertErr;
+        if (razorpayPaymentId) {
+          const { error } = await adminClient
+            .from("billing_payments")
+            .upsert(insertPayload, { onConflict: "razorpay_payment_id" });
+          payInsertErr = error;
+        } else {
+          const { error } = await adminClient
+            .from("billing_payments")
+            .insert(insertPayload);
+          payInsertErr = error;
+        }
 
         if (payInsertErr) {
           console.error("Failed to insert new billing_payments record:", payInsertErr);
