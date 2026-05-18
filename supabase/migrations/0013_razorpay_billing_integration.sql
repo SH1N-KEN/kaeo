@@ -56,13 +56,18 @@ ALTER TABLE public.razorpay_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.billing_payments ENABLE ROW LEVEL SECURITY;
 
 -- 7. Add Policies
--- Only service_role can access or modify razorpay_events (default behavior when RLS is active but no public policy exists).
+-- Org members can select razorpay_events for their organization.
+CREATE POLICY select_razorpay_events ON public.razorpay_events
+    FOR SELECT
+    TO authenticated
+    USING (
+        public.user_id_is_member(organization_id)
+    );
+
 -- Org members can select billing_payments for their organization.
 CREATE POLICY select_billing_payments ON public.billing_payments
     FOR SELECT
     TO authenticated
     USING (
-        organization_id IN (
-            SELECT org_id FROM public.organization_members WHERE user_id = auth.uid()
-        )
+        public.user_id_is_member(organization_id)
     );
