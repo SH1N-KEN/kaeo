@@ -1,4 +1,7 @@
-import Papa from 'papaparse';
+import { parseCSVFile } from './ingestion/csvParser';
+import { parseXLSXFile } from './ingestion/xlsxParser';
+import { parsePDFFile } from './ingestion/pdfParser';
+import type { ParsedFinancialFile, IngestedParsedFile } from './ingestion/ingestionTypes';
 
 export interface ParseResult {
   headers: string[];
@@ -28,7 +31,7 @@ export const detectProvider = (headers: string[], _firstRows: any[], fileName: s
     return { provider: 'Shopify', sourceType: 'ecommerce' };
   }
 
-  if (h.includes('transaction date') && h.includes('withdrawal') && h.includes('deposit')) {
+  if (h.includes('transaction date') && (h.includes('withdrawal') || h.includes('deposit') || h.includes('debit') || h.includes('credit'))) {
     return { provider: 'Bank Statement', sourceType: 'bank' };
   }
 
@@ -39,56 +42,57 @@ export const detectProvider = (headers: string[], _firstRows: any[], fileName: s
   return { provider: 'Generic Finance File', sourceType: 'other' };
 };
 
-export const parseCSV = (file: File): Promise<ParseResult> => {
-  return new Promise((resolve) => {
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: 'greedy',
-      complete: (results) => {
-        const headers = results.meta.fields || [];
-        const rows = results.data;
-        const rowCount = rows.length;
-        const warnings: string[] = [];
-        const errors: string[] = [];
+/**
+ * Legacy Papaparse direct parsing for backward compatibility.
+ */
+export { parseCSV } from './fileParserLegacy';
 
-        if (headers.length === 0) errors.push('No headers detected in file.');
-        if (rowCount === 0) errors.push('The file appears to be empty.');
+/**
+ * Unified Hardcore Parser Ingestion Coordinator
+ * Resolves CSV, XLSX, and PDF statement formats into a unified schema.
+ */
+export const parseFinancialFile = async (file: File): Promise<IngestedParsedFile> => {
+  const ext = file.name.split('.').pop()?.toLowerCase();
 
-        // Finance field validation
-        const h = headers.map(s => s.toLowerCase());
-        const hasDate = h.some(s => s.includes('date'));
-        const hasAmount = h.some(s => s.includes('amount') || s.includes('value'));
-        const hasDesc = h.some(s => s.includes('desc') || s.includes('narrat') || s.includes('particular'));
+  let parsed: ParsedFinancialFile;
 
-        if (!hasDate) warnings.push('Missing common date field.');
-        if (!hasAmount) warnings.push('Missing common amount field.');
-        if (!hasDesc) warnings.push('Missing common description field.');
-
-        const { provider, sourceType } = detectProvider(headers, rows.slice(0, 5), file.name);
-
-        resolve({
-          headers,
-          rows: rows.slice(0, 20), // Only return preview rows
-          allRows: rows, // Return full dataset
-          rowCount,
-          provider,
-          sourceType,
-          warnings,
-          errors
-        });
-      },
-      error: (err) => {
-        resolve({
-          headers: [],
-          rows: [],
-          allRows: [],
-          rowCount: 0,
-          provider: 'Unknown',
-          sourceType: 'unknown',
-          warnings: [],
-          errors: [`Parsing error: ${err.message}`]
-        });
+  if (ext === 'csv') {
+    parsed = await parseCSVFile(file);
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    parsed = await parseXLSXFile(file);
+  } else if (ext === 'pdf') {
+    parsed = await parsePDFFile(file);
+  } else {
+    parsed = {
+      fileName: file.name,
+      fileType: 'csv',
+      rawRows: [],
+      previewRows: [],
+      detectedColumns: [],
+      suggestedMapping: {},
+      confidence: 0,
+      warnings: [],
+      errors: ['Unsupported file format. Kaeo supports CSV, XLSX, and PDF financial files.'],
+      metadata: {
+        totalRows: 0,
+        previewRowCount: 0,
+        skippedRows: 0
       }
-    });
-  });
+    };
+  }
+
+  // Set backward-compatible fields
+  const { provider, sourceType } = detectProvider(parsed.detectedColumns, parsed.previewRows, parsed.fileName);
+  
+  const enriched: IngestedParsedFile = {
+    ...parsed,
+    headers: parsed.detectedColumns,
+    rows: parsed.previewRows,
+    allRows: parsed.rawRows,
+    rowCount: parsed.metadata.totalRows,
+    provider: provider,
+    sourceType: sourceType
+  };
+
+  return enriched;
 };

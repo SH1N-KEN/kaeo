@@ -90,27 +90,50 @@ const Mapping: React.FC = () => {
         throw new Error('This file has already been imported.');
       }
 
-      const { error: mappingErr } = await supabase
+      // Check if mappings already exist to perform upsert or update to prevent primary key errors
+      const { data: existingMapping } = await supabase
         .from('import_mappings')
-        .insert({
-          organization_id: importData.orgId,
-          client_id: importData.clientId,
-          import_id: importId,
-          confirmed_mapping_json: mapping,
-          confirmed_by: (await supabase.auth.getUser()).data.user?.id,
-          confirmed_at: new Date().toISOString()
-        });
+        .select('id')
+        .eq('import_id', importId)
+        .limit(1);
 
-      if (mappingErr) throw mappingErr;
+      if (existingMapping && existingMapping.length > 0) {
+        const { error: mappingErr } = await supabase
+          .from('import_mappings')
+          .update({
+            confirmed_mapping_json: mapping,
+            confirmed_by: (await supabase.auth.getUser()).data.user?.id,
+            confirmed_at: new Date().toISOString()
+          })
+          .eq('import_id', importId);
+
+        if (mappingErr) throw mappingErr;
+      } else {
+        const { error: mappingErr } = await supabase
+          .from('import_mappings')
+          .insert({
+            organization_id: importData.orgId,
+            client_id: importData.clientId,
+            import_id: importId,
+            confirmed_mapping_json: mapping,
+            confirmed_by: (await supabase.auth.getUser()).data.user?.id,
+            confirmed_at: new Date().toISOString()
+          });
+
+        if (mappingErr) throw mappingErr;
+      }
 
       const { error: importErr } = await supabase
         .from('imports')
-        .update({ status: 'mapped' })
+        .update({ 
+          status: 'ready_to_import',
+          ingestion_confidence: confidence / 100
+        })
         .eq('id', importId);
 
       if (importErr) throw importErr;
 
-      navigate('/files', { state: { success: 'Mapping saved successfully!' } });
+      navigate('/files', { state: { success: 'Mapping saved successfully! Ready to import transactions.' } });
 
     } catch (err: any) {
       setError('Failed to save mapping: ' + err.message);

@@ -8,7 +8,9 @@ import { suggestMappingWithAI, validateAIMappingResponse } from './ai/mappingAI'
 export const TARGET_FIELDS = [
   { id: 'transaction_date', label: 'Transaction Date', required: true },
   { id: 'description', label: 'Description', required: true },
-  { id: 'amount', label: 'Amount', required: true },
+  { id: 'amount', label: 'Single Amount Column', required: false },
+  { id: 'debit', label: 'Debit (Expense/Withdrawal)', required: false },
+  { id: 'credit', label: 'Credit (Income/Deposit)', required: false },
   { id: 'currency', label: 'Currency', required: false },
   { id: 'type', label: 'Transaction Type', required: false },
   { id: 'status', label: 'Status', required: false },
@@ -42,7 +44,18 @@ export const suggestMappingFromColumns = (headers: string[]): MappingSuggestion 
 
   mapping['transaction_date'] = findHeader(['date', 'txndate', 'posteddate', 'transactiondate']) || '';
   mapping['description'] = findHeader(['description', 'narration', 'particulars', 'remarks', 'payee', 'vendor']) || '';
-  mapping['amount'] = findHeader(['amount', 'value', 'transactionamount', 'total']) || '';
+  
+  // Look for separate debit/credit columns
+  const debitCol = findHeader(['debit', 'withdrawal', 'out', 'payment', 'dr']);
+  const creditCol = findHeader(['credit', 'deposit', 'in', 'receipt', 'cr']);
+
+  if (debitCol && creditCol) {
+    mapping['debit'] = debitCol;
+    mapping['credit'] = creditCol;
+  } else {
+    mapping['amount'] = findHeader(['amount', 'value', 'transactionamount', 'total']) || '';
+  }
+
   mapping['currency'] = findHeader(['currency', 'ccy']) || '';
   mapping['reference'] = findHeader(['reference', 'utr', 'refno', 'chequeno']) || '';
 
@@ -83,8 +96,8 @@ export const generateBestMapping = async (
     detectedProvider,
     rawColumns,
     previewRows,
-    requiredFields: TARGET_FIELDS.filter(f => f.required).map(f => f.id),
-    optionalFields: TARGET_FIELDS.filter(f => !f.required).map(f => f.id),
+    requiredFields: ['transaction_date', 'description'],
+    optionalFields: TARGET_FIELDS.filter(f => f.id !== 'transaction_date' && f.id !== 'description').map(f => f.id),
   };
 
   const aiResponse = await suggestMappingWithAI(aiInput);
@@ -123,29 +136,46 @@ export const generateBestMapping = async (
 
 export const calculateMappingConfidence = (mapping: Record<string, string>, headers: string[]): number => {
   let score = 0;
-  const totalRequired = TARGET_FIELDS.filter(f => f.required).length;
   
-  TARGET_FIELDS.filter(f => f.required).forEach(f => {
-    if (mapping[f.id] && headers.includes(mapping[f.id])) score += 1;
-  });
+  // Date is 40% of confidence
+  if (mapping['transaction_date'] && headers.includes(mapping['transaction_date'])) score += 0.4;
+  
+  // Description is 40% of confidence
+  if (mapping['description'] && headers.includes(mapping['description'])) score += 0.4;
+  
+  // Amount or separate Debit+Credit is 20% of confidence
+  const hasAmount = mapping['amount'] && headers.includes(mapping['amount']);
+  const hasDebitCredit = mapping['debit'] && headers.includes(mapping['debit']) && mapping['credit'] && headers.includes(mapping['credit']);
+  
+  if (hasAmount || hasDebitCredit) {
+    score += 0.2;
+  }
 
-  const baseConfidence = score / totalRequired;
-  
-  // Bonus for optional fields
-  const optionalScore = TARGET_FIELDS.filter(f => !f.required).reduce((acc, f) => {
-    return acc + (mapping[f.id] && headers.includes(mapping[f.id]) ? 0.05 : 0);
+  // Bonus for optional fields (capped at +20%)
+  const optionalFields = TARGET_FIELDS.filter(f => f.id !== 'transaction_date' && f.id !== 'description' && f.id !== 'amount' && f.id !== 'debit' && f.id !== 'credit');
+  const optionalScore = optionalFields.reduce((acc, f) => {
+    return acc + (mapping[f.id] && headers.includes(mapping[f.id]) ? 0.04 : 0);
   }, 0);
 
-  return Math.min(1, baseConfidence + optionalScore);
+  return Math.min(1, score + optionalScore);
 };
 
 export const validateMapping = (mapping: Record<string, string>): string[] => {
   const errors: string[] = [];
-  const required = TARGET_FIELDS.filter(f => f.required);
   
-  required.forEach(f => {
-    if (!mapping[f.id]) errors.push(`Missing required field: ${f.label}`);
-  });
+  if (!mapping['transaction_date']) {
+    errors.push('Missing required field: Transaction Date');
+  }
+  if (!mapping['description']) {
+    errors.push('Missing required field: Description');
+  }
+  
+  const hasAmount = Boolean(mapping['amount']);
+  const hasDebitCredit = Boolean(mapping['debit'] && mapping['credit']);
+  
+  if (!hasAmount && !hasDebitCredit) {
+    errors.push('Missing required field: Single Amount Column (or both Debit and Credit columns must be mapped)');
+  }
 
   return errors;
 };
