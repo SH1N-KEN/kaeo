@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
 import { askKaeo } from '../lib/askKaeoEngine';
-import { Send, AlertCircle, Bot, User, Sparkles, Shield, Layers } from 'lucide-react';
+import { Send, AlertCircle, Bot, User, Sparkles, Shield, Layers, Zap } from 'lucide-react';
 import { trackUsageEvent } from '../lib/billing';
+import { checkUsageEventAllowed } from '../lib/billingGuards';
+import EmptyState from '../components/ui/EmptyState';
 
 interface ChatMessage {
   id: string;
@@ -16,6 +19,7 @@ interface ChatMessage {
 
 const AskKaeo = () => {
   const { activeClient, activeOrg } = useWorkspace();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -120,6 +124,26 @@ const AskKaeo = () => {
 
     const userText = input.trim();
     setInput('');
+
+    // 1. Enforce AI advisor messaging limit
+    const limitCheck = await checkUsageEventAllowed(activeOrg.id, 'ai_message_sent', 1);
+    if (!limitCheck.allowed) {
+      const userMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: userText,
+        created_at: new Date().toISOString()
+      };
+      const asstMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: limitCheck.message || 'AI advisor monthly message limit reached. Upgrade your plan to ask unlimited CFO questions.',
+        created_at: new Date().toISOString(),
+        source_json: { mode: 'limit_exceeded' }
+      };
+      setMessages(prev => [...prev, userMsg, asstMsg]);
+      return;
+    }
     
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
@@ -198,6 +222,17 @@ const AskKaeo = () => {
       setIsTyping(false);
     }
   };
+
+  if (!activeClient || !activeOrg) {
+    return (
+      <div className="h-[70vh] flex items-center justify-center animate-in fade-in duration-500">
+        <EmptyState 
+          title="No client workspace selected"
+          description="Create or select a client workspace to consult with Kaeo, your intelligent CFO."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] bg-background max-w-4xl mx-auto rounded-2xl border overflow-hidden shadow-sm">
@@ -280,7 +315,18 @@ const AskKaeo = () => {
                   <div className="text-sm whitespace-pre-wrap leading-relaxed opacity-95">
                     {msg.content}
                   </div>
-                  {!isUser && !isAi && (
+                  {msg.source_json?.mode === 'limit_exceeded' && (
+                    <div className="mt-3 pt-3 border-t border-border/50">
+                      <button
+                        onClick={() => navigate('/billing')}
+                        className="px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold rounded-lg transition-all shadow-md shadow-primary/10 inline-flex items-center gap-1.5 animate-in fade-in"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-warning fill-warning" />
+                        Upgrade Subscription
+                      </button>
+                    </div>
+                  )}
+                  {!isUser && !isAi && msg.source_json?.mode !== 'limit_exceeded' && (
                     <div className="mt-3 pt-3 border-t border-border/50 text-[10px] text-muted-foreground flex items-center gap-1.5">
                       <Shield className="w-3 h-3 text-blue-500/70" />
                       Answered from verified Kaeo data.

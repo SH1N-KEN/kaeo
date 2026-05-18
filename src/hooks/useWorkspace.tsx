@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
 import { trackUsageEvent } from '../lib/billing';
+import { checkUsageEventAllowed } from '../lib/billingGuards';
 
 interface Organization {
   id: string;
@@ -221,6 +222,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setError(null);
 
     try {
+      // 1. Enforce monthly client created limit
+      const check = await checkUsageEventAllowed(orgId, 'client_created', 1);
+      if (!check.allowed) {
+        const errMsg = check.message || 'Workspace client creation limit reached. Please upgrade your plan in Billing.';
+        setError(errMsg);
+        throw new Error(errMsg);
+      }
+
       const { data: client, error: clError } = await supabase
         .from('clients')
         .insert({ 

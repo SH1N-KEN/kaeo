@@ -19,6 +19,7 @@ import type { MappingSuggestion } from '../lib/mappingEngine';
 import { normalizeRows } from '../lib/normalizationEngine';
 import { supabase } from '../lib/supabase';
 import { trackUsageEvent } from '../lib/billing';
+import { checkUsageEventAllowed } from '../lib/billingGuards';
 
 const Files: React.FC = () => {
   const { activeClient, activeOrg } = useWorkspace();
@@ -26,7 +27,7 @@ const Files: React.FC = () => {
   const location = useLocation();
   
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<{ message: string; subtext?: string } | null>(null);
+  const [error, setError] = useState<{ message: string; subtext?: string; showUpgrade?: boolean } | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -61,8 +62,24 @@ const Files: React.FC = () => {
       return;
     }
 
+    if (!activeOrg) {
+      setError({ message: 'No active workspace', subtext: 'Please select a workspace before uploading.' });
+      return;
+    }
+
     setLoading(true);
     try {
+      // Enforce file upload capacity limit
+      const limitCheck = await checkUsageEventAllowed(activeOrg.id, 'file_uploaded', 1);
+      if (!limitCheck.allowed) {
+        setError({
+          message: limitCheck.message || 'File upload limit reached for this billing cycle.',
+          subtext: 'Please upgrade your plan to upload additional files.',
+          showUpgrade: true
+        });
+        setLoading(false);
+        return;
+      }
       const result = await parseCSV(file);
       console.log(`[Files] Parsed ${result.rowCount} rows from ${file.name}`);
 
@@ -187,6 +204,18 @@ const Files: React.FC = () => {
           ? importData.parsed_rows_json 
           : parseResult.allRows;
           
+        // Enforce transaction ledger row capacity limits
+        const txCheck = await checkUsageEventAllowed(activeOrg.id, 'transaction_imported', rowsToImport.length);
+        if (!txCheck.allowed) {
+          setError({
+            message: txCheck.message || 'Transaction import row limit reached for this billing cycle.',
+            subtext: 'Please upgrade your plan to ingest additional transaction rows.',
+            showUpgrade: true
+          });
+          setLoading(false);
+          return;
+        }
+
         console.log(`[Files] Importing ${rowsToImport.length} rows via ${autoMapping.source} mapping...`);
         
         const normalized = normalizeRows(rowsToImport, autoMapping.mapping, {
@@ -270,6 +299,15 @@ const Files: React.FC = () => {
           <div className="flex-1">
             <h4 className="text-sm text-risk/80 font-bold">{error.message}</h4>
             {error.subtext && <p className="text-xs text-risk/60 mt-1">{error.subtext}</p>}
+            {error.showUpgrade && (
+              <button
+                onClick={() => navigate('/billing')}
+                className="mt-3 px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold rounded-lg transition-all shadow-md shadow-primary/10 inline-flex items-center gap-1.5"
+              >
+                <Zap className="w-3.5 h-3.5 text-warning fill-warning" />
+                Upgrade Subscription
+              </button>
+            )}
           </div>
           <button onClick={() => setError(null)} className="text-[10px] font-black text-risk/60 hover:text-risk uppercase">Dismiss</button>
         </div>

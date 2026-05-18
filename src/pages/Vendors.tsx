@@ -108,8 +108,15 @@ const Vendors: React.FC = () => {
     return acc;
   }, { totalSpend: 0, needsReview: 0, recurringSpend: 0 });
 
-  if (!activeClient) {
-    return <EmptyState title="No client selected" description="Select a client to view vendor spend advisor." />;
+  if (!activeClient || !activeOrg) {
+    return (
+      <div className="h-[70vh] flex items-center justify-center animate-in fade-in duration-500">
+        <EmptyState 
+          title="No client workspace selected" 
+          description="Select a client workspace to view strategic vendor analysis and spend advisor." 
+        />
+      </div>
+    );
   }
 
   return (

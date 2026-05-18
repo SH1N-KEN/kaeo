@@ -3,9 +3,11 @@ import { supabase } from '../lib/supabase';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useNavigate } from 'react-router-dom';
 import { generateCFOReport } from '../lib/reportEngine';
-import { FileText, Plus, AlertCircle, Eye, Calendar, Layers, ShieldAlert, Loader2 } from 'lucide-react';
+import { FileText, Plus, AlertCircle, Eye, Calendar, ShieldAlert, Loader2, Zap } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import { trackUsageEvent } from '../lib/billing';
+import { checkUsageEventAllowed } from '../lib/billingGuards';
+import EmptyState from '../components/ui/EmptyState';
 
 export default function Reports() {
   const { activeOrg, activeClient } = useWorkspace();
@@ -18,6 +20,7 @@ export default function Reports() {
   const [transactionCount, setTransactionCount] = useState(0);
   const [schemaError, setSchemaError] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   useEffect(() => {
     if (activeOrg && activeClient) {
@@ -73,8 +76,18 @@ export default function Reports() {
     if (!activeOrg || !activeClient || !user) return;
     setGenerating(true);
     setError(null);
+    setShowUpgrade(false);
 
     try {
+      // Enforce monthly report generation limit
+      const limitCheck = await checkUsageEventAllowed(activeOrg.id, 'report_generated', 1);
+      if (!limitCheck.allowed) {
+        setError(limitCheck.message || 'Report generation limit reached for this billing cycle. Please upgrade your plan in settings.');
+        setShowUpgrade(true);
+        setGenerating(false);
+        return;
+      }
+
       // 1. Fetch all required data
       const [txRes, vendorRes, riskRes, noteRes, fileRes, importRes] = await Promise.all([
         supabase.from('transactions').select('*').eq('organization_id', activeOrg.id).eq('client_id', activeClient.id),
@@ -155,12 +168,13 @@ export default function Reports() {
     }
   };
 
-  if (!activeClient) {
+  if (!activeClient || !activeOrg) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <Layers className="h-12 w-12 text-muted-foreground/30 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">No Client Selected</h2>
-        <p className="text-muted-foreground">Select a client to view and generate reports.</p>
+      <div className="h-[70vh] flex items-center justify-center animate-in fade-in duration-500">
+        <EmptyState 
+          title="No client workspace selected"
+          description="Select a client workspace to view or compile professional CFO-ready reporting packages."
+        />
       </div>
     );
   }
@@ -212,9 +226,22 @@ export default function Reports() {
       </div>
 
       {error && (
-        <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-md p-4 flex items-center">
-          <AlertCircle className="h-5 w-5 mr-3 shrink-0" />
-          <p>{error}</p>
+        <div className="p-4 bg-risk/5 border border-risk/10 rounded-xl flex gap-3 items-start animate-in shake-in">
+          <AlertCircle className="w-5 h-5 text-risk/70 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h4 className="text-sm text-risk/80 font-bold">{showUpgrade ? 'Usage Limit Exceeded' : 'Generation Failed'}</h4>
+            <p className="text-xs text-risk/60 mt-1">{error}</p>
+            {showUpgrade && (
+              <button
+                onClick={() => navigate('/billing')}
+                className="mt-3 px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold rounded-lg transition-all shadow-md shadow-primary/10 inline-flex items-center gap-1.5 animate-in fade-in"
+              >
+                <Zap className="w-3.5 h-3.5 text-warning fill-warning" />
+                Upgrade Subscription
+              </button>
+            )}
+          </div>
+          <button onClick={() => setError(null)} className="text-[10px] font-black text-risk/60 hover:text-risk uppercase">Dismiss</button>
         </div>
       )}
 

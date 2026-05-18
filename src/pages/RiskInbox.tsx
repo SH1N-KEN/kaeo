@@ -233,8 +233,15 @@ const RiskInbox: React.FC = () => {
     }
   };
 
-  if (!activeClient) {
-    return <EmptyState title="No client selected" description="Select a client to view risk inbox." />;
+  if (!activeClient || !activeOrg) {
+    return (
+      <div className="h-[70vh] flex items-center justify-center animate-in fade-in duration-500">
+        <EmptyState 
+          title="No client workspace selected" 
+          description="Select a client workspace to scan and audit high-risk vendor payments or anomalies." 
+        />
+      </div>
+    );
   }
 
   return (
