@@ -39,15 +39,23 @@ export const suggestMappingFromColumns = (headers: string[]): MappingSuggestion 
   const normalizedHeaders = headers.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
 
   const findHeader = (keywords: string[]) => {
-    return headers.find((_, i) => keywords.some(k => normalizedHeaders[i].includes(k)));
+    return headers.find((_, i) => keywords.some(k => {
+      const normalizedHeader = normalizedHeaders[i];
+      const words = headers[i].toLowerCase().split(/[^a-z0-9]+/);
+
+      if (k === 'in' || k === 'out' || k === 'dr' || k === 'cr') {
+        return words.includes(k) || normalizedHeader === k;
+      }
+      return normalizedHeader.includes(k);
+    }));
   };
 
   mapping['transaction_date'] = findHeader(['date', 'txndate', 'posteddate', 'transactiondate']) || '';
   mapping['description'] = findHeader(['description', 'narration', 'particulars', 'remarks', 'payee', 'vendor']) || '';
   
   // Look for separate debit/credit columns
-  const debitCol = findHeader(['debit', 'withdrawal', 'out', 'payment', 'dr']);
-  const creditCol = findHeader(['credit', 'deposit', 'in', 'receipt', 'cr']);
+  const debitCol = findHeader(['debit', 'withdrawal', 'outflow', 'out', 'payment', 'dr']);
+  const creditCol = findHeader(['credit', 'deposit', 'inflow', 'in', 'receipt', 'cr']);
 
   if (debitCol && creditCol) {
     mapping['debit'] = debitCol;
