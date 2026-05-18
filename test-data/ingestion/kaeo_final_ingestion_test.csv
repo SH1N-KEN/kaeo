@@ -1,0 +1,35 @@
+Kaeo Final CSV Ingestion Test,,,,,,,,
+Generated for parser QA,,,,,,,,
+Account: HDFC Current A/c 3381,,,,,,,,
+Period: 01 Apr 2026 to 30 Apr 2026,,,,,,,,
+,,,,,,,,
+Txn Date,Value Date,Narration,Withdrawal Dr,Deposit Cr,Balance,Ref No,Mode,Category Hint
+01/04/2026,01/04/2026,Opening Balance,,,500000,OB,SYSTEM,ignore
+01/04/2026,01/04/2026,Client Payment - Nova Foods,,250000,750000,CR001,NEFT,income
+02/04/2026,02/04/2026,Slack Technologies Monthly Subscription,12000,,738000,DR001,CARD,saas
+03/04/2026,03/04/2026,Google Workspace India,6500,,731500,DR002,CARD,saas
+04/04/2026,04/04/2026,Acme Services Invoice 4451,48000,,683500,DR003,NEFT,vendor
+04/04/2026,04/04/2026,Acme Services Invoice 4451,48000,,635500,DR004,NEFT,vendor duplicate
+05/04/2026,05/04/2026,Salary Payroll April,185000,,450500,DR005,IMPS,payroll
+07/04/2026,07/04/2026,Refund from Canva Seat Adjustment,,3500,454000,CR002,UPI,refund
+08/04/2026,08/04/2026,AWS Cloud Hosting,24500,,429500,DR006,CARD,cloud
+10/04/2026,10/04/2026,Client Payment Orion Labs,,320000,749500,CR003,RTGS,income
+11/04/2026,11/04/2026,Office Supplies Urban Stationery,13200,,736300,DR007,UPI,office
+12/04/2026,12/04/2026,Zoho Books Annual Plan,19999,,716301,DR008,CARD,saas
+12/04/2026,12/04/2026,Bank Charges GST,590,,715711,DR009,BANK,fee
+Txn Date,Value Date,Narration,Withdrawal Dr,Deposit Cr,Balance,Ref No,Mode,Category Hint
+14/04/2026,14/04/2026,Razorpay Settlement,,87500,803211,CR004,RAZORPAY,income
+15/04/2026,15/04/2026,Vercel Pro Software Subscription,4041,,799170,DR010,CARD,saas
+16/04/2026,16/04/2026,Travel Reimbursement Returned,,12500,811670,CR005,NEFT,refund
+17/04/2026,17/04/2026,Marketing - Meta Ads,58000,,753670,DR011,CARD,marketing
+18/04/2026,18/04/2026,Unknown Bank Adjustment,,,753670,UNK001,BANK,unknown
+19/04/2026,19/04/2026,Customer Refund - Beta Foods,9000,,744670,DR012,UPI,refund_out
+20/04/2026,20/04/2026,Client Payment - Beta Foods,,175000,919670,CR006,NEFT,income
+21/04/2026,21/04/2026,GitHub Team Subscription,4200,,915470,DR013,CARD,saas
+23/04/2026,23/04/2026,Rent - Office April,75000,,840470,DR014,NEFT,rent
+24/04/2026,24/04/2026,UPI Urban Office Supplies,11330,,829140,DR015,UPI,office
+25/04/2026,25/04/2026,Microsoft 365 Business,8499,,820641,DR016,CARD,saas
+26/04/2026,26/04/2026,Client Payment - Acme Retainer,,110000,930641,CR007,RTGS,income
+27/04/2026,27/04/2026,Zenith Consulting Retainer,65000,,865641,DR017,NEFT,vendor
+28/04/2026,28/04/2026,Closing Balance,,,865641,CB,SYSTEM,ignore
+Total Debit,,,772859,,,,,ignore

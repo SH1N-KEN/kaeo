@@ -35,11 +35,18 @@ export const inferTransactionType = (description: string, amount: number, rawTyp
   const desc = description.toLowerCase();
   const rType = rawType?.toLowerCase() || '';
 
-  // 1. Check refund/recovery FIRST (Task 3: Separated when description contains refund keywords)
-  if (KEYWORDS.refund.some(k => desc.includes(k))) return 'refund';
+  // Determine direction context based on amount sign and explicit columns
+  const isCreditDirection = amount > 0 || ['credit', 'income', 'received', 'deposit', 'cr', 'amount cr', 'inflow'].some(k => rType === k || rType.includes(k));
+
+  // 1. Check failed first
   if (KEYWORDS.failed.some(k => desc.includes(k))) return 'failed_payment';
 
-  // 2. Explicit debit/credit/type column if present (Task 5: type = expense if debit value, type = income or refund if credit value)
+  // 2. Refund/recovery (Rule 1 & 3: only apply to credit/inflow direction, and must contain refund/reversal keyword)
+  if (isCreditDirection && KEYWORDS.refund.some(k => desc.includes(k))) {
+    return 'refund';
+  }
+
+  // 3. Explicit debit/credit/type column if present (Task 5: type = expense if debit value, type = income or refund if credit value)
   if (['credit', 'income', 'received', 'deposit', 'cr', 'amount cr', 'inflow'].some(k => rType === k || rType.includes(k))) {
     return 'income';
   }
@@ -47,17 +54,17 @@ export const inferTransactionType = (description: string, amount: number, rawTyp
     return 'expense';
   }
 
-  // 3. Strong income phrases BEFORE generic payment phrases
+  // 4. Strong income phrases BEFORE generic payment phrases
   if (KEYWORDS.income_strong.some(k => desc.includes(k))) return 'income';
 
-  // 4. Strong expense/vendor phrases
+  // 5. Strong expense/vendor phrases
   if (KEYWORDS.vendor_strong.some(k => desc.includes(k))) return 'vendor_payment';
   if (KEYWORDS.expense_strong.some(k => desc.includes(k))) return 'expense';
 
-  // 5. If amount is negative → expense
+  // 6. If amount is negative → expense (Rule 2: remains expense)
   if (amount < 0) return 'expense';
   
-  // 6. If amount is positive but context is unclear → unknown, not income
+  // 7. If amount is positive but context is unclear → unknown, not income
   return 'unknown';
 };
 
