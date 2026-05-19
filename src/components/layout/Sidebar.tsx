@@ -123,14 +123,14 @@ const Sidebar: React.FC = () => {
         ${collapsed ? 'w-20' : 'w-64'}
       `}
     >
-      {/* Boundary Edge Circular Toggle Button - centered exactly on the intersecting divider corner line */}
+      {/* Boundary Edge Circular Toggle Button - centered exactly on the intersecting corner line at 88px */}
       <button
         onClick={toggleCollapse}
         className="absolute rounded-full flex items-center justify-center border border-teal-500/25 bg-[#0b0f0e]/95 text-teal-400 hover:text-teal-300 hover:border-teal-500/60 hover:shadow-[0_0_12px_rgba(47,184,166,0.25),0_4px_12px_rgba(0,0,0,0.5)] transition-all z-[80] cursor-pointer hover:scale-105 active:scale-95 shadow-lg"
         style={{
           position: 'absolute',
           right: '0',
-          top: '74px',
+          top: '88px',
           transform: 'translate(50%, -50%)',
           width: '28px',
           height: '28px',
@@ -150,34 +150,18 @@ const Sidebar: React.FC = () => {
         )}
       </button>
 
-      {/* Brand Logo Header - Fixed visual height of 74px to ensure vertical line math is consistent */}
+      {/* Brand Logo Header - Fixed visual height of 88px for consistency */}
       <div 
-        className={`p-5 flex items-center border-b border-border/40 ${collapsed ? 'justify-center' : 'justify-start pl-6'}`}
-        style={{ height: '74px' }}
+        className={`flex items-center border-b border-border/40 ${collapsed ? 'justify-center' : 'justify-start pl-6'}`}
+        style={{ height: '88px' }}
       >
         <div className="flex items-center select-none">
           {!collapsed ? (
-            <div 
-              style={{
-                width: '112px',
-                height: '34px',
-                overflow: 'hidden',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
-              <img 
-                src={kaeoWordmark} 
-                alt="Kaeo Logo" 
-                style={{
-                  width: '112px',
-                  height: 'auto',
-                  objectFit: 'contain',
-                  transform: 'scale(1.8)',
-                  transformOrigin: 'left center',
-                }}
-              />
-            </div>
+            <img 
+              src={kaeoWordmark} 
+              alt="Kaeo Logo" 
+              className="h-8 w-auto object-contain max-w-[150px]" 
+            />
           ) : (
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20">
               <img src={aeLogo} alt="Kaeo Icon" className="w-5 h-5 object-contain" />
@@ -186,8 +170,8 @@ const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Navigation Space */}
-      <div className="flex-1 flex flex-col min-h-0 p-3">
+      {/* Navigation Space - pt-4 sets the starting padding-top to exactly 16px */}
+      <div className="flex-1 flex flex-col min-h-0 p-3 pt-4">
         <nav className="space-y-1 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar pr-1 -mr-1">
           {navItems.map((item) => (
             <NavLink
