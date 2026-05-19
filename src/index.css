@@ -56,21 +56,21 @@
 }
 
 .dark {
-  --background: #0C1110;
-  --foreground: var(--color-porcelain);
-  --card: #141C1B;
-  --card-foreground: var(--color-porcelain);
-  --primary: var(--color-ocean-mist);
-  --primary-foreground: #0C1110;
-  --secondary: var(--color-blue-spruce);
-  --secondary-foreground: var(--color-porcelain);
-  --muted: #1F2937;
-  --muted-foreground: #94A3B8;
-  --accent: var(--color-blue-spruce);
-  --accent-foreground: var(--color-porcelain);
-  --border: #1F2937;
-  --input: #1F2937;
-  --ring: var(--color-ocean-mist);
+  --background: #070908;
+  --foreground: #f3f4f6;
+  --card: #0c1110;
+  --card-foreground: #f3f4f6;
+  --primary: #2fb8a6;
+  --primary-foreground: #070908;
+  --secondary: #0f766e;
+  --secondary-foreground: #f3f4f6;
+  --muted: #111827;
+  --muted-foreground: #94a3b8;
+  --accent: #2fb8a6;
+  --accent-foreground: #070908;
+  --border: rgba(47, 184, 166, 0.12);
+  --input: rgba(47, 184, 166, 0.12);
+  --ring: #2fb8a6;
 }
 
 @layer base {
@@ -94,6 +94,24 @@ h1, h2, h3, h4, h5, h6 {
 
 .dark .glass {
   @apply bg-black/40 backdrop-blur-md border border-white/5;
+}
+
+.premium-glass {
+  background: rgba(13, 18, 17, 0.45);
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  border: 1px solid rgba(47, 184, 166, 0.12);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.premium-glass-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-glass-hover:hover {
+  background: rgba(13, 18, 17, 0.6);
+  border-color: rgba(47, 184, 166, 0.25);
+  box-shadow: 0 0 25px rgba(47, 184, 166, 0.08), 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
 /* Custom Scrollbar */

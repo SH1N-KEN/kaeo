@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  Building2, 
   ChevronDown, 
   Plus, 
   Settings, 
@@ -11,6 +10,7 @@ import {
 import { useWorkspace } from '../../hooks/useWorkspace';
 import CreateWorkspaceModal from '../ui/CreateWorkspaceModal';
 import CreateClientModal from '../ui/CreateClientModal';
+import aeLogo from '../../assets/kaeo-ae-logo.png';
 
 const WorkspaceSwitcher: React.FC = () => {
   const { 
@@ -53,8 +53,8 @@ const WorkspaceSwitcher: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card hover:bg-muted transition-colors text-sm font-medium w-full"
       >
-        <div className="w-5 h-5 bg-primary/10 rounded flex items-center justify-center">
-          <Building2 className="w-3 h-3 text-primary" />
+        <div className="w-5 h-5 bg-teal-500/10 rounded flex items-center justify-center border border-teal-500/20 shrink-0">
+          <img src={aeLogo} alt="Workspace Badge" className="w-3.5 h-3.5 object-contain" />
         </div>
         <div className="flex flex-col items-start min-w-0 flex-1">
           <span className="truncate text-[11px] text-muted-foreground uppercase tracking-wider font-bold">

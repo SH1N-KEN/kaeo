@@ -46,10 +46,13 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+import { ToastProvider } from './hooks/useToast';
+
 function App() {
   return (
     <AuthProvider>
-      <WorkspaceProvider>
+      <ToastProvider>
+        <WorkspaceProvider>
         <BrowserRouter>
           <Routes>
             {/* Public Routes */}
@@ -84,6 +87,7 @@ function App() {
           </Routes>
         </BrowserRouter>
       </WorkspaceProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

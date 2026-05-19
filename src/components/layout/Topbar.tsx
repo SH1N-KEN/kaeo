@@ -1,39 +1,133 @@
-import React from 'react';
-import { Search, Bell } from 'lucide-react';
-import ThemeToggle from '../ui/ThemeToggle';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Search, Bell, X } from 'lucide-react';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 
-const Topbar: React.FC = () => {
-  return (
-    <header className="h-16 border-b bg-card/50 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-8">
-      <div className="flex items-center gap-4">
-        <WorkspaceSwitcher />
-        <div className="h-4 w-px bg-border mx-2" />
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Workspaces</span>
-          <span className="text-border">/</span>
-          <span className="text-foreground font-medium">Dashboard</span>
-        </div>
-      </div>
+const pathTitleMap: Record<string, string> = {
+  '/': 'Dashboard',
+  '/ask-kaeo': 'Ask Kaeo',
+  '/files': 'Files Ingestion',
+  '/transactions': 'Ledger Transactions',
+  '/vendors': 'Vendor Analysis',
+  '/risk-inbox': 'Risk Inbox',
+  '/reports': 'Financial Reports',
+  '/clients': 'Client Context',
+  '/settings': 'Workspace Settings',
+  '/billing': 'Billing & Plans',
+};
 
-      <div className="flex items-center gap-4">
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input 
-            type="text" 
-            placeholder="Search transactions, files..." 
-            className="pl-10 pr-4 py-1.5 rounded-lg border bg-muted/50 focus:bg-background focus:ring-1 focus:ring-primary outline-none text-sm w-64 transition-all"
-          />
+const Topbar: React.FC = () => {
+  const location = useLocation();
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  
+  const currentPath = location.pathname;
+  const pageTitle = pathTitleMap[currentPath] || 'Workspace';
+
+  // Close notifications dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setIsNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <>
+      <header className="h-16 border-b border-border/40 bg-card/45 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-8">
+        <div className="flex items-center gap-4">
+          <WorkspaceSwitcher />
+          <div className="h-4 w-px bg-border/40 mx-2" />
+          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+            <span>Workspaces</span>
+            <span className="text-border/40 font-normal">/</span>
+            <span className="text-foreground font-bold">{pageTitle}</span>
+          </div>
         </div>
-        
-        <button className="p-2 rounded-lg hover:bg-muted transition-colors relative">
-          <Bell className="w-5 h-5 text-muted-foreground" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-risk rounded-full border-2 border-card" />
-        </button>
-        
-        <ThemeToggle />
-      </div>
-    </header>
+
+        <div className="flex items-center gap-3">
+          {/* Search Trigger Button */}
+          <button 
+            onClick={() => setIsSearchOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/30 bg-muted/30 hover:bg-muted/60 transition-all text-xs font-semibold text-muted-foreground w-48 md:w-64 cursor-pointer"
+          >
+            <Search className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-left flex-1">Search transactions, files...</span>
+            <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded border border-border/40">Ctrl K</span>
+          </button>
+          
+          {/* Notifications Popover Trigger */}
+          <div className="relative" ref={notifRef}>
+            <button 
+              onClick={() => setIsNotifOpen(!isNotifOpen)}
+              className={`p-2 rounded-xl border border-border/20 bg-muted/10 hover:bg-muted/40 transition-colors relative cursor-pointer ${isNotifOpen ? 'bg-muted/40' : ''}`}
+            >
+              <Bell className="w-4 h-4 text-muted-foreground" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-risk rounded-full border border-card" />
+            </button>
+
+            {isNotifOpen && (
+              <div className="absolute right-0 mt-2 w-72 premium-glass rounded-2xl p-4 shadow-2xl z-50 text-center animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="w-10 h-10 bg-teal-500/10 rounded-full flex items-center justify-center mx-auto mb-2.5">
+                  <Bell className="w-4 h-4 text-teal-400" />
+                </div>
+                <h4 className="text-xs font-bold text-foreground mb-1">Notifications</h4>
+                <p className="text-[11px] text-muted-foreground">No notifications yet.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Command Palette / Search Placeholder Modal */}
+      {isSearchOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-start justify-center pt-24 px-4 animate-in fade-in duration-200"
+          onClick={() => setIsSearchOpen(false)}
+        >
+          <div 
+            className="w-full max-w-xl premium-glass rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setIsSearchOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 border-b border-border/40 pb-4 mb-4">
+              <Search className="w-5 h-5 text-teal-400 shrink-0 animate-pulse" />
+              <input 
+                type="text" 
+                placeholder="Search ledger entries, vendors, reports..." 
+                className="w-full bg-transparent text-sm font-semibold outline-none text-foreground placeholder:text-muted-foreground"
+                autoFocus
+              />
+            </div>
+
+            <div className="py-6 text-center">
+              <div className="w-12 h-12 bg-teal-500/10 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-teal-500/20">
+                <Search className="w-5 h-5 text-teal-400" />
+              </div>
+              <h3 className="text-sm font-bold text-foreground mb-1">Advanced CFO Search</h3>
+              <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
+                Search across transactions, vendors, and files is coming soon in Phase 13B.
+              </p>
+            </div>
+            
+            <div className="border-t border-border/30 pt-3 flex items-center justify-between text-[10px] text-muted-foreground font-bold">
+              <span>TIP: Use filters on ledger page to sort manually</span>
+              <kbd className="px-2 py-0.5 bg-muted rounded border border-border/50">ESC to exit</kbd>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
