@@ -123,33 +123,34 @@ const Sidebar: React.FC = () => {
         ${collapsed ? 'w-20' : 'w-64'}
       `}
     >
-      {/* Brand Logo Header with Floating circular boundary toggle button */}
-      <div className={`relative p-5 flex items-center border-b border-border/40 ${collapsed ? 'justify-center' : 'justify-start'}`}>
+      {/* Boundary Edge Circular Toggle Button - centered on the right border line */}
+      <button
+        onClick={toggleCollapse}
+        className="absolute top-[26px] right-0 translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center border border-teal-500/25 bg-[#0b0f0e]/95 text-teal-400 hover:text-teal-300 hover:border-teal-500/60 hover:shadow-[0_0_12px_rgba(47,184,166,0.25),0_4px_12px_rgba(0,0,0,0.5)] transition-all z-[60] cursor-pointer hover:scale-105 active:scale-95 shadow-lg"
+        title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+      >
+        {collapsed ? (
+          <ChevronRight className="w-4 h-4" />
+        ) : (
+          <ChevronLeft className="w-4 h-4" />
+        )}
+      </button>
+
+      {/* Brand Logo Header */}
+      <div className={`p-5 flex items-center border-b border-border/40 ${collapsed ? 'justify-center' : 'justify-start pl-6'}`}>
         <div className="flex items-center h-8 select-none">
           {!collapsed ? (
-            <img src={kaeoWordmark} alt="Kaeo Logo" className="h-8 object-contain" />
+            <img 
+              src={kaeoWordmark} 
+              alt="Kaeo Logo" 
+              className="h-8 w-auto object-contain max-w-[160px] pl-1" 
+            />
           ) : (
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20">
               <img src={aeLogo} alt="Kaeo Icon" className="w-5 h-5 object-contain" />
             </div>
           )}
         </div>
-
-        {/* Boundary Edge Circular Toggle Button */}
-        <button
-          onClick={toggleCollapse}
-          className="absolute top-1/2 -translate-y-1/2 -right-3 w-6 h-6 rounded-full flex items-center justify-center border border-border bg-[#070908]/95 hover:bg-white/5 text-muted-foreground hover:text-primary hover:border-teal-500/50 transition-all z-[60] shadow-md cursor-pointer hover:scale-105 active:scale-95"
-          style={{
-            boxShadow: '0 4px 8px rgba(0,0,0,0.4)',
-          }}
-          title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-        >
-          {collapsed ? (
-            <ChevronRight className="w-3.5 h-3.5 text-teal-400" />
-          ) : (
-            <ChevronLeft className="w-3.5 h-3.5" />
-          )}
-        </button>
       </div>
 
       {/* Navigation Space */}
