@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { useToast } from '../../hooks/useToast';
-import kaeoWordmark from '../../assets/kaeo-wordmark.png';
 import aeLogo from '../../assets/kaeo-ae-logo.png';
 
 const navItems = [
@@ -123,19 +122,19 @@ const Sidebar: React.FC = () => {
         ${collapsed ? 'w-20' : 'w-64'}
       `}
     >
-      {/* Boundary Edge Circular Toggle Button - centered exactly on the intersecting corner line at 88px */}
+      {/* Boundary Edge Circular Toggle Button - shrunken to 24px x 24px and centered exactly at 86px */}
       <button
         onClick={toggleCollapse}
-        className="absolute rounded-full flex items-center justify-center border border-teal-500/25 bg-[#0b0f0e]/95 text-teal-400 hover:text-teal-300 hover:border-teal-500/60 hover:shadow-[0_0_12px_rgba(47,184,166,0.25),0_4px_12px_rgba(0,0,0,0.5)] transition-all z-[80] cursor-pointer hover:scale-105 active:scale-95 shadow-lg"
+        className="absolute rounded-full flex items-center justify-center border border-teal-500/25 bg-[#0b0f0e]/95 text-teal-400 hover:text-teal-300 hover:border-teal-500/60 hover:shadow-[0_0_8px_rgba(47,184,166,0.25)] transition-all z-[80] cursor-pointer hover:scale-105 active:scale-95 shadow-lg"
         style={{
           position: 'absolute',
           right: '0',
-          top: '88px',
+          top: '86px',
           transform: 'translate(50%, -50%)',
-          width: '28px',
-          height: '28px',
-          minWidth: '28px',
-          minHeight: '28px',
+          width: '24px',
+          height: '24px',
+          minWidth: '24px',
+          minHeight: '24px',
           padding: '0',
           display: 'flex',
           alignItems: 'center',
@@ -144,27 +143,30 @@ const Sidebar: React.FC = () => {
         title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
       >
         {collapsed ? (
-          <ChevronRight className="w-3.5 h-3.5" />
+          <ChevronRight style={{ width: '12px', height: '12px' }} />
         ) : (
-          <ChevronLeft className="w-3.5 h-3.5" />
+          <ChevronLeft style={{ width: '12px', height: '12px' }} />
         )}
       </button>
 
-      {/* Brand Logo Header - Fixed visual height of 88px for consistency */}
+      {/* Brand Logo Header - Fixed visual height of 86px with horizontal padding px-6 */}
       <div 
-        className={`flex items-center border-b border-border/40 ${collapsed ? 'justify-center' : 'justify-start pl-6'}`}
-        style={{ height: '88px' }}
+        className={`flex items-center border-b border-border/40 ${collapsed ? 'justify-center' : 'justify-start px-6'}`}
+        style={{ height: '86px' }}
       >
         <div className="flex items-center select-none">
           {!collapsed ? (
-            <img 
-              src={kaeoWordmark} 
-              alt="Kaeo Logo" 
-              className="h-8 w-auto object-contain max-w-[150px]" 
-            />
+            <div className="flex items-center gap-2.5 h-8">
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/25 shrink-0">
+                <img src={aeLogo} alt="ae" className="w-4 h-4 object-contain" />
+              </div>
+              <span className="text-[26px] font-bold tracking-tight text-teal-400 leading-none">
+                Kaeo
+              </span>
+            </div>
           ) : (
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20">
-              <img src={aeLogo} alt="Kaeo Icon" className="w-5 h-5 object-contain" />
+            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/25">
+              <img src={aeLogo} alt="ae" className="w-4 h-4 object-contain" />
             </div>
           )}
         </div>
