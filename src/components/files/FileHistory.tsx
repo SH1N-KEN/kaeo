@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileText, Clock, ChevronRight } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
+import { useToast } from '../../hooks/useToast';
 
 interface HistoryItem {
   id: string;
@@ -18,6 +19,8 @@ interface FileHistoryProps {
 }
 
 const FileHistory: React.FC<FileHistoryProps> = ({ history }) => {
+  const { toast } = useToast();
+
   if (history.length === 0) return null;
 
   return (
@@ -27,14 +30,19 @@ const FileHistory: React.FC<FileHistoryProps> = ({ history }) => {
           <Clock className="w-5 h-5 text-muted-foreground" />
           Recent Uploads
         </h3>
-        <button className="text-sm text-primary hover:underline font-medium">View all</button>
+        <button 
+          onClick={() => toast('Displaying all file history logs', 'info')}
+          className="text-sm text-primary hover:underline font-medium cursor-pointer"
+        >
+          View all
+        </button>
       </div>
 
       <div className="grid gap-3">
         {history.map((item) => (
           <div 
             key={item.id} 
-            className="group bg-card border border-border/50 rounded-xl p-4 flex items-center justify-between hover:border-primary/30 transition-all hover:shadow-md cursor-pointer"
+            className="group premium-glass premium-glass-hover rounded-xl p-4 flex items-center justify-between cursor-pointer"
           >
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">

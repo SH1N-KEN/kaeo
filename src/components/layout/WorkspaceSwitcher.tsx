@@ -51,7 +51,7 @@ const WorkspaceSwitcher: React.FC = () => {
     <div className="relative">
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card hover:bg-muted transition-colors text-sm font-medium w-full"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all text-xs font-semibold w-full premium-topbar-card"
       >
         <div className="w-5 h-5 bg-teal-500/10 rounded flex items-center justify-center border border-teal-500/20 shrink-0">
           <img src={aeLogo} alt="Workspace Badge" className="w-3.5 h-3.5 object-contain" />
@@ -64,7 +64,7 @@ const WorkspaceSwitcher: React.FC = () => {
             {activeClient?.name || 'No client selected'}
           </span>
         </div>
-        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform chevron-icon ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
@@ -73,13 +73,13 @@ const WorkspaceSwitcher: React.FC = () => {
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full left-0 mt-2 w-64 bg-card border rounded-xl shadow-2xl z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
+          <div className="absolute top-full left-0 mt-2 w-64 premium-glass rounded-xl shadow-2xl z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
             {/* Organizations Section */}
             <div className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-between">
               Workspaces
               <button 
                 onClick={(e) => { e.stopPropagation(); setIsOrgModalOpen(true); setIsOpen(false); }} 
-                className="p-1 hover:bg-muted rounded transition-colors"
+                className="p-1 hover:bg-white/5 rounded transition-colors"
               >
                 <Plus className="w-3 h-3" />
               </button>
@@ -89,7 +89,7 @@ const WorkspaceSwitcher: React.FC = () => {
                 <button
                   key={org.id}
                   onClick={() => { setActiveOrg(org); setIsOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeOrg.id === org.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted'}`}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeOrg.id === org.id ? 'bg-primary/10 text-primary' : 'hover:bg-white/5'}`}
                 >
                   <Building className="w-3 h-3" />
                   <span className="truncate flex-1 text-left">{org.name}</span>
@@ -98,46 +98,46 @@ const WorkspaceSwitcher: React.FC = () => {
               ))}
             </div>
 
-            <div className="h-px bg-border mx-2 my-1" />
+            <div className="h-px bg-border/20 mx-2 my-1" />
 
             {/* Clients Section */}
             <div className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-between">
               Clients
-              <button 
-                onClick={(e) => { e.stopPropagation(); setIsClientModalOpen(true); setIsOpen(false); }} 
-                className="p-1 hover:bg-muted rounded transition-colors"
-              >
-                <Plus className="w-3 h-3" />
-              </button>
-            </div>
-            <div className="space-y-0.5 px-1 max-h-48 overflow-y-auto">
-              {clients.length === 0 ? (
-                <div className="px-3 py-4 text-center">
-                  <p className="text-[10px] text-muted-foreground mb-2">No clients found</p>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setIsClientModalOpen(true); setIsOpen(false); }} 
-                    className="text-[10px] text-primary hover:underline"
-                  >
-                    Add Client
-                  </button>
-                </div>
-              ) : clients.map(client => (
-                <button
-                  key={client.id}
-                  onClick={() => { setActiveClient(client); setIsOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted'}`}
-                >
-                  <Briefcase className="w-3 h-3" />
-                  <span className="truncate flex-1 text-left">{client.name}</span>
-                  {activeClient?.id === client.id && <Check className="w-3 h-3" />}
-                </button>
-              ))}
-            </div>
-
-            <div className="h-px bg-border mx-2 my-1" />
-            
-            <div className="px-1">
-              <button className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors text-muted-foreground">
+               <button 
+                 onClick={(e) => { e.stopPropagation(); setIsClientModalOpen(true); setIsOpen(false); }} 
+                 className="p-1 hover:bg-white/5 rounded transition-colors"
+               >
+                 <Plus className="w-3 h-3" />
+               </button>
+             </div>
+             <div className="space-y-0.5 px-1 max-h-48 overflow-y-auto">
+               {clients.length === 0 ? (
+                 <div className="px-3 py-4 text-center">
+                   <p className="text-[10px] text-muted-foreground mb-2">No clients found</p>
+                   <button 
+                     onClick={(e) => { e.stopPropagation(); setIsClientModalOpen(true); setIsOpen(false); }} 
+                     className="text-[10px] text-primary hover:underline"
+                   >
+                     Add Client
+                   </button>
+                 </div>
+               ) : clients.map(client => (
+                 <button
+                   key={client.id}
+                   onClick={() => { setActiveClient(client); setIsOpen(false); }}
+                   className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary' : 'hover:bg-white/5'}`}
+                 >
+                   <Briefcase className="w-3 h-3" />
+                   <span className="truncate flex-1 text-left">{client.name}</span>
+                   {activeClient?.id === client.id && <Check className="w-3 h-3" />}
+                 </button>
+               ))}
+             </div>
+ 
+             <div className="h-px bg-border/20 mx-2 my-1" />
+             
+             <div className="px-1">
+               <button className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-muted-foreground">
                 <Settings className="w-3 h-3" />
                 Workspace Settings
               </button>

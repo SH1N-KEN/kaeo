@@ -142,6 +142,69 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 0 25px rgba(47, 184, 166, 0.08), 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important;
 }
 
+.premium-glass.border-dashed {
+  border-style: dashed !important;
+}
+
+/* Premium Topbar layout backings */
+.premium-topbar {
+  background: rgba(248, 244, 236, 0.90) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border-bottom: 1px solid rgba(15, 118, 110, 0.12) !important;
+}
+
+.dark .premium-topbar {
+  background: rgba(7, 9, 9, 0.88) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border-bottom: 1px solid rgba(47, 184, 166, 0.12) !important;
+}
+
+/* Theme-aware header controls and buttons */
+.premium-topbar-card {
+  background: #FFFFFF !important;
+  border: 1px solid rgba(15, 118, 110, 0.12) !important;
+  color: #5B6B66 !important;
+  transition: all 0.2s ease-in-out;
+}
+.premium-topbar-card:hover {
+  background: rgba(15, 118, 110, 0.05) !important;
+  border-color: rgba(15, 118, 110, 0.20) !important;
+  color: #10201D !important;
+}
+.premium-topbar-card .search-icon,
+.premium-topbar-card .bell-icon,
+.premium-topbar-card .chevron-icon {
+  color: #5B6B66 !important;
+  transition: color 0.2s ease-in-out;
+}
+.premium-topbar-card:hover .search-icon,
+.premium-topbar-card:hover .bell-icon,
+.premium-topbar-card:hover .chevron-icon {
+  color: #10201D !important;
+}
+
+.dark .premium-topbar-card {
+  background: rgba(13, 18, 17, 0.85) !important;
+  border: 1px solid rgba(47, 184, 166, 0.14) !important;
+  color: #EAF7F4 !important;
+}
+.dark .premium-topbar-card:hover {
+  background: rgba(13, 18, 17, 0.95) !important;
+  border-color: rgba(47, 184, 166, 0.25) !important;
+}
+.dark .premium-topbar-card .search-icon,
+.dark .premium-topbar-card .bell-icon,
+.dark .premium-topbar-card .chevron-icon {
+  color: #7E928D !important;
+}
+.dark .premium-topbar-card:hover .search-icon,
+.dark .premium-topbar-card:hover .bell-icon,
+.dark .premium-topbar-card:hover .chevron-icon {
+  color: #2FB8A6 !important;
+}
+
 /* Light mode overrides for high-contrast, premium readability */
 :not(.dark) .bg-white\/5 {
   background-color: rgba(15, 118, 110, 0.04) !important;
@@ -215,6 +278,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 :not(.dark) .bg-rose-400 {
   background-color: #DC2626 !important;
+}
+:not(.dark) .bg-amber-500\/10 {
+  background-color: rgba(217, 119, 6, 0.1) !important;
+}
+:not(.dark) .border-amber-500\/20 {
+  border-color: rgba(217, 119, 6, 0.2) !important;
 }
 
 /* Custom Scrollbar */

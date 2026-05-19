@@ -38,7 +38,7 @@ const Topbar: React.FC = () => {
 
   return (
     <>
-      <header className="h-16 border-b border-border/40 bg-card/45 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-8">
+      <header className="h-16 premium-topbar sticky top-0 z-40 flex items-center justify-between px-8">
         <div className="flex items-center gap-4">
           <WorkspaceSwitcher />
           <div className="h-4 w-px bg-border/40 mx-2" />
@@ -53,20 +53,20 @@ const Topbar: React.FC = () => {
           {/* Search Trigger Button */}
           <button 
             onClick={() => setIsSearchOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/30 bg-muted/30 hover:bg-muted/60 transition-all text-xs font-semibold text-muted-foreground w-48 md:w-64 cursor-pointer"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all text-xs font-semibold text-muted-foreground w-48 md:w-64 cursor-pointer premium-topbar-card"
           >
-            <Search className="w-3.5 h-3.5 text-muted-foreground" />
+            <Search className="w-3.5 h-3.5 search-icon" />
             <span className="text-left flex-1">Search transactions, files...</span>
-            <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded border border-border/40">Ctrl K</span>
+            <span className="text-[10px] bg-muted/40 px-1.5 py-0.5 rounded border border-border/20 text-muted-foreground">Ctrl K</span>
           </button>
           
           {/* Notifications Popover Trigger */}
           <div className="relative" ref={notifRef}>
             <button 
               onClick={() => setIsNotifOpen(!isNotifOpen)}
-              className={`p-2 rounded-xl border border-border/20 bg-muted/10 hover:bg-muted/40 transition-colors relative cursor-pointer ${isNotifOpen ? 'bg-muted/40' : ''}`}
+              className="p-2 rounded-xl transition-colors relative cursor-pointer premium-topbar-card"
             >
-              <Bell className="w-4 h-4 text-muted-foreground" />
+              <Bell className="w-4 h-4 bell-icon" />
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-risk rounded-full border border-card" />
             </button>
 

@@ -125,7 +125,7 @@ const Sidebar: React.FC = () => {
       {/* Boundary Edge Circular Toggle Button - shrunken to 24px x 24px and centered exactly at 86px */}
       <button
         onClick={toggleCollapse}
-        className="absolute rounded-full flex items-center justify-center border border-teal-500/25 bg-[#0b0f0e]/95 text-teal-400 hover:text-teal-300 hover:border-teal-500/60 hover:shadow-[0_0_8px_rgba(47,184,166,0.25)] transition-all z-[80] cursor-pointer hover:scale-105 active:scale-95 shadow-lg"
+        className="absolute rounded-full flex items-center justify-center transition-all z-[80] cursor-pointer shadow-sm premium-topbar-card"
         style={{
           position: 'absolute',
           right: '0',
@@ -143,9 +143,9 @@ const Sidebar: React.FC = () => {
         title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
       >
         {collapsed ? (
-          <ChevronRight style={{ width: '12px', height: '12px' }} />
+          <ChevronRight className="chevron-icon" style={{ width: '12px', height: '12px' }} />
         ) : (
-          <ChevronLeft style={{ width: '12px', height: '12px' }} />
+          <ChevronLeft className="chevron-icon" style={{ width: '12px', height: '12px' }} />
         )}
       </button>
 

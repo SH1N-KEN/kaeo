@@ -42,10 +42,10 @@ const UploadZone: React.FC<UploadZoneProps> = ({ onFileSelect, loading }) => {
       onDragLeave={handleDrag}
       onDragOver={handleDrag}
       onDrop={handleDrop}
-      className={`relative border-2 border-dashed rounded-2xl p-12 transition-all ${
+      className={`relative border-2 border-dashed rounded-2xl p-12 transition-all premium-glass ${
         dragActive 
           ? 'border-primary bg-primary/5 scale-[1.01]' 
-          : 'border-muted-foreground/20 hover:border-primary/50 hover:bg-muted/50'
+          : 'border-border/30 hover:border-primary/50 hover:bg-white/5'
       } ${loading ? 'opacity-50 pointer-events-none' : ''}`}
     >
       <input
@@ -79,18 +79,18 @@ const UploadZone: React.FC<UploadZoneProps> = ({ onFileSelect, loading }) => {
           Select Files
         </label>
 
-        <div className="flex gap-6 text-xs text-muted-foreground font-medium uppercase tracking-widest pt-4">
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+        <div className="flex flex-wrap justify-center gap-4 text-[10px] text-muted-foreground font-bold uppercase tracking-widest pt-4">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-teal-500/10 text-teal-400 rounded-full border border-teal-500/20">
+            <CheckCircle2 className="w-3 h-3 text-teal-400" />
             <span>CSV Support</span>
           </div>
-          <div className="flex items-center gap-1.5 opacity-50">
-            <AlertCircle className="w-3.5 h-3.5" />
-            <span>XLSX Placeholder</span>
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20">
+            <CheckCircle2 className="w-3 h-3 text-amber-400 animate-pulse" />
+            <span>XLSX Beta</span>
           </div>
-          <div className="flex items-center gap-1.5 opacity-50">
-            <AlertCircle className="w-3.5 h-3.5" />
-            <span>PDF Placeholder</span>
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-muted/40 text-muted-foreground rounded-full border border-border/20 opacity-70">
+            <AlertCircle className="w-3 h-3 text-muted-foreground" />
+            <span>PDF Coming Soon</span>
           </div>
         </div>
       </div>
