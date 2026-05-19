@@ -38,21 +38,29 @@
 }
 
 :root {
-  --background: var(--color-porcelain);
-  --foreground: var(--color-jet-black);
-  --card: var(--color-floral-white);
-  --card-foreground: var(--color-jet-black);
-  --primary: var(--color-blue-spruce);
-  --primary-foreground: var(--color-porcelain);
-  --secondary: var(--color-ocean-mist);
-  --secondary-foreground: var(--color-jet-black);
-  --muted: #F1F5F9;
-  --muted-foreground: var(--color-muted-slate);
-  --accent: var(--color-ocean-mist);
-  --accent-foreground: var(--color-jet-black);
-  --border: #E2E8F0;
-  --input: #E2E8F0;
-  --ring: var(--color-blue-spruce);
+  --background: #F8F4EC;
+  --foreground: #10201D;
+  --card: #FFFFFF;
+  --card-foreground: #10201D;
+  --primary: #0F766E;
+  --primary-foreground: #FFFFFF;
+  --secondary: rgba(15, 118, 110, 0.10);
+  --secondary-foreground: #0F766E;
+  --muted: #F3EEE4;
+  --muted-foreground: #5B6B66;
+  --accent: #14B8A6;
+  --accent-foreground: #10201D;
+  --border: rgba(15, 118, 110, 0.14);
+  --input: rgba(15, 118, 110, 0.14);
+  --ring: #0F766E;
+
+  /* chart variables */
+  --chart-grid: rgba(15, 118, 110, 0.08);
+  --chart-label: #5B6B66;
+  --chart-stroke-inflow: #0F766E;
+  --chart-stroke-outflow: #DC2626;
+  --chart-stop-inflow: #0F766E;
+  --chart-stop-outflow: #DC2626;
 }
 
 .dark {
@@ -71,6 +79,14 @@
   --border: rgba(47, 184, 166, 0.12);
   --input: rgba(47, 184, 166, 0.12);
   --ring: #2fb8a6;
+
+  /* chart variables */
+  --chart-grid: rgba(255, 255, 255, 0.05);
+  --chart-label: #6b7a75;
+  --chart-stroke-inflow: #2fb8a6;
+  --chart-stroke-outflow: #e5484d;
+  --chart-stop-inflow: #2fb8a6;
+  --chart-stop-outflow: #e5484d;
 }
 
 @layer base {
@@ -97,21 +113,108 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .premium-glass {
-  background: rgba(13, 18, 17, 0.45);
-  backdrop-filter: blur(16px) saturate(120%);
-  -webkit-backdrop-filter: blur(16px) saturate(120%);
-  border: 1px solid rgba(47, 184, 166, 0.12);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.86) !important;
+  backdrop-filter: blur(16px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
+  border: 1px solid rgba(15, 118, 110, 0.12) !important;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06) !important;
 }
 
 .premium-glass-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .premium-glass-hover:hover {
-  background: rgba(13, 18, 17, 0.6);
-  border-color: rgba(47, 184, 166, 0.25);
-  box-shadow: 0 0 25px rgba(47, 184, 166, 0.08), 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(15, 118, 110, 0.25) !important;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08) !important;
+}
+
+.dark .premium-glass {
+  background: rgba(13, 18, 17, 0.45) !important;
+  border: 1px solid rgba(47, 184, 166, 0.12) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .premium-glass-hover:hover {
+  background: rgba(13, 18, 17, 0.6) !important;
+  border-color: rgba(47, 184, 166, 0.25) !important;
+  box-shadow: 0 0 25px rgba(47, 184, 166, 0.08), 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Light mode overrides for high-contrast, premium readability */
+:not(.dark) .bg-white\/5 {
+  background-color: rgba(15, 118, 110, 0.04) !important;
+}
+:not(.dark) .hover\:bg-white\/5:hover {
+  background-color: rgba(15, 118, 110, 0.07) !important;
+}
+:not(.dark) .border-border\/20,
+:not(.dark) .border-border\/30,
+:not(.dark) .border-border\/40,
+:not(.dark) .border-border\/50 {
+  border-color: rgba(15, 118, 110, 0.12) !important;
+}
+:not(.dark) .bg-card\/45 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+:not(.dark) .bg-muted\/10 {
+  background-color: rgba(15, 118, 110, 0.04) !important;
+}
+:not(.dark) .bg-muted\/30 {
+  background-color: rgba(15, 118, 110, 0.06) !important;
+}
+:not(.dark) .bg-muted\/40 {
+  background-color: rgba(15, 118, 110, 0.08) !important;
+}
+:not(.dark) .bg-muted\/50 {
+  background-color: rgba(15, 118, 110, 0.05) !important;
+}
+:not(.dark) .hover\:bg-muted\/40:hover {
+  background-color: rgba(15, 118, 110, 0.08) !important;
+}
+:not(.dark) .hover\:bg-muted\/60:hover {
+  background-color: rgba(15, 118, 110, 0.12) !important;
+}
+:not(.dark) .hover\:bg-muted\/80:hover {
+  background-color: rgba(15, 118, 110, 0.16) !important;
+}
+
+/* Color overrides for warning/danger/success indicators */
+:not(.dark) .text-teal-400 {
+  color: #0F766E !important;
+}
+:not(.dark) .text-teal-300 {
+  color: #115E59 !important;
+}
+:not(.dark) .text-emerald-400 {
+  color: #059669 !important;
+}
+:not(.dark) .text-rose-400,
+:not(.dark) .text-rose-400\/80,
+:not(.dark) .text-rose-400\/85 {
+  color: #DC2626 !important;
+}
+:not(.dark) .text-rose-300 {
+  color: #B91C1C !important;
+}
+:not(.dark) .text-amber-400 {
+  color: #D97706 !important;
+}
+:not(.dark) .text-amber-300 {
+  color: #B45309 !important;
+}
+:not(.dark) .bg-teal-500\/10 {
+  background-color: rgba(15, 118, 110, 0.1) !important;
+}
+:not(.dark) .border-teal-500\/20 {
+  border-color: rgba(15, 118, 110, 0.2) !important;
+}
+:not(.dark) .bg-teal-400 {
+  background-color: #0F766E !important;
+}
+:not(.dark) .bg-rose-400 {
+  background-color: #DC2626 !important;
 }
 
 /* Custom Scrollbar */

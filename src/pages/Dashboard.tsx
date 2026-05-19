@@ -377,24 +377,24 @@ const Dashboard: React.FC = () => {
                     <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="inflowGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2fb8a6" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#2fb8a6" stopOpacity={0}/>
+                          <stop offset="5%" stopColor="var(--chart-stop-inflow)" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="var(--chart-stop-inflow)" stopOpacity={0}/>
                         </linearGradient>
                         <linearGradient id="outflowGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#e5484d" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#e5484d" stopOpacity={0}/>
+                          <stop offset="5%" stopColor="var(--chart-stop-outflow)" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="var(--chart-stop-outflow)" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255, 255, 255, 0.05)" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--chart-grid)" />
                       <XAxis 
                         dataKey="date" 
-                        stroke="#6b7a75" 
+                        stroke="var(--chart-label)" 
                         fontSize={9} 
                         tickLine={false} 
                         axisLine={false} 
                       />
                       <YAxis 
-                        stroke="#6b7a75" 
+                        stroke="var(--chart-label)" 
                         fontSize={9} 
                         tickLine={false} 
                         axisLine={false}
@@ -404,7 +404,7 @@ const Dashboard: React.FC = () => {
                       <Area 
                         type="monotone" 
                         dataKey="inflow" 
-                        stroke="#2fb8a6" 
+                        stroke="var(--chart-stroke-inflow)" 
                         strokeWidth={2}
                         fillOpacity={1} 
                         fill="url(#inflowGrad)" 
@@ -412,7 +412,7 @@ const Dashboard: React.FC = () => {
                       <Area 
                         type="monotone" 
                         dataKey="outflow" 
-                        stroke="#e5484d" 
+                        stroke="var(--chart-stroke-outflow)" 
                         strokeWidth={2}
                         fillOpacity={1} 
                         fill="url(#outflowGrad)" 
