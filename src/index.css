@@ -126,6 +126,14 @@ h1, h2, h3, h4, h5, h6 {
   @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
 /* Print Styles for Reports */
 @media print {
   /* Hide UI elements */
