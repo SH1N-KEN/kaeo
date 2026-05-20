@@ -151,8 +151,8 @@ const Billing: React.FC = () => {
   if (!activeOrg) {
     return (
       <div className="max-w-xl mx-auto my-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="bg-card border border-border rounded-sm p-8 shadow-sm space-y-6 text-center relative overflow-hidden group">
-          <div className="w-16 h-16 bg-muted rounded-sm flex items-center justify-center text-muted-foreground mx-auto border border-border">
+        <div className="bg-card border border-border rounded-xl p-8 shadow-sm space-y-6 text-center relative overflow-hidden group">
+          <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center text-muted-foreground mx-auto border border-border">
             <Building2 className="w-8 h-8" />
           </div>
           
@@ -166,7 +166,7 @@ const Billing: React.FC = () => {
           <div className="pt-4 max-w-xs mx-auto">
             <button 
               onClick={() => setIsOrgModalOpen(true)}
-              className="w-full py-3 px-6 bg-foreground text-background font-semibold rounded-sm text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 px-6 bg-foreground text-background font-semibold rounded-md text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Create Workspace</span>
@@ -186,8 +186,8 @@ const Billing: React.FC = () => {
   if (schemaMissing) {
     return (
       <div className="max-w-xl mx-auto my-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="bg-card border border-border rounded-sm p-8 shadow-sm space-y-6 text-center">
-          <div className="w-16 h-16 bg-muted rounded-sm flex items-center justify-center text-muted-foreground mx-auto border border-border">
+        <div className="bg-card border border-border rounded-xl p-8 shadow-sm space-y-6 text-center">
+          <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center text-muted-foreground mx-auto border border-border">
             <ShieldAlert className="w-10 h-10" />
           </div>
           <div className="space-y-2">
@@ -197,14 +197,14 @@ const Billing: React.FC = () => {
             </p>
           </div>
           
-          <div className="p-4 bg-muted border border-border rounded-sm text-left space-y-2">
+          <div className="p-4 bg-muted border border-border rounded-md text-left space-y-2">
             <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
               <Info className="w-3.5 h-3.5 text-muted-foreground" /> How to resolve:
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Execute the latest migration file in your Supabase SQL editor or console:
             </p>
-            <code className="block text-[10px] bg-card p-3 rounded-sm border border-border text-foreground font-mono select-all">
+            <code className="block text-[10px] bg-card p-3 rounded-md border border-border text-foreground font-mono select-all">
               supabase/migrations/0012_billing_plans_subscriptions.sql
             </code>
           </div>
@@ -288,10 +288,10 @@ const Billing: React.FC = () => {
           <h1 className="text-3xl font-black tracking-tight mb-2">Billing & Plans</h1>
           <p className="text-muted-foreground text-xs font-medium">Manage your workspace tier, usage allowances, and invoice preparations.</p>
         </div>
-        <div className="flex items-center gap-2 bg-muted p-1 rounded-sm border border-border shrink-0 w-fit">
+        <div className="flex items-center gap-2 bg-muted p-1 rounded-md border border-border shrink-0 w-fit">
           <button 
             onClick={() => setIsYearly(false)}
-            className={`px-3 py-1.5 text-xs font-bold rounded-sm transition-all ${
+            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
               !isYearly ? 'bg-card text-foreground border border-border/50' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -299,7 +299,7 @@ const Billing: React.FC = () => {
           </button>
           <button 
             onClick={() => setIsYearly(true)}
-            className={`px-3 py-1.5 text-xs font-bold rounded-sm transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
               isYearly ? 'bg-card text-foreground border border-border/50' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -312,14 +312,14 @@ const Billing: React.FC = () => {
       </div>
 
       {(error || checkoutError) && (
-        <div className="p-4 bg-muted border border-border rounded-sm flex gap-3 items-center">
+        <div className="p-4 bg-muted border border-border rounded-md flex gap-3 items-center">
           <AlertTriangle className="w-5 h-5 text-muted-foreground shrink-0" />
           <p className="text-xs text-muted-foreground font-semibold">{error || checkoutError}</p>
         </div>
       )}
 
       {syncMessage && (
-        <div className="p-4 border rounded-sm flex gap-3 items-center bg-muted text-foreground border-border">
+        <div className="p-4 border rounded-md flex gap-3 items-center bg-muted text-foreground border-border">
           {syncMessage.type === 'success' ? (
             <Check className="w-5 h-5 shrink-0" />
           ) : syncMessage.type === 'error' ? (
@@ -332,11 +332,11 @@ const Billing: React.FC = () => {
       )}
 
       {/* A. CURRENT SUBSCRIPTION CARD */}
-      <div className="bg-card border border-border rounded-sm overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-muted rounded-sm border border-border flex items-center justify-center text-muted-foreground">
+              <div className="w-10 h-10 bg-muted rounded-md border border-border flex items-center justify-center text-muted-foreground">
                 <CreditCard className="w-5 h-5" />
               </div>
               <div>
@@ -368,7 +368,7 @@ const Billing: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-muted border border-border p-5 rounded-sm space-y-2 shrink-0 md:max-w-sm w-full">
+          <div className="bg-muted border border-border p-5 rounded-md space-y-2 shrink-0 md:max-w-sm w-full">
             <div className="flex items-center gap-2 text-xs font-bold text-foreground">
               <span className="inline-block w-2 h-2 rounded-sm bg-foreground"></span>
               Status: {subscription?.status ? subscription.status.replace('_', ' ').toUpperCase() : 'ACTIVE'}
@@ -381,7 +381,7 @@ const Billing: React.FC = () => {
                 <button
                   disabled={syncing}
                   onClick={() => handleSync(false)}
-                  className="w-full py-2.5 px-4 bg-foreground text-background font-semibold rounded-sm text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+                  className="w-full py-2.5 px-4 bg-foreground text-background font-semibold rounded-md text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {syncing ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -414,10 +414,10 @@ const Billing: React.FC = () => {
             const nearLimit = isUnlimited ? false : (percent >= 80 && !overLimit);
 
             return (
-              <div key={card.type} className="bg-card border border-border rounded-sm p-6 flex flex-col justify-between space-y-4">
+              <div key={card.type} className="bg-card border border-border rounded-xl p-6 flex flex-col justify-between space-y-4">
                 <div className="space-y-2">
                   <div className="flex justify-between items-start">
-                    <div className="p-2.5 bg-muted rounded-sm text-muted-foreground border border-border/40">
+                    <div className="p-2.5 bg-muted rounded-md text-muted-foreground border border-border/40">
                       <card.icon className="w-5 h-5" />
                     </div>
                     <span className="text-[9px] px-2 py-0.5 rounded-sm font-black uppercase bg-muted text-foreground border border-border">
@@ -440,9 +440,9 @@ const Billing: React.FC = () => {
                   
                   {!isUnlimited && (
                     <div className="space-y-1">
-                      <div className="w-full bg-muted h-1.5 rounded-sm overflow-hidden">
+                      <div className="w-full bg-muted h-1.5 rounded-md overflow-hidden">
                         <div 
-                          className="h-full bg-foreground rounded-sm transition-all duration-500" 
+                          className="h-full bg-foreground rounded-md transition-all duration-500" 
                           style={{ width: `${percent}%` }}
                         />
                       </div>
@@ -486,7 +486,7 @@ const Billing: React.FC = () => {
             return (
               <div 
                 key={plan.id} 
-                className={`relative bg-card border rounded-sm p-6 flex flex-col justify-between transition-all duration-300 ${
+                className={`relative bg-card border rounded-xl p-6 flex flex-col justify-between transition-all duration-300 ${
                   isCurrent 
                     ? 'border-foreground border-2 shadow-none' 
                     : 'border-border hover:border-muted-foreground'
@@ -533,13 +533,13 @@ const Billing: React.FC = () => {
 
                 <div className="pt-6">
                   {isCurrent ? (
-                    <div className="w-full text-center py-2.5 bg-muted rounded-sm text-xs font-bold text-muted-foreground border border-border">
+                    <div className="w-full text-center py-2.5 bg-muted rounded-md text-xs font-bold text-muted-foreground border border-border">
                       Active Plan
                     </div>
                   ) : plan.id === 'free' ? (
                     <button 
                       disabled
-                      className="w-full text-center py-2.5 bg-muted text-muted-foreground/60 border border-border rounded-sm text-xs font-semibold cursor-not-allowed"
+                      className="w-full text-center py-2.5 bg-muted text-muted-foreground/60 border border-border rounded-md text-xs font-semibold cursor-not-allowed"
                     >
                       Free Plan
                     </button>
@@ -547,7 +547,7 @@ const Billing: React.FC = () => {
                     <button 
                       onClick={() => handleUpgrade(plan.id)}
                       disabled={upgradingPlanId !== null}
-                      className="w-full text-center py-2.5 bg-foreground text-background font-semibold rounded-sm text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+                      className="w-full text-center py-2.5 bg-foreground text-background font-semibold rounded-md text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {upgradingPlanId === plan.id ? (
                         <>
@@ -567,7 +567,7 @@ const Billing: React.FC = () => {
       </div>
 
       {/* D. RAZORPAY PLATFORM NOTE */}
-      <div className="bg-muted border border-border rounded-sm p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="bg-muted border border-border rounded-xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-2">
           <h4 className="font-bold text-base text-foreground flex items-center gap-2">
             <Building2 className="w-5 h-5 text-muted-foreground" />

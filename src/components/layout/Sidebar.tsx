@@ -113,6 +113,7 @@ const Sidebar: React.FC = () => {
     color: 'var(--foreground)',
     backdropFilter: 'blur(8px)',
     boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+    borderRadius: 'var(--radius-sm)',
   };
 
   return (
@@ -157,7 +158,7 @@ const Sidebar: React.FC = () => {
         <div className="flex items-center select-none">
           {!collapsed ? (
             <div className="flex items-center gap-2.5 h-8">
-              <div className="flex items-center justify-center w-7 h-7 rounded-sm bg-muted border border-border/40 shrink-0">
+              <div className="flex items-center justify-center w-7 h-7 rounded-md bg-muted border border-border/40 shrink-0">
                 <img src={aeLogo} alt="ae" className="w-4 h-4 object-contain" />
               </div>
               <span className="text-[26px] font-bold tracking-tight text-[var(--kaeo-accent)] leading-none">
@@ -165,7 +166,7 @@ const Sidebar: React.FC = () => {
               </span>
             </div>
           ) : (
-            <div className="flex items-center justify-center w-7 h-7 rounded-sm bg-muted border border-border/40">
+            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-muted border border-border/40">
               <img src={aeLogo} alt="ae" className="w-4 h-4 object-contain" />
             </div>
           )}
@@ -180,10 +181,10 @@ const Sidebar: React.FC = () => {
               key={item.path}
               to={item.path}
               className={({ isActive }) => `
-                group relative flex items-center gap-3 px-3 py-2 rounded-sm text-xs font-bold transition-all duration-200
+                group relative flex items-center gap-3 px-3 py-2 rounded-md text-xs font-semibold transition-all duration-200
                 ${isActive 
-                  ? 'bg-muted text-foreground border border-border border-l-2 border-l-[var(--kaeo-accent)] mx-1' 
-                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground border border-transparent mx-1'}
+                  ? 'bg-[var(--kaeo-accent-soft)] text-foreground border border-[var(--kaeo-accent-border)] border-l-2 border-l-[var(--kaeo-accent)] mx-1' 
+                  : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground border border-transparent mx-1'}
                 ${collapsed ? 'justify-center mx-0' : ''}
               `}
             >
@@ -209,13 +210,13 @@ const Sidebar: React.FC = () => {
         <button 
           onClick={() => setProfileMenuOpen(!profileMenuOpen)}
           className={`
-            w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/5 border border-transparent hover:border-border/30 transition-all text-left cursor-pointer
-            ${profileMenuOpen ? 'bg-white/5 border-border/30 shadow-inner' : ''}
+            w-full flex items-center justify-between p-2 rounded-md hover:bg-muted/50 border border-transparent hover:border-border/30 transition-all text-left cursor-pointer
+            ${profileMenuOpen ? 'bg-muted/50 border-border/30' : ''}
             ${collapsed ? 'justify-center' : ''}
           `}
         >
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div className="w-9 h-9 rounded-sm bg-muted border border-border flex items-center justify-center text-foreground font-bold text-xs shrink-0 transition-all duration-300">
+            <div className="w-9 h-9 rounded-md bg-muted border border-border flex items-center justify-center text-foreground font-bold text-xs shrink-0 transition-all duration-300">
               {user?.email?.[0].toUpperCase() || 'U'}
             </div>
             {!collapsed && (
@@ -248,7 +249,7 @@ const Sidebar: React.FC = () => {
         {profileMenuOpen && (
           <div 
             className={`
-              absolute bottom-16 w-56 premium-floating-panel rounded-sm p-1.5 shadow-2xl z-[90] animate-in fade-in slide-in-from-bottom-2 duration-200
+              absolute bottom-16 w-56 premium-floating-panel rounded-xl p-1.5 shadow-2xl z-[90] animate-in fade-in slide-in-from-bottom-2 duration-200
               ${collapsed ? 'left-20' : 'left-4'}
             `}
           >
@@ -263,7 +264,7 @@ const Sidebar: React.FC = () => {
               <NavLink 
                 to="/settings"
                 onClick={() => setProfileMenuOpen(false)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-sm text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
               >
                 <Settings className="w-3.5 h-3.5" />
                 <span>Account Details</span>
@@ -272,7 +273,7 @@ const Sidebar: React.FC = () => {
               <NavLink 
                 to="/billing"
                 onClick={() => setProfileMenuOpen(false)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-sm text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
               >
                 <CreditCard className="w-3.5 h-3.5" />
                 <span>Billing & Plans</span>
@@ -281,7 +282,7 @@ const Sidebar: React.FC = () => {
               <NavLink 
                 to="/settings"
                 onClick={() => setProfileMenuOpen(false)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-sm text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
               >
                 <Settings className="w-3.5 h-3.5" />
                 <span>Workspace Settings</span>
@@ -290,7 +291,7 @@ const Sidebar: React.FC = () => {
               {/* Theme Toggle option */}
               <button 
                 onClick={toggleTheme}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-sm text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all cursor-pointer"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-md text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-2">
                   {theme === 'light' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
@@ -303,7 +304,7 @@ const Sidebar: React.FC = () => {
 
               <button 
                 onClick={handleSignOut}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-sm text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-all cursor-pointer"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold text-rose-450 dark:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Sign Out</span>

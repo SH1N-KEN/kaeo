@@ -29,7 +29,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       {action && (
         <button
           onClick={action.onClick}
-          className="px-8 py-3 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-xl shadow-foreground/10"
+          className="px-6 py-2.5 bg-foreground text-background rounded-md font-semibold hover:opacity-90 transition-all flex items-center gap-2 text-xs cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           {action.label}

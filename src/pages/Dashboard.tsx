@@ -18,6 +18,7 @@ import {
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useToast } from '../hooks/useToast';
+import { useNavigate } from 'react-router-dom';
 import EmptyState from '../components/ui/EmptyState';
 import MetricCard from '../components/ui/MetricCard';
 import { supabase } from '../lib/supabase';
@@ -43,6 +44,7 @@ const Dashboard: React.FC = () => {
   const { activeClient } = useWorkspace();
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [isAddTxOpen, setIsAddTxOpen] = useState(false);
   const [metrics, setMetrics] = useState({
@@ -184,48 +186,49 @@ const Dashboard: React.FC = () => {
 
       if (recentErr) throw recentErr;
       setRecentTransactions(recent || []);
-
     } catch (err: any) {
-      console.error('[Dashboard] Fetch error:', err);
-      toast(err.message || 'Failed to load dashboard metrics', 'error');
+      console.error("[Dashboard Load Error]", err);
+      toast(err.message || "Failed to load dashboard data.", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const formatCurrency = (val: number) => {
-    const isNegative = val < 0;
-    const absVal = Math.abs(val);
-    const formatted = new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(absVal);
-    
-    return isNegative ? `-${formatted}` : formatted;
-  };
-
   const handleDownloadReport = () => {
-    toast('Navigating to reports folder', 'info');
-    window.location.href = '/reports';
+    toast("Generating PDF Report export request...", "info");
+    setTimeout(() => {
+      window.print();
+    }, 500);
   };
 
   const handleAddTransactionClick = () => {
     setIsAddTxOpen(true);
   };
 
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(val);
+  };
+
   if (!activeClient) {
     return (
-      <div className="h-[70vh] flex items-center justify-center">
+      <div className="max-w-4xl mx-auto py-12">
         <EmptyState 
           title="No client workspace selected"
-          description="Create or select a client workspace to view financial insights."
+          description="Kaeo works at the client level. Select a client from the workspace switcher in the topbar or create one to initialize dashboard metrics."
+          action={{
+            label: "Workspace Config",
+            onClick: () => navigate('/settings')
+          }}
         />
       </div>
     );
   }
 
-  if (loading && metrics.count === 0) {
+  if (loading) {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground animate-pulse" />
@@ -246,7 +249,7 @@ const Dashboard: React.FC = () => {
   const CustomChartTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-card p-3 rounded-sm border border-border text-xs shadow-md">
+        <div className="bg-card p-3 rounded-md border border-border text-xs shadow-md">
           <p className="font-bold text-muted-foreground mb-1">{payload[0].payload.date}</p>
           <p className="text-foreground font-semibold">Inflow: {formatCurrency(payload[0].value)}</p>
           {payload[1] && <p className="text-rose-500 font-semibold">Outflow: {formatCurrency(payload[1].value)}</p>}
@@ -269,7 +272,7 @@ const Dashboard: React.FC = () => {
             <h1 className="text-2xl font-bold tracking-tight">
               Good morning, {firstName}
             </h1>
-            <div className="px-2 py-0.5 bg-muted text-foreground text-[10px] font-black rounded-sm border border-border uppercase tracking-widest">Live OS</div>
+            <div className="px-2 py-0.5 bg-muted text-foreground text-[10px] font-black rounded-md border border-border uppercase tracking-widest">Live OS</div>
           </div>
           <p className="text-xs text-muted-foreground">Strategic workspace overview for <span className="text-foreground font-semibold">{activeClient.name}</span></p>
         </div>
@@ -277,13 +280,13 @@ const Dashboard: React.FC = () => {
         <div className="flex gap-2">
           <button 
             onClick={handleDownloadReport}
-            className="px-4 py-2.5 bg-muted text-foreground hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-sm text-xs font-semibold flex items-center gap-2 border border-border transition-all cursor-pointer"
+            className="px-4 py-2.5 bg-muted text-foreground hover:bg-muted-foreground/15 rounded-md text-xs font-semibold flex items-center gap-2 border border-border transition-all cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" /> Download Report
           </button>
           <button 
             onClick={handleAddTransactionClick}
-            className="px-4 py-2.5 bg-foreground text-background font-semibold rounded-sm text-xs flex items-center gap-2 hover:opacity-90 transition-all cursor-pointer"
+            className="px-4 py-2.5 bg-foreground text-background font-semibold rounded-md text-xs flex items-center gap-2 hover:opacity-90 transition-all cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" /> Add Transaction
           </button>
@@ -297,7 +300,7 @@ const Dashboard: React.FC = () => {
           value={hasTransactions ? formatCurrency(metrics.income) : '—'} 
           description={hasTransactions ? (metrics.incomeCount > 0 ? "From customer payments" : "No income rows detected") : "No data yet"}
           icon={<TrendingUp className="w-4 h-4 text-muted-foreground" />} 
-          className="border border-border rounded-sm bg-card"
+          className="border border-border rounded-lg bg-card"
         />
         {metrics.refunds > 0 && (
           <MetricCard 
@@ -305,7 +308,7 @@ const Dashboard: React.FC = () => {
             value={hasTransactions ? formatCurrency(metrics.refunds) : '—'} 
             description={hasTransactions ? `From ${metrics.refundCount} refund/reversal entries` : ""}
             icon={<TrendingUp className="w-4 h-4 text-muted-foreground" />} 
-            className="border border-border rounded-sm bg-card"
+            className="border border-border rounded-lg bg-card"
           />
         )}
         <MetricCard 
@@ -313,27 +316,27 @@ const Dashboard: React.FC = () => {
           value={hasTransactions ? formatCurrency(metrics.expenses) : '—'} 
           description={hasTransactions ? "From imported expense rows" : ""}
           icon={<TrendingDown className="w-4 h-4 text-muted-foreground" />} 
-          className="border border-border rounded-sm bg-card"
+          className="border border-border rounded-lg bg-card"
         />
         <MetricCard 
           title="Net Cash Movement" 
           value={hasTransactions ? formatCurrency(metrics.net) : '—'} 
           description={hasTransactions ? (metrics.net > 0 ? "Net cash positive" : metrics.net < 0 ? "Net cash negative" : "Balanced") : "No data yet"}
           icon={<DollarSign className="w-4 h-4 text-muted-foreground" />} 
-          className="border border-border rounded-sm bg-card"
+          className="border border-border rounded-lg bg-card"
         />
         <MetricCard 
           title="Transactions" 
           value={hasTransactions ? metrics.count.toString() : '—'} 
           description={hasTransactions ? "Imported transactions" : ""} 
           icon={<FileText className="w-4 h-4 text-muted-foreground" />} 
-          className="border border-border rounded-sm bg-card"
+          className="border border-border rounded-lg bg-card"
         />
       </div>
 
       {!hasTransactions ? (
-        <div className="border border-border bg-card rounded-sm p-20 flex flex-col items-center justify-center text-center space-y-5">
-          <div className="w-16 h-16 bg-muted rounded-sm flex items-center justify-center border border-border shadow-inner">
+        <div className="border border-border bg-card rounded-xl p-20 flex flex-col items-center justify-center text-center space-y-5">
+          <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center border border-border shadow-inner">
             <FileText className="w-8 h-8 text-muted-foreground/60" />
           </div>
           <div className="space-y-1">
@@ -344,7 +347,7 @@ const Dashboard: React.FC = () => {
           </div>
           <button 
             onClick={() => window.location.href = '/files'}
-            className="px-8 py-3 bg-foreground text-background rounded-sm font-semibold hover:opacity-90 transition-all cursor-pointer text-xs"
+            className="px-8 py-3 bg-foreground text-background rounded-md font-semibold hover:opacity-90 transition-all cursor-pointer text-xs"
           >
             Upload Finance File
           </button>
@@ -356,7 +359,7 @@ const Dashboard: React.FC = () => {
             
             {/* Real-data Cash Flow Overview Chart */}
             {chartData.length > 0 && (
-              <div className="border border-border rounded-sm p-6 bg-card space-y-4">
+              <div className="border border-border rounded-xl p-6 bg-card space-y-4">
                 <div className="flex items-center justify-between border-b border-border/30 pb-4">
                   <div>
                     <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Cash Flow Timeline</h3>
@@ -424,8 +427,8 @@ const Dashboard: React.FC = () => {
             )}
 
             {/* File Interpretation Card */}
-            <div className="border border-border rounded-sm p-6 flex flex-col md:flex-row gap-6 items-start bg-card relative overflow-hidden">
-              <div className="p-3 bg-muted border border-border/40 rounded-sm shrink-0">
+            <div className="border border-border rounded-xl p-6 flex flex-col md:flex-row gap-6 items-start bg-card relative overflow-hidden">
+              <div className="p-3 bg-muted border border-border/40 rounded-md shrink-0">
                 <img src={aeLogo} alt="Ligature logo" className="w-7 h-7 object-contain" />
               </div>
               <div className="space-y-4 flex-1">
@@ -493,7 +496,7 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Recent Transactions List */}
-            <div className="border border-border rounded-sm bg-card overflow-hidden">
+            <div className="border border-border rounded-xl bg-card overflow-hidden">
               <div className="px-6 py-4 border-b border-border/30 flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                   <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
@@ -514,7 +517,7 @@ const Dashboard: React.FC = () => {
                   return (
                     <div key={tx.id} className="px-6 py-3.5 flex items-center justify-between hover:bg-muted/50 transition-colors group">
                       <div className="flex items-center gap-3.5 min-w-0">
-                        <div className={`w-8 h-8 rounded-sm flex items-center justify-center shrink-0 border border-border/40 ${isExpense ? 'bg-muted text-muted-foreground' : isIncome ? 'bg-muted text-foreground border-border' : 'bg-muted text-muted-foreground'}`}>
+                        <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 border border-border/40 ${isExpense ? 'bg-muted text-muted-foreground' : isIncome ? 'bg-muted text-foreground border-border' : 'bg-muted text-muted-foreground'}`}>
                           {isExpense ? <ArrowUpRight className="w-3.5 h-3.5" /> : isIncome ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
                         </div>
                         <div className="min-w-0">
@@ -539,7 +542,7 @@ const Dashboard: React.FC = () => {
 
           {/* Right Column (Sidebar Insights) */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="border border-border rounded-sm p-6 bg-card space-y-6">
+            <div className="border border-border rounded-xl p-6 bg-card space-y-6">
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                 <Info className="w-3.5 h-3.5 text-muted-foreground" />
                 Strategic Insights
@@ -547,7 +550,7 @@ const Dashboard: React.FC = () => {
               
               <div className="space-y-4">
                 {metrics.topVendor.amount > 0 && (
-                  <div className="p-4 bg-muted rounded-sm border border-border">
+                  <div className="p-4 bg-muted rounded-lg border border-border">
                     <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 mb-2">Primary Expense Destination</p>
                     <p className="text-base font-bold text-foreground leading-tight mb-1 truncate">{metrics.topVendor.name}</p>
                     <p className="text-xs font-semibold text-muted-foreground">
@@ -557,7 +560,7 @@ const Dashboard: React.FC = () => {
                 )}
 
                 <div className="space-y-2.5">
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-sm border border-border">
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-md border border-border">
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-foreground" />
                       <span className="text-[11px] font-bold">Import Composition</span>
@@ -566,19 +569,19 @@ const Dashboard: React.FC = () => {
                   </div>
 
                   {isExpenseOnly ? (
-                    <div className="flex items-center gap-2 p-3 bg-rose-500/5 rounded-sm border border-rose-500/10">
+                    <div className="flex items-center gap-2 p-3 bg-rose-500/5 rounded-md border border-rose-500/10">
                       <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
                       <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400">Expense-only file detected</span>
                     </div>
                   ) : isMixed ? (
-                    <div className="flex items-center gap-2 p-3 bg-emerald-500/5 rounded-sm border border-emerald-500/10">
+                    <div className="flex items-center gap-2 p-3 bg-emerald-500/5 rounded-md border border-emerald-500/10">
                       <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
                       <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Mixed income and expenses</span>
                     </div>
                   ) : null}
 
                   {metrics.unknownCount > 0 && (
-                    <div className="flex items-center justify-between p-3 bg-amber-500/5 rounded-sm border border-amber-500/10">
+                    <div className="flex items-center justify-between p-3 bg-amber-500/5 rounded-md border border-amber-500/10">
                       <div className="flex items-center gap-2">
                         <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
                         <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">{metrics.unknownCount} Unknown entries</span>
@@ -596,7 +599,7 @@ const Dashboard: React.FC = () => {
             </div>
             
             {/* Legend Card */}
-            <div className="px-6 py-5 bg-muted rounded-sm border border-border">
+            <div className="px-6 py-5 bg-muted rounded-lg border border-border">
               <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-3">Intelligence Legend</h4>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold">
@@ -624,17 +627,17 @@ const Dashboard: React.FC = () => {
           onClick={() => setIsAddTxOpen(false)}
         >
           <div 
-            className="w-full max-w-md premium-floating-panel rounded-sm p-6 shadow-2xl relative animate-in zoom-in-95 duration-200"
+            className="w-full max-w-md premium-floating-panel rounded-xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <button 
               onClick={() => setIsAddTxOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-sm hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
             
-            <div className="w-10 h-10 bg-muted rounded-sm flex items-center justify-center border border-border/45 mb-4">
+            <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center border border-border/45 mb-4">
               <Plus className="w-5 h-5 text-muted-foreground" />
             </div>
             
@@ -646,13 +649,13 @@ const Dashboard: React.FC = () => {
             <div className="flex gap-2.5">
               <button 
                 onClick={() => setIsAddTxOpen(false)} 
-                className="flex-1 py-2.5 bg-muted hover:bg-neutral-200 dark:hover:bg-neutral-800 text-foreground font-semibold rounded-sm text-xs transition-all cursor-pointer border border-border"
+                className="flex-1 py-2.5 bg-muted hover:bg-muted-foreground/15 text-foreground font-semibold rounded-md text-xs transition-all cursor-pointer border border-border"
               >
                 Dismiss
               </button>
               <button 
                 onClick={() => { setIsAddTxOpen(false); window.location.href = '/files'; }}
-                className="flex-1 py-2.5 bg-foreground text-background font-semibold rounded-sm text-xs hover:opacity-95 transition-all cursor-pointer"
+                className="flex-1 py-2.5 bg-foreground text-background font-semibold rounded-md text-xs hover:opacity-95 transition-all cursor-pointer"
               >
                 Go to File Upload
               </button>
