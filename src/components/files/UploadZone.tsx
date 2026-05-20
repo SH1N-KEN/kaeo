@@ -80,15 +80,15 @@ const UploadZone: React.FC<UploadZoneProps> = ({ onFileSelect, loading }) => {
         </label>
 
         <div className="flex flex-wrap justify-center gap-4 text-[10px] text-muted-foreground font-bold uppercase tracking-widest pt-4">
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-teal-500/10 text-teal-400 rounded-full border border-teal-500/20">
-            <CheckCircle2 className="w-3 h-3 text-teal-400" />
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/5 text-primary rounded-full border border-primary/10">
+            <CheckCircle2 className="w-3 h-3 text-primary" />
             <span>CSV Support</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20">
-            <CheckCircle2 className="w-3 h-3 text-amber-400 animate-pulse" />
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/5 text-amber-600 dark:text-amber-400 rounded-full border border-amber-500/10">
+            <CheckCircle2 className="w-3 h-3 text-amber-600 dark:text-amber-400" />
             <span>XLSX Beta</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-muted/40 text-muted-foreground rounded-full border border-border/20 opacity-70">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-muted text-muted-foreground rounded-full border border-border/30 opacity-75">
             <AlertCircle className="w-3 h-3 text-muted-foreground" />
             <span>PDF Coming Soon</span>
           </div>

@@ -273,10 +273,10 @@ export default function Reports() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {reports.map((report) => (
-            <div key={report.id} className="bg-card border rounded-lg p-5 flex flex-col hover:border-primary/50 transition-colors">
+            <div key={report.id} className="bg-card border rounded-lg p-5 flex flex-col hover:border-border/80 transition-colors">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <FileText className="h-5 w-5 text-primary" />
+                <div className="p-2 bg-muted rounded-lg border border-border/40">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <span className="text-xs font-medium bg-muted px-2 py-1 rounded-full text-muted-foreground">
                   {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(report.created_at))}

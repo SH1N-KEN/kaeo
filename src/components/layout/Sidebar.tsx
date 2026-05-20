@@ -108,11 +108,11 @@ const Sidebar: React.FC = () => {
   };
 
   const tooltipStyle: React.CSSProperties = {
-    background: 'rgba(11, 15, 14, 0.95)',
-    borderColor: 'rgba(47, 184, 166, 0.25)',
-    color: '#2fb8a6',
+    background: 'var(--card)',
+    borderColor: 'var(--border)',
+    color: 'var(--foreground)',
     backdropFilter: 'blur(8px)',
-    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.6)',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
   };
 
   return (
@@ -157,15 +157,15 @@ const Sidebar: React.FC = () => {
         <div className="flex items-center select-none">
           {!collapsed ? (
             <div className="flex items-center gap-2.5 h-8">
-              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/25 shrink-0">
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-muted border border-border/40 shrink-0">
                 <img src={aeLogo} alt="ae" className="w-4 h-4 object-contain" />
               </div>
-              <span className="text-[26px] font-bold tracking-tight text-teal-400 leading-none">
+              <span className="text-[26px] font-bold tracking-tight text-primary leading-none">
                 Kaeo
               </span>
             </div>
           ) : (
-            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/25">
+            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-muted border border-border/40">
               <img src={aeLogo} alt="ae" className="w-4 h-4 object-contain" />
             </div>
           )}
@@ -183,7 +183,7 @@ const Sidebar: React.FC = () => {
                 group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200
                 ${isActive 
                   ? 'bg-primary/10 text-primary border border-primary/20 shadow-sm shadow-primary/5 mx-1' 
-                  : 'text-muted-foreground hover:bg-white/5 hover:text-foreground border border-transparent mx-1'}
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground border border-transparent mx-1'}
                 ${collapsed ? 'justify-center mx-0' : ''}
               `}
             >
@@ -263,7 +263,7 @@ const Sidebar: React.FC = () => {
               <NavLink 
                 to="/settings"
                 onClick={() => setProfileMenuOpen(false)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
               >
                 <Settings className="w-3.5 h-3.5" />
                 <span>Account Details</span>
@@ -272,7 +272,7 @@ const Sidebar: React.FC = () => {
               <NavLink 
                 to="/billing"
                 onClick={() => setProfileMenuOpen(false)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
               >
                 <CreditCard className="w-3.5 h-3.5" />
                 <span>Billing & Plans</span>
@@ -281,7 +281,7 @@ const Sidebar: React.FC = () => {
               <NavLink 
                 to="/settings"
                 onClick={() => setProfileMenuOpen(false)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
               >
                 <Settings className="w-3.5 h-3.5" />
                 <span>Workspace Settings</span>
@@ -290,13 +290,13 @@ const Sidebar: React.FC = () => {
               {/* Theme Toggle option */}
               <button 
                 onClick={toggleTheme}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all cursor-pointer"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-2">
                   {theme === 'light' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
                   <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
                 </div>
-                <span className="text-[9px] font-black uppercase text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20">Theme</span>
+                <span className="text-[9px] font-black uppercase text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border/40">Theme</span>
               </button>
 
               <div className="h-px bg-border/30 my-1" />

@@ -125,7 +125,7 @@ const Vendors: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-3xl font-bold tracking-tight">Spend Advisor</h1>
-            <div className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-black rounded border border-primary/20 uppercase tracking-tighter">CFO Intelligence</div>
+            <div className="px-2 py-0.5 bg-primary/5 text-primary text-[10px] font-black rounded border border-primary/10 uppercase tracking-tighter">CFO Intelligence</div>
           </div>
           <p className="text-sm text-muted-foreground">Strategic vendor portfolio analysis for <span className="text-foreground font-semibold">{activeClient.name}</span></p>
         </div>
@@ -166,7 +166,7 @@ const Vendors: React.FC = () => {
         </div>
       ) : vendors.length === 0 ? (
         <div className="bg-card/30 border border-dashed border-border/60 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5">
-          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 text-primary/50">
+          <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center border border-border/40 text-muted-foreground/60">
             <Zap className="w-8 h-8" />
           </div>
           <div className="space-y-1">
@@ -183,7 +183,7 @@ const Vendors: React.FC = () => {
               title="Total Portfolio Spend" 
               value={formatCurrency(stats.totalSpend)} 
               description="Across all detected vendors"
-              icon={<TrendingUp className="w-4 h-4 text-primary" />} 
+              icon={<TrendingUp className="w-4 h-4 text-muted-foreground" />} 
             />
             <MetricCard 
               title="Recurring Commitment" 
@@ -219,11 +219,11 @@ const Vendors: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredVendors.map((vendor) => (
-              <div key={vendor.id} className="bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-all group flex flex-col h-full shadow-sm">
+              <div key={vendor.id} className="bg-card border border-border rounded-2xl p-6 hover:border-border/80 transition-all group flex flex-col h-full shadow-sm">
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-muted/50 rounded-xl flex items-center justify-center border border-border/50 group-hover:scale-110 transition-transform">
-                      <Building2 className="w-6 h-6 text-primary" />
+                      <Building2 className="w-6 h-6 text-muted-foreground" />
                     </div>
                     <div>
                       <h3 className="font-bold text-foreground leading-tight">{vendor.name}</h3>
@@ -263,7 +263,7 @@ const Vendors: React.FC = () => {
                     <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                       <Calendar className="w-3 h-3" /> Since {new Date(vendor.first_seen).toLocaleDateString()}
                     </div>
-                    <button className="p-2 bg-muted/50 rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                    <button className="p-2 bg-muted/50 rounded-lg group-hover:bg-muted group-hover:text-foreground transition-all">
                       <ArrowUpRight className="w-4 h-4" />
                     </button>
                   </div>

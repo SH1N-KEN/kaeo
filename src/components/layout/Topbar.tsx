@@ -72,8 +72,8 @@ const Topbar: React.FC = () => {
 
             {isNotifOpen && (
               <div className="absolute right-0 mt-2 w-72 premium-floating-panel rounded-2xl p-4 shadow-2xl z-[90] text-center animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="w-10 h-10 bg-teal-500/10 rounded-full flex items-center justify-center mx-auto mb-2.5">
-                  <Bell className="w-4 h-4 text-teal-400" />
+                <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center mx-auto mb-2.5">
+                  <Bell className="w-4 h-4 text-muted-foreground" />
                 </div>
                 <h4 className="text-xs font-bold text-foreground mb-1">Notifications</h4>
                 <p className="text-[11px] text-muted-foreground">No notifications yet.</p>
@@ -101,7 +101,7 @@ const Topbar: React.FC = () => {
             </button>
 
             <div className="flex items-center gap-3 border-b border-border/40 pb-4 mb-4">
-              <Search className="w-5 h-5 text-teal-400 shrink-0 animate-pulse" />
+              <Search className="w-5 h-5 text-muted-foreground shrink-0" />
               <input 
                 type="text" 
                 placeholder="Search ledger entries, vendors, reports..." 
@@ -111,8 +111,8 @@ const Topbar: React.FC = () => {
             </div>
 
             <div className="py-6 text-center">
-              <div className="w-12 h-12 bg-teal-500/10 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-teal-500/20">
-                <Search className="w-5 h-5 text-teal-400" />
+              <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-3 border border-border/45">
+                <Search className="w-5 h-5 text-muted-foreground" />
               </div>
               <h3 className="text-sm font-bold text-foreground mb-1">Advanced CFO Search</h3>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">

@@ -53,7 +53,7 @@ const WorkspaceSwitcher: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all text-xs font-semibold w-full premium-topbar-card"
       >
-        <div className="w-5 h-5 bg-teal-500/10 rounded flex items-center justify-center border border-teal-500/20 shrink-0">
+        <div className="w-5 h-5 bg-muted rounded flex items-center justify-center border border-border shrink-0">
           <img src={aeLogo} alt="Workspace Badge" className="w-3.5 h-3.5 object-contain" />
         </div>
         <div className="flex flex-col items-start min-w-0 flex-1">
@@ -79,7 +79,7 @@ const WorkspaceSwitcher: React.FC = () => {
               Workspaces
               <button 
                 onClick={(e) => { e.stopPropagation(); setIsOrgModalOpen(true); setIsOpen(false); }} 
-                className="p-1 hover:bg-white/5 rounded transition-colors"
+                className="p-1 hover:bg-muted/50 rounded transition-colors"
               >
                 <Plus className="w-3 h-3" />
               </button>
@@ -89,7 +89,7 @@ const WorkspaceSwitcher: React.FC = () => {
                 <button
                   key={org.id}
                   onClick={() => { setActiveOrg(org); setIsOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeOrg.id === org.id ? 'bg-primary/10 text-primary' : 'hover:bg-white/5'}`}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeOrg.id === org.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}`}
                 >
                   <Building className="w-3 h-3" />
                   <span className="truncate flex-1 text-left">{org.name}</span>
@@ -105,7 +105,7 @@ const WorkspaceSwitcher: React.FC = () => {
               Clients
                <button 
                  onClick={(e) => { e.stopPropagation(); setIsClientModalOpen(true); setIsOpen(false); }} 
-                 className="p-1 hover:bg-white/5 rounded transition-colors"
+                 className="p-1 hover:bg-muted/50 rounded transition-colors"
                >
                  <Plus className="w-3 h-3" />
                </button>
@@ -125,7 +125,7 @@ const WorkspaceSwitcher: React.FC = () => {
                  <button
                    key={client.id}
                    onClick={() => { setActiveClient(client); setIsOpen(false); }}
-                   className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary' : 'hover:bg-white/5'}`}
+                   className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}`}
                  >
                    <Briefcase className="w-3 h-3" />
                    <span className="truncate flex-1 text-left">{client.name}</span>
@@ -134,10 +134,10 @@ const WorkspaceSwitcher: React.FC = () => {
                ))}
              </div>
  
-             <div className="h-px bg-border/20 mx-2 my-1" />
+             <div className="h-px bg-border mx-2 my-1" />
              
              <div className="px-1">
-               <button className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-muted-foreground">
+                <button className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors text-muted-foreground">
                 <Settings className="w-3 h-3" />
                 Workspace Settings
               </button>

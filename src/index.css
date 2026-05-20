@@ -50,12 +50,12 @@
   --muted-foreground: #5B6B66;
   --accent: #14B8A6;
   --accent-foreground: #10201D;
-  --border: rgba(15, 118, 110, 0.14);
-  --input: rgba(15, 118, 110, 0.14);
+  --border: rgba(16, 32, 29, 0.08);
+  --input: rgba(16, 32, 29, 0.08);
   --ring: #0F766E;
 
   /* chart variables */
-  --chart-grid: rgba(15, 118, 110, 0.08);
+  --chart-grid: rgba(16, 32, 29, 0.05);
   --chart-label: #5B6B66;
   --chart-stroke-inflow: #0F766E;
   --chart-stroke-outflow: #DC2626;
@@ -64,28 +64,28 @@
 }
 
 .dark {
-  --background: #070908;
+  --background: #070909;
   --foreground: #f3f4f6;
-  --card: #0c1110;
+  --card: #0d1110;
   --card-foreground: #f3f4f6;
-  --primary: #2fb8a6;
-  --primary-foreground: #070908;
+  --primary: #14b8a6;
+  --primary-foreground: #070909;
   --secondary: #0f766e;
   --secondary-foreground: #f3f4f6;
   --muted: #111827;
   --muted-foreground: #94a3b8;
-  --accent: #2fb8a6;
-  --accent-foreground: #070908;
-  --border: rgba(47, 184, 166, 0.12);
-  --input: rgba(47, 184, 166, 0.12);
-  --ring: #2fb8a6;
+  --accent: #14b8a6;
+  --accent-foreground: #070909;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: #14b8a6;
 
   /* chart variables */
   --chart-grid: rgba(255, 255, 255, 0.05);
   --chart-label: #6b7a75;
-  --chart-stroke-inflow: #2fb8a6;
+  --chart-stroke-inflow: #14b8a6;
   --chart-stroke-outflow: #e5484d;
-  --chart-stop-inflow: #2fb8a6;
+  --chart-stop-inflow: #14b8a6;
   --chart-stop-outflow: #e5484d;
 }
 
@@ -148,19 +148,19 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Highly opaque floating panels to ensure high readability and prevent background bleed-through */
 .premium-floating-panel {
-  background: rgba(255, 252, 245, 0.96) !important;
-  border: 1px solid rgba(15, 118, 110, 0.16);
+  background: rgba(255, 252, 245, 0.97) !important;
+  border: 1px solid rgba(16, 32, 29, 0.1) !important;
   backdrop-filter: blur(18px) saturate(140%) !important;
   -webkit-backdrop-filter: blur(18px) saturate(140%) !important;
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08) !important;
 }
 
 .dark .premium-floating-panel {
-  background: rgba(8, 14, 13, 0.96) !important;
-  border: 1px solid rgba(47, 184, 166, 0.18);
+  background: rgba(10, 14, 13, 0.97) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   backdrop-filter: blur(18px) saturate(140%) !important;
   -webkit-backdrop-filter: blur(18px) saturate(140%) !important;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4) !important;
 }
 
 /* Premium Topbar layout backings */
@@ -168,26 +168,26 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(248, 244, 236, 0.90) !important;
   backdrop-filter: blur(18px) !important;
   -webkit-backdrop-filter: blur(18px) !important;
-  border-bottom: 1px solid rgba(15, 118, 110, 0.12) !important;
+  border-bottom: 1px solid rgba(16, 32, 29, 0.08) !important;
 }
 
 .dark .premium-topbar {
   background: rgba(7, 9, 9, 0.88) !important;
   backdrop-filter: blur(18px) !important;
   -webkit-backdrop-filter: blur(18px) !important;
-  border-bottom: 1px solid rgba(47, 184, 166, 0.12) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 /* Theme-aware header controls and buttons */
 .premium-topbar-card {
   background: #FFFFFF !important;
-  border: 1px solid rgba(15, 118, 110, 0.12) !important;
+  border: 1px solid rgba(16, 32, 29, 0.1) !important;
   color: #5B6B66 !important;
   transition: all 0.2s ease-in-out;
 }
 .premium-topbar-card:hover {
-  background: rgba(15, 118, 110, 0.05) !important;
-  border-color: rgba(15, 118, 110, 0.20) !important;
+  background: rgba(16, 32, 29, 0.04) !important;
+  border-color: rgba(16, 32, 29, 0.15) !important;
   color: #10201D !important;
 }
 .premium-topbar-card .search-icon,
@@ -204,12 +204,12 @@ h1, h2, h3, h4, h5, h6 {
 
 .dark .premium-topbar-card {
   background: rgba(13, 18, 17, 0.85) !important;
-  border: 1px solid rgba(47, 184, 166, 0.14) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: #EAF7F4 !important;
 }
 .dark .premium-topbar-card:hover {
   background: rgba(13, 18, 17, 0.95) !important;
-  border-color: rgba(47, 184, 166, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
 }
 .dark .premium-topbar-card .search-icon,
 .dark .premium-topbar-card .bell-icon,
@@ -219,45 +219,45 @@ h1, h2, h3, h4, h5, h6 {
 .dark .premium-topbar-card:hover .search-icon,
 .dark .premium-topbar-card:hover .bell-icon,
 .dark .premium-topbar-card:hover .chevron-icon {
-  color: #2FB8A6 !important;
+  color: #f3f4f6 !important;
 }
 
 /* Light mode overrides for high-contrast, premium readability */
 :not(.dark) .bg-white\/5 {
-  background-color: rgba(15, 118, 110, 0.04) !important;
+  background-color: rgba(16, 32, 29, 0.03) !important;
 }
 :not(.dark) .hover\:bg-white\/5:hover {
-  background-color: rgba(15, 118, 110, 0.07) !important;
+  background-color: rgba(16, 32, 29, 0.06) !important;
 }
 :not(.dark) .border-border\/20,
 :not(.dark) .border-border\/30,
 :not(.dark) .border-border\/40,
 :not(.dark) .border-border\/50 {
-  border-color: rgba(15, 118, 110, 0.12) !important;
+  border-color: rgba(16, 32, 29, 0.06) !important;
 }
 :not(.dark) .bg-card\/45 {
   background-color: rgba(255, 255, 255, 0.9) !important;
 }
 :not(.dark) .bg-muted\/10 {
-  background-color: rgba(15, 118, 110, 0.04) !important;
+  background-color: rgba(16, 32, 29, 0.02) !important;
 }
 :not(.dark) .bg-muted\/30 {
-  background-color: rgba(15, 118, 110, 0.06) !important;
+  background-color: rgba(16, 32, 29, 0.04) !important;
 }
 :not(.dark) .bg-muted\/40 {
-  background-color: rgba(15, 118, 110, 0.08) !important;
+  background-color: rgba(16, 32, 29, 0.06) !important;
 }
 :not(.dark) .bg-muted\/50 {
-  background-color: rgba(15, 118, 110, 0.05) !important;
+  background-color: rgba(16, 32, 29, 0.03) !important;
 }
 :not(.dark) .hover\:bg-muted\/40:hover {
-  background-color: rgba(15, 118, 110, 0.08) !important;
+  background-color: rgba(16, 32, 29, 0.06) !important;
 }
 :not(.dark) .hover\:bg-muted\/60:hover {
-  background-color: rgba(15, 118, 110, 0.12) !important;
+  background-color: rgba(16, 32, 29, 0.08) !important;
 }
 :not(.dark) .hover\:bg-muted\/80:hover {
-  background-color: rgba(15, 118, 110, 0.16) !important;
+  background-color: rgba(16, 32, 29, 0.12) !important;
 }
 
 /* Color overrides for warning/danger/success indicators */

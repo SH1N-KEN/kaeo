@@ -239,7 +239,7 @@ const AskKaeo = () => {
       {/* HEADER */}
       <div className="p-4 border-b bg-card/50 backdrop-blur-sm flex justify-between items-center z-10">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/20 rounded-lg">
+          <div className="p-2 bg-muted rounded-lg border border-border/40">
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div>
@@ -286,14 +286,14 @@ const AskKaeo = () => {
             <div key={msg.id || idx} className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
               {!isUser && (
                 <div className="flex-shrink-0 mt-1">
-                  <div className={`h-8 w-8 rounded-full flex items-center justify-center border ${isAi ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-primary/20 border-primary/30'}`}>
-                    <Bot className={`h-4 w-4 ${isAi ? 'text-emerald-500' : 'text-primary'}`} />
+                  <div className="h-8 w-8 rounded-full flex items-center justify-center border bg-muted border-border/40">
+                    <Bot className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </div>
               )}
               
               <div className="flex flex-col gap-1.5 max-w-[85%] md:max-w-[75%]">
-                <div className={`rounded-2xl px-5 py-4 ${isUser ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-card border rounded-tl-sm shadow-sm'}`}>
+                <div className={`rounded-2xl px-5 py-4 ${isUser ? 'bg-teal-600/90 dark:bg-teal-950/40 border border-teal-500/10 text-white dark:text-teal-100 rounded-tr-sm' : 'bg-card border rounded-tl-sm shadow-sm'}`}>
                   {showMetadata && msg.intent && (
                     <div className="text-[10px] font-mono uppercase text-muted-foreground mb-2 flex flex-wrap gap-2 justify-between items-center bg-muted/30 p-2 rounded border border-border/40">
                       <div className="flex items-center gap-3">
@@ -405,14 +405,14 @@ const AskKaeo = () => {
         {isTyping && (
           <div className="flex gap-4 justify-start">
             <div className="flex-shrink-0 mt-1">
-              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
-                <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center border border-border/40">
+                <Sparkles className="h-4 w-4 text-muted-foreground" />
               </div>
             </div>
             <div className="bg-card border rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="w-1.5 h-1.5 bg-muted-foreground/45 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-1.5 h-1.5 bg-muted-foreground/45 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-1.5 h-1.5 bg-muted-foreground/45 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
           </div>
         )}

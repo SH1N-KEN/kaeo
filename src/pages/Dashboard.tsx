@@ -246,10 +246,10 @@ const Dashboard: React.FC = () => {
   const CustomChartTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="premium-glass p-3 rounded-xl border border-teal-500/20 text-xs shadow-2xl">
+        <div className="premium-glass p-3 rounded-xl border border-border text-xs shadow-2xl">
           <p className="font-bold text-muted-foreground mb-1">{payload[0].payload.date}</p>
-          <p className="text-emerald-400 font-semibold">Inflow: {formatCurrency(payload[0].value)}</p>
-          {payload[1] && <p className="text-rose-400 font-semibold">Outflow: {formatCurrency(payload[1].value)}</p>}
+          <p className="text-success font-semibold">Inflow: {formatCurrency(payload[0].value)}</p>
+          {payload[1] && <p className="text-risk font-semibold">Outflow: {formatCurrency(payload[1].value)}</p>}
         </div>
       );
     }
@@ -269,7 +269,7 @@ const Dashboard: React.FC = () => {
             <h1 className="text-2xl font-bold tracking-tight">
               Good morning, {firstName}
             </h1>
-            <div className="px-2 py-0.5 bg-teal-500/10 text-teal-400 text-[10px] font-black rounded border border-teal-500/20 uppercase tracking-widest shadow-sm shadow-teal-500/5">Live OS</div>
+            <div className="px-2 py-0.5 bg-primary/5 text-primary text-[10px] font-black rounded border border-primary/20 uppercase tracking-widest shadow-sm">Live OS</div>
           </div>
           <p className="text-xs text-muted-foreground">Strategic workspace overview for <span className="text-foreground font-semibold">{activeClient.name}</span></p>
         </div>
@@ -296,7 +296,7 @@ const Dashboard: React.FC = () => {
           title="Total Revenue" 
           value={hasTransactions ? formatCurrency(metrics.income) : '—'} 
           description={hasTransactions ? (metrics.incomeCount > 0 ? "From customer payments" : "No income rows detected") : "No data yet"}
-          icon={<TrendingUp className={`w-4 h-4 ${metrics.incomeCount > 0 ? 'text-teal-400' : 'text-muted-foreground'}`} />} 
+          icon={<TrendingUp className="w-4 h-4 text-muted-foreground" />} 
           className="premium-glass premium-glass-hover"
         />
         {metrics.refunds > 0 && (
@@ -304,7 +304,7 @@ const Dashboard: React.FC = () => {
             title="Refunds & Recoveries" 
             value={hasTransactions ? formatCurrency(metrics.refunds) : '—'} 
             description={hasTransactions ? `From ${metrics.refundCount} refund/reversal entries` : ""}
-            icon={<TrendingUp className="w-4 h-4 text-emerald-400" />} 
+            icon={<TrendingUp className="w-4 h-4 text-muted-foreground" />} 
             className="premium-glass premium-glass-hover"
           />
         )}
@@ -312,29 +312,29 @@ const Dashboard: React.FC = () => {
           title="Total Expenses" 
           value={hasTransactions ? formatCurrency(metrics.expenses) : '—'} 
           description={hasTransactions ? "From imported expense rows" : ""}
-          icon={<TrendingDown className={`w-4 h-4 ${metrics.expenseCount > 0 ? 'text-rose-400/80' : 'text-muted-foreground'}`} />} 
+          icon={<TrendingDown className="w-4 h-4 text-muted-foreground" />} 
           className="premium-glass premium-glass-hover"
         />
         <MetricCard 
           title="Net Cash Movement" 
           value={hasTransactions ? formatCurrency(metrics.net) : '—'} 
           description={hasTransactions ? (metrics.net > 0 ? "Net cash positive" : metrics.net < 0 ? "Net cash negative" : "Balanced") : "No data yet"}
-          icon={<DollarSign className={`w-4 h-4 ${hasTransactions ? (metrics.net >= 0 ? 'text-teal-400' : 'text-rose-400/85') : 'text-muted-foreground'}`} />} 
+          icon={<DollarSign className={`w-4 h-4 ${hasTransactions ? (metrics.net >= 0 ? 'text-success' : 'text-risk') : 'text-muted-foreground'}`} />} 
           className="premium-glass premium-glass-hover"
         />
         <MetricCard 
           title="Transactions" 
           value={hasTransactions ? metrics.count.toString() : '—'} 
           description={hasTransactions ? "Imported transactions" : ""} 
-          icon={<FileText className="w-4 h-4 text-teal-400" />} 
+          icon={<FileText className="w-4 h-4 text-muted-foreground" />} 
           className="premium-glass premium-glass-hover"
         />
       </div>
 
       {!hasTransactions ? (
         <div className="premium-glass border border-dashed border-border/40 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5 shadow-xl">
-          <div className="w-16 h-16 bg-teal-500/10 rounded-2xl flex items-center justify-center border border-teal-500/20 shadow-inner">
-            <FileText className="w-8 h-8 text-teal-400/40" />
+          <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center border border-border/40 shadow-inner">
+            <FileText className="w-8 h-8 text-muted-foreground/60" />
           </div>
           <div className="space-y-1">
             <h3 className="text-lg font-bold tracking-tight">No financial ledger uploaded</h3>
@@ -363,11 +363,11 @@ const Dashboard: React.FC = () => {
                     <h4 className="text-sm font-semibold text-foreground mt-0.5">Inflow vs Outflow analysis</h4>
                   </div>
                   <div className="flex items-center gap-4 text-[10px] font-bold">
-                    <span className="flex items-center gap-1.5 text-teal-400">
-                      <span className="w-2 h-2 rounded-full bg-teal-400" /> Revenue Inflow
+                    <span className="flex items-center gap-1.5 text-primary">
+                      <span className="w-2 h-2 rounded-full bg-primary" /> Revenue Inflow
                     </span>
-                    <span className="flex items-center gap-1.5 text-rose-400">
-                      <span className="w-2 h-2 rounded-full bg-rose-400" /> Expense Outflow
+                    <span className="flex items-center gap-1.5 text-risk">
+                      <span className="w-2 h-2 rounded-full bg-risk" /> Expense Outflow
                     </span>
                   </div>
                 </div>
@@ -425,13 +425,13 @@ const Dashboard: React.FC = () => {
 
             {/* File Interpretation Card */}
             <div className="premium-glass rounded-2xl p-6 flex flex-col md:flex-row gap-6 items-start shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
-              <div className="p-3 bg-teal-500/10 border border-teal-500/20 rounded-2xl shrink-0 shadow-sm shadow-teal-500/5">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+              <div className="p-3 bg-muted border border-border/40 rounded-2xl shrink-0 shadow-sm">
                 <img src={aeLogo} alt="Ligature logo" className="w-7 h-7 object-contain" />
               </div>
               <div className="space-y-4 flex-1">
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-widest text-teal-400">File Interpretation</h4>
+                  <h4 className="text-xs font-black uppercase tracking-widest text-primary">File Interpretation</h4>
                   <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
                     {isExpenseOnly ? (
                       <>Kaeo detected this as an <span className="text-foreground font-bold">expense-only ledger</span>. To run cash flow comparisons, ingest an invoice register or a bank statement containing deposit logs.</>
@@ -446,12 +446,12 @@ const Dashboard: React.FC = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-border/20 pt-4">
                   <div className="flex flex-col">
                     <span className="text-[9px] font-bold text-muted-foreground uppercase">Income rows</span>
-                    <span className="text-sm font-bold text-teal-400 mt-0.5">{metrics.incomeCount}</span>
+                    <span className="text-sm font-bold text-primary mt-0.5">{metrics.incomeCount}</span>
                   </div>
                   {metrics.refundCount > 0 && (
                     <div className="flex flex-col">
                       <span className="text-[9px] font-bold text-muted-foreground uppercase">Refund rows</span>
-                      <span className="text-sm font-bold text-teal-400 mt-0.5">{metrics.refundCount}</span>
+                      <span className="text-sm font-bold text-primary mt-0.5">{metrics.refundCount}</span>
                     </div>
                   )}
                   <div className="flex flex-col">
@@ -477,7 +477,7 @@ const Dashboard: React.FC = () => {
                       d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     />
                     <path
-                      className="text-teal-400"
+                      className="text-primary"
                       strokeWidth="2.5"
                       strokeDasharray={`${incomePercentage}, 100`}
                       stroke="currentColor"
@@ -497,12 +497,12 @@ const Dashboard: React.FC = () => {
             <div className="premium-glass rounded-2xl overflow-hidden shadow-xl">
               <div className="px-6 py-4 border-b border-border/30 flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-teal-400" />
+                  <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
                   Recent Ledger Entries
                 </h3>
                 <button 
                   onClick={() => window.location.href = '/transactions'}
-                  className="text-[10px] font-black text-teal-400 hover:text-teal-300 uppercase tracking-widest cursor-pointer"
+                  className="text-[10px] font-black text-primary hover:opacity-90 uppercase tracking-widest cursor-pointer"
                 >
                   View Full Ledger
                 </button>
@@ -515,7 +515,7 @@ const Dashboard: React.FC = () => {
                   return (
                     <div key={tx.id} className="px-6 py-3.5 flex items-center justify-between hover:bg-white/5 transition-colors group">
                       <div className="flex items-center gap-3.5 min-w-0">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-border/40 ${isExpense ? 'bg-muted/30 text-muted-foreground' : isIncome ? 'bg-teal-500/10 text-teal-400 border-teal-500/20' : 'bg-muted/10 text-muted-foreground'}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-border/40 ${isExpense ? 'bg-muted/30 text-muted-foreground' : isIncome ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted/10 text-muted-foreground'}`}>
                           {isExpense ? <ArrowUpRight className="w-3.5 h-3.5" /> : isIncome ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
                         </div>
                         <div className="min-w-0">
@@ -526,7 +526,7 @@ const Dashboard: React.FC = () => {
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className={`text-xs font-extrabold ${isExpense ? 'text-foreground' : isIncome ? 'text-teal-400' : 'text-foreground'}`}>
+                        <div className={`text-xs font-extrabold ${isExpense ? 'text-foreground' : isIncome ? 'text-success' : 'text-foreground'}`}>
                           {isExpense ? '-' : isIncome ? '+' : ''}{formatCurrency(Math.abs(tx.amount))}
                         </div>
                         <div className="text-[9px] text-muted-foreground mt-0.5">{new Date(tx.transaction_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
@@ -542,7 +542,7 @@ const Dashboard: React.FC = () => {
           <div className="lg:col-span-4 space-y-6">
             <div className="premium-glass rounded-2xl p-6 shadow-xl space-y-6">
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                <Info className="w-3.5 h-3.5 text-teal-400" />
+                <Info className="w-3.5 h-3.5 text-muted-foreground" />
                 Strategic Insights
               </h3>
               
@@ -560,7 +560,7 @@ const Dashboard: React.FC = () => {
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-border/20">
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                       <span className="text-[11px] font-bold">Import Composition</span>
                     </div>
                     <span className="text-[10px] font-black text-muted-foreground">{metrics.count} Rows</span>
@@ -572,9 +572,9 @@ const Dashboard: React.FC = () => {
                       <span className="text-[11px] font-bold text-rose-300">Expense-only file detected</span>
                     </div>
                   ) : isMixed ? (
-                    <div className="flex items-center gap-2 p-3 bg-teal-500/5 rounded-xl border border-teal-500/10">
-                      <TrendingUp className="w-3.5 h-3.5 text-teal-400" />
-                      <span className="text-[11px] font-bold text-teal-300">Mixed income and expenses</span>
+                    <div className="flex items-center gap-2 p-3 bg-success/5 rounded-xl border border-success/10">
+                      <TrendingUp className="w-3.5 h-3.5 text-success" />
+                      <span className="text-[11px] font-bold text-success/80">Mixed income and expenses</span>
                     </div>
                   ) : null}
 
@@ -601,7 +601,7 @@ const Dashboard: React.FC = () => {
               <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-3">Intelligence Legend</h4>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold">
-                  <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                   Income: Verified revenue entries
                 </div>
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold">
@@ -635,8 +635,8 @@ const Dashboard: React.FC = () => {
               <X className="w-4 h-4" />
             </button>
             
-            <div className="w-10 h-10 bg-teal-500/10 rounded-2xl flex items-center justify-center border border-teal-500/20 mb-4">
-              <Plus className="w-5 h-5 text-teal-400" />
+            <div className="w-10 h-10 bg-muted rounded-2xl flex items-center justify-center border border-border/45 mb-4">
+              <Plus className="w-5 h-5 text-muted-foreground" />
             </div>
             
             <h3 className="text-sm font-bold text-foreground mb-1.5">Add Manual Transaction</h3>

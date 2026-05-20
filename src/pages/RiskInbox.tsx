@@ -350,7 +350,7 @@ const RiskInbox: React.FC = () => {
                     setSelectedRisk(risk);
                     fetchNotes(risk.id);
                   }}
-                  className={`bg-card border rounded-2xl p-6 transition-all cursor-pointer group hover:border-primary/40 shadow-sm relative overflow-hidden ${selectedRisk?.id === risk.id ? 'border-primary ring-1 ring-primary/20' : 'border-border'}`}
+                  className={`bg-card border rounded-2xl p-6 transition-all cursor-pointer group hover:border-border/80 shadow-sm relative overflow-hidden ${selectedRisk?.id === risk.id ? 'border-primary ring-1 ring-primary/20' : 'border-border'}`}
                 >
                   {risk.status !== 'open' && (
                     <div className="absolute top-0 right-0 px-3 py-1 bg-success/10 text-success text-[8px] font-black uppercase tracking-tighter rounded-bl-lg border-l border-b border-success/20">
@@ -400,7 +400,7 @@ const RiskInbox: React.FC = () => {
             <div className="lg:col-span-4">
               <div className="sticky top-8 space-y-6">
                 {selectedRisk ? (
-                  <div className="bg-card border border-primary/20 rounded-2xl overflow-hidden shadow-xl animate-in slide-in-from-right-4 duration-300">
+                  <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl animate-in slide-in-from-right-4 duration-300">
                     <div className="p-6 bg-muted/20 border-b border-border/50">
                       <div className="flex items-center justify-between mb-4">
                         <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${getSeverityColor(selectedRisk.severity)}`}>
@@ -411,7 +411,7 @@ const RiskInbox: React.FC = () => {
                         </button>
                       </div>
                       <h3 className="font-bold text-lg mb-1">{selectedRisk.title}</h3>
-                      <p className="text-xs text-muted-foreground leading-relaxed italic border-l-2 border-primary/30 pl-3 mb-4">
+                      <p className="text-xs text-muted-foreground leading-relaxed italic border-l-2 border-primary/40 pl-3 mb-4">
                         {selectedRisk.suggested_action}
                       </p>
                       
