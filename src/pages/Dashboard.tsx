@@ -625,7 +625,7 @@ const Dashboard: React.FC = () => {
           onClick={() => setIsAddTxOpen(false)}
         >
           <div 
-            className="w-full max-w-md premium-glass rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200"
+            className="w-full max-w-md premium-floating-panel rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <button 

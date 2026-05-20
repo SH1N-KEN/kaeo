@@ -71,7 +71,7 @@ const Topbar: React.FC = () => {
             </button>
 
             {isNotifOpen && (
-              <div className="absolute right-0 mt-2 w-72 premium-glass rounded-2xl p-4 shadow-2xl z-50 text-center animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-0 mt-2 w-72 premium-floating-panel rounded-2xl p-4 shadow-2xl z-[90] text-center animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="w-10 h-10 bg-teal-500/10 rounded-full flex items-center justify-center mx-auto mb-2.5">
                   <Bell className="w-4 h-4 text-teal-400" />
                 </div>
@@ -90,7 +90,7 @@ const Topbar: React.FC = () => {
           onClick={() => setIsSearchOpen(false)}
         >
           <div 
-            className="w-full max-w-xl premium-glass rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200"
+            className="w-full max-w-xl premium-floating-panel rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <button 

@@ -248,7 +248,7 @@ const Sidebar: React.FC = () => {
         {profileMenuOpen && (
           <div 
             className={`
-              absolute bottom-16 w-56 premium-glass rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-200
+              absolute bottom-16 w-56 premium-floating-panel rounded-2xl p-1.5 shadow-2xl z-[90] animate-in fade-in slide-in-from-bottom-2 duration-200
               ${collapsed ? 'left-20' : 'left-4'}
             `}
           >

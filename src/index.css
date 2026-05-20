@@ -146,6 +146,23 @@ h1, h2, h3, h4, h5, h6 {
   border-style: dashed !important;
 }
 
+/* Highly opaque floating panels to ensure high readability and prevent background bleed-through */
+.premium-floating-panel {
+  background: rgba(255, 252, 245, 0.96) !important;
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  backdrop-filter: blur(18px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(140%) !important;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12) !important;
+}
+
+.dark .premium-floating-panel {
+  background: rgba(8, 14, 13, 0.96) !important;
+  border: 1px solid rgba(47, 184, 166, 0.18);
+  backdrop-filter: blur(18px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(140%) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45) !important;
+}
+
 /* Premium Topbar layout backings */
 .premium-topbar {
   background: rgba(248, 244, 236, 0.90) !important;

@@ -73,7 +73,7 @@ const WorkspaceSwitcher: React.FC = () => {
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full left-0 mt-2 w-64 premium-glass rounded-xl shadow-2xl z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
+          <div className="absolute top-full left-0 mt-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200">
             {/* Organizations Section */}
             <div className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-between">
               Workspaces
