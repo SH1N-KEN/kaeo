@@ -125,7 +125,7 @@ const Vendors: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-3xl font-bold tracking-tight">Spend Advisor</h1>
-            <div className="px-2 py-0.5 bg-primary/5 text-primary text-[10px] font-black rounded border border-primary/10 uppercase tracking-tighter">CFO Intelligence</div>
+            <div className="px-2 py-0.5 bg-muted text-foreground text-[10px] font-black rounded-sm border border-border uppercase tracking-tighter">CFO Intelligence</div>
           </div>
           <p className="text-sm text-muted-foreground">Strategic vendor portfolio analysis for <span className="text-foreground font-semibold">{activeClient.name}</span></p>
         </div>
@@ -133,7 +133,7 @@ const Vendors: React.FC = () => {
         <button 
           onClick={handleAnalyze}
           disabled={analyzing}
-          className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-primary/20 disabled:opacity-50"
+          className="px-6 py-3 bg-foreground text-background rounded-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all disabled:opacity-50 text-xs"
         >
           {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <PieChart className="w-4 h-4" />}
           {vendors.length > 0 ? 'Refresh Intelligence' : 'Analyze Spend'}
@@ -141,7 +141,7 @@ const Vendors: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-risk/5 border border-risk/20 rounded-2xl flex gap-3 items-center">
+        <div className="p-4 bg-risk/5 border border-risk/20 rounded-sm flex gap-3 items-center">
           <AlertCircle className="w-5 h-5 text-risk shrink-0" />
           <p className="text-xs text-risk font-medium">{error}</p>
         </div>
@@ -149,12 +149,12 @@ const Vendors: React.FC = () => {
 
       {loading && vendors.length === 0 ? (
         <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           <p className="text-sm text-muted-foreground animate-pulse font-medium">Aggregating vendor intelligence...</p>
         </div>
       ) : txCount === 0 ? (
-        <div className="bg-card/30 border border-dashed border-border/60 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5">
-          <div className="w-16 h-16 bg-muted/30 rounded-2xl flex items-center justify-center border border-border/50 text-muted-foreground/30">
+        <div className="bg-card border border-dashed border-border rounded-sm p-20 flex flex-col items-center justify-center text-center space-y-5">
+          <div className="w-16 h-16 bg-muted rounded-sm flex items-center justify-center border border-border text-muted-foreground/30">
             <Building2 className="w-8 h-8" />
           </div>
           <div className="space-y-1">
@@ -165,8 +165,8 @@ const Vendors: React.FC = () => {
           </div>
         </div>
       ) : vendors.length === 0 ? (
-        <div className="bg-card/30 border border-dashed border-border/60 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5">
-          <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center border border-border/40 text-muted-foreground/60">
+        <div className="bg-card border border-dashed border-border rounded-sm p-20 flex flex-col items-center justify-center text-center space-y-5">
+          <div className="w-16 h-16 bg-muted rounded-sm flex items-center justify-center border border-border text-muted-foreground/60">
             <Zap className="w-8 h-8" />
           </div>
           <div className="space-y-1">
@@ -184,18 +184,21 @@ const Vendors: React.FC = () => {
               value={formatCurrency(stats.totalSpend)} 
               description="Across all detected vendors"
               icon={<TrendingUp className="w-4 h-4 text-muted-foreground" />} 
+              className="border border-border rounded-sm bg-card"
             />
             <MetricCard 
               title="Recurring Commitment" 
               value={formatCurrency(stats.recurringSpend)} 
               description="Estimated monthly burn"
-              icon={<Zap className="w-4 h-4 text-warning" />} 
+              icon={<Zap className="w-4 h-4 text-muted-foreground" />} 
+              className="border border-border rounded-sm bg-card"
             />
             <MetricCard 
               title="Action Required" 
               value={stats.needsReview.toString()} 
               description="Vendors flagged for review"
-              icon={<AlertCircle className="w-4 h-4 text-risk" />} 
+              icon={<AlertCircle className="w-4 h-4 text-muted-foreground" />} 
+              className="border border-border rounded-sm bg-card"
             />
           </div>
 
@@ -205,13 +208,13 @@ const Vendors: React.FC = () => {
               <input 
                 type="text" 
                 placeholder="Search vendors or categories..." 
-                className="w-full bg-card border border-border rounded-xl pl-12 pr-4 py-3 text-sm focus:ring-1 ring-primary/30 outline-none"
+                className="w-full bg-card border border-border rounded-sm pl-12 pr-4 py-3 text-sm outline-none focus:border-neutral-500"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2">
-              <button className="px-4 py-2 bg-muted/50 border border-border rounded-lg text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 hover:bg-muted transition-colors">
+              <button className="px-4 py-2 bg-muted border border-border rounded-sm text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 transition-colors">
                 <Filter className="w-3 h-3" /> Filter
               </button>
             </div>
@@ -219,10 +222,10 @@ const Vendors: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredVendors.map((vendor) => (
-              <div key={vendor.id} className="bg-card border border-border rounded-2xl p-6 hover:border-border/80 transition-all group flex flex-col h-full shadow-sm">
+              <div key={vendor.id} className="bg-card border border-border rounded-sm p-6 hover:border-muted-foreground transition-all group flex flex-col h-full">
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-muted/50 rounded-xl flex items-center justify-center border border-border/50 group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 bg-muted rounded-sm flex items-center justify-center border border-border/50 transition-transform">
                       <Building2 className="w-6 h-6 text-muted-foreground" />
                     </div>
                     <div>
@@ -230,7 +233,7 @@ const Vendors: React.FC = () => {
                       <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{vendor.category || 'Uncategorized'}</p>
                     </div>
                   </div>
-                  <button className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
+                  <button className="p-2 hover:bg-muted rounded-sm transition-colors text-muted-foreground">
                     <MoreVertical className="w-4 h-4" />
                   </button>
                 </div>
@@ -247,10 +250,10 @@ const Vendors: React.FC = () => {
                 </div>
 
                 <div className="mt-auto space-y-4">
-                  <div className={`p-4 rounded-xl border ${vendor.recommendation === 'review' ? 'bg-warning/5 border-warning/20' : 'bg-muted/30 border-border/50'}`}>
+                  <div className={`p-4 rounded-sm border ${vendor.recommendation === 'review' ? 'bg-amber-500/5 border-amber-500/20' : 'bg-muted border-border/50'}`}>
                     <div className="flex items-center gap-2 mb-2">
-                      <AlertCircle className={`w-3.5 h-3.5 ${vendor.recommendation === 'review' ? 'text-warning' : 'text-muted-foreground'}`} />
-                      <p className={`text-[10px] font-black uppercase tracking-widest ${vendor.recommendation === 'review' ? 'text-warning' : 'text-muted-foreground'}`}>
+                      <AlertCircle className={`w-3.5 h-3.5 ${vendor.recommendation === 'review' ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                      <p className={`text-[10px] font-black uppercase tracking-widest ${vendor.recommendation === 'review' ? 'text-amber-500' : 'text-muted-foreground'}`}>
                         {vendor.recommendation === 'keep' ? 'Strategic Hold' : 'Action: ' + vendor.recommendation}
                       </p>
                     </div>
@@ -263,8 +266,8 @@ const Vendors: React.FC = () => {
                     <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                       <Calendar className="w-3 h-3" /> Since {new Date(vendor.first_seen).toLocaleDateString()}
                     </div>
-                    <button className="p-2 bg-muted/50 rounded-lg group-hover:bg-muted group-hover:text-foreground transition-all">
-                      <ArrowUpRight className="w-4 h-4" />
+                    <button className="p-2 bg-muted rounded-sm group-hover:bg-neutral-200 dark:group-hover:bg-neutral-800 transition-all">
+                      <ArrowUpRight className="w-4 h-4 text-foreground" />
                     </button>
                   </div>
                 </div>

@@ -53,7 +53,7 @@ const Topbar: React.FC = () => {
           {/* Search Trigger Button */}
           <button 
             onClick={() => setIsSearchOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all text-xs font-semibold text-muted-foreground w-48 md:w-64 cursor-pointer premium-topbar-card"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-sm transition-all text-xs font-semibold text-muted-foreground w-48 md:w-64 cursor-pointer premium-topbar-card"
           >
             <Search className="w-3.5 h-3.5 search-icon" />
             <span className="text-left flex-1">Search transactions, files...</span>
@@ -64,14 +64,14 @@ const Topbar: React.FC = () => {
           <div className="relative" ref={notifRef}>
             <button 
               onClick={() => setIsNotifOpen(!isNotifOpen)}
-              className="p-2 rounded-xl transition-colors relative cursor-pointer premium-topbar-card"
+              className="p-2 rounded-sm transition-colors relative cursor-pointer premium-topbar-card"
             >
               <Bell className="w-4 h-4 bell-icon" />
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-risk rounded-full border border-card" />
             </button>
 
             {isNotifOpen && (
-              <div className="absolute right-0 mt-2 w-72 premium-floating-panel rounded-2xl p-4 shadow-2xl z-[90] text-center animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-0 mt-2 w-72 premium-floating-panel rounded-sm p-4 shadow-2xl z-[90] text-center animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center mx-auto mb-2.5">
                   <Bell className="w-4 h-4 text-muted-foreground" />
                 </div>
@@ -90,12 +90,12 @@ const Topbar: React.FC = () => {
           onClick={() => setIsSearchOpen(false)}
         >
           <div 
-            className="w-full max-w-xl premium-floating-panel rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200"
+            className="w-full max-w-xl premium-floating-panel rounded-sm p-6 shadow-2xl relative animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <button 
               onClick={() => setIsSearchOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-sm hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -111,7 +111,7 @@ const Topbar: React.FC = () => {
             </div>
 
             <div className="py-6 text-center">
-              <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-3 border border-border/45">
+              <div className="w-12 h-12 bg-muted rounded-sm flex items-center justify-center mx-auto mb-3 border border-border/45">
                 <Search className="w-5 h-5 text-muted-foreground" />
               </div>
               <h3 className="text-sm font-bold text-foreground mb-1">Advanced CFO Search</h3>

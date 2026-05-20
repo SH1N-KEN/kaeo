@@ -33,7 +33,7 @@ const WorkspaceSwitcher: React.FC = () => {
       <>
         <button 
           onClick={() => setIsOrgModalOpen(true)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dashed hover:border-primary hover:text-primary transition-all text-xs font-medium w-full justify-center"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-sm border border-dashed hover:border-primary hover:text-primary transition-all text-xs font-medium w-full justify-center"
         >
           <Plus className="w-3 h-3" />
           Create Workspace
@@ -51,9 +51,9 @@ const WorkspaceSwitcher: React.FC = () => {
     <div className="relative">
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all text-xs font-semibold w-full premium-topbar-card"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-sm transition-all text-xs font-semibold w-full premium-topbar-card"
       >
-        <div className="w-5 h-5 bg-muted rounded flex items-center justify-center border border-border shrink-0">
+        <div className="w-5 h-5 bg-muted rounded-sm flex items-center justify-center border border-border shrink-0">
           <img src={aeLogo} alt="Workspace Badge" className="w-3.5 h-3.5 object-contain" />
         </div>
         <div className="flex flex-col items-start min-w-0 flex-1">
@@ -73,7 +73,7 @@ const WorkspaceSwitcher: React.FC = () => {
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full left-0 mt-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200">
+          <div className="absolute top-full left-0 mt-2 w-64 premium-floating-panel rounded-sm shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200">
             {/* Organizations Section */}
             <div className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-between">
               Workspaces
@@ -89,7 +89,7 @@ const WorkspaceSwitcher: React.FC = () => {
                 <button
                   key={org.id}
                   onClick={() => { setActiveOrg(org); setIsOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeOrg.id === org.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}`}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-sm text-xs transition-colors ${activeOrg.id === org.id ? 'bg-muted text-foreground border border-border/50 border-l-2 border-l-[var(--kaeo-accent)] font-bold' : 'hover:bg-muted/50'}`}
                 >
                   <Building className="w-3 h-3" />
                   <span className="truncate flex-1 text-left">{org.name}</span>
@@ -125,7 +125,7 @@ const WorkspaceSwitcher: React.FC = () => {
                  <button
                    key={client.id}
                    onClick={() => { setActiveClient(client); setIsOpen(false); }}
-                   className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}`}
+                   className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-sm text-xs transition-colors ${activeClient?.id === client.id ? 'bg-muted text-foreground border border-border/50 border-l-2 border-l-[var(--kaeo-accent)] font-bold' : 'hover:bg-muted/50'}`}
                  >
                    <Briefcase className="w-3 h-3" />
                    <span className="truncate flex-1 text-left">{client.name}</span>
@@ -137,7 +137,7 @@ const WorkspaceSwitcher: React.FC = () => {
              <div className="h-px bg-border mx-2 my-1" />
              
              <div className="px-1">
-                <button className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors text-muted-foreground">
+                <button className="w-full flex items-center gap-2 px-3 py-1.5 rounded-sm text-xs hover:bg-muted/50 transition-colors text-muted-foreground">
                 <Settings className="w-3 h-3" />
                 Workspace Settings
               </button>

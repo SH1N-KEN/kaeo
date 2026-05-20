@@ -89,10 +89,8 @@ const Billing: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'razorpay_return') {
-      // Auto-trigger silent sync
       handleSync(true);
       
-      // Clean up search params to avoid repeated trigger on page refreshes
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }
@@ -141,24 +139,20 @@ const Billing: React.FC = () => {
     }
   };
 
-  // Loading spinner
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
         <p className="text-sm text-muted-foreground">Loading your billing configurations...</p>
       </div>
     );
   }
 
-  // 1. No Active Workspace fallback screen
   if (!activeOrg) {
     return (
       <div className="max-w-xl mx-auto my-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="bg-card border border-border rounded-3xl p-8 shadow-2xl space-y-6 text-center relative overflow-hidden group">
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-ocean-mist to-primary" />
-          
-          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mx-auto group-hover:scale-110 transition-transform duration-300">
+        <div className="bg-card border border-border rounded-sm p-8 shadow-sm space-y-6 text-center relative overflow-hidden group">
+          <div className="w-16 h-16 bg-muted rounded-sm flex items-center justify-center text-muted-foreground mx-auto border border-border">
             <Building2 className="w-8 h-8" />
           </div>
           
@@ -172,7 +166,7 @@ const Billing: React.FC = () => {
           <div className="pt-4 max-w-xs mx-auto">
             <button 
               onClick={() => setIsOrgModalOpen(true)}
-              className="w-full py-3 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-xl text-sm uppercase tracking-wider transition-all duration-200 shadow-lg shadow-primary/20 hover:shadow-primary/30 flex items-center justify-center gap-2"
+              className="w-full py-3 px-6 bg-foreground text-background font-semibold rounded-sm text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4" />
               <span>Create Workspace</span>
@@ -189,12 +183,11 @@ const Billing: React.FC = () => {
     );
   }
 
-  // 2. Schema missing fallback screen
   if (schemaMissing) {
     return (
       <div className="max-w-xl mx-auto my-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="bg-card border border-border rounded-3xl p-8 shadow-2xl space-y-6 text-center">
-          <div className="w-16 h-16 bg-risk/10 rounded-2xl flex items-center justify-center text-risk mx-auto">
+        <div className="bg-card border border-border rounded-sm p-8 shadow-sm space-y-6 text-center">
+          <div className="w-16 h-16 bg-muted rounded-sm flex items-center justify-center text-muted-foreground mx-auto border border-border">
             <ShieldAlert className="w-10 h-10" />
           </div>
           <div className="space-y-2">
@@ -204,14 +197,14 @@ const Billing: React.FC = () => {
             </p>
           </div>
           
-          <div className="p-4 bg-muted/50 border rounded-2xl text-left space-y-2">
+          <div className="p-4 bg-muted border border-border rounded-sm text-left space-y-2">
             <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5 text-primary" /> How to resolve:
+              <Info className="w-3.5 h-3.5 text-muted-foreground" /> How to resolve:
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Execute the latest migration file in your Supabase SQL editor or console:
             </p>
-            <code className="block text-[10px] bg-card p-3 rounded-lg border border-border text-primary font-mono select-all">
+            <code className="block text-[10px] bg-card p-3 rounded-sm border border-border text-foreground font-mono select-all">
               supabase/migrations/0012_billing_plans_subscriptions.sql
             </code>
           </div>
@@ -224,7 +217,6 @@ const Billing: React.FC = () => {
     );
   }
 
-  // Calculate dates and trial time left
   const startDate = subscription ? new Date(subscription.current_period_start).toLocaleDateString('en-IN', {
     day: 'numeric', month: 'short', year: 'numeric'
   }) : 'N/A';
@@ -243,7 +235,6 @@ const Billing: React.FC = () => {
 
   const trialDaysLeft = getTrialDaysLeft();
 
-  // Usage card data helper
   const usageCards: {
     type: BillingUsageEventType;
     title: string;
@@ -295,25 +286,25 @@ const Billing: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight mb-2">Billing & Plans</h1>
-          <p className="text-muted-foreground">Manage your workspace tier, usage allowances, and invoice preparations.</p>
+          <p className="text-muted-foreground text-xs font-medium">Manage your workspace tier, usage allowances, and invoice preparations.</p>
         </div>
-        <div className="flex items-center gap-2 bg-muted/50 p-1.5 rounded-xl border border-border/50 shrink-0 w-fit">
+        <div className="flex items-center gap-2 bg-muted p-1 rounded-sm border border-border shrink-0 w-fit">
           <button 
             onClick={() => setIsYearly(false)}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-              !isYearly ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            className={`px-3 py-1.5 text-xs font-bold rounded-sm transition-all ${
+              !isYearly ? 'bg-card text-foreground border border-border/50' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             Monthly
           </button>
           <button 
             onClick={() => setIsYearly(true)}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-              isYearly ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            className={`px-3 py-1.5 text-xs font-bold rounded-sm transition-all flex items-center gap-1.5 ${
+              isYearly ? 'bg-card text-foreground border border-border/50' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             Yearly
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-black uppercase">
+            <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-muted border border-border text-foreground font-black uppercase">
               Save 20%
             </span>
           </button>
@@ -321,18 +312,14 @@ const Billing: React.FC = () => {
       </div>
 
       {(error || checkoutError) && (
-        <div className="p-4 bg-risk/5 border border-risk/20 rounded-2xl flex gap-3 items-center animate-in fade-in duration-300">
-          <AlertTriangle className="w-5 h-5 text-risk shrink-0" />
-          <p className="text-sm text-risk font-semibold">{error || checkoutError}</p>
+        <div className="p-4 bg-muted border border-border rounded-sm flex gap-3 items-center">
+          <AlertTriangle className="w-5 h-5 text-muted-foreground shrink-0" />
+          <p className="text-xs text-muted-foreground font-semibold">{error || checkoutError}</p>
         </div>
       )}
 
       {syncMessage && (
-        <div className={`p-4 border rounded-2xl flex gap-3 items-center animate-in fade-in duration-300 ${
-          syncMessage.type === 'success' ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500' :
-          syncMessage.type === 'error' ? 'bg-risk/5 border-risk/20 text-risk' :
-          'bg-amber-500/5 border-amber-500/20 text-amber-500'
-        }`}>
+        <div className="p-4 border rounded-sm flex gap-3 items-center bg-muted text-foreground border-border">
           {syncMessage.type === 'success' ? (
             <Check className="w-5 h-5 shrink-0" />
           ) : syncMessage.type === 'error' ? (
@@ -340,30 +327,23 @@ const Billing: React.FC = () => {
           ) : (
             <Info className="w-5 h-5 shrink-0" />
           )}
-          <p className="text-sm font-semibold">{syncMessage.text}</p>
+          <p className="text-xs font-bold">{syncMessage.text}</p>
         </div>
       )}
 
       {/* A. CURRENT SUBSCRIPTION CARD */}
-      <div className="bg-card border rounded-3xl overflow-hidden shadow-sm">
+      <div className="bg-card border border-border rounded-sm overflow-hidden">
         <div className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+              <div className="w-10 h-10 bg-muted rounded-sm border border-border flex items-center justify-center text-muted-foreground">
                 <CreditCard className="w-5 h-5" />
               </div>
               <div>
                 <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-black">Active Workspace Plan</span>
                 <h3 className="text-xl font-black text-foreground flex items-center gap-2">
                   {currentPlan?.name || 'Free'} Plan
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase ${
-                    subscription?.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' :
-                    subscription?.status === 'trialing' ? 'bg-blue-500/10 text-blue-500' :
-                    subscription?.status === 'pending_payment' ? 'bg-amber-500/10 text-amber-500 animate-pulse' :
-                    subscription?.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
-                    subscription?.status === 'failed' ? 'bg-rose-500/10 text-rose-500' :
-                    'bg-muted text-muted-foreground'
-                  }`}>
+                  <span className="text-[10px] px-2 py-0.5 rounded-sm font-black uppercase border bg-muted text-foreground border-border">
                     {subscription?.status || 'active'}
                   </span>
                 </h3>
@@ -382,31 +362,26 @@ const Billing: React.FC = () => {
               {trialDaysLeft !== null && (
                 <div>
                   <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Trial Period</p>
-                  <p className="text-xs font-bold text-blue-500 mt-0.5">{trialDaysLeft} days remaining</p>
+                  <p className="text-xs font-bold text-foreground mt-0.5">{trialDaysLeft} days remaining</p>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="bg-muted/40 border p-5 rounded-2xl space-y-2 shrink-0 md:max-w-sm w-full">
+          <div className="bg-muted border border-border p-5 rounded-sm space-y-2 shrink-0 md:max-w-sm w-full">
             <div className="flex items-center gap-2 text-xs font-bold text-foreground">
-              <span className={`inline-block w-2 h-2 rounded-full ${
-                subscription?.status === 'active' ? 'bg-emerald-500' :
-                subscription?.status === 'trialing' ? 'bg-blue-500' :
-                subscription?.status === 'pending_payment' ? 'bg-amber-500 animate-pulse' :
-                'bg-rose-500'
-              }`}></span>
+              <span className="inline-block w-2 h-2 rounded-sm bg-foreground"></span>
               Status: {subscription?.status ? subscription.status.replace('_', ' ').toUpperCase() : 'ACTIVE'}
             </div>
             <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">
               {getStatusCopy(subscription?.status)}
             </p>
             {subscription?.status === 'pending_payment' && (
-              <div className="pt-2 animate-in fade-in duration-300">
+              <div className="pt-2">
                 <button
                   disabled={syncing}
                   onClick={() => handleSync(false)}
-                  className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-500/90 disabled:bg-amber-500/50 text-black font-black rounded-xl text-xs uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-amber-500/10"
+                  className="w-full py-2.5 px-4 bg-foreground text-background font-semibold rounded-sm text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2"
                 >
                   {syncing ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -438,29 +413,14 @@ const Billing: React.FC = () => {
             const overLimit = isUnlimited ? false : isOverLimit(card.type);
             const nearLimit = isUnlimited ? false : (percent >= 80 && !overLimit);
 
-            // Progress bar and badge styling based on threshold
-            let barColor = 'bg-emerald-500';
-            let textColor = 'text-emerald-500';
-            let badgeBg = 'bg-emerald-500/10';
-
-            if (overLimit) {
-              barColor = 'bg-rose-500';
-              textColor = 'text-rose-500';
-              badgeBg = 'bg-rose-500/10';
-            } else if (nearLimit) {
-              barColor = 'bg-amber-500';
-              textColor = 'text-amber-500';
-              badgeBg = 'bg-amber-500/10';
-            }
-
             return (
-              <div key={card.type} className="bg-card border rounded-2xl p-6 shadow-sm flex flex-col justify-between space-y-4">
+              <div key={card.type} className="bg-card border border-border rounded-sm p-6 flex flex-col justify-between space-y-4">
                 <div className="space-y-2">
                   <div className="flex justify-between items-start">
-                    <div className="p-2.5 bg-muted rounded-xl text-muted-foreground">
+                    <div className="p-2.5 bg-muted rounded-sm text-muted-foreground border border-border/40">
                       <card.icon className="w-5 h-5" />
                     </div>
-                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase ${badgeBg} ${textColor}`}>
+                    <span className="text-[9px] px-2 py-0.5 rounded-sm font-black uppercase bg-muted text-foreground border border-border">
                       {isUnlimited ? 'Unlimited' : overLimit ? 'Exceeded' : nearLimit ? 'Near Limit' : 'Optimal'}
                     </span>
                   </div>
@@ -480,9 +440,9 @@ const Billing: React.FC = () => {
                   
                   {!isUnlimited && (
                     <div className="space-y-1">
-                      <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
+                      <div className="w-full bg-muted h-1.5 rounded-sm overflow-hidden">
                         <div 
-                          className={`h-full rounded-full transition-all duration-500 ${barColor}`} 
+                          className="h-full bg-foreground rounded-sm transition-all duration-500" 
                           style={{ width: `${percent}%` }}
                         />
                       </div>
@@ -500,7 +460,7 @@ const Billing: React.FC = () => {
       </div>
 
       {/* C. SUBSCRIPTION PLANS */}
-      <div className="space-y-6 pt-6 border-t">
+      <div className="space-y-6 pt-6 border-t border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-muted-foreground" />
@@ -515,7 +475,6 @@ const Billing: React.FC = () => {
               ? (plan.price_yearly_inr ?? (plan.price_monthly_inr * 10)) 
               : plan.price_monthly_inr;
             
-            // Format price display
             const formattedPrice = price === 0 
               ? 'Free' 
               : `₹${price.toLocaleString('en-IN')}`;
@@ -527,14 +486,14 @@ const Billing: React.FC = () => {
             return (
               <div 
                 key={plan.id} 
-                className={`relative bg-card border rounded-3xl p-6 flex flex-col justify-between shadow-sm transition-all duration-300 ${
+                className={`relative bg-card border rounded-sm p-6 flex flex-col justify-between transition-all duration-300 ${
                   isCurrent 
-                    ? 'border-primary shadow-lg ring-1 ring-primary/30' 
-                    : 'hover:border-border-hover'
+                    ? 'border-foreground border-2 shadow-none' 
+                    : 'border-border hover:border-muted-foreground'
                 }`}
               >
                 {isCurrent && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[9px] px-3 py-1 rounded-full font-black uppercase tracking-wider shadow-sm">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-foreground text-background text-[9px] px-3 py-1 rounded-sm font-black uppercase tracking-wider">
                     Current Active Tier
                   </span>
                 )}
@@ -555,16 +514,16 @@ const Billing: React.FC = () => {
                       )}
                     </div>
                     {isYearly && price > 0 && (
-                      <p className="text-[9px] text-emerald-500 font-bold">Includes 2 months free discount</p>
+                      <p className="text-[9px] text-foreground font-bold">Includes 2 months free discount</p>
                     )}
                   </div>
 
-                  <div className="border-t border-border/50 pt-4 space-y-2">
+                  <div className="border-t border-border pt-4 space-y-2">
                     <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">What's Included:</p>
                     <ul className="space-y-2">
                       {features.map((feature, idx) => (
                         <li key={idx} className="flex gap-2 items-start text-xs text-muted-foreground">
-                          <Check className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                          <Check className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
                           <span className="leading-normal">{feature}</span>
                         </li>
                       ))}
@@ -574,13 +533,13 @@ const Billing: React.FC = () => {
 
                 <div className="pt-6">
                   {isCurrent ? (
-                    <div className="w-full text-center py-2.5 bg-muted rounded-xl text-xs font-bold text-muted-foreground border">
+                    <div className="w-full text-center py-2.5 bg-muted rounded-sm text-xs font-bold text-muted-foreground border border-border">
                       Active Plan
                     </div>
                   ) : plan.id === 'free' ? (
                     <button 
                       disabled
-                      className="w-full text-center py-2.5 bg-muted text-muted-foreground/60 border rounded-xl text-xs font-bold cursor-not-allowed"
+                      className="w-full text-center py-2.5 bg-muted text-muted-foreground/60 border border-border rounded-sm text-xs font-semibold cursor-not-allowed"
                     >
                       Free Plan
                     </button>
@@ -588,7 +547,7 @@ const Billing: React.FC = () => {
                     <button 
                       onClick={() => handleUpgrade(plan.id)}
                       disabled={upgradingPlanId !== null}
-                      className="w-full text-center py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-xl text-xs uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2"
+                      className="w-full text-center py-2.5 bg-foreground text-background font-semibold rounded-sm text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2"
                     >
                       {upgradingPlanId === plan.id ? (
                         <>
@@ -608,18 +567,18 @@ const Billing: React.FC = () => {
       </div>
 
       {/* D. RAZORPAY PLATFORM NOTE */}
-      <div className="bg-primary/5 border border-primary/10 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="bg-muted border border-border rounded-sm p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-2">
           <h4 className="font-bold text-base text-foreground flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-primary" />
-            Razorpay Billing Gateway Gateway Architecture
+            <Building2 className="w-5 h-5 text-muted-foreground" />
+            Razorpay Billing Gateway Architecture
           </h4>
-          <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
+          <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl font-medium">
             Kaeo is fully Razorpay-first. This setup maps essential Razorpay payment metadata (`razorpay_customer_id`, `razorpay_payment_link_id`, `razorpay_plan_id`) directly to organizations. Your active billing accounts will sync automatically to capture payments and dispatch webhooks via Razorpay Payment Links.
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-xs font-bold text-primary flex items-center gap-1">
+          <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
             Razorpay Active Account Configured <ExternalLink className="w-3 h-3" />
           </span>
         </div>

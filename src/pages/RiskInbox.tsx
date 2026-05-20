@@ -226,10 +226,13 @@ const RiskInbox: React.FC = () => {
 
   const getSeverityColor = (sev: string) => {
     switch (sev) {
-      case 'critical': return 'bg-risk text-white';
-      case 'high': return 'bg-risk/10 text-risk border-risk/20';
-      case 'medium': return 'bg-warning/10 text-warning border-warning/20';
-      default: return 'bg-muted text-muted-foreground border-border';
+      case 'critical':
+      case 'high':
+        return 'bg-rose-500/10 text-rose-500 border-rose-500/20';
+      case 'medium':
+        return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+      default:
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -250,17 +253,17 @@ const RiskInbox: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-3xl font-bold tracking-tight">Risk Inbox</h1>
-            <div className="px-2 py-0.5 bg-risk/10 text-risk text-[10px] font-black rounded border border-risk/20 uppercase tracking-tighter">Monitoring Active</div>
+            <div className="px-2 py-0.5 bg-muted text-foreground text-[10px] font-black rounded-sm border border-border uppercase tracking-tighter">Monitoring Active</div>
           </div>
           <p className="text-sm text-muted-foreground">Automated financial anomaly detection for <span className="text-foreground font-semibold">{activeClient.name}</span></p>
         </div>
         
         <div className="flex items-center gap-3">
           {diagnostics.lastScan && (
-            <div className="hidden md:flex items-center gap-4 px-4 py-2 bg-muted/30 border border-border/50 rounded-xl text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              <span className="flex items-center gap-1.5"><Database className="w-3 h-3" /> {diagnostics.txLoaded} Txns</span>
+            <div className="hidden md:flex items-center gap-4 px-4 py-2 bg-muted border border-border rounded-sm text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              <span className="flex items-center gap-1.5"><Database className="w-3 h-3 text-muted-foreground" /> {diagnostics.txLoaded} Txns</span>
               <span className="w-1 h-1 bg-border rounded-full" />
-              <span className="flex items-center gap-1.5 text-risk"><ShieldAlert className="w-3 h-3" /> {diagnostics.risksGenerated} Risks</span>
+              <span className="flex items-center gap-1.5 text-rose-500"><ShieldAlert className="w-3 h-3 text-rose-500" /> {diagnostics.risksGenerated} Risks</span>
               <span className="w-1 h-1 bg-border rounded-full" />
               <span>Last: {diagnostics.lastScan}</span>
             </div>
@@ -268,7 +271,7 @@ const RiskInbox: React.FC = () => {
           <button 
             onClick={handleAnalyze}
             disabled={analyzing}
-            className="px-6 py-3 bg-risk text-white rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-risk/20 disabled:opacity-50"
+            className="px-6 py-3 bg-foreground text-background rounded-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all disabled:opacity-50 text-xs"
           >
             {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
             Identify Risks
@@ -277,26 +280,26 @@ const RiskInbox: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-risk/5 border border-risk/20 rounded-2xl flex gap-3 items-center animate-in slide-in-from-top-2">
-          <AlertCircle className="w-5 h-5 text-risk shrink-0" />
+        <div className="p-4 bg-rose-500/5 border border-rose-500/10 rounded-sm flex gap-3 items-center animate-in slide-in-from-top-2">
+          <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
           <div className="flex-1">
-            <p className="text-xs font-black text-risk uppercase tracking-widest mb-0.5">Scan Error</p>
-            <p className="text-xs text-risk/80 font-medium">{error}</p>
+            <p className="text-xs font-black text-rose-500 uppercase tracking-widest mb-0.5">Scan Error</p>
+            <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{error}</p>
           </div>
-          <button onClick={() => setError(null)} className="p-1 hover:bg-risk/10 rounded-lg transition-colors">
-            <X className="w-4 h-4 text-risk" />
+          <button onClick={() => setError(null)} className="p-1 hover:bg-muted rounded-sm transition-colors">
+            <X className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
       )}
 
       {loading && risks.length === 0 ? (
         <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-risk" />
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           <p className="text-sm text-muted-foreground animate-pulse font-medium">Scanning ledger for anomalies...</p>
         </div>
       ) : txCount === 0 ? (
-        <div className="bg-card/30 border border-dashed border-border/60 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5">
-          <div className="w-16 h-16 bg-muted/30 rounded-2xl flex items-center justify-center border border-border/50 text-muted-foreground/30">
+        <div className="bg-card border border-dashed border-border rounded-sm p-20 flex flex-col items-center justify-center text-center space-y-5">
+          <div className="w-16 h-16 bg-muted rounded-sm flex items-center justify-center border border-border text-muted-foreground/30">
             <Search className="w-8 h-8" />
           </div>
           <div className="space-y-1">
@@ -307,12 +310,12 @@ const RiskInbox: React.FC = () => {
           </div>
         </div>
       ) : risks.length === 0 ? (
-        <div className="bg-card/30 border border-dashed border-border/60 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5">
-          <div className="w-16 h-16 bg-success/10 rounded-2xl flex items-center justify-center border border-success/20 text-success/50">
-            <CheckCircle2 className="w-8 h-8" />
+        <div className="bg-card border border-dashed border-border rounded-sm p-20 flex flex-col items-center justify-center text-center space-y-5">
+          <div className="w-16 h-16 bg-muted rounded-sm flex items-center justify-center border border-border text-muted-foreground">
+            <CheckCircle2 className="w-8 h-8 text-muted-foreground" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-xl font-bold tracking-tight text-success/80">Clean Ledger</h3>
+            <h3 className="text-xl font-bold tracking-tight">Clean Ledger</h3>
             <p className="text-sm text-muted-foreground max-w-sm">
               No financial risks detected in the latest scan of {txCount} transactions.
             </p>
@@ -325,19 +328,22 @@ const RiskInbox: React.FC = () => {
               title="Open Risks" 
               value={stats.open.toString()} 
               description="Awaiting CFO review"
-              icon={<ShieldAlert className="w-4 h-4 text-risk" />} 
+              icon={<ShieldAlert className="w-4 h-4 text-muted-foreground" />} 
+              className="border border-border rounded-sm bg-card"
             />
             <MetricCard 
               title="Review Exposure" 
               value={formatCurrency(stats.amount)} 
               description="Potential leakage/loss"
-              icon={<Zap className="w-4 h-4 text-warning" />} 
+              icon={<Zap className="w-4 h-4 text-muted-foreground" />} 
+              className="border border-border rounded-sm bg-card"
             />
             <MetricCard 
               title="Critical Issues" 
               value={stats.critical.toString()} 
               description="Immediate action required"
-              icon={<AlertCircle className="w-4 h-4 text-risk" />} 
+              icon={<AlertCircle className="w-4 h-4 text-muted-foreground" />} 
+              className="border border-border rounded-sm bg-card"
             />
           </div>
 
@@ -350,16 +356,16 @@ const RiskInbox: React.FC = () => {
                     setSelectedRisk(risk);
                     fetchNotes(risk.id);
                   }}
-                  className={`bg-card border rounded-2xl p-6 transition-all cursor-pointer group hover:border-border/80 shadow-sm relative overflow-hidden ${selectedRisk?.id === risk.id ? 'border-primary ring-1 ring-primary/20' : 'border-border'}`}
+                  className={`bg-card border rounded-sm p-6 transition-all cursor-pointer group hover:border-muted-foreground shadow-none relative overflow-hidden ${selectedRisk?.id === risk.id ? 'border-foreground' : 'border-border'}`}
                 >
                   {risk.status !== 'open' && (
-                    <div className="absolute top-0 right-0 px-3 py-1 bg-success/10 text-success text-[8px] font-black uppercase tracking-tighter rounded-bl-lg border-l border-b border-success/20">
+                    <div className="absolute top-0 right-0 px-3 py-1 bg-muted text-foreground text-[8px] font-black uppercase tracking-tighter rounded-bl-sm border-l border-b border-border">
                       {risk.status.replace(/_/g, ' ')}
                     </div>
                   )}
                   
                   <div className="flex gap-6">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${risk.severity === 'critical' ? 'bg-risk text-white' : 'bg-muted text-muted-foreground'}`}>
+                    <div className={`w-12 h-12 rounded-sm flex items-center justify-center shrink-0 border border-border ${risk.severity === 'critical' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 'bg-muted text-muted-foreground'}`}>
                       {risk.risk_type.includes('duplicate') ? <MoreHorizontal className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
                     </div>
                     
@@ -368,7 +374,7 @@ const RiskInbox: React.FC = () => {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <h3 className="font-bold text-foreground">{risk.title}</h3>
-                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${getSeverityColor(risk.severity)}`}>
+                            <span className={`px-2 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest border ${getSeverityColor(risk.severity)}`}>
                               {risk.severity}
                             </span>
                           </div>
@@ -389,7 +395,7 @@ const RiskInbox: React.FC = () => {
                             <MessageSquare className="w-3 h-3" /> {risk.notes_count || 0} Notes
                           </div>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
+                        <ArrowRight className="w-4 h-4 text-foreground opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
                       </div>
                     </div>
                   </div>
@@ -400,23 +406,23 @@ const RiskInbox: React.FC = () => {
             <div className="lg:col-span-4">
               <div className="sticky top-8 space-y-6">
                 {selectedRisk ? (
-                  <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl animate-in slide-in-from-right-4 duration-300">
-                    <div className="p-6 bg-muted/20 border-b border-border/50">
+                  <div className="bg-card border border-border rounded-sm overflow-hidden animate-in slide-in-from-right-4 duration-300">
+                    <div className="p-6 bg-muted border-b border-border">
                       <div className="flex items-center justify-between mb-4">
-                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${getSeverityColor(selectedRisk.severity)}`}>
+                        <span className={`px-2 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest border ${getSeverityColor(selectedRisk.severity)}`}>
                           {selectedRisk.severity}
                         </span>
-                        <button onClick={() => setSelectedRisk(null)} className="p-1 hover:bg-muted rounded-lg transition-colors">
+                        <button onClick={() => setSelectedRisk(null)} className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-sm transition-colors">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                       <h3 className="font-bold text-lg mb-1">{selectedRisk.title}</h3>
-                      <p className="text-xs text-muted-foreground leading-relaxed italic border-l-2 border-primary/40 pl-3 mb-4">
+                      <p className="text-xs text-muted-foreground leading-relaxed italic border-l-2 border-border pl-3 mb-4">
                         {selectedRisk.suggested_action}
                       </p>
                       
                       {selectedRisk.evidence_json && (
-                        <div className="bg-background/50 rounded-xl p-3 border border-border/50 space-y-2">
+                        <div className="bg-background rounded-sm p-3 border border-border space-y-2">
                           <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1.5">
                             <Terminal className="w-3 h-3" /> Risk Evidence
                           </h4>
@@ -436,32 +442,32 @@ const RiskInbox: React.FC = () => {
                         <div className="grid grid-cols-2 gap-2">
                           <button 
                             onClick={() => updateStatus(selectedRisk.id, 'confirmed')}
-                            className={`px-3 py-2 rounded-lg text-[10px] font-bold border transition-all ${selectedRisk.status === 'confirmed' ? 'bg-risk/10 border-risk/40 text-risk' : 'bg-muted/50 border-border hover:border-risk/30 text-muted-foreground'}`}
+                            className={`px-3 py-2 rounded-sm text-[10px] font-bold border transition-all ${selectedRisk.status === 'confirmed' ? 'bg-rose-500/10 border-rose-500/25 text-rose-600 dark:text-rose-400' : 'bg-muted border-border hover:border-rose-500/30 text-muted-foreground'}`}
                           >
                             Confirm Issue
                           </button>
                           <button 
                             onClick={() => updateStatus(selectedRisk.id, 'reviewed')}
-                            className={`px-3 py-2 rounded-lg text-[10px] font-bold border transition-all ${selectedRisk.status === 'reviewed' ? 'bg-success/10 border-success/40 text-success' : 'bg-muted/50 border-border hover:border-success/30 text-muted-foreground'}`}
+                            className={`px-3 py-2 rounded-sm text-[10px] font-bold border transition-all ${selectedRisk.status === 'reviewed' ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400' : 'bg-muted border-border hover:border-emerald-500/30 text-muted-foreground'}`}
                           >
                             Mark Reviewed
                           </button>
                           <button 
                             onClick={() => updateStatus(selectedRisk.id, 'false_positive')}
-                            className={`px-3 py-2 rounded-lg text-[10px] font-bold border transition-all ${selectedRisk.status === 'false_positive' ? 'bg-muted border-foreground/20 text-foreground' : 'bg-muted/50 border-border hover:border-border text-muted-foreground'}`}
+                            className={`px-3 py-2 rounded-sm text-[10px] font-bold border transition-all ${selectedRisk.status === 'false_positive' ? 'bg-muted border-foreground/20 text-foreground' : 'bg-muted border-border hover:border-border text-muted-foreground'}`}
                           >
                             False Positive
                           </button>
                           <button 
                             onClick={() => updateStatus(selectedRisk.id, 'ignored')}
-                            className={`px-3 py-2 rounded-lg text-[10px] font-bold border transition-all ${selectedRisk.status === 'ignored' ? 'bg-muted border-border text-muted-foreground/50' : 'bg-muted/50 border-border hover:border-border text-muted-foreground'}`}
+                            className={`px-3 py-2 rounded-sm text-[10px] font-bold border transition-all ${selectedRisk.status === 'ignored' ? 'bg-muted border-border text-muted-foreground/50' : 'bg-muted border-border hover:border-border text-muted-foreground'}`}
                           >
                             Ignore
                           </button>
                         </div>
                       </div>
 
-                      <div className="space-y-4 pt-6 border-t border-border/50">
+                      <div className="space-y-4 pt-6 border-t border-border">
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 flex items-center justify-between">
                           Notes & Audit Trail
                         </h4>
@@ -471,7 +477,7 @@ const RiskInbox: React.FC = () => {
                             <p className="text-[10px] text-muted-foreground italic text-center py-4">No audit notes yet.</p>
                           ) : (
                             notes.map(note => (
-                              <div key={note.id} className="p-3 bg-muted/30 rounded-xl space-y-1 border border-border/30">
+                              <div key={note.id} className="p-3 bg-muted rounded-sm space-y-1 border border-border">
                                 <p className="text-xs text-foreground/90 leading-relaxed font-medium">{note.note}</p>
                                 <div className="flex items-center justify-between text-[8px] text-muted-foreground/60 uppercase font-black tracking-tighter">
                                   <div className="flex items-center gap-1"><User className="w-2 h-2" /> You</div>
@@ -488,13 +494,13 @@ const RiskInbox: React.FC = () => {
                             value={newNote}
                             onChange={(e) => setNewNote(e.target.value)}
                             placeholder="Add strategic note..." 
-                            className="flex-1 bg-muted/50 border border-border rounded-xl px-4 py-2 text-xs focus:ring-1 ring-primary/30 outline-none"
+                            className="flex-1 bg-card border border-border rounded-sm px-4 py-2 text-xs outline-none focus:border-neutral-500"
                             onKeyDown={(e) => e.key === 'Enter' && addNote()}
                           />
                           <button 
                             onClick={addNote}
                             disabled={!newNote.trim()}
-                            className="p-2 bg-primary text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-30 transition-all"
+                            className="p-2 bg-foreground text-background rounded-sm hover:opacity-90 disabled:opacity-30 transition-all"
                           >
                             <Plus className="w-5 h-5" />
                           </button>
@@ -503,8 +509,8 @@ const RiskInbox: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-12 border border-dashed border-border/60 rounded-3xl flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-12 h-12 bg-muted/30 rounded-2xl flex items-center justify-center text-muted-foreground/20">
+                  <div className="p-12 border border-dashed border-border rounded-sm flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-12 h-12 bg-muted rounded-sm flex items-center justify-center text-muted-foreground">
                       <ShieldAlert className="w-6 h-6" />
                     </div>
                     <p className="text-xs text-muted-foreground font-medium px-4 leading-relaxed">
