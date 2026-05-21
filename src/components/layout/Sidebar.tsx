@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  MessageSquare, 
   Files, 
   ArrowRightLeft, 
   Users, 
@@ -24,7 +23,6 @@ import aeLogo from '../../assets/kaeo-ae-logo.png';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: MessageSquare, label: 'Ask Kaeo', path: '/ask-kaeo' },
   { icon: Files, label: 'Files Ingestion', path: '/files' },
   { icon: ArrowRightLeft, label: 'Transactions', path: '/transactions' },
   { icon: Users, label: 'Vendors', path: '/vendors' },

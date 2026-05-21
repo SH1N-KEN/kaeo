@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import FloatingAskKaeo from '../ask/FloatingAskKaeo';
 
 const AppShell: React.FC = () => {
   return (
@@ -15,8 +16,10 @@ const AppShell: React.FC = () => {
           </div>
         </main>
       </div>
+      <FloatingAskKaeo />
     </div>
   );
 };
 
 export default AppShell;
+
