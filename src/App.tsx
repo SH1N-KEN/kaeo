@@ -17,6 +17,7 @@ import Settings from './pages/Settings';
 import Billing from './pages/Billing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Landing from './pages/Landing';
 import LoadingState from './components/ui/LoadingState';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -46,6 +47,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+const FallbackRoute: React.FC = () => {
+  const { user } = useAuth();
+  return <Navigate to={user ? "/dashboard" : "/"} replace />;
+};
+
 import { ToastProvider } from './hooks/useToast';
 
 function App() {
@@ -56,19 +62,19 @@ function App() {
         <BrowserRouter>
           <Routes>
             {/* Public Routes */}
+            <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
             {/* Protected Routes */}
             <Route 
-              path="/" 
               element={
                 <ProtectedRoute>
                   <AppShell />
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Dashboard />} />
+              <Route path="dashboard" element={<Dashboard />} />
               <Route path="ask-kaeo" element={<AskKaeo />} />
               <Route path="files" element={<Files />} />
               <Route path="files/:importId/mapping" element={<Mapping />} />
@@ -83,7 +89,7 @@ function App() {
             </Route>
 
             {/* Catch all */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<FallbackRoute />} />
           </Routes>
         </BrowserRouter>
       </WorkspaceProvider>
