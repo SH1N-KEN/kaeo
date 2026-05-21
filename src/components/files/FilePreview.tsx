@@ -65,7 +65,11 @@ const FilePreview: React.FC<FilePreviewProps> = ({
                   }`}>
                     {sheet.rowCount} rows
                   </span>
-                  {sheet.confidence < 0.5 && (
+                  {sheet.isNonFinancial ? (
+                    <span className="text-[8px] bg-muted/20 text-muted-foreground border border-border px-1 py-0.5 rounded font-black uppercase tracking-tighter shrink-0">
+                      Not financial
+                    </span>
+                  ) : sheet.confidence < 0.5 && (
                     <span className="text-[8px] bg-risk/10 text-risk border border-risk/20 px-1 py-0.5 rounded font-black uppercase tracking-tighter shrink-0">
                       Low Score
                     </span>
@@ -101,7 +105,12 @@ const FilePreview: React.FC<FilePreviewProps> = ({
             </button>
             <button 
               onClick={onAction}
-              className="px-6 py-2.5 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-xl shadow-foreground/10"
+              disabled={result.isNonFinancial}
+              className={`px-6 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 shadow-xl ${
+                result.isNonFinancial
+                  ? 'bg-muted text-muted-foreground/50 border border-border cursor-not-allowed shadow-none opacity-60'
+                  : 'bg-foreground text-background hover:opacity-90 shadow-foreground/10'
+              }`}
             >
               {isHighConfidence ? 'Import Transactions' : 'Review Mapping'}
               <ChevronRight className="w-4 h-4" />
@@ -113,18 +122,38 @@ const FilePreview: React.FC<FilePreviewProps> = ({
         <div className="px-6 py-5 bg-primary/5 border-b border-border/30">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex gap-4 items-start">
-              <div className={`p-2 rounded-lg shrink-0 ${isHighConfidence ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
-                {autoMapping?.source === 'ai' ? <BrainCircuit className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+              <div className={`p-2 rounded-lg shrink-0 ${
+                result.isNonFinancial 
+                  ? 'bg-muted text-muted-foreground' 
+                  : isHighConfidence 
+                  ? 'bg-success/10 text-success' 
+                  : 'bg-warning/10 text-warning'
+              }`}>
+                {result.isNonFinancial ? <Info className="w-5 h-5" /> : autoMapping?.source === 'ai' ? <BrainCircuit className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
               </div>
               <div className="space-y-1">
                 <h4 className="text-sm font-bold flex items-center gap-2">
-                  Kaeo Intelligence: {isLowConfidence ? 'Review Required' : isHighConfidence ? 'Auto-mapped' : 'Mapping Uncertain'}
-                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-tighter ${isHighConfidence ? 'bg-success/10 text-success border-success/20' : 'bg-warning/10 text-warning border-warning/20'}`}>
-                    {autoMapping?.source === 'ai' ? 'AI Suggestion' : 'Rule Based'}
+                  {result.isNonFinancial
+                    ? "Kaeo Intelligence: Non-financial Sheet"
+                    : isLowConfidence 
+                    ? "Kaeo Intelligence: Review Required" 
+                    : isHighConfidence 
+                    ? "Kaeo Intelligence: Auto-mapped" 
+                    : "Kaeo Intelligence: Mapping Uncertain"}
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-tighter ${
+                    result.isNonFinancial
+                      ? 'bg-muted/50 text-muted-foreground border-border/50'
+                      : isHighConfidence 
+                      ? 'bg-success/10 text-success border-success/20' 
+                      : 'bg-warning/10 text-warning border-warning/20'
+                  }`}>
+                    {result.isNonFinancial ? 'Not financial' : autoMapping?.source === 'ai' ? 'AI Suggestion' : 'Rule Based'}
                   </span>
                 </h4>
                 <p className="text-xs text-muted-foreground max-w-xl">
-                  {isLowConfidence 
+                  {result.isNonFinancial
+                    ? "This sheet looks informational, not a transaction ledger."
+                    : isLowConfidence 
                     ? "This sheet has extremely low parsing parameters. Auto-import is locked; manual review is required."
                     : isHighConfidence 
                     ? `Kaeo mapped this file automatically with ${Math.round(result.confidence * 100)}% confidence. Required fields were detected successfully.` 
@@ -132,17 +161,25 @@ const FilePreview: React.FC<FilePreviewProps> = ({
                 </p>
               </div>
             </div>
-
+ 
             <div className="flex items-center gap-6 shrink-0 bg-background/50 p-3 rounded-xl border border-border/50">
               <div className="text-center px-4">
                 <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">Confidence</div>
-                <div className="text-lg font-black text-foreground">{Math.round((result.confidence || 0) * 100)}%</div>
+                <div className="text-lg font-black text-foreground">
+                  {result.isNonFinancial ? 'N/A' : `${Math.round((result.confidence || 0) * 100)}%`}
+                </div>
               </div>
               <div className="w-px h-8 bg-border/50" />
               <div className="text-center px-4">
                 <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">Status</div>
-                <div className={`text-xs font-bold ${isHighConfidence ? 'text-success' : 'text-warning'}`}>
-                  {isHighConfidence ? 'Ready to Import' : 'Review Required'}
+                <div className={`text-xs font-bold ${
+                  result.isNonFinancial 
+                    ? 'text-muted-foreground' 
+                    : isHighConfidence 
+                    ? 'text-success' 
+                    : 'text-warning'
+                }`}>
+                  {result.isNonFinancial ? 'Not Importable' : isHighConfidence ? 'Ready to Import' : 'Review Required'}
                 </div>
               </div>
             </div>
@@ -220,7 +257,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({
         </div>
       </div>
 
-      {(isMediumConfidence || isLowConfidence) && (
+      {!result.isNonFinancial && (isMediumConfidence || isLowConfidence) && (
         <div className="p-4 bg-warning/5 border border-warning/10 rounded-2xl flex gap-3 items-center">
           <Zap className="w-5 h-5 text-warning/70" />
           <div className="flex-1">

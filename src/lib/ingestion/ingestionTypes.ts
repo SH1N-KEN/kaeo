@@ -8,6 +8,7 @@ export interface ParsedSheet {
   detectedColumns: string[];
   detectedHeaderRow?: number;
   skippedRows?: number;
+  isNonFinancial?: boolean;
 }
 
 export interface ParsedFinancialFile {
@@ -22,6 +23,7 @@ export interface ParsedFinancialFile {
   confidence: number; // 0 to 1
   warnings: string[];
   errors: string[];
+  isNonFinancial?: boolean;
   metadata: {
     totalRows: number;
     previewRowCount: number;

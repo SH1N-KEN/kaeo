@@ -82,6 +82,7 @@ const Files: React.FC = () => {
         rowCount: sheet.rowCount,
         confidence: sheet.confidence,
         warnings: sheet.warnings,
+        isNonFinancial: sheet.isNonFinancial,
         metadata: {
           ...parseResult!.metadata,
           totalRows: sheet.rowCount,
@@ -277,6 +278,13 @@ const Files: React.FC = () => {
 
   const handleAction = async () => {
     if (!autoMapping || !activeClient || !activeOrg || !parseResult) return;
+    if (parseResult.isNonFinancial) {
+      setError({
+        message: 'Import blocked',
+        subtext: 'This sheet looks informational, not a transaction ledger.'
+      });
+      return;
+    }
 
     setLoading(true);
     try {
