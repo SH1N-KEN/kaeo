@@ -4,7 +4,6 @@ import { Mail, Lock, Loader2, AlertCircle, ArrowRight, Brain, AlertTriangle } fr
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
 import aeLogo from '../assets/kaeo-ae-logo.png';
-import kaeoWordmark from '../assets/kaeo-wordmark.png';
 import { useToast } from '../hooks/useToast';
 
 const Login: React.FC = () => {
@@ -76,10 +75,13 @@ const Login: React.FC = () => {
         <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-[300px] h-[300px] bg-teal-500/5 rounded-full blur-[95px] pointer-events-none" />
 
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-3 z-10 self-start group">
-          <img src={aeLogo} alt="Kaeo Logo" className="w-8 h-8 object-contain" />
-          <img src={kaeoWordmark} alt="Kaeo Wordmark" className="h-5.5 object-contain brightness-0 invert" />
+        <Link to="/" className="flex items-center gap-2.5 z-10 self-start group">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/25 shrink-0">
+            <img src={aeLogo} alt="ae Logo" className="w-4.5 h-4.5 object-contain" />
+          </div>
+          <span className="text-xl font-black tracking-tight text-white leading-none">
+            Kaeo
+          </span>
         </Link>
 
         {/* Core Value Statement & Illustrative Card */}
@@ -131,8 +133,12 @@ const Login: React.FC = () => {
           {/* Mobile Logo Only */}
           <div className="flex lg:hidden flex-col items-center justify-center mb-6">
             <Link to="/" className="flex items-center gap-2.5">
-              <img src={aeLogo} alt="Kaeo Logo" className="w-8 h-8 object-contain" />
-              <img src={kaeoWordmark} alt="Kaeo" className="h-5.5 object-contain dark:brightness-0 dark:invert" />
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/25 shrink-0">
+                <img src={aeLogo} alt="ae Logo" className="w-4.5 h-4.5 object-contain" />
+              </div>
+              <span className="text-xl font-black tracking-tight text-foreground leading-none">
+                Kaeo
+              </span>
             </Link>
           </div>
 

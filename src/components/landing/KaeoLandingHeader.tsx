@@ -4,7 +4,6 @@ import { Menu, X, ArrowRight } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 
 import aeLogo from '../../assets/kaeo-ae-logo.png';
-import kaeoWordmark from '../../assets/kaeo-wordmark.png';
 
 export const KaeoLandingHeader: React.FC = () => {
   const { user } = useAuth();
@@ -60,8 +59,12 @@ export const KaeoLandingHeader: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
-          <img src={aeLogo} alt="Kaeo Logo" className="w-8 h-8 object-contain" />
-          <img src={kaeoWordmark} alt="Kaeo" className="h-5.5 object-contain dark:brightness-0 dark:invert" />
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/25 shrink-0">
+            <img src={aeLogo} alt="ae Logo" className="w-4.5 h-4.5 object-contain" />
+          </div>
+          <span className="text-xl font-black tracking-tight text-foreground leading-none">
+            Kaeo
+          </span>
         </Link>
 
         {/* Desktop Navigation */}

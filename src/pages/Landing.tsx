@@ -18,7 +18,6 @@ import {
   FileText
 } from 'lucide-react';
 import aeLogo from '../assets/kaeo-ae-logo.png';
-import kaeoWordmark from '../assets/kaeo-wordmark.png';
 
 export const Landing: React.FC = () => {
   const { user } = useAuth();
@@ -630,8 +629,12 @@ export const Landing: React.FC = () => {
       <footer className="border-t border-border/40 py-12 bg-card text-muted-foreground">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <img src={aeLogo} alt="Kaeo Logo" className="w-6 h-6 object-contain" />
-            <img src={kaeoWordmark} alt="Kaeo" className="h-4.5 object-contain dark:brightness-0 dark:invert" />
+            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/25 shrink-0">
+              <img src={aeLogo} alt="ae Logo" className="w-4 h-4 object-contain" />
+            </div>
+            <span className="text-lg font-black tracking-tight text-foreground leading-none">
+              Kaeo
+            </span>
           </Link>
           <p className="text-xs">
             &copy; 2026 Kaeo Finance OS. India-first SME CFO Intelligence. All rights reserved.
