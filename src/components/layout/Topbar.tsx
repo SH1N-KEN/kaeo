@@ -53,27 +53,27 @@ const Topbar: React.FC = () => {
           {/* Search Trigger Button */}
           <button 
             onClick={() => setIsSearchOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-xs font-semibold text-muted-foreground w-48 md:w-64 cursor-pointer premium-topbar-card"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all text-xs font-semibold text-muted-foreground w-48 md:w-64 cursor-pointer premium-topbar-card"
           >
             <Search className="w-3.5 h-3.5 search-icon" />
             <span className="text-left flex-1">Search transactions, files...</span>
-            <span className="text-[10px] bg-muted/40 px-1.5 py-0.5 rounded-md border border-border/20 text-muted-foreground">Ctrl K</span>
+            <span className="text-[10px] bg-muted/40 px-1.5 py-0.5 rounded border border-border/20 text-muted-foreground">Ctrl K</span>
           </button>
           
           {/* Notifications Popover Trigger */}
           <div className="relative" ref={notifRef}>
             <button 
               onClick={() => setIsNotifOpen(!isNotifOpen)}
-              className="p-2 rounded-md transition-colors relative cursor-pointer premium-topbar-card"
+              className="p-2 rounded-xl transition-colors relative cursor-pointer premium-topbar-card"
             >
               <Bell className="w-4 h-4 bell-icon" />
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-risk rounded-full border border-card" />
             </button>
 
             {isNotifOpen && (
-              <div className="absolute right-0 mt-2 w-72 premium-floating-panel rounded-xl p-4 shadow-2xl z-[90] text-center animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center mx-auto mb-2.5">
-                  <Bell className="w-4 h-4 text-muted-foreground" />
+              <div className="absolute right-0 mt-2 w-72 premium-floating-panel rounded-2xl p-4 shadow-2xl z-[90] text-center animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="w-10 h-10 bg-teal-500/10 rounded-full flex items-center justify-center mx-auto mb-2.5">
+                  <Bell className="w-4 h-4 text-teal-400" />
                 </div>
                 <h4 className="text-xs font-bold text-foreground mb-1">Notifications</h4>
                 <p className="text-[11px] text-muted-foreground">No notifications yet.</p>
@@ -90,18 +90,18 @@ const Topbar: React.FC = () => {
           onClick={() => setIsSearchOpen(false)}
         >
           <div 
-            className="w-full max-w-xl premium-floating-panel rounded-xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200"
+            className="w-full max-w-xl premium-floating-panel rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <button 
               onClick={() => setIsSearchOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="flex items-center gap-3 border-b border-border/40 pb-4 mb-4">
-              <Search className="w-5 h-5 text-muted-foreground shrink-0" />
+              <Search className="w-5 h-5 text-teal-400 shrink-0 animate-pulse" />
               <input 
                 type="text" 
                 placeholder="Search ledger entries, vendors, reports..." 
@@ -111,8 +111,8 @@ const Topbar: React.FC = () => {
             </div>
 
             <div className="py-6 text-center">
-              <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center mx-auto mb-3 border border-border/45">
-                <Search className="w-5 h-5 text-muted-foreground" />
+              <div className="w-12 h-12 bg-teal-500/10 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-teal-500/20">
+                <Search className="w-5 h-5 text-teal-400" />
               </div>
               <h3 className="text-sm font-bold text-foreground mb-1">Advanced CFO Search</h3>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
@@ -122,7 +122,7 @@ const Topbar: React.FC = () => {
             
             <div className="border-t border-border/30 pt-3 flex items-center justify-between text-[10px] text-muted-foreground font-bold">
               <span>TIP: Use filters on ledger page to sort manually</span>
-              <kbd className="px-2 py-0.5 bg-muted rounded-md border border-border/50">ESC to exit</kbd>
+              <kbd className="px-2 py-0.5 bg-muted rounded border border-border/50">ESC to exit</kbd>
             </div>
           </div>
         </div>

@@ -24,11 +24,14 @@ interface AskKaeoResponse {
 }
 
 const formatReportCurrency = (val: number) => {
-  return new Intl.NumberFormat('en-IN', {
+  const isNegative = val < 0;
+  const absVal = Math.abs(val);
+  const formatted = new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
     maximumFractionDigits: 0
-  }).format(val);
+  }).format(absVal);
+  return isNegative ? `-${formatted}` : formatted;
 };
 
 export async function categorizeQuestion(query: string): Promise<AskKaeoCategory> {

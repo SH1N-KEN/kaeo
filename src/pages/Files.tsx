@@ -424,14 +424,14 @@ const Files: React.FC = () => {
             {error.showUpgrade && (
               <button
                 onClick={() => navigate('/billing')}
-                className="mt-3 px-3 py-1.5 bg-foreground text-background hover:opacity-90 text-xs font-bold rounded-md transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                className="mt-3 px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold rounded-lg transition-all shadow-md shadow-primary/10 inline-flex items-center gap-1.5"
               >
-                <Zap className="w-3.5 h-3.5" />
+                <Zap className="w-3.5 h-3.5 text-warning fill-warning" />
                 Upgrade Subscription
               </button>
             )}
           </div>
-          <button onClick={() => setError(null)} className="text-[10px] font-black text-risk/60 hover:text-risk uppercase cursor-pointer">Dismiss</button>
+          <button onClick={() => setError(null)} className="text-[10px] font-black text-risk/60 hover:text-risk uppercase">Dismiss</button>
         </div>
       )}
 
@@ -439,15 +439,15 @@ const Files: React.FC = () => {
         <div className="p-4 bg-success/5 border border-success/10 rounded-xl flex gap-3 items-center animate-in slide-in-from-top-2">
           <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
           <p className="text-sm text-success font-bold flex-1">{success}</p>
-          <button onClick={() => setSuccess(null)} className="cursor-pointer"><X className="w-4 h-4 text-success" /></button>
+          <button onClick={() => setSuccess(null)}><X className="w-4 h-4 text-success" /></button>
         </div>
       )}
 
       {loading && !parseResult && (
         <div className="h-64 bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl flex flex-col items-center justify-center space-y-4">
           <div className="relative">
-            <Loader2 className="w-10 h-10 animate-spin text-foreground" />
-            <Zap className="w-4 h-4 text-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+            <Zap className="w-4 h-4 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
           </div>
           <p className="text-xs text-muted-foreground font-black uppercase tracking-widest">Applying intelligence engine...</p>
         </div>

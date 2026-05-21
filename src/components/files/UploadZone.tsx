@@ -42,10 +42,10 @@ const UploadZone: React.FC<UploadZoneProps> = ({ onFileSelect, loading }) => {
       onDragLeave={handleDrag}
       onDragOver={handleDrag}
       onDrop={handleDrop}
-      className={`relative border border-dashed rounded-xl p-12 transition-all bg-card ${
+      className={`relative border-2 border-dashed rounded-2xl p-12 transition-all premium-glass ${
         dragActive 
-          ? 'border-[var(--kaeo-accent)] bg-muted scale-[1.01]' 
-          : 'border-border hover:border-muted-foreground hover:bg-muted'
+          ? 'border-primary bg-primary/5 scale-[1.01]' 
+          : 'border-border/30 hover:border-primary/50 hover:bg-white/5'
       } ${loading ? 'opacity-50 pointer-events-none' : ''}`}
     >
       <input
@@ -57,7 +57,7 @@ const UploadZone: React.FC<UploadZoneProps> = ({ onFileSelect, loading }) => {
       />
       
       <div className="flex flex-col items-center text-center space-y-4">
-        <div className="w-16 h-16 bg-muted rounded-md border border-border flex items-center justify-center text-muted-foreground mb-2">
+        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-2">
           {loading ? (
             <Loader2 className="w-8 h-8 animate-spin" />
           ) : (
@@ -74,21 +74,21 @@ const UploadZone: React.FC<UploadZoneProps> = ({ onFileSelect, loading }) => {
 
         <label 
           htmlFor="file-upload"
-          className="px-6 py-2.5 bg-foreground text-background rounded-md font-semibold hover:bg-foreground/90 transition-colors cursor-pointer text-xs"
+          className="px-6 py-2.5 bg-foreground text-background rounded-xl font-semibold hover:bg-foreground/90 transition-colors cursor-pointer"
         >
           Select Files
         </label>
 
         <div className="flex flex-wrap justify-center gap-4 text-[10px] text-muted-foreground font-bold uppercase tracking-widest pt-4">
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-muted text-foreground rounded-md border border-border">
-            <CheckCircle2 className="w-3 h-3 text-muted-foreground" />
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-teal-500/10 text-teal-400 rounded-full border border-teal-500/20">
+            <CheckCircle2 className="w-3 h-3 text-teal-400" />
             <span>CSV Support</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-muted text-muted-foreground rounded-md border border-border">
-            <CheckCircle2 className="w-3 h-3 text-muted-foreground" />
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20">
+            <CheckCircle2 className="w-3 h-3 text-amber-400 animate-pulse" />
             <span>XLSX Beta</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-muted text-muted-foreground rounded-md border border-border opacity-75">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-muted/40 text-muted-foreground rounded-full border border-border/20 opacity-70">
             <AlertCircle className="w-3 h-3 text-muted-foreground" />
             <span>PDF Coming Soon</span>
           </div>

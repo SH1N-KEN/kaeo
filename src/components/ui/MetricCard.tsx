@@ -2,7 +2,7 @@ import React from 'react';
 
 interface MetricCardProps {
   title: string;
-  value: string;
+  value: string | React.ReactNode;
   description?: string;
   icon?: React.ReactNode;
   trend?: {
@@ -10,6 +10,7 @@ interface MetricCardProps {
     isPositive: boolean;
   };
   className?: string;
+  valueClassName?: string;
 }
 
 const MetricCard: React.FC<MetricCardProps> = ({ 
@@ -18,7 +19,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
   description, 
   icon, 
   trend,
-  className = "" 
+  className = "",
+  valueClassName = ""
 }) => {
   return (
     <div className={`bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 group ${className}`}>
@@ -35,7 +37,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
       
       <div>
         <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-1">{title}</h4>
-        <div className="text-xl font-bold tracking-tight text-foreground">{value}</div>
+        <div className={`text-xl font-bold tracking-tight ${valueClassName || 'text-foreground'}`}>{value}</div>
         {description && (
           <p className="text-[10px] text-muted-foreground/60 mt-1 font-medium leading-tight">{description}</p>
         )}

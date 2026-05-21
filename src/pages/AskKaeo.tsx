@@ -74,6 +74,7 @@ const AskKaeo = () => {
           }
         });
         
+        // Removed determining latest message mode
         setDbError(false);
       } else {
         // 2. Create a new thread
@@ -190,6 +191,7 @@ const AskKaeo = () => {
       };
 
       setMessages(prev => [...prev, asstMsg]);
+      // Mode setting removed
       if (kaeoReply.source_json?.fallback_reason) {
         console.warn(`[Ask Kaeo Fallback] Raw Reason: ${kaeoReply.source_json.fallback_reason}`);
       }
@@ -233,23 +235,23 @@ const AskKaeo = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] bg-background max-w-4xl mx-auto rounded-xl border overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-8rem)] bg-background max-w-4xl mx-auto rounded-2xl border overflow-hidden shadow-sm">
       {/* HEADER */}
-      <div className="p-4 border-b bg-card flex justify-between items-center z-10">
+      <div className="p-4 border-b bg-card/50 backdrop-blur-sm flex justify-between items-center z-10">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-muted rounded-md border border-border/40 text-muted-foreground">
-            <Sparkles className="h-5 w-5" />
+          <div className="p-2 bg-primary/20 rounded-lg">
+            <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="font-semibold tracking-tight text-xs">Ask Kaeo</h2>
-            <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 uppercase font-bold tracking-wider">
+            <h2 className="font-semibold tracking-tight">Ask Kaeo</h2>
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
               CFO Advisor
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {dbError && (
-            <div className="flex items-center gap-2 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-md border border-amber-500/20">
+            <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 px-3 py-1.5 rounded-full border border-warning/20">
               <AlertCircle className="h-3.5 w-3.5" />
               <span>Chat not saved. Your answer still works.</span>
             </div>
@@ -257,9 +259,9 @@ const AskKaeo = () => {
           
           <button 
             onClick={() => setShowMetadata(!showMetadata)} 
-            className={`px-3 py-1.5 rounded-md border text-[10px] font-bold tracking-wider uppercase transition-all duration-200 flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all duration-200 flex items-center gap-1.5 shadow-sm ${
               showMetadata 
-                ? 'bg-muted text-foreground border-border' 
+                ? 'bg-success/10 text-success border-success/20 hover:bg-success/20' 
                 : 'text-muted-foreground hover:text-foreground border-border hover:bg-muted'
             }`}
           >
@@ -284,19 +286,19 @@ const AskKaeo = () => {
             <div key={msg.id || idx} className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
               {!isUser && (
                 <div className="flex-shrink-0 mt-1">
-                  <div className="h-8 w-8 rounded-md flex items-center justify-center border bg-muted border-border/40">
-                    <Bot className="h-4 w-4 text-muted-foreground" />
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center border ${isAi ? 'bg-success/10 border-success/30' : 'bg-primary/20 border-primary/30'}`}>
+                    <Bot className={`h-4 w-4 ${isAi ? 'text-success' : 'text-primary'}`} />
                   </div>
                 </div>
               )}
               
               <div className="flex flex-col gap-1.5 max-w-[85%] md:max-w-[75%]">
-                <div className={`rounded-lg px-5 py-4 ${isUser ? 'bg-[var(--kaeo-accent-soft)] text-foreground border border-[var(--kaeo-accent-border)] rounded-tr-none' : 'bg-card border rounded-tl-none shadow-sm'}`}>
+                <div className={`rounded-2xl px-5 py-4 ${isUser ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-card border rounded-tl-sm shadow-sm'}`}>
                   {showMetadata && msg.intent && (
-                    <div className="text-[10px] font-mono uppercase text-muted-foreground mb-2 flex flex-wrap gap-2 justify-between items-center bg-muted p-2 rounded-md border border-border/40">
+                    <div className="text-[10px] font-mono uppercase text-muted-foreground mb-2 flex flex-wrap gap-2 justify-between items-center bg-muted/30 p-2 rounded border border-border/40">
                       <div className="flex items-center gap-3">
                         <span className="flex items-center gap-1 font-semibold">
-                          <span className={`inline-block w-1.5 h-1.5 rounded-full bg-foreground`}></span>
+                          <span className={`inline-block w-1.5 h-1.5 rounded-full ${isAi ? 'bg-success' : 'bg-blue-500'}`}></span>
                           Intent: {msg.intent.replace(/_/g, ' ')}
                         </span>
                         <span className="flex items-center gap-1 font-semibold">
@@ -304,29 +306,29 @@ const AskKaeo = () => {
                         </span>
                       </div>
                       {fallbackReason && (
-                        <span className="text-[9px] text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 font-medium">
+                        <span className="text-[9px] text-warning bg-warning/10 px-2 py-0.5 rounded border border-warning/20 font-medium">
                           Fallback Reason: {fallbackReason}
                         </span>
                       )}
                     </div>
                   )}
-                  <div className="text-sm whitespace-pre-wrap leading-relaxed opacity-95 font-medium">
+                  <div className="text-sm whitespace-pre-wrap leading-relaxed opacity-95">
                     {msg.content}
                   </div>
                   {msg.source_json?.mode === 'limit_exceeded' && (
                     <div className="mt-3 pt-3 border-t border-border/50">
                       <button
                         onClick={() => navigate('/billing')}
-                        className="px-3 py-1.5 bg-foreground text-background text-xs font-bold rounded-md transition-all inline-flex items-center gap-1.5"
+                        className="px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold rounded-lg transition-all shadow-md shadow-primary/10 inline-flex items-center gap-1.5 animate-in fade-in"
                       >
-                        <Zap className="w-3.5 h-3.5" />
+                        <Zap className="w-3.5 h-3.5 text-warning fill-warning" />
                         Upgrade Subscription
                       </button>
                     </div>
                   )}
                   {!isUser && !isAi && msg.source_json?.mode !== 'limit_exceeded' && (
                     <div className="mt-3 pt-3 border-t border-border/50 text-[10px] text-muted-foreground flex items-center gap-1.5">
-                      <Shield className="w-3 h-3 text-muted-foreground/70" />
+                      <Shield className="w-3 h-3 text-blue-500/70" />
                       Answered from verified Kaeo data.
                     </div>
                   )}
@@ -337,11 +339,15 @@ const AskKaeo = () => {
                   <div className="px-2 mt-1 space-y-2">
                     {/* Upper Metadata Row */}
                     <div className="flex flex-wrap gap-2 items-center text-[10px] text-muted-foreground">
-                      <span className="px-2 py-0.5 rounded-md border font-medium uppercase bg-muted text-foreground border-border">
+                      <span className={`px-2 py-0.5 rounded border font-medium uppercase ${
+                        aiConfidence === 'high' ? 'bg-success/10 text-success border-success/20' :
+                        aiConfidence === 'medium' ? 'bg-warning/10 text-warning border-warning/20' :
+                        'bg-risk/10 text-risk border-risk/20'
+                      }`}>
                         Confidence: {aiConfidence || 'medium'}
                       </span>
                       {needsExt && (
-                        <span className="bg-muted text-foreground border border-border px-2 py-0.5 rounded-md font-medium">
+                        <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-2 py-0.5 rounded font-medium">
                           Live Research Triggered
                         </span>
                       )}
@@ -349,7 +355,7 @@ const AskKaeo = () => {
 
                     {/* Source Summary Counts */}
                     {sourceSummary && (
-                      <div className="flex items-center gap-2 text-[9px] text-muted-foreground bg-muted p-2 rounded-md border border-border">
+                      <div className="flex items-center gap-2 text-[9px] text-muted-foreground bg-muted/40 p-2 rounded-lg border border-border/40">
                         <Layers className="w-3 h-3 text-muted-foreground/70" />
                         <span>Sources analyzed:</span>
                         <span className="font-semibold text-foreground">{sourceSummary.transactions_used} txs</span>
@@ -362,7 +368,7 @@ const AskKaeo = () => {
 
                     {/* Caveats list */}
                     {aiCaveats.length > 0 && (
-                      <div className="mt-1 text-[9px] text-muted-foreground/80 space-y-0.5 bg-muted p-2 rounded-md border border-border">
+                      <div className="mt-1 text-[9px] text-muted-foreground/80 space-y-0.5 bg-muted/20 p-2 rounded border border-border/20">
                         <span className="font-semibold text-[10px] block mb-1 text-foreground/80">CFO Notes:</span>
                         {aiCaveats.map((cav: string, cavIdx: number) => (
                           <div key={cavIdx} className="flex gap-1.5 items-start">
@@ -387,7 +393,7 @@ const AskKaeo = () => {
 
               {isUser && (
                 <div className="flex-shrink-0 mt-1">
-                  <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center border">
+                  <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center border">
                     <User className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </div>
@@ -399,14 +405,14 @@ const AskKaeo = () => {
         {isTyping && (
           <div className="flex gap-4 justify-start">
             <div className="flex-shrink-0 mt-1">
-              <div className="h-8 w-8 rounded-md flex items-center justify-center border border-border/40">
-                <Bot className="h-4 w-4 text-muted-foreground" />
+              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
+                <Sparkles className="h-4 w-4 text-primary animate-pulse" />
               </div>
             </div>
-            <div className="bg-card border rounded-lg rounded-tl-none px-5 py-4 shadow-sm flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-muted-foreground/45 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <div className="w-1.5 h-1.5 bg-muted-foreground/45 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <div className="w-1.5 h-1.5 bg-muted-foreground/45 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="bg-card border rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
           </div>
         )}
@@ -414,7 +420,7 @@ const AskKaeo = () => {
       </div>
 
       {/* INPUT AREA */}
-      <div className="p-4 bg-card border-t">
+      <div className="p-4 bg-card/80 backdrop-blur-md border-t">
         <form onSubmit={handleSendMessage} className="relative max-w-4xl mx-auto flex items-end gap-2">
           <div className="relative flex-1">
             <input
@@ -422,14 +428,14 @@ const AskKaeo = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about your net cash, top vendors, or open risks..."
-              className="w-full bg-background border rounded-md pl-4 pr-12 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-all"
+              className="w-full bg-background border rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
               disabled={isTyping}
             />
           </div>
           <button
             type="submit"
             disabled={!input.trim() || isTyping}
-            className="h-[46px] px-4 bg-foreground text-background rounded-md flex items-center justify-center hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            className="h-[46px] px-4 bg-primary text-primary-foreground rounded-xl flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
           >
             <Send className="h-4 w-4" />
           </button>

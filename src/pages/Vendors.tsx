@@ -89,11 +89,14 @@ const Vendors: React.FC = () => {
   };
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-IN', {
+    const isNegative = val < 0;
+    const absVal = Math.abs(val);
+    const formatted = new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0
-    }).format(val);
+    }).format(absVal);
+    return isNegative ? `-${formatted}` : formatted;
   };
 
   const filteredVendors = vendors.filter(v => 
@@ -182,22 +185,25 @@ const Vendors: React.FC = () => {
             <MetricCard 
               title="Total Portfolio Spend" 
               value={formatCurrency(stats.totalSpend)} 
+              valueClassName="text-risk"
               description="Across all detected vendors"
-              icon={<TrendingUp className="w-4 h-4 text-muted-foreground" />} 
+              icon={<TrendingUp className="w-4 h-4 text-risk" />} 
               className="border border-border rounded-lg bg-card"
             />
             <MetricCard 
               title="Recurring Commitment" 
               value={formatCurrency(stats.recurringSpend)} 
+              valueClassName="text-warning"
               description="Estimated monthly burn"
-              icon={<Zap className="w-4 h-4 text-muted-foreground" />} 
+              icon={<Zap className="w-4 h-4 text-warning" />} 
               className="border border-border rounded-lg bg-card"
             />
             <MetricCard 
               title="Action Required" 
               value={stats.needsReview.toString()} 
+              valueClassName="text-risk"
               description="Vendors flagged for review"
-              icon={<AlertCircle className="w-4 h-4 text-muted-foreground" />} 
+              icon={<AlertCircle className="w-4 h-4 text-risk" />} 
               className="border border-border rounded-lg bg-card"
             />
           </div>
@@ -221,58 +227,74 @@ const Vendors: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredVendors.map((vendor) => (
-              <div key={vendor.id} className="bg-card border border-border rounded-xl p-6 hover:border-muted-foreground transition-all group flex flex-col h-full">
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center border border-border/50 transition-transform">
-                      <Building2 className="w-6 h-6 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-foreground leading-tight">{vendor.name}</h3>
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{vendor.category || 'Uncategorized'}</p>
-                    </div>
-                  </div>
-                  <button className="p-2 hover:bg-muted rounded-md transition-colors text-muted-foreground cursor-pointer">
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                </div>
+            {filteredVendors.map((vendor) => {
+              let badgeBgBorder = 'bg-muted border-border/50';
+              let badgeText = 'text-muted-foreground';
+              
+              if (vendor.recommendation === 'keep') {
+                badgeBgBorder = 'bg-success/5 border-success/20';
+                badgeText = 'text-success';
+              } else if (vendor.recommendation === 'review') {
+                badgeBgBorder = 'bg-warning/5 border-warning/20';
+                badgeText = 'text-warning';
+              } else if (vendor.recommendation && ['replace', 'cancel_candidate'].includes(vendor.recommendation)) {
+                badgeBgBorder = 'bg-risk/5 border-risk/20';
+                badgeText = 'text-risk';
+              }
 
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="space-y-1">
-                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Total Spend</p>
-                    <p className="font-bold text-foreground">{formatCurrency(vendor.total_spend)}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Recurrence</p>
-                    <p className="font-bold text-foreground capitalize">{vendor.recurrence_pattern}</p>
-                  </div>
-                </div>
-
-                <div className="mt-auto space-y-4">
-                  <div className={`p-4 rounded-md border ${vendor.recommendation === 'review' ? 'bg-amber-500/5 border-amber-500/20' : 'bg-muted border-border/50'}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertCircle className={`w-3.5 h-3.5 ${vendor.recommendation === 'review' ? 'text-amber-500' : 'text-muted-foreground'}`} />
-                      <p className={`text-[10px] font-black uppercase tracking-widest ${vendor.recommendation === 'review' ? 'text-amber-500' : 'text-muted-foreground'}`}>
-                        {vendor.recommendation === 'keep' ? 'Strategic Hold' : 'Action: ' + vendor.recommendation}
-                      </p>
+              return (
+                <div key={vendor.id} className="bg-card border border-border rounded-xl p-6 hover:border-muted-foreground transition-all group flex flex-col h-full">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center border border-border/50 transition-transform">
+                        <Building2 className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-foreground leading-tight">{vendor.name}</h3>
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{vendor.category || 'Uncategorized'}</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground font-medium leading-relaxed">
-                      {vendor.recommendation_reason}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                      <Calendar className="w-3 h-3" /> Since {new Date(vendor.first_seen).toLocaleDateString()}
-                    </div>
-                    <button className="p-2 bg-muted rounded-md group-hover:bg-muted-foreground/15 transition-all cursor-pointer">
-                      <ArrowUpRight className="w-4 h-4 text-foreground" />
+                    <button className="p-2 hover:bg-muted rounded-md transition-colors text-muted-foreground cursor-pointer">
+                      <MoreVertical className="w-4 h-4" />
                     </button>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="space-y-1">
+                      <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Total Spend</p>
+                      <p className="font-bold text-risk">{formatCurrency(vendor.total_spend)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Recurrence</p>
+                      <p className="font-bold text-foreground capitalize">{vendor.recurrence_pattern}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto space-y-4">
+                    <div className={`p-4 rounded-md border ${badgeBgBorder}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertCircle className={`w-3.5 h-3.5 ${badgeText}`} />
+                        <p className={`text-[10px] font-black uppercase tracking-widest ${badgeText}`}>
+                          {vendor.recommendation === 'keep' ? 'Strategic Hold' : 'Action: ' + (vendor.recommendation ? vendor.recommendation.replace('_', ' ') : 'review')}
+                        </p>
+                      </div>
+                      <p className="text-xs text-muted-foreground font-medium leading-relaxed">
+                        {vendor.recommendation_reason}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                        <Calendar className="w-3 h-3" /> Since {new Date(vendor.first_seen).toLocaleDateString()}
+                      </div>
+                      <button className="p-2 bg-muted rounded-md group-hover:bg-muted-foreground/15 transition-all cursor-pointer">
+                        <ArrowUpRight className="w-4 h-4 text-foreground" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
