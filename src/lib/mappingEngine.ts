@@ -43,10 +43,10 @@ export const suggestMappingFromColumns = (headers: string[]): MappingSuggestion 
       const normalizedHeader = normalizedHeaders[i];
       const words = headers[i].toLowerCase().split(/[^a-z0-9]+/);
 
-      if (k === 'in' || k === 'out' || k === 'dr' || k === 'cr') {
+      if (['in', 'out', 'dr', 'cr'].includes(k)) {
         return words.includes(k) || normalizedHeader === k;
       }
-      return normalizedHeader.includes(k);
+      return normalizedHeader.includes(k) || words.includes(k);
     }));
   };
 

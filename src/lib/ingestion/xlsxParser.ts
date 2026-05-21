@@ -18,26 +18,27 @@ export const parseXLSXFile = (file: File): Promise<ParsedFinancialFile> => {
 
         workbook.SheetNames.forEach((sheetName) => {
           const sheet = workbook.Sheets[sheetName];
-          // Convert sheet to raw 2D grid containing all cell contents (including empty cells as null)
-          const rawGrid = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: null });
+          // Convert sheet twice: once for reliable header detection (strings), once for raw numbers
+          const displayGrid = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, raw: false, defval: null });
+          const rawGrid = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, raw: true, defval: null });
 
-          if (!rawGrid || rawGrid.length === 0) {
+          if (!displayGrid || displayGrid.length === 0) {
             return; // Skip empty sheets
           }
 
-          // Run smart header detection per sheet
-          const { headerRowIndex, headers, skippedRowCount, warnings: headerWarnings } = detectHeaderRow(rawGrid);
+          // Run smart header detection per sheet using the display grid for string matching
+          const { headerRowIndex, headers, skippedRowCount, warnings: headerWarnings } = detectHeaderRow(displayGrid);
 
           if (headers.length === 0) {
             return; // Skip if no columns found
           }
 
-          // Map rows to key-value objects
+          // Map rows to key-value objects using the raw grid for precise numeric values
           const dataGrid = rawGrid.slice(headerRowIndex + 1);
           const mappedRows: Record<string, any>[] = dataGrid.map((row) => {
             const obj: Record<string, any> = {};
             headers.forEach((header, idx) => {
-              // Format dates parsed by SheetJS to local string formats
+              // Strictly map by index to prevent column shifting
               let cellVal = row[idx];
               if (cellVal instanceof Date) {
                 cellVal = cellVal.toISOString().split('T')[0];

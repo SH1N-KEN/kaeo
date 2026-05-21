@@ -81,7 +81,8 @@ export const normalizeRows = (
     const rawType = mapping['type'] ? row[mapping['type']] : undefined;
     
     // Clean amount (remove symbols, handles strings)
-    const cleanAmountStr = rawAmount?.toString().replace(/[^\d.-]/g, '') || '0';
+    const rawAmountStr = String(rawAmount || '0').trim().replace(/,/g, '').replace(/\s+/g, '');
+    const cleanAmountStr = rawAmountStr.replace(/[^\d.-]/g, '');
     const amount = parseFloat(cleanAmountStr);
     
     const type = inferTransactionType(rawDesc, amount, rawType);

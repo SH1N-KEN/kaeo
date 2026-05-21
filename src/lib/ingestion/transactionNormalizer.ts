@@ -18,7 +18,7 @@ export const cleanAmount = (val: any): { amount: number; isExpense: boolean; isI
     return { amount: 0, isExpense: false, isIncome: false };
   }
 
-  let str = val.toString().trim().replace(/,/g, '');
+  let str = String(val).trim();
   if (str === '') {
     return { amount: 0, isExpense: false, isIncome: false };
   }
@@ -33,18 +33,23 @@ export const cleanAmount = (val: any): { amount: number; isExpense: boolean; isI
   }
 
   // 2. DR/CR suffixes
-  if (str.toLowerCase().endsWith('dr')) {
+  const lowerStr = str.toLowerCase();
+  if (lowerStr.endsWith('dr') || lowerStr.endsWith(' db') || lowerStr.endsWith('debit')) {
     isExpense = true;
-    str = str.slice(0, -2).trim();
-  } else if (str.toLowerCase().endsWith('cr')) {
+    str = str.replace(/(dr|db|debit)$/i, '').trim();
+  } else if (lowerStr.endsWith('cr') || lowerStr.endsWith('credit')) {
     isIncome = true;
-    str = str.slice(0, -2).trim();
+    str = str.replace(/(cr|credit)$/i, '').trim();
   }
 
-  // 3. Clean symbols (currency signs etc)
+  // 3. Remove ALL commas and spaces FIRST to prevent parseInt/parseFloat truncation
+  str = str.replace(/,/g, '').replace(/\s+/g, '');
+
+  // 4. Clean other symbols (currency signs etc)
   str = str.replace(/[^\d.-]/g, '');
 
   let amount = parseFloat(str);
+  
   if (isNaN(amount)) {
     return { amount: 0, isExpense: false, isIncome: false };
   }
