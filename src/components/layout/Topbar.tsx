@@ -1,20 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { Search, Bell, X } from 'lucide-react';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '../ui/Breadcrumb';
 
 const pathTitleMap: Record<string, string> = {
-  '/': 'Dashboard',
+  '/dashboard': 'Dashboard',
   '/ask-kaeo': 'Ask Kaeo',
   '/files': 'Files Ingestion',
-  '/transactions': 'Ledger Transactions',
-  '/vendors': 'Vendor Analysis',
+  '/transactions': 'Transactions',
+  '/vendors': 'Vendors',
   '/risk-inbox': 'Risk Inbox',
-  '/reports': 'Financial Reports',
-  '/clients': 'Client Context',
-  '/settings': 'Workspace Settings',
+  '/reports': 'Reports',
+  '/clients': 'Clients',
+  '/settings': 'Settings',
   '/billing': 'Billing & Plans',
 };
+
 
 const Topbar: React.FC = () => {
   const location = useLocation();
@@ -23,7 +32,38 @@ const Topbar: React.FC = () => {
   const notifRef = useRef<HTMLDivElement>(null);
   
   const currentPath = location.pathname;
-  const pageTitle = pathTitleMap[currentPath] || 'Workspace';
+  
+  // Dynamic page title mapping helper
+  const getPageTitle = (path: string): string => {
+    // Exact match
+    if (pathTitleMap[path]) {
+      return pathTitleMap[path];
+    }
+    
+    // Sub-route matches
+    if (path.endsWith('/mapping')) {
+      return 'Ledger Mapping';
+    }
+    if (path.startsWith('/reports/')) {
+      return 'Report Detail';
+    }
+    
+    // Fallback format last segment
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length === 0) return 'Current Page';
+    
+    const lastSegment = segments[segments.length - 1];
+    // Check if UUID or numeric ID
+    const isId = /^[0-9a-fA-F-]+$/.test(lastSegment) || /^\d+$/.test(lastSegment);
+    const targetSegment = isId && segments.length > 1 ? segments[segments.length - 2] : lastSegment;
+    
+    return targetSegment
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const pageTitle = getPageTitle(currentPath);
 
   // Close notifications dropdown on click outside
   useEffect(() => {
@@ -42,11 +82,19 @@ const Topbar: React.FC = () => {
         <div className="flex items-center gap-4">
           <WorkspaceSwitcher />
           <div className="h-4 w-px bg-border/40 mx-2" />
-          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-            <span>Workspaces</span>
-            <span className="text-border/40 font-normal">/</span>
-            <span className="text-foreground font-bold">{pageTitle}</span>
-          </div>
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden sm:inline-flex">
+                <BreadcrumbLink asChild>
+                  <Link to="/dashboard">Workspaces</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden sm:inline-flex" />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
         </div>
 
         <div className="flex items-center gap-3">
