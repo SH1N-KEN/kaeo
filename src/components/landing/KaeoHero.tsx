@@ -1,18 +1,35 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Play, UploadCloud, Brain, ShieldCheck, CheckCircle2, MessageSquare } from 'lucide-react';
+import { 
+  ArrowRight, 
+  Play, 
+  UploadCloud, 
+  Brain, 
+  ShieldCheck, 
+  CheckCircle2, 
+  MessageSquare,
+  LayoutDashboard,
+  Files,
+  ArrowRightLeft,
+  Users,
+  AlertTriangle,
+  BarChart3,
+  Download,
+  Plus,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  FileText
+} from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { motion } from 'framer-motion';
+import aeLogo from '../../assets/kaeo-ae-logo.png';
 
 export const KaeoHero: React.FC = () => {
   const { user } = useAuth();
 
   const handleScrollToPreview = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (user) {
-      window.location.href = '/dashboard';
-      return;
-    }
     const element = document.getElementById('product-preview');
     if (element) {
       const headerOffset = 100;
@@ -82,7 +99,7 @@ export const KaeoHero: React.FC = () => {
             variants={itemVariants}
             className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto mb-10"
           >
-            Kaeo is an AI CFO workspace for SMEs. Upload messy bank statements and invoices, detect duplicate payments, risky vendors, uncontrolled spend, and generate accountant-ready reports.
+            Kaeo is an AI CFO workspace for SMEs. Upload bank statements and exports, detect duplicate payments, identify vendor risk anomalies, and generate accountant-ready ledger reports instantly.
           </motion.p>
 
           {/* CTAs */}
@@ -92,7 +109,7 @@ export const KaeoHero: React.FC = () => {
           >
             <Link 
               to={user ? "/dashboard" : "/signup"}
-              className="w-full sm:w-auto px-8 py-4 bg-primary text-primary-foreground rounded-xl font-bold hover:opacity-95 shadow-xl shadow-primary/15 hover:shadow-primary/20 transition-all flex items-center justify-center gap-2 group"
+              className="w-full sm:w-auto px-8 py-4 bg-primary text-primary-foreground rounded-xl font-bold hover:opacity-95 shadow-xl shadow-primary/15 hover:shadow-primary/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
             >
               {user ? 'Go to Dashboard' : 'Start free'}
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -100,147 +117,251 @@ export const KaeoHero: React.FC = () => {
             <a 
               href="#product-preview"
               onClick={handleScrollToPreview}
-              className="w-full sm:w-auto px-8 py-4 bg-card hover:bg-muted/10 border border-border text-foreground rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-8 py-4 bg-card hover:bg-muted/10 border border-border text-foreground rounded-xl font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <Play className="w-4 h-4 text-primary dark:text-[#2fb8a6]" />
               View demo
             </a>
           </motion.div>
+
+          {/* 3 Proof/Value Bullet Points */}
+          <motion.div 
+            variants={itemVariants}
+            className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 mt-6 text-xs text-muted-foreground font-bold"
+          >
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-primary dark:text-[#2fb8a6]" />
+              No Credit Card Required
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-primary dark:text-[#2fb8a6]" />
+              Indian Banks & CSV / XLSX Support
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-primary dark:text-[#2fb8a6]" />
+              GDPR Compliant & Local-First Processing
+            </div>
+          </motion.div>
         </motion.div>
 
-        {/* Product Preview Card */}
+        {/* Product Preview Card (Realistic Kaeo Dashboard) */}
         <motion.div 
           id="product-preview"
           initial={{ opacity: 0, y: 60 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-100px' }}
           transition={{ type: 'spring', damping: 28, stiffness: 80, delay: 0.1 }}
-          className="relative max-w-5xl mx-auto rounded-2xl border border-border/80 overflow-hidden shadow-2xl bg-card"
+          className="relative max-w-6xl mx-auto rounded-2xl border border-border/80 overflow-hidden shadow-2xl bg-card flex flex-col md:flex-row min-h-[580px]"
         >
-          {/* Header Bar */}
-          <div className="flex items-center justify-between px-6 py-4 bg-muted/30 border-b border-border/50">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-red-500/80" />
-              <span className="w-3 h-3 rounded-full bg-yellow-500/80" />
-              <span className="w-3 h-3 rounded-full bg-green-500/80" />
-              <span className="text-xs font-semibold text-muted-foreground ml-2">Kaeo CFO Workspace Dashboard</span>
+          {/* Collapsed Sidebar Rail Mock */}
+          <div className="hidden md:flex flex-col items-center justify-between py-6 w-16 border-r border-border/40 bg-muted/10 select-none">
+            <div className="flex flex-col items-center gap-8">
+              {/* compact logo */}
+              <div className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/25 flex items-center justify-center">
+                <img src={aeLogo} alt="ae" className="w-4 h-4 object-contain" />
+              </div>
+              
+              {/* menu items mock */}
+              <div className="flex flex-col items-center gap-4">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-sm">
+                  <LayoutDashboard className="w-4 h-4" />
+                </div>
+                <div className="p-2 rounded-xl text-muted-foreground hover:text-foreground">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div className="p-2 rounded-xl text-muted-foreground hover:text-foreground">
+                  <Files className="w-4 h-4" />
+                </div>
+                <div className="p-2 rounded-xl text-muted-foreground hover:text-foreground">
+                  <ArrowRightLeft className="w-4 h-4" />
+                </div>
+                <div className="p-2 rounded-xl text-muted-foreground hover:text-foreground">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div className="p-2 rounded-xl text-muted-foreground hover:text-foreground">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div className="p-2 rounded-xl text-muted-foreground hover:text-foreground">
+                  <BarChart3 className="w-4 h-4" />
+                </div>
+              </div>
             </div>
-            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-teal-500/10 text-teal-500 border border-teal-500/20">
-              Product Preview &bull; Illustrative
-            </span>
+            
+            <div className="w-8 h-8 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 font-bold text-xs">
+              G
+            </div>
           </div>
 
-          {/* Card Body (Mock Mini-Dashboard) */}
-          <div className="p-6 md:p-8 space-y-8 bg-card">
-            {/* Metric Cards Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-4 rounded-xl border border-border/60 bg-muted/10">
-                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Inflow / Revenue</div>
-                <div className="text-xl font-black text-success">&bull;&bull;&bull;&bull;&bull;</div>
-                <div className="text-xs text-muted-foreground mt-1">₹24,85,000 &bull; 41 txns</div>
+          {/* Right Side: Main Application View */}
+          <div className="flex-1 flex flex-col bg-background">
+            {/* Top Bar */}
+            <div className="flex items-center justify-between px-6 py-4 bg-muted/20 border-b border-border/40 select-none">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+                <span className="text-xs font-semibold text-muted-foreground ml-2">kaeo-app-production</span>
               </div>
-              <div className="p-4 rounded-xl border border-border/60 bg-muted/10">
-                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Outflow / Expenses</div>
-                <div className="text-xl font-black text-risk">&bull;&bull;&bull;&bull;&bull;</div>
-                <div className="text-xs text-muted-foreground mt-1">₹18,04,566 &bull; 39 txns</div>
-              </div>
-              <div className="p-4 rounded-xl border border-border/60 bg-muted/10">
-                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Net Cashflow</div>
-                <div className="text-xl font-black text-primary dark:text-[#2fb8a6]">&bull;&bull;&bull;&bull;&bull;</div>
-                <div className="text-xs text-muted-foreground mt-1">₹6,80,434 net cash</div>
-              </div>
-              <div className="p-4 rounded-xl border border-border/60 bg-warning/5 border-warning/20">
-                <div className="text-[10px] font-black uppercase tracking-widest text-warning mb-1">Risks Detected</div>
-                <div className="text-xl font-black text-warning">3 Alerts</div>
-                <div className="text-xs text-muted-foreground mt-1">2 Duplicate payments &bull; 1 Vendor</div>
-              </div>
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-teal-500/10 text-teal-500 border border-teal-500/20 shadow-sm shadow-teal-500/5">
+                Product Preview &middot; Illustrative Data
+              </span>
             </div>
 
-            {/* Mock Charts & Layout Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Cashflow visualizer */}
-              <div className="lg:col-span-2 p-6 rounded-xl border border-border/60 bg-muted/5 flex flex-col h-64">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Monthly Inflow vs Outflow Trend</h4>
-                  <div className="flex items-center gap-3 text-[10px] font-bold">
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-success" /> Inflow</span>
-                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-risk" /> Outflow</span>
-                  </div>
-                </div>
-                {/* Visual grid representing columns */}
-                <div className="flex-1 flex items-end justify-between gap-4 pt-6 border-b border-border/50">
-                  <div className="flex-1 flex gap-1 items-end h-full">
-                    <div className="w-full bg-success/80 rounded-t h-[40%]" />
-                    <div className="w-full bg-risk/80 rounded-t h-[30%]" />
-                  </div>
-                  <div className="flex-1 flex gap-1 items-end h-full">
-                    <div className="w-full bg-success/80 rounded-t h-[55%]" />
-                    <div className="w-full bg-risk/80 rounded-t h-[40%]" />
-                  </div>
-                  <div className="flex-1 flex gap-1 items-end h-full">
-                    <div className="w-full bg-success/80 rounded-t h-[75%]" />
-                    <div className="w-full bg-risk/80 rounded-t h-[45%]" />
-                  </div>
-                  <div className="flex-1 flex gap-1 items-end h-full">
-                    <div className="w-full bg-success/80 rounded-t h-[60%]" />
-                    <div className="w-full bg-risk/80 rounded-t h-[50%]" />
-                  </div>
-                  <div className="flex-1 flex gap-1 items-end h-full">
-                    <div className="w-full bg-success/80 rounded-t h-[90%]" />
-                    <div className="w-full bg-risk/80 rounded-t h-[65%]" />
-                  </div>
-                </div>
-                <div className="flex justify-between text-[9px] text-muted-foreground mt-2 font-bold uppercase">
-                  <span>Dec</span>
-                  <span>Jan</span>
-                  <span>Feb</span>
-                  <span>Mar</span>
-                  <span>Apr (FY)</span>
-                </div>
-              </div>
-
-              {/* Ingestion & Invoices Panel */}
-              <div className="p-6 rounded-xl border border-border/60 bg-muted/5 flex flex-col justify-between h-64">
+            {/* Dashboard Workspace */}
+            <div className="p-6 space-y-6 flex-1 overflow-hidden">
+              {/* Good morning header row */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/20 pb-4">
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-foreground mb-4">Latest Uploaded Statements</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-background/50 border border-border/30">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                        <span className="text-[11px] font-bold truncate max-w-[120px]">hdfc_statement_fy26.xlsx</span>
-                      </div>
-                      <span className="text-[9px] font-black uppercase bg-success/10 text-success border border-success/15 px-1 py-0.5 rounded">98% Auto</span>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold tracking-tight text-foreground">Good morning, Guest</h2>
+                    <div className="px-1.5 py-0.5 bg-teal-500/10 text-teal-400 text-[9px] font-black rounded border border-teal-500/20 uppercase tracking-widest">Live OS</div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Strategic workspace overview for <span className="text-foreground font-semibold">Illustrative Client</span></p>
+                </div>
+                
+                <div className="flex gap-2">
+                  <div className="px-3 py-1.5 bg-muted/40 text-foreground rounded-lg text-[10px] font-bold flex items-center gap-1.5 border border-border/50">
+                    <Download className="w-3 h-3" /> Download Report
+                  </div>
+                  <div className="px-3 py-1.5 bg-primary text-primary-foreground font-bold rounded-lg text-[10px] flex items-center gap-1.5 shadow-sm">
+                    <Plus className="w-3 h-3" /> Add Transaction
+                  </div>
+                </div>
+              </div>
+
+              {/* 5 Authentic Metric Cards Grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                <div className="p-3.5 rounded-xl border border-border/50 bg-card premium-glass">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                    Revenue
+                    <TrendingUp className="w-3 h-3 text-success" />
+                  </div>
+                  <div className="text-sm font-black text-success mt-1.5">₹28,85,000</div>
+                  <div className="text-[9px] text-muted-foreground mt-1 truncate">41 customer items</div>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-border/50 bg-card premium-glass">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                    Refunds
+                    <TrendingUp className="w-3 h-3 text-success" />
+                  </div>
+                  <div className="text-sm font-black text-success mt-1.5">₹52,500</div>
+                  <div className="text-[9px] text-muted-foreground mt-1 truncate">3 refund entries</div>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-border/50 bg-card premium-glass">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                    Expenses
+                    <TrendingDown className="w-3 h-3 text-risk" />
+                  </div>
+                  <div className="text-sm font-black text-risk mt-1.5">₹18,04,566</div>
+                  <div className="text-[9px] text-muted-foreground mt-1 truncate">39 expense items</div>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-border/50 bg-card premium-glass">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                    Net Cash
+                    <DollarSign className="w-3 h-3 text-success" />
+                  </div>
+                  <div className="text-sm font-black text-success mt-1.5">₹11,32,934</div>
+                  <div className="text-[9px] text-muted-foreground mt-1 truncate">Net cash positive</div>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-border/50 bg-card premium-glass col-span-2 lg:col-span-1">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                    Transactions
+                    <FileText className="w-3 h-3 text-primary dark:text-[#2fb8a6]" />
+                  </div>
+                  <div className="text-sm font-black text-foreground mt-1.5">83</div>
+                  <div className="text-[9px] text-muted-foreground mt-1 truncate">Processed ledgers</div>
+                </div>
+              </div>
+
+              {/* Chart and Detail Panels */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Custom Cash Flow Timeline Chart */}
+                <div className="lg:col-span-2 p-4.5 rounded-xl border border-border/50 bg-card/45 premium-glass flex flex-col justify-between min-h-[220px]">
+                  <div className="flex items-center justify-between border-b border-border/10 pb-2">
+                    <div>
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-foreground">Cash Flow Timeline</h4>
+                      <p className="text-[9px] text-muted-foreground mt-0.5">Real-time daily flow tracking</p>
                     </div>
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-background/50 border border-border/30">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                        <span className="text-[11px] font-bold truncate max-w-[120px]">razorpay_export_weird.csv</span>
+                    <div className="flex items-center gap-3 text-[9px] font-bold">
+                      <span className="flex items-center gap-1 text-success"><span className="w-1.5 h-1.5 rounded-full bg-success" /> Inflow</span>
+                      <span className="flex items-center gap-1 text-risk"><span className="w-1.5 h-1.5 rounded-full bg-risk" /> Outflow</span>
+                    </div>
+                  </div>
+
+                  {/* SVG Chart Visualization */}
+                  <div className="relative h-28 w-full mt-3">
+                    <svg className="w-full h-full overflow-visible" viewBox="0 0 500 100" preserveAspectRatio="none">
+                      {/* Grid Lines */}
+                      <line x1="0" y1="20" x2="500" y2="20" stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
+                      <line x1="0" y1="50" x2="500" y2="50" stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
+                      <line x1="0" y1="80" x2="500" y2="80" stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
+                      
+                      {/* Gradients */}
+                      <defs>
+                        <linearGradient id="svgInflow" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#22C55E" stopOpacity="0.15" />
+                          <stop offset="100%" stopColor="#22C55E" stopOpacity="0" />
+                        </linearGradient>
+                        <linearGradient id="svgOutflow" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#E5484D" stopOpacity="0.1" />
+                          <stop offset="100%" stopColor="#E5484D" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Inflow Area & Path */}
+                      <path d="M0,100 L0,80 Q100,20 200,60 T400,30 Q450,10 500,25 L500,100 Z" fill="url(#svgInflow)" />
+                      <path d="M0,80 Q100,20 200,60 T400,30 Q450,10 500,25" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" />
+                      
+                      {/* Outflow Area & Path */}
+                      <path d="M0,100 L0,95 Q100,75 200,85 T400,60 Q450,45 500,55 L500,100 Z" fill="url(#svgOutflow)" />
+                      <path d="M0,95 Q100,75 200,85 T400,60 Q450,45 500,55" fill="none" stroke="#E5484D" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2 1" />
+                    </svg>
+                  </div>
+
+                  <div className="flex justify-between text-[8px] text-muted-foreground font-bold mt-2 uppercase border-t border-border/10 pt-1.5">
+                    <span>May 01</span>
+                    <span>May 07</span>
+                    <span>May 14</span>
+                    <span>May 21</span>
+                    <span>Live (May 22)</span>
+                  </div>
+                </div>
+
+                {/* Strategic Insights & Files Mini Panel */}
+                <div className="space-y-3 flex flex-col justify-between">
+                  {/* Risks Alerts Card */}
+                  <div className="p-3.5 rounded-xl border border-warning/20 bg-warning/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-warning flex items-center gap-1">
+                        <AlertTriangle className="w-3.5 h-3.5" /> Live Risk screening
+                      </span>
+                      <span className="text-[8px] font-bold text-muted-foreground">Alert Active</span>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground leading-relaxed">
+                      Detected 2 duplicate payments matching subscription parameters to <strong className="text-foreground">Slack Inc</strong> on April 12. Review recommended.
+                    </div>
+                  </div>
+
+                  {/* Files Ingestion Status Card */}
+                  <div className="p-3.5 rounded-xl border border-border/50 bg-card/45 premium-glass space-y-2">
+                    <h5 className="text-[9px] font-bold uppercase tracking-wider text-foreground">Ingested Ledgers</h5>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-[9px] text-muted-foreground">
+                        <span className="truncate text-foreground max-w-[110px] font-semibold">hdfc_fy26.xlsx</span>
+                        <span className="text-[8px] px-1 py-0.5 rounded bg-success/15 text-success font-black border border-success/15">Excel Support</span>
                       </div>
-                      <span className="text-[9px] font-black uppercase bg-success/10 text-success border border-success/15 px-1 py-0.5 rounded">100% Auto</span>
+                      <div className="flex items-center justify-between text-[9px] text-muted-foreground">
+                        <span className="truncate text-foreground max-w-[110px] font-semibold">razorpay_mar.csv</span>
+                        <span className="text-[8px] px-1 py-0.5 rounded bg-success/15 text-success font-black border border-success/15">CSV Support</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 flex items-center gap-2 text-xs">
-                  <UploadCloud className="w-4 h-4 text-primary dark:text-[#2fb8a6] shrink-0" />
-                  <span className="text-muted-foreground">Supported: CSV, XLSX, XLS</span>
-                </div>
               </div>
-            </div>
-          </div>
-
-          {/* Ask Kaeo preview chat bubble floating */}
-          <div className="absolute bottom-6 right-6 max-w-sm p-4 rounded-xl shadow-2xl bg-foreground text-background dark:bg-card dark:text-foreground border border-border/80 flex items-start gap-3 animate-bounce shadow-teal-500/5 duration-1000">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-              <span className="text-primary-foreground font-black text-sm">K</span>
-            </div>
-            <div className="space-y-1">
-              <h5 className="text-[10px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                <MessageSquare className="w-3 h-3 text-primary dark:text-[#2fb8a6]" />
-                Ask Kaeo Advisor
-              </h5>
-              <p className="text-xs font-semibold leading-relaxed">
-                "You’re overspending on recurring tools. Review Slack, AWS, and duplicate vendor payments first."
-              </p>
             </div>
           </div>
         </motion.div>

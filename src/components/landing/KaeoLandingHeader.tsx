@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ArrowRight } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 
+import aeLogo from '../../assets/kaeo-ae-logo.png';
+import kaeoWordmark from '../../assets/kaeo-wordmark.png';
+
 export const KaeoLandingHeader: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -20,6 +23,12 @@ export const KaeoLandingHeader: React.FC = () => {
   const handleNavClick = (e: React.MouseEvent, targetId: string) => {
     e.preventDefault();
     setMobileMenuOpen(false);
+    
+    // If user is authenticated and clicks pricing, go to /billing
+    if (targetId === 'pricing' && user) {
+      navigate('/billing');
+      return;
+    }
     
     // Check if we are on the landing page
     if (window.location.pathname !== '/') {
@@ -50,13 +59,9 @@ export const KaeoLandingHeader: React.FC = () => {
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/10 transition-all group-hover:scale-105">
-            <span className="text-primary-foreground font-black text-xl">K</span>
-          </div>
-          <span className="text-xl font-bold tracking-tight text-foreground">
-            Kaeo<span className="text-primary dark:text-[#2fb8a6]">.</span>
-          </span>
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <img src={aeLogo} alt="Kaeo Logo" className="w-8 h-8 object-contain" />
+          <img src={kaeoWordmark} alt="Kaeo" className="h-5.5 object-contain dark:brightness-0 dark:invert" />
         </Link>
 
         {/* Desktop Navigation */}
