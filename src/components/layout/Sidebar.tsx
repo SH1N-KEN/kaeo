@@ -22,12 +22,12 @@ import { useToast } from '../../hooks/useToast';
 import aeLogo from '../../assets/kaeo-ae-logo.png';
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Overview', path: '/dashboard' },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: Inbox, label: 'Risk Inbox', path: '/risk-inbox' },
-  { icon: ArrowRightLeft, label: 'Ledger', path: '/transactions' },
+  { icon: ArrowRightLeft, label: 'Transactions', path: '/transactions' },
   { icon: Building2, label: 'Vendors', path: '/vendors' },
   { icon: FileText, label: 'Reports', path: '/reports' },
-  { icon: UploadCloud, label: 'Imports', path: '/files' },
+  { icon: UploadCloud, label: 'Files', path: '/files' },
   { icon: Users, label: 'Clients', path: '/clients' },
 ];
 

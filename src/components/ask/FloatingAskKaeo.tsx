@@ -62,42 +62,58 @@ const FloatingAskKaeo: React.FC = () => {
       {/* ── Floating Trigger Button ── */}
       <AnimatePresence>
         {!isOpen && (
-          <motion.button
-            key="fab"
+          <motion.div
+            key="fab-container"
             initial={{ opacity: 0, y: 12, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.95 }}
             transition={{ type: 'spring', damping: 22, stiffness: 320 }}
-            onClick={() => setIsOpen(true)}
-            aria-label="Open Ask Kaeo advisor"
-            className={`
-              fixed bottom-6 right-6 z-[100]
-              flex items-center gap-2.5
-              h-11 px-4 rounded-full
-              bg-card/95 backdrop-blur-md
-              border border-primary/25
-              shadow-lg shadow-black/20
-              text-foreground text-sm font-semibold
-              hover:border-primary/45 hover:bg-card hover:shadow-xl hover:shadow-black/25
-              transition-all duration-200
-              cursor-pointer
-              group
-            `}
+            className="fixed bottom-6 right-6 z-[100] group"
           >
-            {/* ae icon */}
-            <div className="w-6 h-6 rounded-md bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0 group-hover:bg-teal-500/20 transition-colors">
-              <img src={aeLogo} alt="Kaeo" className="w-3.5 h-3.5 object-contain" />
+            {/* Tooltip on hover */}
+            <div
+              className="absolute bottom-full right-0 mb-2.5 px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200 pointer-events-none border"
+              style={{
+                background: 'rgba(11, 15, 14, 0.95)',
+                borderColor: 'rgba(47, 184, 166, 0.25)',
+                color: '#2fb8a6',
+                backdropFilter: 'blur(8px)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.6)',
+              }}
+            >
+              Ask what to review first
             </div>
 
-            {/* Label — hidden on very small screens */}
-            <span className="hidden sm:inline leading-none">Ask Kaeo</span>
+            <button
+              onClick={() => setIsOpen(true)}
+              aria-label="Open Ask Kaeo advisor"
+              className={`
+                flex items-center gap-2.5
+                h-11 px-4 rounded-full
+                bg-card/95 backdrop-blur-md
+                border border-primary/25
+                shadow-lg shadow-black/20
+                text-foreground text-sm font-semibold
+                hover:border-primary/45 hover:bg-card hover:shadow-xl hover:shadow-black/25
+                transition-all duration-200
+                cursor-pointer
+              `}
+            >
+              {/* ae icon */}
+              <div className="w-6 h-6 rounded-md bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0 transition-colors">
+                <img src={aeLogo} alt="Kaeo" className="w-3.5 h-3.5 object-contain" />
+              </div>
 
-            {/* Status dot — subtle pulse only */}
-            <span className="relative flex h-2 w-2 ml-0.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-40" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-400/70" />
-            </span>
-          </motion.button>
+              {/* Label */}
+              <span className="leading-none text-foreground font-semibold">Ask Kaeo</span>
+
+              {/* Status dot — subtle pulse only */}
+              <span className="relative flex h-2 w-2 ml-0.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-40" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-400/70" />
+              </span>
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
 

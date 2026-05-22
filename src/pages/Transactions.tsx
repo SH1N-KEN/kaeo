@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Search,
   ArrowUpRight,
@@ -61,6 +61,7 @@ type ReviewFilter = 'all' | 'new' | 'needs_review' | 'reviewed' | 'ignored' | 'u
 const Transactions: React.FC = () => {
   const { activeClient, activeOrg } = useWorkspace();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -80,6 +81,21 @@ const Transactions: React.FC = () => {
 
   // ── Context menu state ────────────────────────────────────────────────────
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const reviewParam = searchParams.get('review_status');
+    const categoryParam = searchParams.get('category');
+
+    if (reviewParam === 'needs_review') {
+      setFilterReview('needs_review');
+    } else if (reviewParam === 'new') {
+      setFilterReview('new');
+    }
+
+    if (categoryParam === 'uncategorized') {
+      setFilterReview('uncategorized');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (activeClient) fetchTransactions();

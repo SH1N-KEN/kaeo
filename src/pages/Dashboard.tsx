@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
-  TrendingUp, 
   TrendingDown, 
   DollarSign, 
   AlertCircle,
@@ -21,7 +21,6 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useToast } from '../hooks/useToast';
 import EmptyState from '../components/ui/EmptyState';
-import MetricCard from '../components/ui/MetricCard';
 import { supabase } from '../lib/supabase';
 import aeLogo from '../assets/kaeo-ae-logo.png';
 import { calculateMonthEndReadiness, type ReadinessResult } from '../lib/readinessEngine';
@@ -47,6 +46,8 @@ const Dashboard: React.FC = () => {
   const { activeClient } = useWorkspace();
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  
   const [loading, setLoading] = useState(true);
   const [isAddTxOpen, setIsAddTxOpen] = useState(false);
   const [metrics, setMetrics] = useState({
@@ -243,8 +244,7 @@ const Dashboard: React.FC = () => {
   };
 
   const handleDownloadReport = () => {
-    toast('Navigating to reports folder', 'info');
-    window.location.href = '/reports';
+    navigate('/reports');
   };
 
   const handleAddTransactionClick = () => {
@@ -297,18 +297,35 @@ const Dashboard: React.FC = () => {
     ? user.user_metadata.full_name.split(' ')[0] 
     : user?.email?.split('@')[0] || 'Guest';
 
+  const topReasonText = (() => {
+    if (metrics.unreviewedCount > 0) {
+      return `${metrics.unreviewedCount} transactions still need review`;
+    }
+    if (metrics.uncategorizedCount > 0) {
+      return `${metrics.uncategorizedCount} transactions are uncategorized`;
+    }
+    if (metrics.openRisksCount > 0) {
+      return `${metrics.openRisksCount} unresolved risks require attention`;
+    }
+    if (readiness?.deductions && readiness.deductions.length > 0) {
+      const topDeduction = [...readiness.deductions].sort((a, b) => b.amount - a.amount)[0];
+      return topDeduction.reason;
+    }
+    return "All close preparation checks passed";
+  })();
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-700 pb-16">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Good morning, {firstName}
             </h1>
             <div className="px-2 py-0.5 bg-teal-500/10 text-teal-400 text-[10px] font-black rounded border border-teal-500/20 uppercase tracking-widest shadow-sm shadow-teal-500/5">Live OS</div>
           </div>
-          <p className="text-xs text-muted-foreground">Strategic workspace overview for <span className="text-foreground font-semibold">{activeClient.name}</span></p>
+          <p className="text-xs text-muted-foreground">Spend-control summary for <span className="text-foreground font-semibold">{activeClient.name}</span></p>
         </div>
         
         <div className="flex gap-2">
@@ -327,157 +344,243 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Metric Cards Layout */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${metrics.refunds > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
-        <MetricCard 
-          title="Total Revenue" 
-          value={hasTransactions ? formatCurrency(metrics.income) : '—'} 
-          valueClassName="text-success"
-          description={hasTransactions ? (metrics.incomeCount > 0 ? "From customer payments" : "No income rows detected") : "No data yet"}
-          icon={<TrendingUp className={`w-4 h-4 ${metrics.incomeCount > 0 ? 'text-teal-400' : 'text-muted-foreground'}`} />} 
-          className="premium-glass premium-glass-hover"
-        />
-        {metrics.refunds > 0 && (
-          <MetricCard 
-            title="Refunds & Recoveries" 
-            value={hasTransactions ? formatCurrency(metrics.refunds) : '—'} 
-            valueClassName="text-success"
-            description={hasTransactions ? `From ${metrics.refundCount} refund/reversal entries` : ""}
-            icon={<TrendingUp className="w-4 h-4 text-emerald-400" />} 
-            className="premium-glass premium-glass-hover"
-          />
-        )}
-        <MetricCard 
-          title="Total Expenses" 
-          value={hasTransactions ? formatCurrency(metrics.expenses) : '—'} 
-          valueClassName="text-risk"
-          description={hasTransactions ? "From imported expense rows" : ""}
-          icon={<TrendingDown className={`w-4 h-4 ${metrics.expenseCount > 0 ? 'text-rose-400/80' : 'text-muted-foreground'}`} />} 
-          className="premium-glass premium-glass-hover"
-        />
-        <MetricCard 
-          title="Net Cash Movement" 
-          value={hasTransactions ? formatCurrency(metrics.net) : '—'} 
-          valueClassName={metrics.net >= 0 ? "text-success" : "text-risk"}
-          description={hasTransactions ? (metrics.net > 0 ? "Net cash positive" : metrics.net < 0 ? "Net cash negative" : "Balanced") : "No data yet"}
-          icon={<DollarSign className={`w-4 h-4 ${hasTransactions ? (metrics.net >= 0 ? 'text-teal-400' : 'text-rose-400/85') : 'text-muted-foreground'}`} />} 
-          className="premium-glass premium-glass-hover"
-        />
-        <MetricCard 
-          title="Transactions" 
-          value={hasTransactions ? metrics.count.toString() : '—'} 
-          description={hasTransactions ? "Imported transactions" : ""} 
-          icon={<FileText className="w-4 h-4 text-teal-400" />} 
-          className="premium-glass premium-glass-hover"
-        />
-      </div>
+      {/* Primary Top Row Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Net Cash Movement */}
+        <div 
+          onClick={() => navigate('/transactions')}
+          className="premium-glass premium-glass-hover p-5 rounded-2xl border border-border/30 flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Net Cash Movement</span>
+            <div className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 group-hover:bg-teal-500/20 transition-all duration-200">
+              <DollarSign className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <div className={`text-2xl font-black ${metrics.net >= 0 ? 'text-success' : 'text-risk'}`}>
+              {hasTransactions ? formatCurrency(metrics.net) : '—'}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1.5 font-semibold leading-none">
+              {hasTransactions ? (metrics.net > 0 ? "Net cash positive" : metrics.net < 0 ? "Net cash negative" : "Balanced") : "No data yet"}
+            </p>
+          </div>
+        </div>
 
-      {/* Control Metrics Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        <div className="premium-glass rounded-xl p-4 border border-border/30 flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-            <ShieldAlert className="w-4 h-4 text-warning" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Open Risks</span>
+        {/* Total Expenses */}
+        <div 
+          onClick={() => navigate('/transactions')}
+          className="premium-glass premium-glass-hover p-5 rounded-2xl border border-border/30 flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Expenses</span>
+            <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 group-hover:bg-rose-500/20 transition-all duration-200">
+              <TrendingDown className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-xl font-bold text-foreground">{metrics.openRisksCount}</div>
+          <div>
+            <div className="text-2xl font-black text-risk">
+              {hasTransactions ? formatCurrency(metrics.expenses) : '—'}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1.5 font-semibold leading-none">
+              {hasTransactions ? `${metrics.expenseCount} outflow rows` : "No expense data"}
+            </p>
+          </div>
         </div>
-        <div className="premium-glass rounded-xl p-4 border border-border/30 flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-            <FileText className="w-4 h-4 text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Needs Review</span>
+
+        {/* Open Risks */}
+        <div 
+          onClick={() => navigate('/risk-inbox')}
+          className="premium-glass premium-glass-hover p-5 rounded-2xl border border-risk/20 hover:border-risk/40 bg-risk/5 flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Open Risks</span>
+            <div className="w-8 h-8 rounded-lg bg-risk/10 border border-risk/20 flex items-center justify-center text-risk group-hover:bg-risk/20 transition-all duration-200">
+              <ShieldAlert className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-xl font-bold text-foreground">{metrics.unreviewedCount}</div>
+          <div>
+            <div className="text-2xl font-black text-foreground">
+              {metrics.openRisksCount}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1.5 font-semibold leading-none">
+              Unresolved alerts requiring action
+            </p>
+          </div>
         </div>
-        <div className="premium-glass rounded-xl p-4 border border-border/30 flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-            <AlertCircle className="w-4 h-4 text-risk" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Unknown Rows</span>
+
+        {/* Month-End Readiness */}
+        <div 
+          onClick={() => navigate('/settings?tab=spend-rules')}
+          className="premium-glass premium-glass-hover p-5 rounded-2xl border border-primary/20 hover:border-primary/45 bg-primary/5 flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Month-End Readiness</span>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-all duration-200">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-xl font-bold text-foreground">{metrics.unknownCount}</div>
-        </div>
-        <div className="premium-glass rounded-xl p-4 border border-border/30 flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-            <Info className="w-4 h-4 text-amber-500" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Uncategorized</span>
-          </div>
-          <div className="text-xl font-bold text-foreground">{metrics.uncategorizedCount}</div>
-        </div>
-        <div className="premium-glass rounded-xl p-4 border border-border/30 flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-            <TrendingDown className="w-4 h-4 text-risk" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Dup. Exposure</span>
-          </div>
-          <div className="text-xl font-bold text-foreground">{formatCurrency(metrics.duplicateExposure)}</div>
-        </div>
-        <div className="premium-glass rounded-xl p-4 border border-border/30 flex flex-col justify-between bg-primary/5">
-          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-            <CheckCircle2 className="w-4 h-4 text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Readiness Score</span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <div className="text-xl font-bold text-foreground">{readiness?.score || 0}/100</div>
-            <div className={`text-[10px] font-bold uppercase ${
+          <div>
+            <div className="text-2xl font-black text-foreground">
+              {readiness?.score || 0}/100
+            </div>
+            <p className={`text-[10px] font-bold mt-1.5 leading-none uppercase ${
               readiness?.status === 'Ready' ? 'text-success' : 
               readiness?.status === 'Almost ready' ? 'text-primary' : 
               readiness?.status === 'Needs review' ? 'text-amber-500' : 'text-risk'
             }`}>
-              {readiness?.status || 'Unknown'}
-            </div>
+              {readiness?.status || 'Not ready'}
+            </p>
           </div>
         </div>
       </div>
 
-      {!hasTransactions ? (
-        <div className="premium-glass border border-dashed border-border/40 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5 shadow-xl">
-          <div className="w-16 h-16 bg-teal-500/10 rounded-2xl flex items-center justify-center border border-teal-500/20 shadow-inner">
-            <FileText className="w-8 h-8 text-teal-400/40" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-lg font-bold tracking-tight">No financial ledger uploaded</h3>
-            <p className="text-xs text-muted-foreground max-w-sm">
-              Upload and import a transaction sheet to activate AI CFO insights.
-            </p>
-          </div>
-          <button 
-            onClick={() => window.location.href = '/files'}
-            className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 transition-all shadow-xl shadow-primary/20 cursor-pointer"
-          >
-            Upload Finance File
-          </button>
-        </div>
-      ) : (
+      {hasTransactions && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column (Wide) */}
-          <div className="lg:col-span-8 space-y-6">
-            
+          {/* Action Center - Column 1 */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* Priority Review Card */}
+            <div className="premium-glass rounded-2xl p-6 border border-warning/30 bg-warning/5 shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-warning" />
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-warning">Priority Review</h3>
+                </div>
+                <span className="px-2 py-0.5 rounded bg-warning/15 text-warning border border-warning/20 text-[9px] font-black uppercase tracking-wider">Action Required</span>
+              </div>
+              
+              <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                Verify open risk events and categorize transactions to lock client books for close.
+              </p>
+
+              <div className="space-y-2">
+                {/* Open Risks */}
+                <div 
+                  onClick={() => navigate('/risk-inbox')}
+                  className="p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 hover:border-border/30 transition-all duration-150 flex items-center justify-between cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-risk" />
+                    <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground">Open Risks</span>
+                  </div>
+                  <span className="text-xs font-bold text-foreground group-hover:text-primary">{metrics.openRisksCount} unresolved</span>
+                </div>
+
+                {/* Duplicate Exposure */}
+                <div 
+                  onClick={() => navigate('/risk-inbox')}
+                  className="p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 hover:border-border/30 transition-all duration-150 flex items-center justify-between cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground">Duplicate Spend Exposure</span>
+                  </div>
+                  <span className="text-xs font-bold text-foreground group-hover:text-primary">{formatCurrency(metrics.duplicateExposure)}</span>
+                </div>
+
+                {/* Transactions Needing Review */}
+                <div 
+                  onClick={() => navigate('/transactions?review_status=needs_review')}
+                  className="p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 hover:border-border/30 transition-all duration-150 flex items-center justify-between cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground">Pending Review Status</span>
+                  </div>
+                  <span className="text-xs font-bold text-foreground group-hover:text-primary">{metrics.unreviewedCount} transactions</span>
+                </div>
+
+                {/* Uncategorized Count */}
+                <div 
+                  onClick={() => navigate('/transactions?category=uncategorized')}
+                  className="p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 hover:border-border/30 transition-all duration-150 flex items-center justify-between cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                    <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground">Uncategorized Ledger Rows</span>
+                  </div>
+                  <span className="text-xs font-bold text-foreground group-hover:text-primary">{metrics.uncategorizedCount} transactions</span>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => navigate('/risk-inbox')}
+                  className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-xl text-xs flex items-center justify-center gap-2 hover:opacity-95 transition-all cursor-pointer shadow-lg shadow-primary/10"
+                >
+                  Open Risk Inbox <ArrowUpRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Month-End Readiness Detailed Card */}
+            <div className="premium-glass rounded-2xl p-6 border border-border/30 shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Month-End Readiness Close</h3>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                  readiness?.status === 'Ready' ? 'bg-success/15 text-success border border-success/20' : 
+                  readiness?.status === 'Almost ready' ? 'bg-primary/15 text-primary border border-primary/20' : 
+                  readiness?.status === 'Needs review' ? 'bg-amber-500/15 text-amber-500 border border-amber-500/20' : 
+                  'bg-risk/15 text-risk border border-risk/20'
+                }`}>
+                  {readiness?.status || 'Not ready'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-5">
+                {/* Large Score Circle */}
+                <div className="relative w-16 h-16 shrink-0 bg-white/5 border border-border/20 rounded-full flex items-center justify-center">
+                  <span className="text-xl font-black text-foreground">{readiness?.score || 0}</span>
+                  <span className="text-[8px] text-muted-foreground absolute bottom-2 font-bold uppercase">Ready</span>
+                </div>
+                
+                <div>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Top Deduction Reason</h4>
+                  <p className="text-sm font-bold text-foreground mt-0.5 leading-snug">
+                    {topReasonText}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-[10px] text-muted-foreground leading-relaxed pt-2 border-t border-border/20 font-medium">
+                {readiness?.score && readiness.score >= 90 ? (
+                  <span className="text-success font-semibold">Your score is 90+. You are fully prepared to export the Accountant Pack for close.</span>
+                ) : (
+                  <span>To prepare the workspace for export, categorize unmapped transactions and review all pending transactions to boost your readiness.</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Timeline & Secondary Metrics - Column 2 */}
+          <div className="lg:col-span-7 space-y-6">
             {/* Real-data Cash Flow Overview Chart */}
             {chartData.length > 0 && (
-              <div className="premium-glass rounded-2xl p-6 shadow-xl space-y-4">
-                <div className="flex items-center justify-between border-b border-border/30 pb-4">
+              <div className="premium-glass rounded-2xl p-5 shadow-xl space-y-3">
+                <div className="flex items-center justify-between border-b border-border/30 pb-3">
                   <div>
                     <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Cash Flow Timeline</h3>
-                    <h4 className="text-sm font-semibold text-foreground mt-0.5">Inflow vs Outflow analysis</h4>
                   </div>
                   <div className="flex items-center gap-4 text-[10px] font-bold">
                     <span className="flex items-center gap-1.5 text-success">
-                      <span className="w-2 h-2 rounded-full bg-success" /> Revenue Inflow
+                      <span className="w-1.5 h-1.5 rounded-full bg-success" /> Revenue Inflow
                     </span>
                     <span className="flex items-center gap-1.5 text-risk">
-                      <span className="w-2 h-2 rounded-full bg-risk" /> Expense Outflow
+                      <span className="w-1.5 h-1.5 rounded-full bg-risk" /> Expense Outflow
                     </span>
                   </div>
                 </div>
 
-                <div className="h-64 w-full">
+                <div className="h-44 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                       <defs>
                         <linearGradient id="inflowGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--chart-stop-inflow)" stopOpacity={0.2}/>
+                          <stop offset="5%" stopColor="var(--chart-stop-inflow)" stopOpacity={0.15}/>
                           <stop offset="95%" stopColor="var(--chart-stop-inflow)" stopOpacity={0}/>
                         </linearGradient>
                         <linearGradient id="outflowGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--chart-stop-outflow)" stopOpacity={0.2}/>
+                          <stop offset="5%" stopColor="var(--chart-stop-outflow)" stopOpacity={0.15}/>
                           <stop offset="95%" stopColor="var(--chart-stop-outflow)" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
@@ -501,7 +604,7 @@ const Dashboard: React.FC = () => {
                         type="monotone" 
                         dataKey="inflow" 
                         stroke="var(--chart-stroke-inflow)" 
-                        strokeWidth={2}
+                        strokeWidth={1.5}
                         fillOpacity={1} 
                         fill="url(#inflowGrad)" 
                       />
@@ -509,7 +612,7 @@ const Dashboard: React.FC = () => {
                         type="monotone" 
                         dataKey="outflow" 
                         stroke="var(--chart-stroke-outflow)" 
-                        strokeWidth={2}
+                        strokeWidth={1.5}
                         fillOpacity={1} 
                         fill="url(#outflowGrad)" 
                       />
@@ -519,6 +622,80 @@ const Dashboard: React.FC = () => {
               </div>
             )}
 
+            {/* Secondary Row Metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+              {/* Revenue */}
+              <div className="premium-glass rounded-xl p-3.5 border border-border/20 flex flex-col justify-between min-w-0">
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">Revenue</span>
+                <div className="text-base font-extrabold text-success mt-1 truncate">{formatCurrency(metrics.income)}</div>
+                <span className="text-[8px] text-muted-foreground font-semibold mt-0.5 truncate">{metrics.incomeCount} inflows</span>
+              </div>
+
+              {/* Refunds */}
+              {metrics.refunds > 0 && (
+                <div className="premium-glass rounded-xl p-3.5 border border-border/20 flex flex-col justify-between min-w-0">
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">Refunds</span>
+                  <div className="text-base font-extrabold text-teal-400 mt-1 truncate">{formatCurrency(metrics.refunds)}</div>
+                  <span className="text-[8px] text-muted-foreground font-semibold mt-0.5 truncate">{metrics.refundCount} items</span>
+                </div>
+              )}
+
+              {/* Transactions */}
+              <div 
+                onClick={() => navigate('/transactions')}
+                className="premium-glass premium-glass-hover rounded-xl p-3.5 border border-border/20 flex flex-col justify-between min-w-0 cursor-pointer group"
+              >
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">Transactions</span>
+                <div className="text-base font-extrabold text-foreground mt-1 group-hover:text-primary transition-colors truncate">{metrics.count}</div>
+                <span className="text-[8px] text-muted-foreground font-semibold mt-0.5 truncate">View Ledger →</span>
+              </div>
+
+              {/* Uncategorized */}
+              <div 
+                onClick={() => navigate('/transactions?category=uncategorized')}
+                className="premium-glass premium-glass-hover rounded-xl p-3.5 border border-border/20 flex flex-col justify-between min-w-0 cursor-pointer group"
+              >
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">Uncategorized</span>
+                <div className="text-base font-extrabold text-foreground mt-1 group-hover:text-primary transition-colors truncate">{metrics.uncategorizedCount}</div>
+                <span className="text-[8px] text-muted-foreground font-semibold mt-0.5 truncate">Map Categories →</span>
+              </div>
+
+              {/* Duplicate Exposure */}
+              <div 
+                onClick={() => navigate('/risk-inbox')}
+                className="premium-glass premium-glass-hover rounded-xl p-3.5 border border-border/20 flex flex-col justify-between min-w-0 cursor-pointer group"
+              >
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">Duplicate Exp.</span>
+                <div className="text-base font-extrabold text-foreground mt-1 group-hover:text-primary transition-colors truncate">{formatCurrency(metrics.duplicateExposure)}</div>
+                <span className="text-[8px] text-muted-foreground font-semibold mt-0.5 truncate">Review Risks →</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!hasTransactions ? (
+        <div className="premium-glass border border-dashed border-border/40 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5 shadow-xl">
+          <div className="w-16 h-16 bg-teal-500/10 rounded-2xl flex items-center justify-center border border-teal-500/20 shadow-inner">
+            <FileText className="w-8 h-8 text-teal-400/40" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold tracking-tight">No financial ledger uploaded</h3>
+            <p className="text-xs text-muted-foreground max-w-sm font-medium">
+              Upload and import a transaction sheet to activate AI CFO insights.
+            </p>
+          </div>
+          <button 
+            onClick={() => navigate('/files')}
+            className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 transition-all shadow-xl shadow-primary/20 cursor-pointer"
+          >
+            Upload Finance File
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column (Wide) */}
+          <div className="lg:col-span-8 space-y-6">
             {/* File Interpretation Card */}
             <div className="premium-glass rounded-2xl p-6 flex flex-col md:flex-row gap-6 items-start shadow-xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -528,7 +705,7 @@ const Dashboard: React.FC = () => {
               <div className="space-y-4 flex-1">
                 <div>
                   <h4 className="text-xs font-black uppercase tracking-widest text-teal-400">File Interpretation</h4>
-                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed font-medium">
                     {isExpenseOnly ? (
                       <>Kaeo detected this as an <span className="text-foreground font-bold">expense-only ledger</span>. To run cash flow comparisons, ingest an invoice register or a bank statement containing deposit logs.</>
                     ) : isMixed ? (
@@ -583,7 +760,7 @@ const Dashboard: React.FC = () => {
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                     <span className="text-xs font-bold">{incomePercentage}%</span>
-                    <span className="text-[7px] font-bold text-muted-foreground uppercase leading-none">Inflow</span>
+                    <span className="text-[7px] font-bold text-muted-foreground uppercase leading-none font-semibold">Inflow</span>
                   </div>
                 </div>
               </div>
@@ -597,7 +774,7 @@ const Dashboard: React.FC = () => {
                   Recent Ledger Entries
                 </h3>
                 <button 
-                  onClick={() => window.location.href = '/transactions'}
+                  onClick={() => navigate('/transactions')}
                   className="text-[10px] font-black text-teal-400 hover:text-teal-300 uppercase tracking-widest cursor-pointer"
                 >
                   View Full Ledger
@@ -645,6 +822,7 @@ const Dashboard: React.FC = () => {
 
           {/* Right Column (Sidebar Insights) */}
           <div className="lg:col-span-4 space-y-6">
+            {/* Action-Oriented Strategic Insights */}
             <div className="premium-glass rounded-2xl p-6 shadow-xl space-y-6">
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                 <Info className="w-3.5 h-3.5 text-teal-400" />
@@ -652,51 +830,44 @@ const Dashboard: React.FC = () => {
               </h3>
               
               <div className="space-y-4">
-                {metrics.topVendor.amount > 0 && (
-                  <div className="p-4 bg-white/5 rounded-2xl border border-border/30">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 mb-2">Primary Expense Destination</p>
-                    <p className="text-base font-bold text-foreground leading-tight mb-1 truncate">{metrics.topVendor.name}</p>
-                    <p className="text-xs font-semibold text-muted-foreground">
-                      Cumulative spend: <span className="font-extrabold text-risk">{formatCurrency(metrics.topVendor.amount)}</span>
-                    </p>
-                  </div>
-                )}
-
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-border/20">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
-                      <span className="text-[11px] font-bold">Import Composition</span>
-                    </div>
-                    <span className="text-[10px] font-black text-muted-foreground">{metrics.count} Rows</span>
-                  </div>
-
-                  {isExpenseOnly ? (
-                    <div className="flex items-center gap-2 p-3 bg-risk/5 rounded-xl border border-risk/15">
-                      <AlertCircle className="w-3.5 h-3.5 text-risk" />
-                      <span className="text-[11px] font-bold text-risk">Expense-only file detected</span>
-                    </div>
-                  ) : isMixed ? (
-                    <div className="flex items-center gap-2 p-3 bg-success/5 rounded-xl border border-success/15">
-                      <TrendingUp className="w-3.5 h-3.5 text-success" />
-                      <span className="text-[11px] font-bold text-success">Mixed income and expenses</span>
-                    </div>
-                  ) : null}
-
-                  {metrics.unknownCount > 0 && (
-                    <div className="flex items-center justify-between p-3 bg-warning/5 rounded-xl border border-warning/15">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="w-3.5 h-3.5 text-warning" />
-                        <span className="text-[11px] font-bold text-warning">{metrics.unknownCount} Unknown entries</span>
-                      </div>
-                      <button 
-                        onClick={() => window.location.href = '/transactions'}
-                        className="text-[9px] font-black text-warning hover:underline uppercase cursor-pointer"
-                      >
-                        Review
-                      </button>
-                    </div>
+                <ul className="space-y-3.5 text-xs text-muted-foreground font-semibold leading-relaxed">
+                  {metrics.topVendor.amount > 0 && (
+                    <li className="flex gap-2.5 items-start">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span>
+                        <strong className="text-foreground">{metrics.topVendor.name}</strong> is your largest expense destination ({formatCurrency(metrics.topVendor.amount)} total).
+                      </span>
+                    </li>
                   )}
+                  <li className="flex gap-2.5 items-start">
+                    <span className="text-primary mt-0.5">•</span>
+                    <span>
+                      <strong className="text-foreground">{formatCurrency(metrics.duplicateExposure)}</strong> duplicate exposure needs review.
+                    </span>
+                  </li>
+                  <li className="flex gap-2.5 items-start">
+                    <span className="text-primary mt-0.5">•</span>
+                    <span>
+                      <strong className="text-foreground">{metrics.uncategorizedCount}</strong> transactions are uncategorized.
+                    </span>
+                  </li>
+                  {metrics.unreviewedCount > 0 && (
+                    <li className="flex gap-2.5 items-start">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span>
+                        <strong className="text-foreground">{metrics.unreviewedCount}</strong> transactions need review.
+                      </span>
+                    </li>
+                  )}
+                </ul>
+
+                <div className="pt-3.5 border-t border-border/20">
+                  <Link 
+                    to="/risk-inbox"
+                    className="text-xs font-bold text-teal-400 hover:text-teal-300 transition-colors flex items-center gap-1.5 group"
+                  >
+                    Review risks <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  </Link>
                 </div>
               </div>
             </div>
@@ -757,7 +928,7 @@ const Dashboard: React.FC = () => {
                 Dismiss
               </button>
               <button 
-                onClick={() => { setIsAddTxOpen(false); window.location.href = '/files'; }}
+                onClick={() => { setIsAddTxOpen(false); navigate('/files'); }}
                 className="flex-1 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-xs hover:opacity-95 transition-all cursor-pointer shadow-lg shadow-primary/10"
               >
                 Go to File Upload
