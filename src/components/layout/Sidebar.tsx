@@ -12,10 +12,10 @@ import {
   Moon,
   MoreVertical,
   Building2,
-  ShieldCheck,
   Inbox,
   FileText,
-  UploadCloud
+  UploadCloud,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { useToast } from '../../hooks/useToast';
@@ -28,7 +28,7 @@ const navItems = [
   { icon: Building2, label: 'Vendors', path: '/vendors' },
   { icon: FileText, label: 'Reports', path: '/reports' },
   { icon: UploadCloud, label: 'Imports', path: '/files' },
-  { icon: ShieldCheck, label: 'Spend Rules', path: '/spend-rules' },
+  { icon: Users, label: 'Clients', path: '/clients' },
 ];
 
 const Sidebar: React.FC = () => {
@@ -259,7 +259,7 @@ const Sidebar: React.FC = () => {
             {/* Menu Items */}
             <div className="space-y-0.5">
               <NavLink 
-                to="/settings"
+                to="/account"
                 onClick={() => setProfileMenuOpen(false)}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
               >
@@ -273,7 +273,7 @@ const Sidebar: React.FC = () => {
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
               >
                 <CreditCard className="w-3.5 h-3.5" />
-                <span>Billing & Plans</span>
+                <span>Billing &amp; Plans</span>
               </NavLink>
 
               <NavLink 

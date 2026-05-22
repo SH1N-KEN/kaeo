@@ -23,6 +23,7 @@ const pathTitleMap: Record<string, string> = {
   '/settings': 'Settings',
   '/billing': 'Billing & Plans',
   '/spend-rules': 'Spend Rules',
+  '/account': 'Account',
 };
 
 
@@ -33,9 +34,14 @@ const Topbar: React.FC = () => {
   const notifRef = useRef<HTMLDivElement>(null);
   
   const currentPath = location.pathname;
+  const searchParams = new URLSearchParams(location.search);
+  const tabParam = searchParams.get('tab');
   
   // Dynamic page title mapping helper
   const getPageTitle = (path: string): string => {
+    // Handle /settings?tab=spend-rules specially
+    if (path === '/settings' && tabParam === 'spend-rules') return 'Spend Rules';
+    if (path === '/settings' && tabParam === 'data') return 'Data & Reset';
     // Exact match
     if (pathTitleMap[path]) {
       return pathTitleMap[path];
