@@ -22,6 +22,7 @@ const pathTitleMap: Record<string, string> = {
   '/clients': 'Clients',
   '/settings': 'Settings',
   '/billing': 'Billing & Plans',
+  '/spend-rules': 'Spend Rules',
 };
 
 

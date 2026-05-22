@@ -22,7 +22,7 @@ import { useToast } from '../../hooks/useToast';
 import aeLogo from '../../assets/kaeo-ae-logo.png';
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Overview', path: '/' },
+  { icon: LayoutDashboard, label: 'Overview', path: '/dashboard' },
   { icon: Inbox, label: 'Risk Inbox', path: '/risk-inbox' },
   { icon: ArrowRightLeft, label: 'Ledger', path: '/transactions' },
   { icon: Building2, label: 'Vendors', path: '/vendors' },
