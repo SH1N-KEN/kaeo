@@ -2,12 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Files, 
   ArrowRightLeft, 
-  Users, 
-  AlertTriangle, 
-  BarChart3, 
-  UserSquare2, 
   Settings, 
   CreditCard,
   LogOut,
@@ -15,20 +10,25 @@ import {
   ChevronRight,
   Sun,
   Moon,
-  MoreVertical
+  MoreVertical,
+  Building2,
+  ShieldCheck,
+  Inbox,
+  FileText,
+  UploadCloud
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { useToast } from '../../hooks/useToast';
 import aeLogo from '../../assets/kaeo-ae-logo.png';
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: Files, label: 'Files Ingestion', path: '/files' },
-  { icon: ArrowRightLeft, label: 'Transactions', path: '/transactions' },
-  { icon: Users, label: 'Vendors', path: '/vendors' },
-  { icon: AlertTriangle, label: 'Risk Inbox', path: '/risk-inbox' },
-  { icon: BarChart3, label: 'Reports', path: '/reports' },
-  { icon: UserSquare2, label: 'Clients', path: '/clients' },
+  { icon: LayoutDashboard, label: 'Overview', path: '/' },
+  { icon: Inbox, label: 'Risk Inbox', path: '/risk-inbox' },
+  { icon: ArrowRightLeft, label: 'Ledger', path: '/transactions' },
+  { icon: Building2, label: 'Vendors', path: '/vendors' },
+  { icon: FileText, label: 'Reports', path: '/reports' },
+  { icon: UploadCloud, label: 'Imports', path: '/files' },
+  { icon: ShieldCheck, label: 'Spend Rules', path: '/spend-rules' },
 ];
 
 const Sidebar: React.FC = () => {

@@ -13,7 +13,9 @@ import {
   Download,
   Info,
   Calendar,
-  X
+  X,
+  ShieldAlert,
+  CheckCircle2
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useAuth } from '../components/auth/AuthProvider';
@@ -22,6 +24,8 @@ import EmptyState from '../components/ui/EmptyState';
 import MetricCard from '../components/ui/MetricCard';
 import { supabase } from '../lib/supabase';
 import aeLogo from '../assets/kaeo-ae-logo.png';
+import { calculateMonthEndReadiness, type ReadinessResult } from '../lib/readinessEngine';
+import { getDisplayCategory } from '../lib/categoryEngine';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -57,8 +61,13 @@ const Dashboard: React.FC = () => {
     vendorPaymentCount: 0,
     refundCount: 0,
     failedCount: 0,
-    topVendor: { name: '', amount: 0 }
+    topVendor: { name: '', amount: 0 },
+    uncategorizedCount: 0,
+    unreviewedCount: 0,
+    openRisksCount: 0,
+    duplicateExposure: 0,
   });
+  const [readiness, setReadiness] = useState<ReadinessResult | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
 
@@ -72,19 +81,36 @@ const Dashboard: React.FC = () => {
     if (!activeClient) return;
     setLoading(true);
     try {
-      // Fetch transactions with transaction_date for charting
+      // Fetch transactions
       const { data: allTransactions, error: metricsErr } = await supabase
         .from('transactions')
-        .select('amount, type, description, transaction_date')
+        .select('*')
         .eq('client_id', activeClient.id);
 
       if (metricsErr) throw metricsErr;
+      
+      // Fetch open risks
+      const { data: openRisksData } = await supabase
+        .from('risk_events')
+        .select('*')
+        .eq('client_id', activeClient.id)
+        .eq('status', 'open');
+        
+      const readinessResult = calculateMonthEndReadiness(allTransactions || [], openRisksData || []);
+      setReadiness(readinessResult);
 
       const vendors: Record<string, number> = {};
       const dailyMap: Record<string, { inflow: number; outflow: number; rawDate: string }> = {};
 
       const stats = (allTransactions || []).reduce((acc, tx) => {
         const amt = Math.abs(Number(tx.amount));
+        
+        const cat = getDisplayCategory(tx);
+        if (cat === 'Uncategorized') acc.uncategorizedCount++;
+        
+        if (!tx.review_status || tx.review_status === 'new' || tx.review_status === 'needs_review') {
+          acc.unreviewedCount++;
+        }
         
         // Date-series aggregation for Cash Flow chart
         if (tx.transaction_date) {
@@ -146,7 +172,16 @@ const Dashboard: React.FC = () => {
         unknownCount: 0,
         vendorPaymentCount: 0,
         refundCount: 0,
-        failedCount: 0
+        failedCount: 0,
+        uncategorizedCount: 0,
+        unreviewedCount: 0
+      });
+
+      let duplicateExposure = 0;
+      (openRisksData || []).forEach(r => {
+        if (r.risk_type.includes('duplicate')) {
+          duplicateExposure += Number(r.amount_at_risk);
+        }
       });
 
       // Compute Top Vendor
@@ -158,7 +193,9 @@ const Dashboard: React.FC = () => {
       setMetrics({
         ...stats,
         net: stats.income + stats.refunds - stats.expenses,
-        topVendor
+        topVendor,
+        openRisksCount: openRisksData?.length || 0,
+        duplicateExposure
       });
 
       // Prepare Recharts sorted daily series data
@@ -333,6 +370,61 @@ const Dashboard: React.FC = () => {
           icon={<FileText className="w-4 h-4 text-teal-400" />} 
           className="premium-glass premium-glass-hover"
         />
+      </div>
+
+      {/* Control Metrics Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+        <div className="premium-glass rounded-xl p-4 border border-border/30 flex flex-col justify-between">
+          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+            <ShieldAlert className="w-4 h-4 text-warning" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Open Risks</span>
+          </div>
+          <div className="text-xl font-bold text-foreground">{metrics.openRisksCount}</div>
+        </div>
+        <div className="premium-glass rounded-xl p-4 border border-border/30 flex flex-col justify-between">
+          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+            <FileText className="w-4 h-4 text-primary" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Needs Review</span>
+          </div>
+          <div className="text-xl font-bold text-foreground">{metrics.unreviewedCount}</div>
+        </div>
+        <div className="premium-glass rounded-xl p-4 border border-border/30 flex flex-col justify-between">
+          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+            <AlertCircle className="w-4 h-4 text-risk" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Unknown Rows</span>
+          </div>
+          <div className="text-xl font-bold text-foreground">{metrics.unknownCount}</div>
+        </div>
+        <div className="premium-glass rounded-xl p-4 border border-border/30 flex flex-col justify-between">
+          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+            <Info className="w-4 h-4 text-amber-500" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Uncategorized</span>
+          </div>
+          <div className="text-xl font-bold text-foreground">{metrics.uncategorizedCount}</div>
+        </div>
+        <div className="premium-glass rounded-xl p-4 border border-border/30 flex flex-col justify-between">
+          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+            <TrendingDown className="w-4 h-4 text-risk" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Dup. Exposure</span>
+          </div>
+          <div className="text-xl font-bold text-foreground">{formatCurrency(metrics.duplicateExposure)}</div>
+        </div>
+        <div className="premium-glass rounded-xl p-4 border border-border/30 flex flex-col justify-between bg-primary/5">
+          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+            <CheckCircle2 className="w-4 h-4 text-primary" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Readiness Score</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <div className="text-xl font-bold text-foreground">{readiness?.score || 0}/100</div>
+            <div className={`text-[10px] font-bold uppercase ${
+              readiness?.status === 'Ready' ? 'text-success' : 
+              readiness?.status === 'Almost ready' ? 'text-primary' : 
+              readiness?.status === 'Needs review' ? 'text-amber-500' : 'text-risk'
+            }`}>
+              {readiness?.status || 'Unknown'}
+            </div>
+          </div>
+        </div>
       </div>
 
       {!hasTransactions ? (

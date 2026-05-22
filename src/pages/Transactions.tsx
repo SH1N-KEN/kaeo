@@ -19,6 +19,9 @@ import {
   UploadCloud,
   Copy,
   Filter,
+  CheckCircle2,
+  CircleDashed,
+  EyeOff,
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
@@ -29,6 +32,7 @@ import {
   type TransactionCategory,
 } from '../lib/categoryEngine';
 import { useToast } from '../hooks/useToast';
+import { trackAuditEvent } from '../lib/auditEngine';
 
 // ── Shared INR formatter ─────────────────────────────────────────────────────
 const INR = new Intl.NumberFormat('en-IN', {
@@ -52,7 +56,7 @@ type DateRange = 'all' | 'this_month' | 'last_30';
 type AmountRange = 'all' | 'under_10k' | '10k_50k' | 'above_50k';
 
 // ── Review filter ─────────────────────────────────────────────────────────────
-type ReviewFilter = 'all' | 'uncategorized' | 'unknown' | 'high_value';
+type ReviewFilter = 'all' | 'new' | 'needs_review' | 'reviewed' | 'ignored' | 'uncategorized' | 'unknown' | 'high_value';
 
 const Transactions: React.FC = () => {
   const { activeClient, activeOrg } = useWorkspace();
@@ -98,6 +102,28 @@ const Transactions: React.FC = () => {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateReviewStatus = async (txId: string, status: string) => {
+    if (!activeOrg) return;
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .update({ review_status: status, reviewed_at: new Date().toISOString() })
+        .eq('id', txId);
+      if (error) throw error;
+      
+      setTransactions(prev => prev.map(t => t.id === txId ? { ...t, review_status: status } : t));
+      toast(`Marked as ${status.replace('_', ' ')}`, 'success');
+      
+      let actionName = 'transaction_marked_reviewed';
+      if (status === 'ignored') actionName = 'transaction_marked_ignored';
+      if (status === 'needs_review') actionName = 'transaction_marked_needs_review';
+      
+      await trackAuditEvent(activeOrg.id, actionName as any, 'transaction', txId, { status });
+    } catch (err: any) {
+      toast(err.message, 'error');
     }
   };
 
@@ -173,6 +199,11 @@ const Transactions: React.FC = () => {
 
       // Review filter
       if (filterReview !== 'all') {
+        const revStatus = tx.review_status || 'new';
+        if (filterReview === 'new' && revStatus !== 'new') return false;
+        if (filterReview === 'needs_review' && revStatus !== 'needs_review') return false;
+        if (filterReview === 'reviewed' && revStatus !== 'reviewed') return false;
+        if (filterReview === 'ignored' && revStatus !== 'ignored') return false;
         if (filterReview === 'uncategorized' && tx._displayCategory !== 'Uncategorized') return false;
         if (filterReview === 'unknown' && tx.type !== 'unknown') return false;
         if (filterReview === 'high_value' && (tx.amount >= 0 || Math.abs(tx.amount) < 50000)) return false;
@@ -411,6 +442,10 @@ const Transactions: React.FC = () => {
               onChange={(e) => setFilterReview(e.target.value as ReviewFilter)}
             >
               <option value="all">All rows</option>
+              <option value="new">New (Unreviewed)</option>
+              <option value="needs_review">Needs Review</option>
+              <option value="reviewed">Reviewed</option>
+              <option value="ignored">Ignored</option>
               <option value="uncategorized">Uncategorized only</option>
               <option value="unknown">Unknown rows only</option>
               <option value="high_value">High-value expenses</option>
@@ -576,6 +611,11 @@ const Transactions: React.FC = () => {
                       <SortIcon col="source_provider" />
                     </span>
                   </th>
+                  <th
+                    className={thClass}
+                  >
+                    Status
+                  </th>
                   <th className="px-4 py-3 border-b border-border/50 w-10" />
                 </tr>
               </thead>
@@ -653,6 +693,11 @@ const Transactions: React.FC = () => {
                         </span>
                       </td>
 
+                      {/* Review Status */}
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                        <ReviewBadge status={tx.review_status || 'new'} />
+                      </td>
+
                       {/* Row actions */}
                       <td className="px-3 py-3 text-right relative">
                         <button
@@ -705,6 +750,37 @@ const Transactions: React.FC = () => {
                               <FileText className="w-3.5 h-3.5" />
                               Filter by source
                             </button>
+                            <div className="h-px bg-border my-1 mx-2" />
+                            <button
+                              className="w-full text-left px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-success hover:bg-success/10 transition-colors cursor-pointer flex items-center gap-2"
+                              onClick={() => {
+                                updateReviewStatus(tx.id, 'reviewed');
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Mark Reviewed
+                            </button>
+                            <button
+                              className="w-full text-left px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer flex items-center gap-2"
+                              onClick={() => {
+                                updateReviewStatus(tx.id, 'needs_review');
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              <CircleDashed className="w-3.5 h-3.5" />
+                              Needs Review
+                            </button>
+                            <button
+                              className="w-full text-left px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-muted-foreground hover:bg-muted transition-colors cursor-pointer flex items-center gap-2"
+                              onClick={() => {
+                                updateReviewStatus(tx.id, 'ignored');
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              <EyeOff className="w-3.5 h-3.5" />
+                              Ignore
+                            </button>
                           </div>
                         )}
                       </td>
@@ -734,6 +810,26 @@ const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
 const TypeBadge: React.FC<{ type: string }> = ({ type }) => {
   const colors = TYPE_COLORS[type] ?? { bg: 'bg-muted/40', text: 'text-muted-foreground' };
   const label = type.replace(/_/g, ' ');
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${colors.bg} ${colors.text}`}
+    >
+      {label}
+    </span>
+  );
+};
+
+const REVIEW_COLORS: Record<string, { bg: string; text: string }> = {
+  new: { bg: 'bg-muted/40', text: 'text-muted-foreground' },
+  needs_review: { bg: 'bg-amber-500/10', text: 'text-amber-500' },
+  reviewed: { bg: 'bg-success/10', text: 'text-success' },
+  ignored: { bg: 'bg-muted/30', text: 'text-muted-foreground/50' },
+  resolved: { bg: 'bg-primary/10', text: 'text-primary' },
+};
+
+const ReviewBadge: React.FC<{ status: string }> = ({ status }) => {
+  const colors = REVIEW_COLORS[status] ?? REVIEW_COLORS.new;
+  const label = status.replace(/_/g, ' ');
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${colors.bg} ${colors.text}`}

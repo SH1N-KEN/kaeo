@@ -22,8 +22,11 @@ import { analyzeRisksForClient } from '../lib/riskEngine';
 import EmptyState from '../components/ui/EmptyState';
 import MetricCard from '../components/ui/MetricCard';
 import type { RiskEvent, Note } from '../types/finance';
+import { trackAuditEvent } from '../lib/auditEngine';
+import { useNavigate } from 'react-router-dom';
 
 const RiskInbox: React.FC = () => {
+  const navigate = useNavigate();
   const { activeClient, activeOrg } = useWorkspace();
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
@@ -139,7 +142,8 @@ const RiskInbox: React.FC = () => {
     }
   };
 
-  const updateStatus = async (riskId: string, status: RiskEvent['status']) => {
+  const updateStatus = async (riskId: string, status: string) => {
+    if (!activeOrg) return;
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error('User not authenticated');
@@ -156,11 +160,17 @@ const RiskInbox: React.FC = () => {
       
       if (updateErr) throw updateErr;
       
+      let actionName = 'risk_resolved';
+      if (status === 'ignored') actionName = 'risk_ignored';
+      if (status === 'reviewed') actionName = 'risk_review_started';
+
+      await trackAuditEvent(activeOrg.id, actionName as any, 'risk', riskId, { status });
+      
       fetchRisks();
       if (selectedRisk?.id === riskId) {
         setSelectedRisk({ 
           ...selectedRisk, 
-          status,
+          status: status as RiskEvent['status'],
           reviewed_by: userData.user?.id,
           reviewed_at: new Date().toISOString()
         });
@@ -442,10 +452,10 @@ const RiskInbox: React.FC = () => {
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Risk Status</h4>
                         <div className="grid grid-cols-2 gap-2">
                           <button 
-                            onClick={() => updateStatus(selectedRisk.id, 'confirmed')}
-                            className={`px-3 py-2 rounded-lg text-[10px] font-bold border transition-all ${selectedRisk.status === 'confirmed' ? 'bg-risk/10 border-risk/40 text-risk' : 'bg-muted/50 border-border hover:border-risk/30 text-muted-foreground'}`}
+                            onClick={() => updateStatus(selectedRisk.id, 'resolved')}
+                            className={`px-3 py-2 rounded-lg text-[10px] font-bold border transition-all ${selectedRisk.status === 'resolved' ? 'bg-primary/10 border-primary/40 text-primary' : 'bg-muted/50 border-border hover:border-primary/30 text-muted-foreground'}`}
                           >
-                            Confirm Issue
+                            Mark Resolved
                           </button>
                           <button 
                             onClick={() => updateStatus(selectedRisk.id, 'reviewed')}
@@ -454,16 +464,23 @@ const RiskInbox: React.FC = () => {
                             Mark Reviewed
                           </button>
                           <button 
-                            onClick={() => updateStatus(selectedRisk.id, 'false_positive')}
-                            className={`px-3 py-2 rounded-lg text-[10px] font-bold border transition-all ${selectedRisk.status === 'false_positive' ? 'bg-muted border-foreground/20 text-foreground' : 'bg-muted/50 border-border hover:border-border text-muted-foreground'}`}
-                          >
-                            False Positive
-                          </button>
-                          <button 
                             onClick={() => updateStatus(selectedRisk.id, 'ignored')}
                             className={`px-3 py-2 rounded-lg text-[10px] font-bold border transition-all ${selectedRisk.status === 'ignored' ? 'bg-muted border-border text-muted-foreground/50' : 'bg-muted/50 border-border hover:border-border text-muted-foreground'}`}
                           >
                             Ignore
+                          </button>
+                          <button 
+                            onClick={() => {
+                              // If it has a related vendor name, go to vendors, else transactions
+                              if (selectedRisk.evidence_json?.vendor_name) {
+                                navigate('/vendors');
+                              } else {
+                                navigate('/transactions');
+                              }
+                            }}
+                            className={`px-3 py-2 rounded-lg text-[10px] font-bold border transition-all bg-muted/50 border-border hover:border-border text-muted-foreground`}
+                          >
+                            View Details
                           </button>
                         </div>
                       </div>

@@ -19,11 +19,16 @@ import EmptyState from '../components/ui/EmptyState';
 import MetricCard from '../components/ui/MetricCard';
 import type { Vendor } from '../types/finance';
 
+interface EnrichedVendor extends Vendor {
+  openRisksCount: number;
+  duplicateCount: number;
+}
+
 const Vendors: React.FC = () => {
   const { activeClient, activeOrg } = useWorkspace();
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [vendors, setVendors] = useState<EnrichedVendor[]>([]);
   const [txCount, setTxCount] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +61,32 @@ const Vendors: React.FC = () => {
         .order('total_spend', { ascending: false });
 
       if (fetchErr) throw fetchErr;
-      setVendors(data || []);
+      
+      const { data: risksData } = await supabase
+        .from('risk_events')
+        .select('*')
+        .eq('client_id', activeClient.id)
+        .eq('status', 'open');
+
+      const enriched = (data || []).map(v => {
+        const vendorRisks = (risksData || []).filter(r => 
+          r.vendor_id === v.id || r.evidence_json?.vendor_name === v.name
+        );
+        let dupCount = 0;
+        vendorRisks.forEach(r => {
+          if (r.risk_type.includes('duplicate')) {
+            dupCount += Number(r.evidence_json?.transaction_count || 1);
+          }
+        });
+        
+        return {
+          ...v,
+          openRisksCount: vendorRisks.length,
+          duplicateCount: dupCount,
+        };
+      });
+
+      setVendors(enriched);
     } catch (err: any) {
       console.error('[Vendors] Fetch error:', err);
       if (err.message?.includes('column') && err.message?.includes('does not exist')) {
@@ -259,7 +289,7 @@ const Vendors: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="space-y-1">
                       <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Total Spend</p>
                       <p className="font-bold text-risk">{formatCurrency(vendor.total_spend)}</p>
@@ -268,6 +298,25 @@ const Vendors: React.FC = () => {
                       <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Recurrence</p>
                       <p className="font-bold text-foreground capitalize">{vendor.recurrence_pattern}</p>
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 mb-4 flex-wrap">
+                    <span className="px-2 py-1 bg-muted/40 rounded-md text-[9px] font-bold text-muted-foreground uppercase tracking-widest border border-border/30">
+                      {vendor.transaction_count} Txs
+                    </span>
+                    <span className="px-2 py-1 bg-muted/40 rounded-md text-[9px] font-bold text-muted-foreground uppercase tracking-widest border border-border/30">
+                      Last: {new Date(vendor.last_seen).toLocaleDateString()}
+                    </span>
+                    {vendor.openRisksCount > 0 && (
+                      <span className="px-2 py-1 bg-warning/10 rounded-md text-[9px] font-bold text-warning uppercase tracking-widest border border-warning/20 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {vendor.openRisksCount} Open Risks
+                      </span>
+                    )}
+                    {vendor.duplicateCount > 0 && (
+                      <span className="px-2 py-1 bg-risk/10 rounded-md text-[9px] font-bold text-risk uppercase tracking-widest border border-risk/20 flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3" /> {vendor.duplicateCount} Duplicates
+                      </span>
+                    )}
                   </div>
 
                   <div className="mt-auto space-y-4">

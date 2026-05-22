@@ -71,7 +71,7 @@ export interface RiskEvent {
   amount_at_risk: number;
   evidence_json: any;
   suggested_action: string | null;
-  status: 'open' | 'reviewed' | 'confirmed' | 'false_positive' | 'ignored';
+  status: 'open' | 'reviewed' | 'confirmed' | 'false_positive' | 'ignored' | 'resolved';
   reviewed_by: string | null;
   reviewed_at: string | null;
   assigned_to: string | null;

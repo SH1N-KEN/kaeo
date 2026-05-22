@@ -3,11 +3,12 @@ import { supabase } from '../lib/supabase';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useNavigate } from 'react-router-dom';
 import { generateCFOReport, formatReportCurrency } from '../lib/reportEngine';
-import { FileText, Plus, AlertCircle, Eye, Calendar, ShieldAlert, Loader2, Zap } from 'lucide-react';
+import { FileText, Plus, AlertCircle, Eye, Calendar, ShieldAlert, Loader2, Zap, DownloadCloud } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import { trackUsageEvent } from '../lib/billing';
 import { checkUsageEventAllowed } from '../lib/billingGuards';
 import EmptyState from '../components/ui/EmptyState';
+import { useToast } from '../hooks/useToast';
 
 export default function Reports() {
   const { activeOrg, activeClient } = useWorkspace();
@@ -21,6 +22,7 @@ export default function Reports() {
   const [schemaError, setSchemaError] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (activeOrg && activeClient) {
@@ -211,18 +213,83 @@ export default function Reports() {
             Accountant-ready CFO outputs for {activeClient.name}
           </p>
         </div>
-        <button
-          onClick={handleGenerateReport}
-          disabled={generating || transactionCount === 0}
-          className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium flex items-center hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {generating ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Plus className="h-4 w-4 mr-2" />
-          )}
-          {generating ? 'Generating...' : 'Generate Report'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              if (!activeOrg || !activeClient) return;
+              try {
+                const { data, error } = await supabase
+                  .from('transactions')
+                  .select('*')
+                  .eq('organization_id', activeOrg.id)
+                  .eq('client_id', activeClient.id)
+                  .order('transaction_date', { ascending: false });
+
+                if (error) throw error;
+                if (!data || data.length === 0) {
+                  toast('No transactions found', 'error');
+                  return;
+                }
+
+                // Generate CSV
+                const headers = ['Date', 'Description', 'Amount', 'Type', 'Category', 'Source', 'Review Status'];
+                const rows = data.map(tx => [
+                  tx.transaction_date?.split('T')[0] || '',
+                  `"${(tx.description || '').replace(/"/g, '""')}"`,
+                  tx.amount,
+                  tx.type,
+                  tx.category || 'Uncategorized',
+                  tx.source_provider || 'Manual',
+                  tx.review_status || 'new'
+                ]);
+
+                const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+                
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', `kaeo_accountant_pack_${activeClient.name.replace(/\\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                if (user) {
+                  await supabase.from('audit_events').insert({
+                    organization_id: activeOrg.id,
+                    client_id: activeClient.id,
+                    user_id: user.id,
+                    action: 'accountant_pack_exported',
+                    resource_type: 'report',
+                    resource_id: 'csv',
+                    metadata_json: { rows: data.length }
+                  });
+                }
+                
+                toast('Accountant Pack downloaded successfully', 'success');
+              } catch (err: any) {
+                toast(err.message, 'error');
+              }
+            }}
+            disabled={transactionCount === 0}
+            className="bg-muted text-foreground px-4 py-2 rounded-md font-medium flex items-center hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-border"
+          >
+            <DownloadCloud className="h-4 w-4 mr-2" />
+            Accountant Pack (CSV)
+          </button>
+          <button
+            onClick={handleGenerateReport}
+            disabled={generating || transactionCount === 0}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium flex items-center hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {generating ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
+            {generating ? 'Generating...' : 'Generate Report'}
+          </button>
+        </div>
       </div>
 
       {error && (

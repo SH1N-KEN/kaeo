@@ -5,6 +5,7 @@ import SetupRequired from './components/auth/SetupRequired';
 import AppShell from './components/layout/AppShell';
 import Dashboard from './pages/Dashboard';
 import AskKaeo from './pages/AskKaeo';
+import SpendRules from './pages/SpendRules';
 import Files from './pages/Files';
 import Mapping from './pages/Mapping';
 import Transactions from './pages/Transactions';
@@ -80,6 +81,7 @@ function App() {
               <Route path="files/:importId/mapping" element={<Mapping />} />
               <Route path="transactions" element={<Transactions />} />
               <Route path="vendors" element={<Vendors />} />
+              <Route path="spend-rules" element={<SpendRules />} />
               <Route path="risk-inbox" element={<RiskInbox />} />
               <Route path="reports" element={<Reports />} />
               <Route path="reports/:reportId" element={<ReportDetail />} />
