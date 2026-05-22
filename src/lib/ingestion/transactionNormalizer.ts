@@ -1,4 +1,5 @@
 import { inferTransactionType } from '../normalizationEngine';
+import { inferTransactionCategory } from '../categoryEngine';
 
 export interface NormalizerContext {
   provider: string;
@@ -235,15 +236,29 @@ export const normalizeIngestedRows = (
 
     const type = inferTransactionType(rawDesc, amount, rawType);
 
-    // 5. Build standardized transaction schema
+    // 5. Resolve or infer category
+    const rawCategory = mapping['category'] ? row[mapping['category']] : null;
+    const storedCat = rawCategory ? String(rawCategory).trim() : '';
+    const isCatMissing =
+      !storedCat ||
+      storedCat.toLowerCase() === 'uncategorized' ||
+      storedCat.toLowerCase() === 'unknown' ||
+      storedCat.toLowerCase() === 'generic' ||
+      storedCat.toLowerCase() === 'null';
+    const counterparty = mapping['counterparty_name'] ? row[mapping['counterparty_name']] : null;
+    const inferredCategory = isCatMissing
+      ? inferTransactionCategory(rawDesc, counterparty, type)
+      : storedCat;
+
+    // 6. Build standardized transaction schema
     transactions.push({
       transaction_date: date.toISOString(),
       description: rawDesc,
       amount: amount,
       currency: context.currency,
       type: type,
-      category: mapping['category'] ? row[mapping['category']] : null,
-      counterparty_name: mapping['counterparty_name'] ? row[mapping['counterparty_name']] : null,
+      category: inferredCategory,
+      counterparty_name: counterparty,
       source_provider: context.provider,
       raw_row_json: row
     });
