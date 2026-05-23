@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -56,7 +56,7 @@ type DateRange = 'all' | 'this_month' | 'last_30';
 type AmountRange = 'all' | 'under_10k' | '10k_50k' | 'above_50k';
 
 // ── Review filter ─────────────────────────────────────────────────────────────
-type ReviewFilter = 'all' | 'new' | 'needs_review' | 'reviewed' | 'ignored' | 'uncategorized' | 'unknown' | 'high_value';
+type ReviewFilter = 'all' | 'pending' | 'new' | 'needs_review' | 'reviewed' | 'ignored' | 'resolved' | 'uncategorized' | 'unknown' | 'high_value';
 
 const Transactions: React.FC = () => {
   const { activeClient, activeOrg } = useWorkspace();
@@ -82,18 +82,38 @@ const Transactions: React.FC = () => {
   // ── Context menu state ────────────────────────────────────────────────────
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
+  const lastSearchRef = useRef<string | null>(null);
+
   useEffect(() => {
-    const reviewParam = searchParams.get('review_status');
-    const categoryParam = searchParams.get('category');
-
-    if (reviewParam === 'needs_review') {
-      setFilterReview('needs_review');
-    } else if (reviewParam === 'new') {
-      setFilterReview('new');
+    const currentSearch = searchParams.toString();
+    if (lastSearchRef.current !== null && currentSearch === lastSearchRef.current) {
+      return;
     }
+    lastSearchRef.current = currentSearch;
 
-    if (categoryParam === 'uncategorized') {
+    const reviewStatusParam = searchParams.get('review_status');
+    const reviewParam = searchParams.get('review');
+    const categoryParam = searchParams.get('category');
+    const typeParam = searchParams.get('type');
+
+    if (reviewStatusParam === 'needs_review') {
+      setFilterReview('needs_review');
+    } else if (reviewStatusParam === 'new') {
+      setFilterReview('new');
+    } else if (reviewStatusParam === 'pending' || reviewParam === 'pending' || reviewStatusParam === 'pending') {
+      setFilterReview('pending');
+    } else if (reviewStatusParam === 'reviewed') {
+      setFilterReview('reviewed');
+    } else if (reviewStatusParam === 'ignored') {
+      setFilterReview('ignored');
+    } else if (reviewStatusParam === 'resolved') {
+      setFilterReview('resolved');
+    } else if (categoryParam === 'uncategorized') {
       setFilterReview('uncategorized');
+    } else if (typeParam === 'unknown') {
+      setFilterReview('unknown');
+    } else {
+      setFilterReview('all');
     }
   }, [searchParams]);
 
@@ -220,6 +240,8 @@ const Transactions: React.FC = () => {
         if (filterReview === 'needs_review' && revStatus !== 'needs_review') return false;
         if (filterReview === 'reviewed' && revStatus !== 'reviewed') return false;
         if (filterReview === 'ignored' && revStatus !== 'ignored') return false;
+        if (filterReview === 'resolved' && revStatus !== 'resolved') return false;
+        if (filterReview === 'pending' && revStatus !== 'new' && revStatus !== 'needs_review') return false;
         if (filterReview === 'uncategorized' && tx._displayCategory !== 'Uncategorized') return false;
         if (filterReview === 'unknown' && tx.type !== 'unknown') return false;
         if (filterReview === 'high_value' && (tx.amount >= 0 || Math.abs(tx.amount) < 50000)) return false;
@@ -457,14 +479,22 @@ const Transactions: React.FC = () => {
               value={filterReview}
               onChange={(e) => setFilterReview(e.target.value as ReviewFilter)}
             >
-              <option value="all">All rows</option>
-              <option value="new">New (Unreviewed)</option>
+              <option value="all">All</option>
+              <option value="pending">Pending Review</option>
+              <option value="new">New</option>
               <option value="needs_review">Needs Review</option>
               <option value="reviewed">Reviewed</option>
               <option value="ignored">Ignored</option>
-              <option value="uncategorized">Uncategorized only</option>
-              <option value="unknown">Unknown rows only</option>
-              <option value="high_value">High-value expenses</option>
+              <option value="resolved">Resolved</option>
+              {filterReview === 'uncategorized' && (
+                <option value="uncategorized">Uncategorized</option>
+              )}
+              {filterReview === 'unknown' && (
+                <option value="unknown">Unknown Rows</option>
+              )}
+              {filterReview === 'high_value' && (
+                <option value="high_value">High-value expenses</option>
+              )}
             </select>
           </div>
 
@@ -554,8 +584,18 @@ const Transactions: React.FC = () => {
             <FileText className="w-8 h-8 text-muted-foreground/50" />
           </div>
           <div>
-            <h3 className="text-lg font-black mb-1">No transactions match these filters.</h3>
-            <p className="text-sm text-muted-foreground">Try adjusting or clearing your filters.</p>
+            <h3 className="text-lg font-black mb-1">
+              {filterReview === 'pending'
+                ? "All transactions are reviewed."
+                : filterReview !== 'all'
+                ? "No transactions match this review filter."
+                : "No transactions match these filters."}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {filterReview === 'pending'
+                ? "You're all caught up with your review checklist."
+                : "Try adjusting or clearing your filters."}
+            </p>
           </div>
           <button
             onClick={clearFilters}
@@ -786,6 +826,16 @@ const Transactions: React.FC = () => {
                             >
                               <CircleDashed className="w-3.5 h-3.5" />
                               Needs Review
+                            </button>
+                            <button
+                              className="w-full text-left px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer flex items-center gap-2"
+                              onClick={() => {
+                                updateReviewStatus(tx.id, 'resolved');
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                              Mark Resolved
                             </button>
                             <button
                               className="w-full text-left px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-muted-foreground hover:bg-muted transition-colors cursor-pointer flex items-center gap-2"

@@ -411,8 +411,8 @@ const Dashboard: React.FC = () => {
 
         {/* Month-End Readiness */}
         <div 
-          onClick={() => navigate('/settings?tab=spend-rules')}
-          className="premium-glass premium-glass-hover p-5 rounded-2xl border border-primary/20 hover:border-primary/45 bg-primary/5 flex flex-col justify-between cursor-pointer group"
+          onClick={() => navigate('/reports')}
+          className="premium-glass premium-glass-hover p-5 rounded-2xl border border-primary/25 hover:border-primary/45 bg-primary/5 flex flex-col justify-between cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Month-End Readiness</span>
@@ -468,7 +468,7 @@ const Dashboard: React.FC = () => {
 
                 {/* Duplicate Exposure */}
                 <div 
-                  onClick={() => navigate('/risk-inbox')}
+                  onClick={() => navigate('/risk-inbox?type=duplicate_payment')}
                   className="p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 hover:border-border/30 transition-all duration-150 flex items-center justify-between cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
@@ -480,12 +480,12 @@ const Dashboard: React.FC = () => {
 
                 {/* Transactions Needing Review */}
                 <div 
-                  onClick={() => navigate('/transactions?review_status=needs_review')}
+                  onClick={() => navigate('/transactions?review=pending')}
                   className="p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 hover:border-border/30 transition-all duration-150 flex items-center justify-between cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground">Pending Review Status</span>
+                    <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground">Pending Review</span>
                   </div>
                   <span className="text-xs font-bold text-foreground group-hover:text-primary">{metrics.unreviewedCount} transactions</span>
                 </div>
@@ -662,7 +662,7 @@ const Dashboard: React.FC = () => {
 
               {/* Duplicate Exposure */}
               <div 
-                onClick={() => navigate('/risk-inbox')}
+                onClick={() => navigate('/risk-inbox?type=duplicate_payment')}
                 className="premium-glass premium-glass-hover rounded-xl p-3.5 border border-border/20 flex flex-col justify-between min-w-0 cursor-pointer group"
               >
                 <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">Duplicate Exp.</span>
@@ -731,9 +731,12 @@ const Dashboard: React.FC = () => {
                     <span className="text-[9px] font-bold text-muted-foreground uppercase">Expense rows</span>
                     <span className="text-sm font-bold text-risk mt-0.5">{metrics.expenseCount}</span>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase">Unknown rows</span>
-                    <span className="text-sm font-bold text-muted-foreground mt-0.5">{metrics.unknownCount}</span>
+                  <div 
+                    onClick={() => navigate('/transactions?type=unknown')}
+                    className="flex flex-col cursor-pointer hover:opacity-80 transition-all group"
+                  >
+                    <span className="text-[9px] font-bold text-muted-foreground group-hover:text-primary uppercase">Unknown rows</span>
+                    <span className="text-sm font-bold text-muted-foreground mt-0.5 group-hover:text-primary">{metrics.unknownCount}</span>
                   </div>
                 </div>
               </div>
