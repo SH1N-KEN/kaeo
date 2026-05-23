@@ -32,6 +32,7 @@ import { calculateMonthEndReadiness, type ReadinessResult } from '../lib/readine
 import { getDisplayCategory, inferTransactionCategory, ALL_CATEGORIES } from '../lib/categoryEngine';
 import { analyzeRisksForClient } from '../lib/riskEngine';
 import { getSpendRules } from '../lib/spendRulesEngine';
+import { getTimeBasedGreeting } from '../lib/greeting';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -535,7 +536,7 @@ const Dashboard: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Good morning, {firstName}
+              {getTimeBasedGreeting(firstName)}
             </h1>
             <div className="px-2 py-0.5 bg-teal-500/10 text-teal-400 text-[10px] font-black rounded border border-teal-500/20 uppercase tracking-widest shadow-sm shadow-teal-500/5">Live OS</div>
           </div>
