@@ -51,6 +51,14 @@ export interface AIStructuredContext {
     pain_points?: string[];
     notes?: string;
   } | null;
+  invoice_summary?: {
+    total_invoices_count: number;
+    unmatched_invoices_count: number;
+    overdue_invoices_count: number;
+    mismatch_invoices_count: number;
+    duplicate_invoices_count: number;
+    top_invoiced_vendors: Array<{ name: string; spend: number }>;
+  } | null;
 }
 
 export const askKaeoAi = async (context: AIStructuredContext): Promise<AskKaeoAIResponse | null> => {

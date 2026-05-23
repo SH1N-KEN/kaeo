@@ -87,7 +87,7 @@ export async function categorizeQuestion(query: string): Promise<AskKaeoCategory
     return 'service_alternatives';
   }
   
-  if (q.includes('risk') || q.includes('duplicate') || q.includes('unusual')) {
+  if (q.includes('risk') || q.includes('duplicate') || q.includes('unusual') || q.includes('invoice') || q.includes('mismatch')) {
     return 'risk_review';
   }
   
@@ -249,10 +249,49 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     .select('*')
     .eq('client_id', clientId)
     .eq('status', 'open');
+
+  const { data: invoicesData } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('client_id', clientId);
     
   const transactions = txs || [];
   const vendors = vendorsData || [];
   const risks = risksData || [];
+  const invoices = invoicesData || [];
+
+  const total_invoices_count = invoices.length;
+  const unmatchedInvoices = invoices.filter(inv => inv.status === 'unpaid' || inv.status === 'uploaded' || inv.status === 'extracted' || inv.status === 'needs_review');
+  const overdueInvoices = invoices.filter(inv => inv.status === 'overdue' || (inv.status !== 'paid' && inv.due_date && new Date(inv.due_date) < new Date()));
+  const mismatchInvoices = invoices.filter(inv => inv.status === 'mismatch');
+
+  const invGroups: Record<string, number> = {};
+  invoices.forEach(inv => {
+    if (inv.invoice_number && inv.vendor_name) {
+      const k = `${inv.vendor_name.toLowerCase()}_${inv.invoice_number.toLowerCase()}`;
+      invGroups[k] = (invGroups[k] || 0) + 1;
+    }
+  });
+  const duplicate_invoices_count = Object.values(invGroups).filter(count => count > 1).length;
+
+  const vendorInvoiceSums: Record<string, number> = {};
+  invoices.forEach(inv => {
+    const v = inv.vendor_name || 'Unknown Vendor';
+    vendorInvoiceSums[v] = (vendorInvoiceSums[v] || 0) + (inv.total_amount || 0);
+  });
+  const top_invoiced_vendors = Object.entries(vendorInvoiceSums)
+    .map(([name, spend]) => ({ name, spend }))
+    .sort((a, b) => b.spend - a.spend)
+    .slice(0, 5);
+
+  const invoice_summary = {
+    total_invoices_count,
+    unmatched_invoices_count: unmatchedInvoices.length,
+    overdue_invoices_count: overdueInvoices.length,
+    mismatch_invoices_count: mismatchInvoices.length,
+    duplicate_invoices_count,
+    top_invoiced_vendors
+  };
   
   const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
   const refunds = transactions.filter(t => t.type === 'refund').reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
@@ -290,12 +329,18 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   const period_start = transactions.length > 0 ? transactions[transactions.length - 1].transaction_date : null;
   const period_end = transactions.length > 0 ? transactions[0].transaction_date : null;
 
-  // Extract all existing vendor monthly averages, spends, transaction amounts, and risk amounts to prevent false positives
+  // Extract all existing vendor monthly averages, spends, transaction amounts, risk amounts, and invoice amounts to prevent false positives
   const approved_extra_numbers = [
     ...vendors.map(v => Math.round(Number(v.monthly_average || 0))),
     ...vendors.map(v => Math.round(Number(v.total_spend || v.spend || 0))),
     ...transactions.map(t => Math.round(Math.abs(Number(t.amount || 0)))),
-    ...risks.map(r => Math.round(Number(r.amount_at_risk || 0)))
+    ...risks.map(r => Math.round(Number(r.amount_at_risk || 0))),
+    ...invoices.map(i => Math.round(Number(i.total_amount || 0))),
+    total_invoices_count,
+    unmatchedInvoices.length,
+    overdueInvoices.length,
+    mismatchInvoices.length,
+    duplicate_invoices_count
   ].filter(n => n > 0);
 
   // Extract matching vendor details
@@ -331,6 +376,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   const structuredContext: AIStructuredContext = {
     question: query,
     intent,
+    invoice_summary,
     needs_web_research,
     active_client_name: activeClientName,
     business_profile,
@@ -485,18 +531,41 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       const unknownTxs = transactions.filter(t => t.type === 'unknown');
       const recurringCount = vendorSummary.recurringVendors.length;
       
-      responseText = `You have ${risks.length} open risk events and ${unknownTxs.length} unclassified transactions that need attention.\n\n` +
+      // Invoice stats
+      const unmatchedCount = unmatchedInvoices.length;
+      const overdueCount = overdueInvoices.length;
+      const mismatchCount = mismatchInvoices.length;
+
+      let invoiceText = '';
+      if (total_invoices_count > 0) {
+        invoiceText = `\n\nInvoice Scanning Status:\n` +
+        `• Total invoices uploaded: ${total_invoices_count}\n` +
+        `• Overdue unpaid invoices: ${overdueCount} items\n` +
+        `• Mismatched payment/invoice amounts: ${mismatchCount} items\n` +
+        `• Unmatched (missing payment): ${unmatchedCount} items`;
+      } else {
+        invoiceText = `\n\nInvoice Scanning Status:\n` +
+        `• No vendor invoices uploaded yet. Upload your invoices in the Invoices tab to reconcile them against payments.`;
+      }
+
+      // Check for large payments lacking invoices
+      const missingInvoicePayments = transactions.filter(t => t.amount < 0 && Math.abs(t.amount) >= 15000);
+      if (missingInvoicePayments.length > 0) {
+        invoiceText += `\n• Large transactions missing supporting invoices: ${missingInvoicePayments.length} payments (> ₹15,000)`;
+      }
+
+      responseText = `You have ${risks.length} open risk events and ${unknownTxs.length} unclassified transactions that need attention.${invoiceText}\n\n` +
       `Breakdown:\n` +
       `1. High-severity risks: ${highSeverityRisks.length > 0 ? highSeverityRisks.map(r => r.title).join(', ') : 'None'}\n` +
       `2. Possible duplicate vendor payments: ${risks.filter(r => r.title.toLowerCase().includes('duplicate')).length} detected\n` +
       `3. Unknown transactions: ${unknownTxs.length} items (${formatReportCurrency(unknownTxs.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0))})\n` +
       `4. Recurring SaaS commitments: ${recurringCount} active vendors\n` +
       `5. High spend vendors: Your top vendor is ${vendorSummary.topVendors[0]?.normalized_name || 'N/A'}\n\n` +
-      `What this means:\nLeaving high-severity risks and unknown transactions unreviewed means your financial reports (like Net Cash and Vendor Analysis) may be inaccurate. Duplicate payments in particular represent direct capital leakage.\n\n` +
-      `Recommended next step:\nInvestigate the high-severity duplicate risks in your Risk Inbox immediately. Then classify the unknown transactions to clean up your ledger.\n\n` +
-      `Source:\nBased on ${risks.length} active risks and ${txCount} imported transactions.`;
+      `What this means:\nLeaving high-severity risks, overdue invoices, and missing invoices unreviewed means your ledger compliance is low and duplicate payments can slide through.\n\n` +
+      `Recommended next step:\nReview your Risk Inbox and go to the Invoices tab inside Files to upload vendor bills and resolve mismatches.\n\n` +
+      `Source:\nBased on ${risks.length} active risks, ${total_invoices_count} uploaded invoices, and ${txCount} imported transactions.`;
       
-      sourceJson = { risks: risks.length, highSeverity: highSeverityRisks.length, unknown: unknownTxs.length };
+      sourceJson = { risks: risks.length, highSeverity: highSeverityRisks.length, unknown: unknownTxs.length, totalInvoices: total_invoices_count, unmatchedInvoices: unmatchedCount, overdueInvoices: overdueCount, mismatchInvoices: mismatchCount };
       break;
     }
 

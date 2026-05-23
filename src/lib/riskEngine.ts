@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { normalizeVendorName, inferCategory } from './vendorEngine';
 import { getSpendRules } from './spendRulesEngine';
 import { getDisplayCategory } from './categoryEngine';
+import { matchInvoicesToTransactions } from './invoice/invoiceMatcher';
 
 /**
  * Risk Detection Engine
@@ -44,6 +45,40 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
 
   if (error) throw error;
   if (!txs || txs.length === 0) return [];
+
+  // Fetch invoices for matching
+  const { data: invoices } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('client_id', clientId);
+
+  const { matches: invoiceMatches, risks: invoiceRisks } = matchInvoicesToTransactions(invoices || [], txs);
+
+  // Sync matches to the database
+  if (invoices && invoices.length > 0) {
+    const invoiceIds = invoices.map(i => i.id);
+    // Delete old matches for these invoices
+    await supabase
+      .from('invoice_matches')
+      .delete()
+      .in('invoice_id', invoiceIds);
+
+    const matchesToInsert = invoiceMatches
+      .filter(m => m.transaction_id !== null)
+      .map(m => ({
+        invoice_id: m.invoice_id,
+        transaction_id: m.transaction_id,
+        match_status: m.match_status,
+        confidence: m.confidence,
+        reason: m.reason
+      }));
+
+    if (matchesToInsert.length > 0) {
+      await supabase
+        .from('invoice_matches')
+        .insert(matchesToInsert);
+    }
+  }
 
   // 2. Fetch spend rules
   const rules = await getSpendRules(orgId);
@@ -347,11 +382,13 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
     .eq('client_id', clientId)
     .eq('status', 'open');
 
-  if (risks.length > 0) {
+  const allRisks = [...risks, ...invoiceRisks];
+
+  if (allRisks.length > 0) {
     try {
       const { error: insertErr } = await supabase
         .from('risk_events')
-        .insert(risks);
+        .insert(allRisks);
       
       if (insertErr) {
         if (insertErr.message?.includes('column') && insertErr.message?.includes('does not exist')) {
@@ -365,7 +402,7 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
     }
   }
 
-  return risks;
+  return allRisks;
 };
 
 export type RiskEvent = {

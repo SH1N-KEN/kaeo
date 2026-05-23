@@ -24,7 +24,8 @@ import EmptyState from '../components/ui/EmptyState';
 import { supabase } from '../lib/supabase';
 import aeLogo from '../assets/kaeo-ae-logo.png';
 import { calculateMonthEndReadiness, type ReadinessResult } from '../lib/readinessEngine';
-import { getDisplayCategory } from '../lib/categoryEngine';
+import { getDisplayCategory, inferTransactionCategory, ALL_CATEGORIES } from '../lib/categoryEngine';
+import { analyzeRisksForClient } from '../lib/riskEngine';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -50,6 +51,80 @@ const Dashboard: React.FC = () => {
   
   const [loading, setLoading] = useState(true);
   const [isAddTxOpen, setIsAddTxOpen] = useState(false);
+  const [manualTxDate, setManualTxDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualTxDesc, setManualTxDesc] = useState('');
+  const [manualTxAmt, setManualTxAmt] = useState('');
+  const [manualTxType, setManualTxType] = useState<'income' | 'refund' | 'expense' | 'unknown'>('expense');
+  const [manualTxCat, setManualTxCat] = useState('Uncategorized');
+  const [manualTxVendor, setManualTxVendor] = useState('');
+  const [manualTxNote, setManualTxNote] = useState('');
+  const [manualTxSaving, setManualTxSaving] = useState(false);
+
+  // Smart category suggestion hook
+  useEffect(() => {
+    if (manualTxDesc) {
+      const suggested = inferTransactionCategory(manualTxDesc, manualTxVendor, manualTxType);
+      if (suggested && suggested !== 'Uncategorized') {
+        setManualTxCat(suggested);
+      }
+    }
+  }, [manualTxDesc, manualTxVendor, manualTxType]);
+
+  const handleSaveManualTx = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeClient) return;
+    setManualTxSaving(true);
+    try {
+      const { data: userResponse } = await supabase.auth.getUser();
+      const user = userResponse?.user;
+
+      const amt = parseFloat(manualTxAmt);
+      if (isNaN(amt) || amt <= 0) {
+        throw new Error('Please enter a valid positive number for the amount.');
+      }
+      
+      const finalAmt = (manualTxType === 'expense' || manualTxType === 'unknown') ? -Math.abs(amt) : Math.abs(amt);
+
+      const { error } = await supabase
+        .from('transactions')
+        .insert({
+          organization_id: activeClient.organization_id,
+          client_id: activeClient.id,
+          transaction_date: manualTxDate || new Date().toISOString().split('T')[0],
+          description: manualTxDesc,
+          amount: finalAmt,
+          type: manualTxType,
+          category: manualTxCat,
+          counterparty_name: manualTxVendor || null,
+          source: 'manual',
+          review_status: 'reviewed',
+          review_note: manualTxNote || null,
+          reviewed_by: user?.id || null,
+          reviewed_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      toast('Manual transaction added successfully', 'success');
+      setIsAddTxOpen(false);
+      
+      setManualTxDate(new Date().toISOString().split('T')[0]);
+      setManualTxDesc('');
+      setManualTxAmt('');
+      setManualTxType('expense');
+      setManualTxCat('Uncategorized');
+      setManualTxVendor('');
+      setManualTxNote('');
+
+      fetchDashboardData();
+
+      await analyzeRisksForClient(activeClient.organization_id, activeClient.id);
+    } catch (err: any) {
+      toast(err.message || 'Failed to add transaction', 'error');
+    } finally {
+      setManualTxSaving(false);
+    }
+  };
   const [metrics, setMetrics] = useState({
     income: 0,
     expenses: 0,
@@ -875,6 +950,143 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             
+            {/* First Launch Checklist */}
+            <div className="premium-glass rounded-2xl p-5 shadow-xl space-y-4 border border-teal-500/20">
+              <h3 className="text-xs font-black uppercase tracking-widest text-teal-400 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-teal-400" />
+                Launch Checklist
+              </h3>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Complete these setup milestones to get your workspace ready for active CFO review.
+              </p>
+              
+              <div className="space-y-3 pt-1">
+                {/* 1. Create Workspace */}
+                <div className="flex items-start gap-2.5 text-xs text-foreground/80">
+                  <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-bold line-through text-muted-foreground">Create workspace</span>
+                    <span className="text-[9px] text-muted-foreground/60">Workspace configured</span>
+                  </div>
+                </div>
+
+                {/* 2. Upload First Statement */}
+                <div className="flex items-start gap-2.5 text-xs text-foreground/80">
+                  {metrics.count > 0 ? (
+                    <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
+                    </div>
+                  ) : (
+                    <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex flex-col">
+                    <span className={metrics.count > 0 ? "font-bold line-through text-muted-foreground" : "font-bold text-foreground"}>Upload first statement</span>
+                    {metrics.count > 0 ? (
+                      <span className="text-[9px] text-muted-foreground/60">Uploaded {metrics.count} rows</span>
+                    ) : (
+                      <Link to="/files" className="text-[9px] text-teal-400 hover:underline">Upload bank statement →</Link>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Review Risks */}
+                <div className="flex items-start gap-2.5 text-xs text-foreground/80">
+                  {metrics.count > 0 && metrics.openRisksCount === 0 ? (
+                    <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
+                    </div>
+                  ) : (
+                    <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex flex-col">
+                    <span className={metrics.count > 0 && metrics.openRisksCount === 0 ? "font-bold line-through text-muted-foreground" : "font-bold text-foreground"}>Review risks</span>
+                    {metrics.openRisksCount > 0 ? (
+                      <Link to="/risk-inbox" className="text-[9px] text-teal-400 hover:underline">Resolve {metrics.openRisksCount} active risks →</Link>
+                    ) : (
+                      <span className="text-[9px] text-muted-foreground/60">No pending risks</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Categorize Unknown Rows */}
+                <div className="flex items-start gap-2.5 text-xs text-foreground/80">
+                  {metrics.count > 0 && metrics.uncategorizedCount === 0 ? (
+                    <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
+                    </div>
+                  ) : (
+                    <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex flex-col">
+                    <span className={metrics.count > 0 && metrics.uncategorizedCount === 0 ? "font-bold line-through text-muted-foreground" : "font-bold text-foreground"}>Categorize unknown rows</span>
+                    {metrics.uncategorizedCount > 0 ? (
+                      <Link to="/transactions?category=uncategorized" className="text-[9px] text-teal-400 hover:underline">Categorize {metrics.uncategorizedCount} rows →</Link>
+                    ) : (
+                      <span className="text-[9px] text-muted-foreground/60">All rows categorized</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 5. Generate Accountant Pack */}
+                <div className="flex items-start gap-2.5 text-xs text-foreground/80">
+                  <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-foreground">Generate accountant pack</span>
+                    <Link to="/reports" className="text-[9px] text-teal-400 hover:underline">Generate pack →</Link>
+                  </div>
+                </div>
+
+                {/* 6. Ask Kaeo for Next Action */}
+                <div className="flex items-start gap-2.5 text-xs text-foreground/80">
+                  <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-foreground">Ask Kaeo for next action</span>
+                    <Link to="/ask-kaeo" className="text-[9px] text-teal-400 hover:underline">Consult Kaeo Advisor →</Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Roadmap & Future Capabilities */}
+            <div className="premium-glass rounded-2xl p-5 shadow-lg border border-border/30 space-y-3">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-primary" />
+                Integration Roadmap
+              </h4>
+              <p className="text-[10px] text-muted-foreground leading-relaxed font-medium">
+                Future capabilities planned for the active Kaeo Spend Control network.
+              </p>
+              
+              <div className="grid grid-cols-1 gap-2 pt-1">
+                <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
+                  <span className="font-bold text-foreground/80">Bank Feed Integrations</span>
+                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase">Coming Soon</span>
+                </div>
+                <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
+                  <span className="font-bold text-foreground/80">Tally &amp; Zoho Sync</span>
+                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase">Planned</span>
+                </div>
+                <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
+                  <span className="font-bold text-foreground/80">Approval Workflows</span>
+                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase">Coming Soon</span>
+                </div>
+                <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
+                  <span className="font-bold text-foreground/80">UPI Payment Controls</span>
+                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase">Planned</span>
+                </div>
+                <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
+                  <span className="font-bold text-foreground/80">Card/Spend Policy Layer</span>
+                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase">Coming Soon</span>
+                </div>
+                <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
+                  <span className="font-bold text-foreground/80">Accountant Collaboration</span>
+                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase">Planned</span>
+                </div>
+              </div>
+            </div>
+
             {/* Legend Card */}
             <div className="px-6 py-5 bg-white/5 rounded-2xl border border-border/20">
               <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-3">Intelligence Legend</h4>
@@ -900,11 +1112,11 @@ const Dashboard: React.FC = () => {
       {/* Add Manual Transaction Modal */}
       {isAddTxOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
           onClick={() => setIsAddTxOpen(false)}
         >
           <div 
-            className="w-full max-w-md premium-floating-panel rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200"
+            className="w-full max-w-lg premium-floating-panel rounded-3xl p-6 shadow-2xl relative my-8 animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <button 
@@ -914,29 +1126,145 @@ const Dashboard: React.FC = () => {
               <X className="w-4 h-4" />
             </button>
             
-            <div className="w-10 h-10 bg-teal-500/10 rounded-2xl flex items-center justify-center border border-teal-500/20 mb-4">
-              <Plus className="w-5 h-5 text-teal-400" />
+            <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 mb-3">
+              <Plus className="w-5 h-5 text-primary" />
             </div>
             
-            <h3 className="text-sm font-bold text-foreground mb-1.5">Add Manual Transaction</h3>
-            <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
-              Manual ledger entries are coming in Phase 13B. Currently, you can ingest financial datasets by uploading statement files directly in the Files Ingestion layer.
+            <h3 className="text-base font-bold text-foreground mb-1">Add Manual Transaction</h3>
+            <p className="text-xs text-muted-foreground mb-5">
+              Record an offline or manual financial flow. The risk engine will automatically analyze it against uploaded bills.
             </p>
             
-            <div className="flex gap-2.5">
-              <button 
-                onClick={() => setIsAddTxOpen(false)} 
-                className="flex-1 py-2.5 bg-muted/40 hover:bg-muted/60 text-foreground font-semibold rounded-xl text-xs transition-all cursor-pointer border border-border/40"
-              >
-                Dismiss
-              </button>
-              <button 
-                onClick={() => { setIsAddTxOpen(false); navigate('/files'); }}
-                className="flex-1 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-xs hover:opacity-95 transition-all cursor-pointer shadow-lg shadow-primary/10"
-              >
-                Go to File Upload
-              </button>
-            </div>
+            <form onSubmit={handleSaveManualTx} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Date */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Transaction Date</label>
+                  <input 
+                    type="date"
+                    required
+                    value={manualTxDate}
+                    onChange={(e) => setManualTxDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                  />
+                </div>
+
+                {/* Amount */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Amount (INR ₹)</label>
+                  <input 
+                    type="number"
+                    required
+                    step="0.01"
+                    min="0.01"
+                    placeholder="5,000.00"
+                    value={manualTxAmt}
+                    onChange={(e) => setManualTxAmt(e.target.value)}
+                    className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Type */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Flow Type</label>
+                  <select
+                    value={manualTxType}
+                    onChange={(e) => setManualTxType(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-[#161a18] border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="expense">Expense (Outflow)</option>
+                    <option value="income">Revenue / Sales (Inflow)</option>
+                    <option value="refund">Refund / Recovery (Inflow)</option>
+                    <option value="unknown">Unknown Outflow</option>
+                  </select>
+                </div>
+
+                {/* Vendor / Counterparty */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Vendor / Counterparty</label>
+                  <input 
+                    type="text"
+                    placeholder="e.g. AWS, Stripe, Google"
+                    value={manualTxVendor}
+                    onChange={(e) => setManualTxVendor(e.target.value)}
+                    className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description</label>
+                <input 
+                  type="text"
+                  required
+                  placeholder="e.g. Github Copilot subscription"
+                  value={manualTxDesc}
+                  onChange={(e) => setManualTxDesc(e.target.value)}
+                  className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Category */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</label>
+                    {manualTxDesc && (
+                      <span className="text-[8px] font-black uppercase text-teal-400 bg-teal-500/10 px-1 py-0.2 rounded border border-teal-500/20">Auto suggested</span>
+                    )}
+                  </div>
+                  <select
+                    value={manualTxCat}
+                    onChange={(e) => setManualTxCat(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#161a18] border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    {ALL_CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Review Note */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Audit / Internal Note</label>
+                  <input 
+                    type="text"
+                    placeholder="Optional memo..."
+                    value={manualTxNote}
+                    onChange={(e) => setManualTxNote(e.target.value)}
+                    className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 border-t border-border/20 pt-4 mt-6">
+                <button 
+                  type="button"
+                  onClick={() => setIsAddTxOpen(false)}
+                  disabled={manualTxSaving}
+                  className="flex-1 py-2.5 bg-card hover:bg-muted text-foreground font-semibold rounded-xl text-xs transition-colors border border-border/40"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={manualTxSaving}
+                  className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-xl text-xs hover:opacity-90 transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
+                >
+                  {manualTxSaving ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Save Transaction
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
