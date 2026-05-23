@@ -281,9 +281,9 @@ const FloatingAskKaeo: React.FC = () => {
 
                         {/* Grounded badge — not on greeting/limit/error */}
                         {!isUser && !isGreeting && !isLimitExceeded && !isError && (
-                          <p className="text-[9px] text-muted-foreground mt-2 pt-2 border-t border-border/30 flex items-center gap-1">
+                          <p className="text-[9px] text-muted-foreground mt-2 pt-2 border-t border-border/30 flex items-center gap-1 font-medium">
                             <Sparkles className="w-2.5 h-2.5 text-teal-400" />
-                            Grounded in Kaeo data
+                            {msg.source_json?.mode === 'deterministic' ? 'Answered from verified Kaeo data.' : 'Grounded in verified Kaeo data.'}
                           </p>
                         )}
                       </div>

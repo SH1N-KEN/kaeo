@@ -4,6 +4,7 @@ import { summarizeVendors } from './reportEngine';
 import { askKaeoAi } from './ai/aiClient';
 import type { AIStructuredContext } from './ai/aiClient';
 import { syncReviewSuggestions } from './aiReviewEngine';
+import { calculateMonthEndReadiness } from './readinessEngine';
 
 export type AskKaeoCategory = 
   | 'finance_summary' 
@@ -212,8 +213,37 @@ const checkAIContradictions = (aiText: string, context: AIStructuredContext): bo
     if (cleanDigits.length >= 3) {
       const val = parseInt(cleanDigits, 10);
       if (val > 100 && !approvedStrings.has(cleanDigits)) {
-        console.warn(`[AI Contradiction Checker] AI output contained unapproved number: ${numStr} (digits: ${cleanDigits}). Falling back.`);
-        return true;
+        // Check if this number matches any metric or vendor keyword context window
+        const startWindow = Math.max(0, sanitizedText.indexOf(numStr) - 50);
+        const endWindow = Math.min(sanitizedText.length, sanitizedText.indexOf(numStr) + numStr.length + 50);
+        const contextSnippet = sanitizedText.slice(startWindow, endWindow).toLowerCase();
+
+        const metricKeywords = [
+          "risk", "exposure", "threat",
+          "uncategorized", "unclassified", "unmapped",
+          "review", "pending", "validate",
+          "revenue", "income", "sales", "inflow",
+          "expense", "spend", "outflow",
+          "net cash", "net flow", "net movement", "profit",
+          "refund", "recovery", "recoveries",
+          "readiness", "score",
+          "transaction", "ledger", "row", "entry", "entries",
+          "vendor", "provider",
+          "invoice", "bill"
+        ];
+
+        const hasKeyword = metricKeywords.some(kw => contextSnippet.includes(kw));
+        let hasVendor = false;
+        if (context.top_vendors) {
+          hasVendor = context.top_vendors.some(v => contextSnippet.includes(v.name.toLowerCase()));
+        }
+
+        if (hasKeyword || hasVendor) {
+          if (isDev) {
+            console.debug(`[AI Contradiction Checker] AI output contained unapproved number: ${numStr} (digits: ${cleanDigits}) associated with verified metric keywords.`);
+          }
+          return true;
+        }
       }
     }
   }
@@ -221,7 +251,222 @@ const checkAIContradictions = (aiText: string, context: AIStructuredContext): bo
   return false;
 };
 
+const isDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
+
+function sanitizeTextNumbers(text: string, context: {
+  income: number;
+  expenses: number;
+  netCash: number;
+  refunds: number;
+  transactionCount: number;
+  openRisksCount: number;
+  duplicateExposure: number;
+  uncategorizedCount: number;
+  readinessScore: number;
+  unreviewedCount: number;
+  totalVendorsCount: number;
+  totalInvoicesCount: number;
+  approvedNumbers: Set<number>;
+  vendorsList: any[];
+  invoicesList: any[];
+  vendorSummary: any;
+}): { sanitizedText: string; repairedCount: number; hasUnrepairable: boolean } {
+  let repairedCount = 0;
+  let hasUnrepairable = false;
+
+  const numRegex = /([₹$]|Rs\.?|INR)?\s*(\d[\d,.]*)\b/gi;
+
+  let lastIndex = 0;
+  let resultText = "";
+
+  let match;
+  while ((match = numRegex.exec(text)) !== null) {
+    const fullMatch = match[0];
+    const currencyPrefix = match[1];
+    const numberStr = match[2];
+
+    resultText += text.slice(lastIndex, match.index);
+    lastIndex = numRegex.lastIndex;
+
+    const cleanDigits = numberStr.replace(/[^\d]/g, '');
+    const val = parseInt(cleanDigits, 10);
+
+    if (isNaN(val)) {
+      resultText += fullMatch;
+      continue;
+    }
+
+    const isYear = val >= 2020 && val <= 2030;
+    const isSmall = val < 10;
+    const isPercentage = text.substring(match.index + fullMatch.length).trim().startsWith('%');
+    
+    let isApproved = isYear || isSmall || isPercentage || context.approvedNumbers.has(val);
+    
+    if (!isApproved) {
+      for (const approvedVal of context.approvedNumbers) {
+        if (Math.abs(approvedVal - val) / Math.max(1, approvedVal) < 0.02) {
+          isApproved = true;
+          break;
+        }
+      }
+    }
+
+    if (isApproved) {
+      resultText += fullMatch;
+      continue;
+    }
+
+    const startWindow = Math.max(0, match.index - 50);
+    const endWindow = Math.min(text.length, match.index + fullMatch.length + 50);
+    const contextSnippet = text.slice(startWindow, endWindow).toLowerCase();
+
+    let replacementStr = "";
+    let keywordMatched = false;
+
+    if (contextSnippet.includes("risk") || contextSnippet.includes("exposure") || contextSnippet.includes("threat")) {
+      keywordMatched = true;
+      if (currencyPrefix || val > 500) {
+        replacementStr = formatINR(context.duplicateExposure);
+      } else {
+        replacementStr = String(context.openRisksCount);
+      }
+    } else if (contextSnippet.includes("uncategorized") || contextSnippet.includes("unclassified") || contextSnippet.includes("unmapped")) {
+      keywordMatched = true;
+      replacementStr = String(context.uncategorizedCount);
+    } else if (contextSnippet.includes("review") || contextSnippet.includes("pending") || contextSnippet.includes("validate")) {
+      keywordMatched = true;
+      replacementStr = String(context.unreviewedCount);
+    } else if (contextSnippet.includes("revenue") || contextSnippet.includes("income") || contextSnippet.includes("sales") || contextSnippet.includes("inflow")) {
+      keywordMatched = true;
+      replacementStr = formatINR(context.income);
+    } else if (contextSnippet.includes("expense") || contextSnippet.includes("spend") || contextSnippet.includes("outflow")) {
+      keywordMatched = true;
+      let foundVendorSpend = null;
+      for (const vendor of context.vendorsList) {
+        if (contextSnippet.includes(vendor.normalized_name.toLowerCase())) {
+          const spend = context.vendorSummary.topVendors.find((tv: any) => tv.normalized_name === vendor.normalized_name)?.totalSpend || vendor.total_spend || vendor.spend || 0;
+          foundVendorSpend = spend;
+          break;
+        }
+      }
+      if (foundVendorSpend !== null) {
+        replacementStr = formatINR(foundVendorSpend);
+      } else {
+        replacementStr = formatINR(context.expenses);
+      }
+    } else if (contextSnippet.includes("net cash") || contextSnippet.includes("net flow") || contextSnippet.includes("net movement") || contextSnippet.includes("profit")) {
+      keywordMatched = true;
+      replacementStr = formatINR(context.netCash);
+    } else if (contextSnippet.includes("refund") || contextSnippet.includes("recovery") || contextSnippet.includes("recoveries")) {
+      keywordMatched = true;
+      replacementStr = formatINR(context.refunds);
+    } else if (contextSnippet.includes("readiness") || contextSnippet.includes("score")) {
+      keywordMatched = true;
+      replacementStr = `${context.readinessScore}`;
+    } else if (contextSnippet.includes("transaction") || contextSnippet.includes("ledger") || contextSnippet.includes("row") || contextSnippet.includes("entry") || contextSnippet.includes("entries")) {
+      keywordMatched = true;
+      replacementStr = String(context.transactionCount);
+    } else if (contextSnippet.includes("vendor") || contextSnippet.includes("provider")) {
+      keywordMatched = true;
+      if (currencyPrefix || val > 500) {
+        let foundVendorSpend = null;
+        for (const vendor of context.vendorsList) {
+          if (contextSnippet.includes(vendor.normalized_name.toLowerCase())) {
+            const spend = context.vendorSummary.topVendors.find((tv: any) => tv.normalized_name === vendor.normalized_name)?.totalSpend || vendor.total_spend || vendor.spend || 0;
+            foundVendorSpend = spend;
+            break;
+          }
+        }
+        if (foundVendorSpend !== null) {
+          replacementStr = formatINR(foundVendorSpend);
+        } else {
+          replacementStr = String(context.totalVendorsCount);
+        }
+      } else {
+        replacementStr = String(context.totalVendorsCount);
+      }
+    } else if (contextSnippet.includes("invoice") || contextSnippet.includes("bill")) {
+      keywordMatched = true;
+      if (currencyPrefix || val > 500) {
+        let closestInvAmount = null;
+        let minDiff = Infinity;
+        for (const inv of context.invoicesList) {
+          const amt = Number(inv.total_amount || 0);
+          if (amt > 0) {
+            const diff = Math.abs(amt - val);
+            if (diff < minDiff) {
+              minDiff = diff;
+              closestInvAmount = amt;
+            }
+          }
+        }
+        if (closestInvAmount !== null && minDiff / closestInvAmount < 0.3) {
+          replacementStr = formatINR(closestInvAmount);
+        } else {
+          const totalInvAmount = context.invoicesList.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+          replacementStr = formatINR(totalInvAmount);
+        }
+      } else {
+        replacementStr = String(context.totalInvoicesCount);
+      }
+    } else {
+      for (const vendor of context.vendorsList) {
+        if (contextSnippet.includes(vendor.normalized_name.toLowerCase())) {
+          keywordMatched = true;
+          const spend = context.vendorSummary.topVendors.find((tv: any) => tv.normalized_name === vendor.normalized_name)?.totalSpend || vendor.total_spend || vendor.spend || 0;
+          replacementStr = formatINR(spend);
+          break;
+        }
+      }
+    }
+
+    if (keywordMatched) {
+      if (replacementStr) {
+        repairedCount++;
+        resultText += replacementStr;
+        if (isDev) {
+          console.debug(`[Ask Kaeo Sanitizer] Repaired conflicting number '${fullMatch}' with '${replacementStr}' in context '${contextSnippet.trim()}'`);
+        }
+      } else {
+        if (val > 1000) {
+          const candidates = [
+            { val: context.income, str: formatINR(context.income) },
+            { val: context.expenses, str: formatINR(context.expenses) },
+            { val: context.netCash, str: formatINR(context.netCash) },
+            { val: context.refunds, str: formatINR(context.refunds) }
+          ];
+          candidates.sort((a, b) => Math.abs(a.val - val) - Math.abs(b.val - val));
+          
+          if (Math.abs(candidates[0].val - val) / Math.max(1, candidates[0].val) < 0.3) {
+            repairedCount++;
+            resultText += candidates[0].str;
+            if (isDev) {
+              console.debug(`[Ask Kaeo Sanitizer] Repaired close financial number '${fullMatch}' with '${candidates[0].str}'`);
+            }
+            continue;
+          }
+        }
+
+        hasUnrepairable = true;
+        resultText += fullMatch;
+      }
+    } else {
+      resultText += fullMatch;
+      if (isDev) {
+        console.debug(`[Ask Kaeo Sanitizer] Passed qualitative/advice number '${fullMatch}' without replacement in context: '${contextSnippet.trim()}'`);
+      }
+    }
+  }
+
+  resultText += text.slice(lastIndex);
+  return { sanitizedText: resultText, repairedCount, hasUnrepairable };
+}
+
 export async function askKaeo(query: string, clientId: string, _orgId: string): Promise<AskKaeoResponse> {
+  let isSanitized = false;
+  let sanitizedAnswer = '';
+  let sanitizedReasoning = '';
+
   // 1. Get current user and profile onboarding status
   const { data: { user } } = await supabase.auth.getUser();
   let profile = null;
@@ -271,6 +516,13 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   const vendors = vendorsData || [];
   const risks = risksData || [];
   const invoices = invoicesData || [];
+
+  const duplicateExposure = risks.reduce((sum, r) => {
+    if (r.risk_type && r.risk_type.includes('duplicate')) {
+      return sum + (Number(r.amount_at_risk) || 0);
+    }
+    return sum;
+  }, 0);
 
   const total_invoices_count = invoices.length;
   const unmatchedInvoices = invoices.filter(inv => inv.status === 'unpaid' || inv.status === 'uploaded' || inv.status === 'extracted' || inv.status === 'needs_review');
@@ -356,6 +608,28 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     mismatchInvoices.length,
     duplicate_invoices_count
   ].filter(n => n > 0);
+
+  const approvedNumbers = new Set<number>([
+    Math.round(income),
+    Math.round(refunds),
+    Math.round(expenses),
+    Math.round(netCash),
+    Math.round(vendorSummary.recurringCommitment),
+    vendorSummary.recurringVendors.length,
+    risks.filter(r => r.severity === 'high').length,
+    transactions.length,
+    vendors.length,
+    risks.length
+  ]);
+  vendorSummary.topVendors.forEach(v => approvedNumbers.add(Math.round(v.totalSpend)));
+  approved_extra_numbers.forEach(n => approvedNumbers.add(Math.round(n)));
+  const numbersInQuery = query.replace(/\b20\d{2}\b/g, '').match(/\d[\d,.]*/g) || [];
+  numbersInQuery.forEach(numStr => {
+    const cleanDigits = numStr.replace(/[^\d]/g, '');
+    if (cleanDigits.length >= 3) {
+      approvedNumbers.add(parseInt(cleanDigits, 10));
+    }
+  });
 
   // Extract matching vendor details
   const matchingVendor = vendors.find(v => query.toLowerCase().includes(v.normalized_name.toLowerCase()));
@@ -481,17 +755,57 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
         }
 
         // 3. Run contradiction check
+        const unreviewedCount = transactions.filter(t => !t.review_status || t.review_status === 'new' || t.review_status === 'needs_review').length;
+        const uncategorizedCount = transactions.filter(t => t.category === 'Uncategorized' || !t.category).length;
+        const readinessResult = calculateMonthEndReadiness(transactions, risks);
+        const readinessScore = readinessResult.score;
+
         const hasContradiction = checkAIContradictions(aiResult.answer + " " + aiResult.reasoning_summary, structuredContext);
         checkContradictionResult = hasContradiction;
+
+        isSanitized = false;
+        sanitizedAnswer = aiResult.answer;
+        sanitizedReasoning = aiResult.reasoning_summary;
+
         if (hasContradiction) {
-          aiResult = null;
-          fallbackReason = 'AI response contained numeric contradictions with deterministic totals';
+          const sanitizeContext = {
+            income,
+            expenses,
+            netCash,
+            refunds,
+            transactionCount: transactions.length,
+            openRisksCount: risks.length,
+            duplicateExposure,
+            uncategorizedCount,
+            readinessScore,
+            unreviewedCount,
+            totalVendorsCount: vendors.length,
+            totalInvoicesCount: invoices.length,
+            approvedNumbers,
+            vendorsList: vendors,
+            invoicesList: invoices,
+            vendorSummary
+          };
+
+          const ansRep = sanitizeTextNumbers(aiResult.answer, sanitizeContext);
+          const reasonRep = sanitizeTextNumbers(aiResult.reasoning_summary, sanitizeContext);
+
+          if (!ansRep.hasUnrepairable && !reasonRep.hasUnrepairable) {
+            sanitizedAnswer = ansRep.sanitizedText;
+            sanitizedReasoning = reasonRep.sanitizedText;
+            isSanitized = true;
+          } else {
+            aiResult = null;
+            fallbackReason = 'AI response contained unrepairable numeric contradictions';
+          }
         }
       } else {
         fallbackReason = 'AI server returned null or failed validation/repair checks';
       }
     } catch (err: any) {
-      console.warn('[Ask Kaeo Engine] Real AI call failed, falling back to deterministic answer.', err);
+      if (isDev) {
+        console.debug('[Ask Kaeo Engine] Real AI call failed, falling back to deterministic answer.', err);
+      }
       fallbackReason = err.message || 'AI request threw error';
     }
   } else {
@@ -499,8 +813,8 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   }
 
   // IF AI GENUINELY FAILS OR WAS SHUNTED, PRINT AN OPERATOR DEBUG LOG
-  if (!aiResult) {
-    console.warn('[Ask Kaeo Engine Fallback Triggered]', {
+  if (!aiResult && isDev) {
+    console.debug('[Ask Kaeo Engine Fallback Triggered]', {
       intent,
       fallback_reason: fallbackReason,
       raw_ai_response: rawAiResponse,
@@ -510,8 +824,8 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
 
   // IF REAL AI SUCCEEDS, USE IT
   if (aiResult) {
-    const formattedText = `${aiResult.answer}\n\nBreakdown / Reasoning:\n${aiResult.reasoning_summary}\n\nRecommended next steps:\n${aiResult.recommended_actions.map(a => `• ${a}`).join('\n')}\n\nCaveats:\n${aiResult.caveats.map(c => `• ${c}`).join('\n')}`;
-    const mode = intent === 'finance_summary' ? 'ai_assisted_locked_numbers' : 'ai_assisted';
+    const formattedText = `${isSanitized ? sanitizedAnswer : aiResult.answer}\n\nBreakdown / Reasoning:\n${isSanitized ? sanitizedReasoning : aiResult.reasoning_summary}\n\nRecommended next steps:\n${aiResult.recommended_actions.map(a => `• ${a}`).join('\n')}\n\nCaveats:\n${aiResult.caveats.map(c => `• ${c}`).join('\n')}`;
+    const mode = isSanitized ? 'ai_assisted_sanitized' : (intent === 'finance_summary' ? 'ai_assisted_locked_numbers' : 'ai_assisted');
     
     return {
       intent,
@@ -589,7 +903,26 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       break;
     }
     
-    case 'operational_next_steps':
+    case 'operational_next_steps': {
+      const unreviewedCount = transactions.filter(t => !t.review_status || t.review_status === 'new' || t.review_status === 'needs_review').length;
+      const uncategorizedCount = transactions.filter(t => t.category === 'Uncategorized' || !t.category).length;
+
+      responseText = `Start with your review queue:\n` +
+      `1. Resolve ${risks.length} open risks.\n` +
+      `2. Review ${unreviewedCount} pending transactions.\n` +
+      `3. Categorize ${uncategorizedCount} uncategorized rows.\n` +
+      `4. Generate the accountant pack after those are clean.\n\n` +
+      `Your first click should be Risk Inbox. Clean books require fixing risks and pending reviews before compiling reports.`;
+      
+      sourceJson = { 
+        risks: risks.length, 
+        unreviewed: unreviewedCount, 
+        uncategorized: uncategorizedCount,
+        cta: 'risk_inbox'
+      };
+      break;
+    }
+    
     case 'risk_review': {
       const highSeverityRisks = risks.filter(r => r.severity === 'high');
       const unknownTxs = transactions.filter(t => t.type === 'unknown');
@@ -699,12 +1032,17 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     }
     
     case 'business_advice': {
-      responseText = `Based on your internal financial profile, the primary directive is to resolve operational blind spots and secure your cash flow.\n\n` +
-      `Breakdown:\n• Financial Health: ${netCash >= 0 ? 'Positive' : 'Negative'} cash flow (${formatReportCurrency(netCash, baseCurrency)})\n• Open Risks: ${risks.length} pending items\n• Spending Concentration: Top vendor is ${vendorSummary.topVendors[0]?.normalized_name || 'N/A'}\n• Recurring Commitments: ${formatReportCurrency(vendorSummary.recurringCommitment, baseCurrency)}/mo\n\n` +
-      `What this means:\nYour business data has anomalies. CFOs rely on high-fidelity data. Until the risk inbox is cleared and unknown transactions are categorized, your executive reporting contains a margin of error.\n\n` +
-      `Recommended next step:\nClear your Risk Inbox and categorize unknown transactions.\n\n` +
-      `Source:\nBased strictly on ${txCount} imported transactions and your verified Kaeo risk profile.`;
-      sourceJson = { netCash, risks: risks.length };
+      const unreviewedCount = transactions.filter(t => !t.review_status || t.review_status === 'new' || t.review_status === 'needs_review').length;
+      const uncategorizedCount = transactions.filter(t => t.category === 'Uncategorized' || !t.category).length;
+
+      responseText = `Your financial health shows ${netCash >= 0 ? 'positive' : 'negative'} net cash flow of ${formatReportCurrency(netCash, baseCurrency)} this period. However, we have data gaps that make this number unreliable for decision-making.\n\n` +
+      `Ranked Action List:\n` +
+      `1. Resolve ${risks.length} open risks to capture duplicate exposure.\n` +
+      `2. Review ${unreviewedCount} transactions in the review queue.\n` +
+      `3. Categorize ${uncategorizedCount} transactions that are currently unclassified.\n\n` +
+      `Why it matters:\nCFOs need high-fidelity books. Until these items are reviewed, your reports have a margin of error.\n\n` +
+      `First click: Go to the Risk Inbox to check the duplicate payments first.`;
+      sourceJson = { netCash, risks: risks.length, unreviewed: unreviewedCount, uncategorized: uncategorizedCount };
       break;
     }
     
@@ -713,7 +1051,8 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     case 'unsupported_needs_ai_or_web':
     case 'casual_check_in':
     default: {
-      responseText = `I'm here. AI is unavailable right now, but I can still answer from verified Kaeo data. Ask me about cash, vendors, risks, or reports.`;
+      const unreviewedCount = transactions.filter(t => !t.review_status || t.review_status === 'new' || t.review_status === 'needs_review').length;
+      responseText = `I'm here to help you navigate your books. Start by checking your Risk Inbox (${risks.length} open risks) and review queue (${unreviewedCount} transactions pending review). Let me know if you want to drill into cash movement, vendor spend, or reports.`;
       break;
     }
   }
