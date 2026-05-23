@@ -13,9 +13,10 @@ import {
   Info,
   Calendar,
   X,
-  ShieldAlert,
-  CheckCircle2,
-  Layers
+  ShieldAlert, 
+  CheckCircle2, 
+  Layers,
+  Sparkles
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useAuth } from '../components/auth/AuthProvider';
@@ -28,6 +29,7 @@ import { getDisplayCategory, inferTransactionCategory, ALL_CATEGORIES } from '..
 import { analyzeRisksForClient } from '../lib/riskEngine';
 import { getSpendRules } from '../lib/spendRulesEngine';
 import { getTimeBasedGreeting } from '../lib/greeting';
+import { AIReviewQueueModal } from '../components/ai/AIReviewQueueModal';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -61,6 +63,12 @@ const Dashboard: React.FC = () => {
   const [manualTxVendor, setManualTxVendor] = useState('');
   const [manualTxNote, setManualTxNote] = useState('');
   const [manualTxSaving, setManualTxSaving] = useState(false);
+  const [isAIQueueOpen, setIsAIQueueOpen] = useState(false);
+  const [sugMetrics, setSugMetrics] = useState({
+    pending: 0,
+    safe: 0,
+    high: 0
+  });
 
   // Smart category suggestion hook
   useEffect(() => {
@@ -328,7 +336,32 @@ const Dashboard: React.FC = () => {
 
       const recurringCount = (allTransactions || []).filter(tx => tx.type === 'subscription').length;
 
-      const suggestionsCount = (openRisksData?.length || 0) + (stats.uncategorizedCount || 0) + (stats.unreviewedCount > 0 ? 1 : 0);
+      let pendingSugsCount = 0;
+      let safeSugsCount = 0;
+      let highSugsCount = 0;
+      try {
+        const { data: sugs } = await supabase
+          .from('ai_review_suggestions')
+          .select('priority, requires_approval')
+          .eq('client_id', activeClient.id)
+          .eq('status', 'pending');
+        
+        if (sugs) {
+          pendingSugsCount = sugs.length;
+          safeSugsCount = sugs.filter(s => !s.requires_approval).length;
+          highSugsCount = sugs.filter(s => s.priority === 'high').length;
+        }
+      } catch (e) {
+        console.error('Error fetching suggestions for dashboard:', e);
+      }
+
+      setSugMetrics({
+        pending: pendingSugsCount,
+        safe: safeSugsCount,
+        high: highSugsCount
+      });
+
+      const suggestionsCount = pendingSugsCount;
 
       setMetrics({
         ...stats,
@@ -699,7 +732,7 @@ const Dashboard: React.FC = () => {
       {hasTransactions && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Priority Review - Left Column */}
-          <div className="lg:col-span-6">
+          <div className="lg:col-span-4">
             <div className="premium-glass rounded-2xl p-6 border border-border/20 hover:border-border/30 shadow-xl flex flex-col justify-between h-full min-h-[340px]">
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -765,31 +798,99 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-5 border-t border-border/20 mt-5 flex flex-col sm:flex-row gap-3">
+              <div className="pt-5 border-t border-border/20 mt-5 flex flex-col gap-2">
                 <button
                   onClick={() => navigate('/risk-inbox')}
-                  className="flex-1 py-2.5 bg-teal-500 text-black font-bold rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-teal-400 transition-all cursor-pointer shadow-lg shadow-teal-500/10"
+                  className="w-full py-2.5 bg-teal-500 text-black font-bold rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-teal-400 transition-all cursor-pointer shadow-lg shadow-teal-500/10"
                 >
                   Open Risk Inbox <ArrowUpRight className="w-3.5 h-3.5" />
                 </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => navigate('/transactions?review=pending')}
+                    className="py-2.5 bg-white/5 hover:bg-white/10 text-foreground font-semibold rounded-xl text-xs transition-colors border border-border/30 cursor-pointer text-center"
+                  >
+                    Review Txns
+                  </button>
+                  <button
+                    onClick={() => navigate('/transactions?category=uncategorized')}
+                    className="py-2.5 bg-white/5 hover:bg-white/10 text-foreground font-semibold rounded-xl text-xs transition-colors border border-border/30 cursor-pointer text-center"
+                  >
+                    Map Categories
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Review - Middle Column */}
+          <div className="lg:col-span-4">
+            <div className="premium-glass rounded-2xl p-6 border border-border/20 hover:border-border/30 shadow-xl flex flex-col justify-between h-full min-h-[340px]">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-teal-400 animate-pulse" />
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-teal-400">AI Review</h3>
+                  </div>
+                  <span className="px-2 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 text-[9px] font-black uppercase tracking-wider">Kaeo Assistant</span>
+                </div>
+                
+                <p className="text-xs text-muted-foreground leading-relaxed font-medium mb-5">
+                  Kaeo has audited your financial statements and prepared review suggestions to automate your books.
+                </p>
+
+                <div className="space-y-3">
+                  {/* Suggestions Pending */}
+                  <div 
+                    onClick={() => setIsAIQueueOpen(true)}
+                    className="p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 hover:border-border/30 transition-all duration-150 flex items-center justify-between cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                      <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground">Suggestions Pending</span>
+                    </div>
+                    <span className="text-xs font-bold text-teal-400 group-hover:underline">{sugMetrics.pending} suggestions</span>
+                  </div>
+
+                  {/* High Priority Suggestions */}
+                  <div 
+                    onClick={() => setIsAIQueueOpen(true)}
+                    className="p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 hover:border-border/30 transition-all duration-150 flex items-center justify-between cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-1.5 h-1.5 rounded-full bg-risk" />
+                      <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground">High Priority</span>
+                    </div>
+                    <span className="text-xs font-bold text-risk group-hover:underline">{sugMetrics.high} high priority</span>
+                  </div>
+
+                  {/* Safe Auto-Categorization Count */}
+                  <div 
+                    onClick={() => setIsAIQueueOpen(true)}
+                    className="p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 hover:border-border/30 transition-all duration-150 flex items-center justify-between cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                      <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground">Safe Auto-Categorization</span>
+                    </div>
+                    <span className="text-xs font-bold text-success group-hover:underline">{sugMetrics.safe} safe items</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-5 border-t border-border/20 mt-5">
                 <button
-                  onClick={() => navigate('/transactions?review=pending')}
-                  className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-foreground font-semibold rounded-xl text-xs transition-colors border border-border/30 cursor-pointer"
+                  onClick={() => setIsAIQueueOpen(true)}
+                  className="w-full py-2.5 bg-teal-500 text-black font-bold rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-teal-400 transition-all cursor-pointer shadow-lg shadow-teal-500/10"
                 >
-                  Review Transactions
-                </button>
-                <button
-                  onClick={() => navigate('/transactions?category=uncategorized')}
-                  className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-foreground font-semibold rounded-xl text-xs transition-colors border border-border/30 cursor-pointer"
-                >
-                  Map Categories
+                  Review AI Suggestions <Sparkles className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
           </div>
 
           {/* Cash Flow Timeline - Right Column */}
-          <div className="lg:col-span-6">
+          <div className="lg:col-span-4">
             {chartData.length > 0 && (
               <div className="premium-glass rounded-2xl p-5 border border-border/20 shadow-xl space-y-3 h-full min-h-[340px] flex flex-col justify-between">
                 <div className="flex items-center justify-between border-b border-border/20 pb-3">
@@ -859,6 +960,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       )}
+
 
       {!hasTransactions ? (
         <div className="premium-glass border border-dashed border-border/40 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5 shadow-xl">
@@ -1469,6 +1571,11 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       )}
+      <AIReviewQueueModal 
+        isOpen={isAIQueueOpen} 
+        onClose={() => setIsAIQueueOpen(false)} 
+        onRefreshParent={fetchDashboardData} 
+      />
     </div>
   );
 };

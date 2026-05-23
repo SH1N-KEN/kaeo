@@ -14,7 +14,8 @@ import {
   Database,
   Search,
   CheckCircle2,
-  User
+  User,
+  Sparkles
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
@@ -24,10 +25,13 @@ import MetricCard from '../components/ui/MetricCard';
 import type { RiskEvent, Note } from '../types/finance';
 import { trackAuditEvent } from '../lib/auditEngine';
 import { useNavigate } from 'react-router-dom';
+import { applyReviewSuggestion } from '../lib/reviewActions';
+import { useToast } from '../hooks/useToast';
 
 const RiskInbox: React.FC = () => {
   const navigate = useNavigate();
   const { activeClient, activeOrg } = useWorkspace();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [risks, setRisks] = useState<RiskEvent[]>([]);
@@ -47,6 +51,7 @@ const RiskInbox: React.FC = () => {
     amount: 0,
     open: 0
   });
+  const [suggestions, setSuggestions] = useState<any[]>([]);
 
   useEffect(() => {
     if (activeClient) {
@@ -105,6 +110,14 @@ const RiskInbox: React.FC = () => {
         return acc;
       }, { critical: 0, amount: 0, open: 0 });
       setStats(s);
+
+      // Fetch pending review suggestions
+      const { data: sugs } = await supabase
+        .from('ai_review_suggestions')
+        .select('*')
+        .eq('client_id', activeClient.id)
+        .eq('status', 'pending');
+      setSuggestions(sugs || []);
 
     } catch (err: any) {
       console.error('[Risk] Fetch error:', err);
@@ -445,6 +458,65 @@ const RiskInbox: React.FC = () => {
                           </div>
                         </div>
                       )}
+
+                      {(() => {
+                        const riskSuggestion = suggestions.find(
+                          s => s.entity_type === 'risk' && s.entity_id === selectedRisk.id
+                        );
+
+                        if (!riskSuggestion) return null;
+
+                        return (
+                          <div className="mt-3 p-3 bg-teal-500/10 border border-teal-500/20 rounded-xl space-y-2">
+                            <h4 className="text-[9px] font-black uppercase tracking-widest text-teal-400 flex items-center gap-1.5">
+                              <Sparkles className="w-3 h-3 animate-pulse" /> Kaeo Recommendation
+                            </h4>
+                            <div className="text-[10px] text-foreground/90 font-medium space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="bg-teal-500/20 text-teal-400 px-1.5 py-0.5 rounded text-[8px] font-black uppercase">
+                                  {Math.round(riskSuggestion.confidence * 100)}% Confidence
+                                </span>
+                                <span className="text-muted-foreground">Action: {riskSuggestion.suggestion_type.replace(/_/g, ' ')}</span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground/90">{riskSuggestion.reason}</p>
+                              <div className="flex gap-2 pt-1.5">
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const { data: { user } } = await supabase.auth.getUser();
+                                      await applyReviewSuggestion(riskSuggestion, 'approved', user?.id);
+                                      toast('AI recommendation applied successfully', 'success');
+                                      fetchRisks();
+                                      setSelectedRisk(null);
+                                    } catch (err: any) {
+                                      setError('Failed to approve suggestion: ' + err.message);
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 bg-success text-black text-[9px] font-black rounded hover:bg-success/80 transition-all cursor-pointer"
+                                >
+                                  Approve Recommendation
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const { data: { user } } = await supabase.auth.getUser();
+                                      await applyReviewSuggestion(riskSuggestion, 'rejected', user?.id);
+                                      toast('AI recommendation dismissed', 'info');
+                                      fetchRisks();
+                                      setSelectedRisk(null);
+                                    } catch (err: any) {
+                                      setError('Failed to reject suggestion: ' + err.message);
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 bg-risk text-white text-[9px] font-black rounded hover:bg-risk/80 transition-all cursor-pointer"
+                                >
+                                  Dismiss
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="p-6 space-y-6">

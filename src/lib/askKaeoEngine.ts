@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { summarizeVendors } from './reportEngine';
 import { askKaeoAi } from './ai/aiClient';
 import type { AIStructuredContext } from './ai/aiClient';
+import { syncReviewSuggestions } from './aiReviewEngine';
 
 export type AskKaeoCategory = 
   | 'finance_summary' 
@@ -15,7 +16,8 @@ export type AskKaeoCategory =
   | 'casual_check_in'
   | 'tax_or_legal_sensitive'
   | 'unknown_general'
-  | 'unsupported_needs_ai_or_web';
+  | 'unsupported_needs_ai_or_web'
+  | 'ai_review';
 
 interface AskKaeoResponse {
   intent: AskKaeoCategory;
@@ -36,6 +38,22 @@ const formatReportCurrency = (val: number) => {
 
 export async function categorizeQuestion(query: string): Promise<AskKaeoCategory> {
   const q = query.toLowerCase().trim();
+  
+  if (
+    q.includes('review my transactions') ||
+    q.includes('review transactions') ||
+    q.includes('what should i review') ||
+    q.includes('categorize the uncategorized') ||
+    q.includes('categorize uncategorized') ||
+    q.includes('prepare my month-end') ||
+    q.includes('prepare month-end') ||
+    q.includes('which risks can be resolved') ||
+    q.includes('risks can be resolved') ||
+    q.includes('safe to mark reviewed') ||
+    q.includes('mark reviewed')
+  ) {
+    return 'ai_review';
+  }
   
   // 0. Strict external live web needs
   if (
@@ -426,55 +444,59 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   let rawAiResponse: any = null;
   let checkContradictionResult: boolean | null = null;
   
-  try {
-    aiResult = await askKaeoAi(structuredContext);
-    rawAiResponse = aiResult;
-    if (aiResult) {
-      const sanitizeMarkdown = (text: string) => {
-        if (!text) return text;
-        return text
-          .replace(/\$/g, '₹')
-          .replace(/--/g, ', ')
-          .replace(/—/g, ', ')
-          .replace(/\*\*/g, '')
-          .replace(/\*/g, '')
-          .replace(/#{1,6}\s?/g, '')
-          .replace(/```[\s\S]*?```/g, '')
-          .replace(/\|/g, '');
-      };
+  if (intent !== 'ai_review') {
+    try {
+      aiResult = await askKaeoAi(structuredContext);
+      rawAiResponse = aiResult;
+      if (aiResult) {
+        const sanitizeMarkdown = (text: string) => {
+          if (!text) return text;
+          return text
+            .replace(/\$/g, '₹')
+            .replace(/--/g, ', ')
+            .replace(/—/g, ', ')
+            .replace(/\*\*/g, '')
+            .replace(/\*/g, '')
+            .replace(/#{1,6}\s?/g, '')
+            .replace(/```[\s\S]*?```/g, '')
+            .replace(/\|/g, '');
+        };
 
-      // 1. Sanitize Markdown and Currency
-      aiResult.answer = sanitizeMarkdown(aiResult.answer);
-      aiResult.reasoning_summary = sanitizeMarkdown(aiResult.reasoning_summary);
-      if (aiResult.recommended_actions) {
-        aiResult.recommended_actions = aiResult.recommended_actions.map(sanitizeMarkdown);
-      }
-      if (aiResult.caveats) {
-        aiResult.caveats = aiResult.caveats.map(sanitizeMarkdown);
-      }
-
-      // 2. Auto-inject math formula for net cash if omitted
-      if (intent === 'finance_summary') {
-        const hasMath = aiResult.reasoning_summary.includes('=') && 
-                        (aiResult.reasoning_summary.toLowerCase().includes('net cash') || aiResult.reasoning_summary.toLowerCase().includes('math'));
-        if (!hasMath) {
-          aiResult.reasoning_summary += `\n\nHere’s the math:\n${formatReportCurrency(income)} (Income) + ${formatReportCurrency(refunds)} (Refunds) - ${formatReportCurrency(expenses)} (Expenses) = ${formatReportCurrency(netCash)} (Net Cash).`;
+        // 1. Sanitize Markdown and Currency
+        aiResult.answer = sanitizeMarkdown(aiResult.answer);
+        aiResult.reasoning_summary = sanitizeMarkdown(aiResult.reasoning_summary);
+        if (aiResult.recommended_actions) {
+          aiResult.recommended_actions = aiResult.recommended_actions.map(sanitizeMarkdown);
         }
-      }
+        if (aiResult.caveats) {
+          aiResult.caveats = aiResult.caveats.map(sanitizeMarkdown);
+        }
 
-      // 3. Run contradiction check
-      const hasContradiction = checkAIContradictions(aiResult.answer + " " + aiResult.reasoning_summary, structuredContext);
-      checkContradictionResult = hasContradiction;
-      if (hasContradiction) {
-        aiResult = null;
-        fallbackReason = 'AI response contained numeric contradictions with deterministic totals';
+        // 2. Auto-inject math formula for net cash if omitted
+        if (intent === 'finance_summary') {
+          const hasMath = aiResult.reasoning_summary.includes('=') && 
+                          (aiResult.reasoning_summary.toLowerCase().includes('net cash') || aiResult.reasoning_summary.toLowerCase().includes('math'));
+          if (!hasMath) {
+            aiResult.reasoning_summary += `\n\nHere’s the math:\n${formatReportCurrency(income)} (Income) + ${formatReportCurrency(refunds)} (Refunds) - ${formatReportCurrency(expenses)} (Expenses) = ${formatReportCurrency(netCash)} (Net Cash).`;
+          }
+        }
+
+        // 3. Run contradiction check
+        const hasContradiction = checkAIContradictions(aiResult.answer + " " + aiResult.reasoning_summary, structuredContext);
+        checkContradictionResult = hasContradiction;
+        if (hasContradiction) {
+          aiResult = null;
+          fallbackReason = 'AI response contained numeric contradictions with deterministic totals';
+        }
+      } else {
+        fallbackReason = 'AI server returned null or failed validation/repair checks';
       }
-    } else {
-      fallbackReason = 'AI server returned null or failed validation/repair checks';
+    } catch (err: any) {
+      console.warn('[Ask Kaeo Engine] Real AI call failed, falling back to deterministic answer.', err);
+      fallbackReason = err.message || 'AI request threw error';
     }
-  } catch (err: any) {
-    console.warn('[Ask Kaeo Engine] Real AI call failed, falling back to deterministic answer.', err);
-    fallbackReason = err.message || 'AI request threw error';
+  } else {
+    fallbackReason = 'AI Review intent forces deterministic suggestions queue summary';
   }
 
   // IF AI GENUINELY FAILS OR WAS SHUNTED, PRINT AN OPERATOR DEBUG LOG
@@ -512,6 +534,49 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   let sourceJson: any = {};
 
   switch (intent) {
+    case 'ai_review': {
+      let currentSuggestions: any[] = [];
+      try {
+        currentSuggestions = await syncReviewSuggestions(_orgId, clientId);
+      } catch (err) {
+        console.warn('Error syncing suggestions in Ask Kaeo:', err);
+        const { data } = await supabase
+          .from('ai_review_suggestions')
+          .select('*')
+          .eq('client_id', clientId)
+          .eq('status', 'pending');
+        currentSuggestions = data || [];
+      }
+
+      const safeSuggestions = currentSuggestions.filter(s => !s.requires_approval);
+      const highPriority = currentSuggestions.filter(s => s.priority === 'high');
+
+      responseText = `I have completed an AI audit of your financial data and prepared review recommendations for your approval:\n\n` +
+      `Summary:\n` +
+      `• Total suggestions: ${currentSuggestions.length} pending items\n` +
+      `• Safe to auto-apply: ${safeSuggestions.length} suggestions (low risk)\n` +
+      `• High priority: ${highPriority.length} items needing attention\n\n` +
+      `Top Issues & Recommendations:\n` +
+      (highPriority.length > 0 
+        ? highPriority.slice(0, 3).map(h => `• [${h.priority.toUpperCase()}] ${h.reason}`).join('\n') + '\n\n'
+        : `• All identified items are low-to-medium priority.\n\n`) +
+      `Suggested Actions:\n` +
+      `• Click "Open AI Review" to review the full queue.\n` +
+      `• You can approve the ${safeSuggestions.length} safe items (categorization and low-value reviews) in bulk with one click.\n\n` +
+      `What this means:\nApproving safe suggestions will automatically categorize transactions and clear clean rows, improving your month-end readiness.`;
+
+      sourceJson = {
+        mode: 'ai_review',
+        intent: 'ai_review',
+        totalSuggestionsCount: currentSuggestions.length,
+        safeSuggestionsCount: safeSuggestions.length,
+        highPriorityCount: highPriority.length,
+        hasSafeSuggestions: safeSuggestions.length > 0,
+        cta: 'open_ai_review'
+      };
+      break;
+    }
+
     case 'finance_summary': {
       const netCashPositive = netCash >= 0;
       responseText = `Your net cash movement is ${netCashPositive ? 'positive' : 'negative'} at ${formatReportCurrency(netCash)}. That means the client ${netCashPositive ? 'brought in more cash than it spent' : 'spent more cash than it brought in'} during this imported period.\n\n` +

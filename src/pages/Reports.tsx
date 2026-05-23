@@ -9,6 +9,7 @@ import { trackUsageEvent } from '../lib/billing';
 import { checkUsageEventAllowed } from '../lib/billingGuards';
 import EmptyState from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
+import { generateMonthEndReviewPlan } from '../lib/aiReviewEngine';
 
 export default function Reports() {
   const { activeOrg, activeClient } = useWorkspace();
@@ -22,15 +23,37 @@ export default function Reports() {
   const [schemaError, setSchemaError] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [readinessPlan, setReadinessPlan] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (activeOrg && activeClient) {
       checkDataAndFetchReports();
+      fetchReadinessProjections();
     } else {
       setLoading(false);
     }
   }, [activeOrg, activeClient]);
+
+  const fetchReadinessProjections = async () => {
+    if (!activeOrg || !activeClient) return;
+    try {
+      const [txRes, riskRes, sugRes] = await Promise.all([
+        supabase.from('transactions').select('*').eq('client_id', activeClient.id),
+        supabase.from('risk_events').select('*').eq('client_id', activeClient.id),
+        supabase.from('ai_review_suggestions').select('*').eq('client_id', activeClient.id).eq('status', 'pending'),
+      ]);
+
+      const txs = txRes.data || [];
+      const rks = riskRes.data || [];
+      const sugs = sugRes.data || [];
+
+      const plan = generateMonthEndReviewPlan(txs, rks, sugs);
+      setReadinessPlan(plan);
+    } catch (e) {
+      console.error('Error fetching projections:', e);
+    }
+  };
 
   const checkDataAndFetchReports = async () => {
     if (!activeOrg || !activeClient) return;
@@ -206,6 +229,30 @@ export default function Reports() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      {readinessPlan && readinessPlan.totalCount > 0 && (
+        <div className="bg-teal-500/10 border border-teal-500/20 rounded-2xl p-5 flex items-center justify-between gap-4 animate-in fade-in duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-center text-teal-400 shrink-0">
+              <Zap className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Month-End Readiness Optimizer</h3>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed font-medium">
+                Approve <strong className="text-teal-400">{readinessPlan.safeCount} safe suggestions</strong> to move readiness from{' '}
+                <strong className="text-risk">{readinessPlan.currentScore}%</strong> to approximately{' '}
+                <strong className="text-success">{readinessPlan.projectedScore}%</strong> (estimated projection).
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/transactions?review_status=ai_suggested')}
+            className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-xs font-bold rounded-xl transition-colors cursor-pointer shrink-0"
+          >
+            Optimize Readiness
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Reports</h1>

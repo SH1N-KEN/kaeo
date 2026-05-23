@@ -11,9 +11,15 @@ export type AuditAction =
   | 'spend_rule_updated'
   | 'spend_rule_created'
   | 'accountant_pack_generated'
-  | 'vendor_reviewed';
+  | 'vendor_reviewed'
+  | 'ai_suggestion_approved'
+  | 'ai_suggestion_rejected'
+  | 'ai_bulk_review_applied'
+  | 'transaction_ai_categorized'
+  | 'risk_ai_flagged'
+  | 'invoice_matched_by_ai';
 
-export type AuditEntityType = 'transaction' | 'risk' | 'rule' | 'report' | 'vendor';
+export type AuditEntityType = 'transaction' | 'risk' | 'rule' | 'report' | 'vendor' | 'ai_suggestion' | 'invoice';
 
 /**
  * Tracks an audit event in the database for compliance and review history.

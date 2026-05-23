@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useAskKaeoChat } from '../hooks/useAskKaeoChat';
-import { Send, AlertCircle, User, Shield, Layers, Zap } from 'lucide-react';
+import { Send, AlertCircle, User, Shield, Layers, Zap, Sparkles } from 'lucide-react';
 import EmptyState from '../components/ui/EmptyState';
 import aeLogo from '../assets/kaeo-ae-logo.png';
 
@@ -131,6 +131,30 @@ const AskKaeo = () => {
                       >
                         <Zap className="w-3.5 h-3.5 text-warning fill-warning" />
                         Upgrade Subscription
+                      </button>
+                    </div>
+                  )}
+                  {msg.source_json?.cta === 'open_ai_review' && (
+                    <div className="mt-3">
+                      <button
+                        onClick={() => navigate('/transactions?review_status=ai_suggested')}
+                        className="px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-black text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Open AI Review
+                      </button>
+                    </div>
+                  )}
+                  {isGreeting && (
+                    <div className="mt-3 max-w-xs">
+                      <button
+                        onClick={async () => {
+                          await sendMessage("Review my transactions");
+                        }}
+                        className="w-full text-left px-3 py-2 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 font-semibold rounded-lg border border-teal-500/20 text-xs transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        "Review my transactions"
                       </button>
                     </div>
                   )}

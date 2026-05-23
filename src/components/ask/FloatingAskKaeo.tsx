@@ -245,9 +245,38 @@ const FloatingAskKaeo: React.FC = () => {
                             }}
                             className="mt-3 px-3 py-1.5 bg-primary text-primary-foreground text-[11px] font-bold rounded-lg hover:opacity-95 transition-all cursor-pointer inline-flex items-center gap-1.5"
                           >
-                            <Zap className="w-3 h-3 text-warning fill-warning" />
+                            <Zap className="w-3.5 h-3.5 text-warning fill-warning" />
                             Upgrade Plan
                           </button>
+                        )}
+
+                        {/* AI Review CTA */}
+                        {msg.source_json?.cta === 'open_ai_review' && (
+                          <button
+                            onClick={() => {
+                              setIsOpen(false);
+                              navigate('/transactions?review_status=ai_suggested');
+                            }}
+                            className="mt-3 px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-black text-[11px] font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            Open AI Review
+                          </button>
+                        )}
+
+                        {/* Quick Action Suggestion for greeting */}
+                        {isGreeting && (
+                          <div className="mt-3">
+                            <button
+                              onClick={async () => {
+                                await sendMessage("Review my transactions");
+                              }}
+                              className="w-full text-left px-3 py-2 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 font-semibold rounded-lg border border-teal-500/20 text-[10px] transition-all cursor-pointer flex items-center gap-1.5"
+                            >
+                              <Sparkles className="w-3 h-3" />
+                              "Review my transactions"
+                            </button>
+                          </div>
                         )}
 
                         {/* Grounded badge — not on greeting/limit/error */}

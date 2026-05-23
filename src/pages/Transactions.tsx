@@ -33,6 +33,9 @@ import {
 } from '../lib/categoryEngine';
 import { useToast } from '../hooks/useToast';
 import { trackAuditEvent } from '../lib/auditEngine';
+import { AIReviewQueueModal } from '../components/ai/AIReviewQueueModal';
+import { applyReviewSuggestion } from '../lib/reviewActions';
+import { Sparkles } from 'lucide-react';
 
 // ── Shared INR formatter ─────────────────────────────────────────────────────
 const INR = new Intl.NumberFormat('en-IN', {
@@ -62,7 +65,7 @@ type DateRange = 'all' | 'this_month' | 'last_30';
 type AmountRange = 'all' | 'under_10k' | '10k_50k' | 'above_50k';
 
 // ── Review filter ─────────────────────────────────────────────────────────────
-type ReviewFilter = 'all' | 'pending' | 'new' | 'needs_review' | 'reviewed' | 'ignored' | 'resolved' | 'uncategorized' | 'unknown' | 'high_value';
+type ReviewFilter = 'all' | 'pending' | 'new' | 'needs_review' | 'reviewed' | 'ignored' | 'resolved' | 'uncategorized' | 'unknown' | 'high_value' | 'ai_suggested';
 
 const Transactions: React.FC = () => {
   const { activeClient, activeOrg } = useWorkspace();
@@ -87,6 +90,31 @@ const Transactions: React.FC = () => {
 
   // ── Context menu state ────────────────────────────────────────────────────
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  const [isAIQueueOpen, setIsAIQueueOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+
+  const handleApproveSuggestion = async (sug: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      await applyReviewSuggestion(sug, 'approved', user?.id);
+      toast('AI category suggestion approved and applied', 'success');
+      fetchTransactions();
+    } catch (err: any) {
+      toast(err.message || 'Approval failed', 'error');
+    }
+  };
+
+  const handleRejectSuggestion = async (sug: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      await applyReviewSuggestion(sug, 'rejected', user?.id);
+      toast('AI suggestion rejected', 'info');
+      fetchTransactions();
+    } catch (err: any) {
+      toast(err.message || 'Rejection failed', 'error');
+    }
+  };
 
   const lastSearchRef = useRef<string | null>(null);
 
@@ -167,6 +195,15 @@ const Transactions: React.FC = () => {
 
       if (error) throw error;
       setTransactions(data || []);
+
+      const { data: sugs, error: sugsError } = await supabase
+        .from('ai_review_suggestions')
+        .select('*')
+        .eq('client_id', activeClient.id)
+        .eq('status', 'pending');
+      
+      if (sugsError) throw sugsError;
+      setSuggestions(sugs || []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -277,12 +314,15 @@ const Transactions: React.FC = () => {
         if (filterReview === 'pending' && revStatus !== 'new' && revStatus !== 'needs_review') return false;
         if (filterReview === 'uncategorized' && tx._displayCategory !== 'Uncategorized') return false;
         if (filterReview === 'unknown' && tx.type !== 'unknown') return false;
-        if (filterReview === 'high_value' && (tx.amount >= 0 || Math.abs(tx.amount) < 50000)) return false;
+        if (filterReview === 'ai_suggested') {
+          const hasSug = suggestions.some(s => s.entity_type === 'transaction' && s.entity_id === tx.id);
+          if (!hasSug) return false;
+        }
       }
 
       return true;
     });
-  }, [displayTransactions, searchTerm, filterType, filterCategory, filterSource, filterDateRange, filterAmountRange, filterReview]);
+  }, [displayTransactions, searchTerm, filterType, filterCategory, filterSource, filterDateRange, filterAmountRange, filterReview, suggestions]);
 
   // ── Sorting ───────────────────────────────────────────────────────────────
   const sortedTransactions = useMemo(() => {
@@ -411,6 +451,14 @@ const Transactions: React.FC = () => {
             {' — '}{transactions.length.toLocaleString()} total rows imported
           </p>
         </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsAIQueueOpen(true)}
+            className="px-4 py-2.5 bg-teal-500 hover:bg-teal-400 text-black font-bold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-teal-500/10 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" /> AI Review Suggestions Queue
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -523,6 +571,7 @@ const Transactions: React.FC = () => {
               <option value="reviewed">Reviewed</option>
               <option value="ignored">Ignored</option>
               <option value="resolved">Resolved</option>
+              <option value="ai_suggested">AI Suggested</option>
               {filterReview === 'uncategorized' && (
                 <option value="uncategorized">Uncategorized</option>
               )}
@@ -754,11 +803,56 @@ const Transactions: React.FC = () => {
 
                       {/* Category badge */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
-                        >
-                          {cat}
-                        </span>
+                        {(() => {
+                          const categorySuggestion = suggestions.find(
+                            s => s.entity_type === 'transaction' && 
+                            s.entity_id === tx.id && 
+                            s.suggestion_type === 'categorize_transaction'
+                          );
+
+                          if (categorySuggestion) {
+                            return (
+                              <div className="flex flex-col gap-1.5">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
+                                >
+                                  {cat}
+                                </span>
+                                <div className="text-[10px] text-teal-400 font-bold bg-teal-500/10 px-2 py-1.5 rounded border border-teal-500/20 mt-1 flex flex-col gap-1.5">
+                                  <span>Suggested: {categorySuggestion.proposed_value.category}</span>
+                                  <span className="flex items-center gap-1.5">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleApproveSuggestion(categorySuggestion);
+                                      }}
+                                      className="px-2 py-0.5 bg-success text-black text-[9px] font-black rounded hover:bg-success/80 transition-all cursor-pointer"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRejectSuggestion(categorySuggestion);
+                                      }}
+                                      className="px-2 py-0.5 bg-risk text-white text-[9px] font-black rounded hover:bg-risk/80 transition-all cursor-pointer"
+                                    >
+                                      Reject
+                                    </button>
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
+                            >
+                              {cat}
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* Amount */}
@@ -898,9 +992,15 @@ const Transactions: React.FC = () => {
           </div>
         </div>
       )}
+      <AIReviewQueueModal 
+        isOpen={isAIQueueOpen} 
+        onClose={() => setIsAIQueueOpen(false)} 
+        onRefreshParent={fetchTransactions} 
+      />
     </div>
   );
 };
+
 
 // ── Type badge sub-component ─────────────────────────────────────────────────
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
