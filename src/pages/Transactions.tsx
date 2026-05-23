@@ -37,17 +37,15 @@ import { AIReviewQueueModal } from '../components/ai/AIReviewQueueModal';
 import { applyReviewSuggestion } from '../lib/reviewActions';
 import { Sparkles } from 'lucide-react';
 
-// ── Shared INR formatter ─────────────────────────────────────────────────────
-const INR = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-});
-
-function formatINR(amount: number, forceSign: boolean = false): string {
+// ── Shared currency formatter ────────────────────────────────────────────────
+function formatCurrency(amount: number, currencyCode: string = 'INR', forceSign: boolean = false): string {
   const isNegative = amount < 0;
   const absVal = Math.abs(amount);
-  const formatted = INR.format(absVal);
+  const formatted = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: currencyCode,
+    maximumFractionDigits: 0,
+  }).format(absVal);
   if (forceSign) {
     return isNegative ? `-${formatted}` : `+${formatted}`;
   }
@@ -614,7 +612,7 @@ const Transactions: React.FC = () => {
           </p>
           <p className="text-lg font-black text-success flex items-center justify-center gap-1">
             <TrendingUp className="w-4 h-4" />
-            {formatINR(summary.inflow)}
+            {formatCurrency(summary.inflow, activeClient.base_currency || 'INR')}
           </p>
         </div>
         <div className="bg-card border border-border/50 rounded-xl p-3 text-center">
@@ -623,7 +621,7 @@ const Transactions: React.FC = () => {
           </p>
           <p className="text-lg font-black text-risk flex items-center justify-center gap-1">
             <TrendingDown className="w-4 h-4" />
-            {formatINR(summary.outflow)}
+            {formatCurrency(summary.outflow, activeClient.base_currency || 'INR')}
           </p>
         </div>
         <div className="bg-card border border-border/50 rounded-xl p-3 text-center">
@@ -632,7 +630,7 @@ const Transactions: React.FC = () => {
           </p>
           <p className={`text-lg font-black flex items-center justify-center gap-1 ${summary.net >= 0 ? 'text-success' : 'text-risk'}`}>
             <Minus className="w-4 h-4" />
-            {formatINR(summary.net, true)}
+            {formatCurrency(summary.net, activeClient.base_currency || 'INR', true)}
           </p>
         </div>
       </div>
@@ -867,7 +865,7 @@ const Transactions: React.FC = () => {
                           ) : (
                             <ArrowDownLeft className="w-3.5 h-3.5" />
                           )}
-                          {formatINR(tx.amount, true)}
+                          {formatCurrency(tx.amount, tx.currency || 'INR', true)}
                         </span>
                       </td>
 

@@ -711,9 +711,10 @@ const Dashboard: React.FC = () => {
           value={readiness?.score !== undefined ? `${readiness.score}%` : "Coming online"}
           subValue={
             !hasTransactions ? "Not ready" :
-            metrics.unreviewedCount > 0 ? `Reason: ${metrics.unreviewedCount} need review` :
-            metrics.uncategorizedCount > 0 ? `Reason: ${metrics.uncategorizedCount} uncategorized` :
-            readiness?.status || "Not ready"
+            metrics.unreviewedCount > 0 ? `Not ready · ${metrics.unreviewedCount} transactions still need review` :
+            metrics.uncategorizedCount > 0 ? `Not ready · ${metrics.uncategorizedCount} transactions are uncategorized` :
+            metrics.openRisksCount > 0 ? `Not ready · ${metrics.openRisksCount} unresolved risks require attention` :
+            readiness?.status || "Ready"
           }
           ctaText="Start Review →"
           onClick={() => navigate('/reports')}
@@ -1056,13 +1057,15 @@ const Dashboard: React.FC = () => {
                     <span className="text-[9px] font-bold text-muted-foreground uppercase">Expense rows</span>
                     <span className="text-sm font-bold text-risk mt-0.5">{metrics.expenseCount}</span>
                   </div>
-                  <div 
-                    onClick={() => navigate('/transactions?type=unknown')}
-                    className="flex flex-col cursor-pointer hover:opacity-80 transition-all group"
-                  >
-                    <span className="text-[9px] font-bold text-muted-foreground group-hover:text-primary uppercase">Unknown rows</span>
-                    <span className="text-sm font-bold text-muted-foreground mt-0.5 group-hover:text-primary">{metrics.unknownCount}</span>
-                  </div>
+                  {metrics.unknownCount > 0 && (
+                    <div 
+                      onClick={() => navigate('/transactions?type=unknown')}
+                      className="flex flex-col cursor-pointer hover:opacity-80 transition-all group"
+                    >
+                      <span className="text-[9px] font-bold text-muted-foreground group-hover:text-primary uppercase">Unknown rows</span>
+                      <span className="text-sm font-bold text-muted-foreground mt-0.5 group-hover:text-primary">{metrics.unknownCount}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1200,6 +1203,143 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
+              {/* First Launch Checklist */}
+              <div className="premium-glass rounded-2xl p-5 shadow-xl space-y-4 border border-border/20">
+                <h3 className="text-xs font-black uppercase tracking-widest text-teal-400 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-teal-400" />
+                  Launch Checklist
+                </h3>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Complete these setup milestones to get your workspace ready for active CFO review.
+                </p>
+                
+                <div className="space-y-3 pt-1">
+                  {/* 1. Create Workspace */}
+                  <div className="flex items-start gap-2.5 text-xs text-foreground/80">
+                    <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold line-through text-muted-foreground">Create workspace</span>
+                      <span className="text-[9px] text-muted-foreground/60">Workspace configured</span>
+                    </div>
+                  </div>
+
+                  {/* 2. Upload First Statement */}
+                  <div className="flex items-start gap-2.5 text-xs text-foreground/80">
+                    {metrics.count > 0 ? (
+                      <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
+                      </div>
+                    ) : (
+                      <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex flex-col">
+                      <span className={metrics.count > 0 ? "font-bold line-through text-muted-foreground" : "font-bold text-foreground"}>Upload first statement</span>
+                      {metrics.count > 0 ? (
+                        <span className="text-[9px] text-muted-foreground/60">Uploaded {metrics.count} rows</span>
+                      ) : (
+                        <Link to="/files" className="text-[9px] text-teal-400 hover:underline">Upload bank statement →</Link>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3. Review Risks */}
+                  <div className="flex items-start gap-2.5 text-xs text-foreground/80">
+                    {metrics.count > 0 && metrics.openRisksCount === 0 ? (
+                      <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
+                      </div>
+                    ) : (
+                      <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex flex-col">
+                      <span className={metrics.count > 0 && metrics.openRisksCount === 0 ? "font-bold line-through text-muted-foreground" : "font-bold text-foreground"}>Review risks</span>
+                      {metrics.openRisksCount > 0 ? (
+                        <Link to="/risk-inbox" className="text-[9px] text-teal-400 hover:underline">Resolve {metrics.openRisksCount} active risks →</Link>
+                      ) : (
+                        <span className="text-[9px] text-muted-foreground/60">No pending risks</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 4. Categorize Unknown Rows */}
+                  <div className="flex items-start gap-2.5 text-xs text-foreground/80">
+                    {metrics.count > 0 && metrics.uncategorizedCount === 0 ? (
+                      <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
+                      </div>
+                    ) : (
+                      <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex flex-col">
+                      <span className={metrics.count > 0 && metrics.uncategorizedCount === 0 ? "font-bold line-through text-muted-foreground" : "font-bold text-foreground"}>Categorize unknown rows</span>
+                      {metrics.uncategorizedCount > 0 ? (
+                        <Link to="/transactions?category=uncategorized" className="text-[9px] text-teal-400 hover:underline">Categorize {metrics.uncategorizedCount} rows →</Link>
+                      ) : (
+                        <span className="text-[9px] text-muted-foreground/60">All rows categorized</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 5. Generate Accountant Pack */}
+                  <div className="flex items-start gap-2.5 text-xs text-foreground/80">
+                    <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
+                    <div className="flex flex-col">
+                      <span className="font-bold text-foreground">Generate accountant pack</span>
+                      <Link to="/reports" className="text-[9px] text-teal-400 hover:underline">Generate pack →</Link>
+                    </div>
+                  </div>
+
+                  {/* 6. Ask Kaeo for Next Action */}
+                  <div className="flex items-start gap-2.5 text-xs text-foreground/80">
+                    <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
+                    <div className="flex flex-col">
+                      <span className="font-bold text-foreground">Ask Kaeo for next action</span>
+                      <Link to="/ask-kaeo" className="text-[9px] text-teal-400 hover:underline">Consult Kaeo Advisor →</Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Roadmap & Future Capabilities */}
+              <div className="premium-glass rounded-2xl p-5 shadow-lg border border-border/30 space-y-3">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-primary" />
+                  Integration Roadmap
+                </h4>
+                <p className="text-[10px] text-muted-foreground leading-relaxed font-medium">
+                  Future capabilities planned for the active Kaeo Spend Control network.
+                </p>
+                
+                <div className="grid grid-cols-1 gap-2 pt-1">
+                  <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
+                    <span className="font-bold text-foreground/80">Bank Feed Integrations</span>
+                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase">Coming Soon</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
+                    <span className="font-bold text-foreground/80">Tally &amp; Zoho Sync</span>
+                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase">Planned</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
+                    <span className="font-bold text-foreground/80">Approval Workflows</span>
+                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase">Coming Soon</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
+                    <span className="font-bold text-foreground/80">UPI Payment Controls</span>
+                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase">Planned</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
+                    <span className="font-bold text-foreground/80">Card/Spend Policy Layer</span>
+                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase">Coming Soon</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
+                    <span className="font-bold text-foreground/80">Accountant Collaboration</span>
+                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase">Planned</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Workspace Signals */}
               <div className="premium-glass rounded-2xl p-5 shadow-lg border border-border/20 space-y-3">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/85 flex items-center gap-1.5">
@@ -1252,143 +1392,6 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
               </div>
-
-              {/* First Launch Checklist */}
-            <div className="premium-glass rounded-2xl p-5 shadow-xl space-y-4 border border-teal-500/20">
-              <h3 className="text-xs font-black uppercase tracking-widest text-teal-400 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-teal-400" />
-                Launch Checklist
-              </h3>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Complete these setup milestones to get your workspace ready for active CFO review.
-              </p>
-              
-              <div className="space-y-3 pt-1">
-                {/* 1. Create Workspace */}
-                <div className="flex items-start gap-2.5 text-xs text-foreground/80">
-                  <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
-                    <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-bold line-through text-muted-foreground">Create workspace</span>
-                    <span className="text-[9px] text-muted-foreground/60">Workspace configured</span>
-                  </div>
-                </div>
-
-                {/* 2. Upload First Statement */}
-                <div className="flex items-start gap-2.5 text-xs text-foreground/80">
-                  {metrics.count > 0 ? (
-                    <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
-                      <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
-                    </div>
-                  ) : (
-                    <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
-                  )}
-                  <div className="flex flex-col">
-                    <span className={metrics.count > 0 ? "font-bold line-through text-muted-foreground" : "font-bold text-foreground"}>Upload first statement</span>
-                    {metrics.count > 0 ? (
-                      <span className="text-[9px] text-muted-foreground/60">Uploaded {metrics.count} rows</span>
-                    ) : (
-                      <Link to="/files" className="text-[9px] text-teal-400 hover:underline">Upload bank statement →</Link>
-                    )}
-                  </div>
-                </div>
-
-                {/* 3. Review Risks */}
-                <div className="flex items-start gap-2.5 text-xs text-foreground/80">
-                  {metrics.count > 0 && metrics.openRisksCount === 0 ? (
-                    <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
-                      <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
-                    </div>
-                  ) : (
-                    <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
-                  )}
-                  <div className="flex flex-col">
-                    <span className={metrics.count > 0 && metrics.openRisksCount === 0 ? "font-bold line-through text-muted-foreground" : "font-bold text-foreground"}>Review risks</span>
-                    {metrics.openRisksCount > 0 ? (
-                      <Link to="/risk-inbox" className="text-[9px] text-teal-400 hover:underline">Resolve {metrics.openRisksCount} active risks →</Link>
-                    ) : (
-                      <span className="text-[9px] text-muted-foreground/60">No pending risks</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* 4. Categorize Unknown Rows */}
-                <div className="flex items-start gap-2.5 text-xs text-foreground/80">
-                  {metrics.count > 0 && metrics.uncategorizedCount === 0 ? (
-                    <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
-                      <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
-                    </div>
-                  ) : (
-                    <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
-                  )}
-                  <div className="flex flex-col">
-                    <span className={metrics.count > 0 && metrics.uncategorizedCount === 0 ? "font-bold line-through text-muted-foreground" : "font-bold text-foreground"}>Categorize unknown rows</span>
-                    {metrics.uncategorizedCount > 0 ? (
-                      <Link to="/transactions?category=uncategorized" className="text-[9px] text-teal-400 hover:underline">Categorize {metrics.uncategorizedCount} rows →</Link>
-                    ) : (
-                      <span className="text-[9px] text-muted-foreground/60">All rows categorized</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* 5. Generate Accountant Pack */}
-                <div className="flex items-start gap-2.5 text-xs text-foreground/80">
-                  <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
-                  <div className="flex flex-col">
-                    <span className="font-bold text-foreground">Generate accountant pack</span>
-                    <Link to="/reports" className="text-[9px] text-teal-400 hover:underline">Generate pack →</Link>
-                  </div>
-                </div>
-
-                {/* 6. Ask Kaeo for Next Action */}
-                <div className="flex items-start gap-2.5 text-xs text-foreground/80">
-                  <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
-                  <div className="flex flex-col">
-                    <span className="font-bold text-foreground">Ask Kaeo for next action</span>
-                    <Link to="/ask-kaeo" className="text-[9px] text-teal-400 hover:underline">Consult Kaeo Advisor →</Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Roadmap & Future Capabilities */}
-            <div className="premium-glass rounded-2xl p-5 shadow-lg border border-border/30 space-y-3">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-primary" />
-                Integration Roadmap
-              </h4>
-              <p className="text-[10px] text-muted-foreground leading-relaxed font-medium">
-                Future capabilities planned for the active Kaeo Spend Control network.
-              </p>
-              
-              <div className="grid grid-cols-1 gap-2 pt-1">
-                <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
-                  <span className="font-bold text-foreground/80">Bank Feed Integrations</span>
-                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase">Coming Soon</span>
-                </div>
-                <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
-                  <span className="font-bold text-foreground/80">Tally &amp; Zoho Sync</span>
-                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase">Planned</span>
-                </div>
-                <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
-                  <span className="font-bold text-foreground/80">Approval Workflows</span>
-                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase">Coming Soon</span>
-                </div>
-                <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
-                  <span className="font-bold text-foreground/80">UPI Payment Controls</span>
-                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase">Planned</span>
-                </div>
-                <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
-                  <span className="font-bold text-foreground/80">Card/Spend Policy Layer</span>
-                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase">Coming Soon</span>
-                </div>
-                <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/5 rounded-lg border border-border/20">
-                  <span className="font-bold text-foreground/80">Accountant Collaboration</span>
-                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase">Planned</span>
-                </div>
-              </div>
-            </div>
 
             {/* Legend Card */}
             <div className="px-6 py-5 bg-white/5 rounded-2xl border border-border/20">
