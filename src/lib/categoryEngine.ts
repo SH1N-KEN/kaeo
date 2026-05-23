@@ -87,7 +87,7 @@ const CATEGORY_RULES: Array<{
       'google ads', 'meta ads', 'facebook ads', 'instagram ads',
       'linkedin ads', 'adwords', 'marketing spend', 'ad campaign',
       'campaign spend', 'twitter ads', 'youtube ads', 'bing ads',
-      'display ads', 'sponsored', 'influencer', 'seo', 'sem',
+      'display ads', 'sponsored', 'influencer', 'seo', 'sem', 'campaign',
     ],
   },
   {
@@ -95,7 +95,7 @@ const CATEGORY_RULES: Array<{
     keywords: [
       'salary', 'payroll', 'wages', 'employee payment', 'stipend',
       'consultant salary', 'monthly salary', 'pay slip', 'hr payment',
-      'staff payment', 'wage transfer',
+      'staff payment', 'wage transfer', 'employee',
     ],
   },
   {
@@ -121,7 +121,7 @@ const CATEGORY_RULES: Array<{
       'consulting', 'professional fee', 'retainer', 'agency fee',
       'vendor services', 'acme services', 'bluepine consulting',
       'freelancer', 'contractor', 'outsourcing', 'advisory',
-      'management consulting', 'legal fee', 'audit fee',
+      'management consulting', 'legal fee', 'audit fee', 'services', 'agency',
     ],
   },
   {
@@ -129,7 +129,7 @@ const CATEGORY_RULES: Array<{
     keywords: [
       'rent', 'electricity', 'water bill', 'internet', 'broadband',
       'utility', 'co-working', 'office rent', 'lease', 'maintenance',
-      'wifi bill', 'data plan', 'mobile recharge',
+      'wifi bill', 'data plan', 'mobile recharge', 'water',
     ],
   },
   {
@@ -138,7 +138,7 @@ const CATEGORY_RULES: Array<{
       'bank charge', 'service charge', 'bank fee', 'annual fee',
       'imps charge', 'neft charge', 'rtgs charge', 'wire fee',
       'overdraft fee', 'account maintenance', 'bank commission',
-      'transaction charge', 'demat', 'locker',
+      'transaction charge', 'demat', 'locker', 'charges', 'fee', 'commission',
     ],
   },
   {
@@ -146,7 +146,7 @@ const CATEGORY_RULES: Array<{
     keywords: [
       'gst', 'tds', 'income tax', 'tax payment', 'compliance',
       'tax filing', 'roc fee', 'mca fee', 'advance tax', 'tcs',
-      'customs duty', 'excise', 'professional tax', 'itr',
+      'customs duty', 'excise', 'professional tax', 'itr', 'tax', 'filing', 'roc', 'mca',
     ],
   },
   {
@@ -171,7 +171,7 @@ export function inferTransactionCategory(
   description: string,
   vendor?: string | null,
   type?: string | null
-): TransactionCategory {
+): string {
   const t = type?.toLowerCase() ?? '';
 
   // 1. Income type always → Revenue / Sales (unless refund keywords found)
@@ -214,7 +214,7 @@ export function getDisplayCategory(tx: {
   description?: string | null;
   counterparty_name?: string | null;
   type?: string | null;
-}): TransactionCategory {
+}): string {
   const stored = tx.category?.trim();
   const isEmpty =
     !stored ||
@@ -225,11 +225,7 @@ export function getDisplayCategory(tx: {
     stored.toLowerCase() === 'null';
 
   if (!isEmpty) {
-    // Return stored value cast to TransactionCategory if it's a valid one,
-    // otherwise fall through to inference.
-    if (ALL_CATEGORIES.includes(stored as TransactionCategory)) {
-      return stored as TransactionCategory;
-    }
+    return stored;
   }
 
   return inferTransactionCategory(

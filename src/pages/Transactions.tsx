@@ -41,12 +41,18 @@ const INR = new Intl.NumberFormat('en-IN', {
   maximumFractionDigits: 0,
 });
 
-function formatINR(amount: number): string {
-  return INR.format(Math.abs(amount));
+function formatINR(amount: number, forceSign: boolean = false): string {
+  const isNegative = amount < 0;
+  const absVal = Math.abs(amount);
+  const formatted = INR.format(absVal);
+  if (forceSign) {
+    return isNegative ? `-${formatted}` : `+${formatted}`;
+  }
+  return isNegative ? `-${formatted}` : formatted;
 }
 
 // ── Sort types ────────────────────────────────────────────────────────────────
-type SortKey = 'transaction_date' | 'description' | 'category' | 'amount' | 'type' | 'source_provider';
+type SortKey = 'transaction_date' | 'description' | 'category' | 'amount' | 'type' | 'source_provider' | 'review_status';
 type SortDir = 'asc' | 'desc';
 
 // ── Date range presets ────────────────────────────────────────────────────────
@@ -95,12 +101,14 @@ const Transactions: React.FC = () => {
     const reviewParam = searchParams.get('review');
     const categoryParam = searchParams.get('category');
     const typeParam = searchParams.get('type');
+    const sourceParam = searchParams.get('source');
 
+    // 1. Review status query param mapping
     if (reviewStatusParam === 'needs_review') {
       setFilterReview('needs_review');
     } else if (reviewStatusParam === 'new') {
       setFilterReview('new');
-    } else if (reviewStatusParam === 'pending' || reviewParam === 'pending' || reviewStatusParam === 'pending') {
+    } else if (reviewStatusParam === 'pending' || reviewParam === 'pending') {
       setFilterReview('pending');
     } else if (reviewStatusParam === 'reviewed') {
       setFilterReview('reviewed');
@@ -114,6 +122,31 @@ const Transactions: React.FC = () => {
       setFilterReview('unknown');
     } else {
       setFilterReview('all');
+    }
+
+    // 2. Category mapping
+    if (categoryParam === 'uncategorized') {
+      setFilterCategory('Uncategorized');
+    } else if (categoryParam) {
+      setFilterCategory(categoryParam);
+    } else {
+      setFilterCategory('all');
+    }
+
+    // 3. Type mapping
+    if (typeParam) {
+      if (['income', 'expense', 'refund', 'unknown'].includes(typeParam)) {
+        setFilterType(typeParam);
+      }
+    } else {
+      setFilterType('all');
+    }
+
+    // 4. Source mapping
+    if (sourceParam) {
+      setFilterSource(sourceParam);
+    } else {
+      setFilterSource('all');
     }
   }, [searchParams]);
 
@@ -278,6 +311,10 @@ const Transactions: React.FC = () => {
         case 'source_provider':
           aVal = a.source_provider ?? '';
           bVal = b.source_provider ?? '';
+          break;
+        case 'review_status':
+          aVal = a.review_status || 'new';
+          bVal = b.review_status || 'new';
           break;
         default:
           aVal = (a[sortKey] ?? '').toString().toLowerCase();
@@ -546,7 +583,7 @@ const Transactions: React.FC = () => {
           </p>
           <p className={`text-lg font-black flex items-center justify-center gap-1 ${summary.net >= 0 ? 'text-success' : 'text-risk'}`}>
             <Minus className="w-4 h-4" />
-            {summary.net >= 0 ? '+' : '-'}{formatINR(summary.net)}
+            {formatINR(summary.net, true)}
           </p>
         </div>
       </div>
@@ -669,8 +706,12 @@ const Transactions: React.FC = () => {
                   </th>
                   <th
                     className={thClass}
+                    onClick={() => handleSort('review_status')}
                   >
-                    Status
+                    <span className="flex items-center gap-1.5">
+                      Status
+                      <SortIcon col="review_status" />
+                    </span>
                   </th>
                   <th className="px-4 py-3 border-b border-border/50 w-10" />
                 </tr>
@@ -732,8 +773,7 @@ const Transactions: React.FC = () => {
                           ) : (
                             <ArrowDownLeft className="w-3.5 h-3.5" />
                           )}
-                          {isExpense ? '-' : '+'}
-                          {formatINR(tx.amount)}
+                          {formatINR(tx.amount, true)}
                         </span>
                       </td>
 
@@ -825,7 +865,7 @@ const Transactions: React.FC = () => {
                               }}
                             >
                               <CircleDashed className="w-3.5 h-3.5" />
-                              Needs Review
+                              Mark Needs Review
                             </button>
                             <button
                               className="w-full text-left px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer flex items-center gap-2"
@@ -835,7 +875,7 @@ const Transactions: React.FC = () => {
                               }}
                             >
                               <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                              Mark Resolved
+                              Resolve
                             </button>
                             <button
                               className="w-full text-left px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-muted-foreground hover:bg-muted transition-colors cursor-pointer flex items-center gap-2"
