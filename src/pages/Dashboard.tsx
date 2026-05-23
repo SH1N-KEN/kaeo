@@ -15,7 +15,12 @@ import {
   Calendar,
   X,
   ShieldAlert,
-  CheckCircle2
+  CheckCircle2,
+  Building2,
+  ShieldCheck,
+  Sparkles,
+  Upload,
+  Layers
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useAuth } from '../components/auth/AuthProvider';
@@ -26,6 +31,7 @@ import aeLogo from '../assets/kaeo-ae-logo.png';
 import { calculateMonthEndReadiness, type ReadinessResult } from '../lib/readinessEngine';
 import { getDisplayCategory, inferTransactionCategory, ALL_CATEGORIES } from '../lib/categoryEngine';
 import { analyzeRisksForClient } from '../lib/riskEngine';
+import { getSpendRules } from '../lib/spendRulesEngine';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -142,6 +148,15 @@ const Dashboard: React.FC = () => {
     unreviewedCount: 0,
     openRisksCount: 0,
     duplicateExposure: 0,
+    uniqueVendorsCount: 0,
+    matchedInvoicesCount: 0,
+    totalInvoicesCount: 0,
+    overdueInvoicesCount: 0,
+    highValueCount: 0,
+    recurringCount: 0,
+    rulesActiveCount: 0,
+    uploadsCount: 0,
+    suggestionsCount: 0
   });
   const [readiness, setReadiness] = useState<ReadinessResult | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
@@ -266,12 +281,74 @@ const Dashboard: React.FC = () => {
         if (amount > topVendor.amount) topVendor = { name, amount };
       });
 
+      // Extra data for secondary grid
+      let totalInvoicesCount = 0;
+      let matchedInvoicesCount = 0;
+      let overdueInvoicesCount = 0;
+      try {
+        const { data: invoicesData } = await supabase
+          .from('invoices')
+          .select('id, status, due_date')
+          .eq('client_id', activeClient.id);
+        if (invoicesData) {
+          totalInvoicesCount = invoicesData.length;
+          matchedInvoicesCount = invoicesData.filter(inv => inv.status === 'paid').length;
+          
+          const today = new Date();
+          overdueInvoicesCount = invoicesData.filter(inv => {
+            if (inv.status === 'overdue') return true;
+            if (inv.status === 'unpaid' && inv.due_date && new Date(inv.due_date) < today) return true;
+            return false;
+          }).length;
+        }
+      } catch (e) {
+        console.error('Error fetching invoices for dashboard:', e);
+      }
+
+      let uploadsCount = 0;
+      try {
+        const { data: uploadsData } = await supabase
+          .from('uploaded_files')
+          .select('id')
+          .eq('client_id', activeClient.id);
+        if (uploadsData) {
+          uploadsCount = uploadsData.length;
+        }
+      } catch (e) {
+        console.error('Error fetching uploaded files count:', e);
+      }
+
+      let rulesActiveCount = 0;
+      try {
+        const activeRules = await getSpendRules(activeClient.organization_id);
+        rulesActiveCount = activeRules.filter(r => r.enabled).length;
+      } catch (e) {
+        console.error('Error fetching active rules count:', e);
+      }
+
+      const highValueCount = (allTransactions || []).filter(tx => 
+        ['expense', 'vendor_payment', 'subscription'].includes(tx.type) && Math.abs(Number(tx.amount)) >= 50000
+      ).length;
+
+      const recurringCount = (allTransactions || []).filter(tx => tx.type === 'subscription').length;
+
+      const suggestionsCount = (openRisksData?.length || 0) + (stats.uncategorizedCount || 0) + (stats.unreviewedCount > 0 ? 1 : 0);
+
       setMetrics({
         ...stats,
         net: stats.income + stats.refunds - stats.expenses,
         topVendor,
         openRisksCount: openRisksData?.length || 0,
-        duplicateExposure
+        duplicateExposure,
+        uniqueVendorsCount: Object.keys(vendors).length,
+        matchedInvoicesCount,
+        totalInvoicesCount,
+        overdueInvoicesCount,
+        highValueCount,
+        recurringCount,
+        rulesActiveCount,
+        uploadsCount,
+        suggestionsCount
       });
 
       // Prepare Recharts sorted daily series data
@@ -389,6 +466,68 @@ const Dashboard: React.FC = () => {
     return "All close preparation checks passed";
   })();
 
+  const MiniCard = ({ 
+    title, 
+    value, 
+    ctaText, 
+    onClick, 
+    icon: Icon, 
+    accentColor 
+  }: { 
+    title: string; 
+    value: string | number; 
+    ctaText?: string; 
+    onClick?: () => void; 
+    icon: React.ComponentType<{ className?: string }>; 
+    accentColor?: 'green' | 'red' | 'amber' | 'teal' | 'neutral';
+  }) => {
+    let accentBg = 'bg-white/5 border-border/20 hover:bg-white/10 hover:border-border/30';
+    let iconClass = 'text-muted-foreground';
+    let valueClass = 'text-foreground';
+    
+    if (accentColor === 'green') {
+      accentBg = 'bg-success/5 border-success/20 hover:bg-success/10 hover:border-success/40';
+      iconClass = 'text-success';
+      valueClass = 'text-success';
+    } else if (accentColor === 'red') {
+      accentBg = 'bg-risk/5 border-risk/25 hover:bg-risk/10 hover:border-risk/45';
+      iconClass = 'text-risk';
+      valueClass = 'text-risk';
+    } else if (accentColor === 'amber') {
+      accentBg = 'bg-amber-500/5 border-amber-500/25 hover:bg-amber-500/10 hover:border-amber-500/45';
+      iconClass = 'text-amber-500';
+      valueClass = 'text-amber-500';
+    } else if (accentColor === 'teal') {
+      accentBg = 'bg-teal-500/5 border-teal-500/20 hover:bg-teal-500/10 hover:border-teal-500/40';
+      iconClass = 'text-teal-400';
+      valueClass = 'text-teal-400';
+    }
+
+    return (
+      <div 
+        onClick={onClick}
+        className={`premium-glass rounded-xl p-3.5 border flex flex-col justify-between h-[100px] transition-all duration-200 select-none cursor-pointer group ${accentBg}`}
+      >
+        <div className="flex items-center justify-between gap-1.5 min-w-0">
+          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">
+            {title}
+          </span>
+          <Icon className={`w-3.5 h-3.5 shrink-0 ${iconClass}`} />
+        </div>
+        <div className="mt-1">
+          <div className={`text-base font-extrabold truncate ${valueClass}`}>
+            {value}
+          </div>
+          {ctaText && (
+            <span className="text-[8px] text-muted-foreground font-black group-hover:text-primary transition-colors uppercase tracking-widest mt-0.5 block">
+              {ctaText}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-700 pb-16">
       {/* Header Banner */}
@@ -419,95 +558,212 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Primary Top Row Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Net Cash Movement */}
+      {/* Primary Top Row Metrics (Main KPI Cards) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {/* Revenue */}
         <div 
           onClick={() => navigate('/transactions')}
           className="premium-glass premium-glass-hover p-5 rounded-2xl border border-border/30 flex flex-col justify-between cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Net Cash Movement</span>
-            <div className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 group-hover:bg-teal-500/20 transition-all duration-200">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Revenue</span>
+            <div className="w-8 h-8 rounded-lg bg-success/10 border border-success/20 flex items-center justify-center text-success group-hover:bg-success/20 transition-all duration-200">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className={`text-2xl font-black ${metrics.net >= 0 ? 'text-success' : 'text-risk'}`}>
-              {hasTransactions ? formatCurrency(metrics.net) : '—'}
+            <div className="text-2xl font-black text-success">
+              {hasTransactions ? formatCurrency(metrics.income) : '—'}
             </div>
             <p className="text-[10px] text-muted-foreground mt-1.5 font-semibold leading-none">
-              {hasTransactions ? (metrics.net > 0 ? "Net cash positive" : metrics.net < 0 ? "Net cash negative" : "Balanced") : "No data yet"}
+              {hasTransactions ? `${metrics.incomeCount} inflows` : "No revenue data"}
             </p>
           </div>
         </div>
 
-        {/* Total Expenses */}
+        {/* Refunds */}
         <div 
           onClick={() => navigate('/transactions')}
           className="premium-glass premium-glass-hover p-5 rounded-2xl border border-border/30 flex flex-col justify-between cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Expenses</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 group-hover:bg-rose-500/20 transition-all duration-200">
-              <TrendingDown className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Refunds</span>
+            <div className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 group-hover:bg-teal-500/20 transition-all duration-200">
+              <ArrowDownLeft className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-risk">
-              {hasTransactions ? formatCurrency(metrics.expenses) : '—'}
+            <div className="text-2xl font-black text-teal-400">
+              {hasTransactions && metrics.refunds > 0 ? formatCurrency(metrics.refunds) : '—'}
             </div>
             <p className="text-[10px] text-muted-foreground mt-1.5 font-semibold leading-none">
-              {hasTransactions ? `${metrics.expenseCount} outflow rows` : "No expense data"}
+              {hasTransactions && metrics.refunds > 0 ? `${metrics.refundCount} items` : "No refunds recorded"}
             </p>
           </div>
         </div>
 
-        {/* Open Risks */}
+        {/* Transactions */}
         <div 
-          onClick={() => navigate('/risk-inbox')}
+          onClick={() => navigate('/transactions')}
+          className="premium-glass premium-glass-hover p-5 rounded-2xl border border-border/30 flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Transactions</span>
+            <div className="w-8 h-8 rounded-lg bg-white/5 border border-border/20 flex items-center justify-center text-foreground group-hover:bg-white/10 transition-all duration-200">
+              <FileText className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-foreground">
+              {metrics.count}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1.5 font-semibold leading-none">
+              {hasTransactions ? "Total ledger rows" : "No transactions"}
+            </p>
+          </div>
+        </div>
+
+        {/* Uncategorized */}
+        <div 
+          onClick={() => navigate('/transactions?category=uncategorized')}
+          className="premium-glass premium-glass-hover p-5 rounded-2xl border border-warning/20 hover:border-warning/40 bg-warning/5 flex flex-col justify-between cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Uncategorized</span>
+            <div className="w-8 h-8 rounded-lg bg-warning/10 border border-warning/20 flex items-center justify-center text-warning group-hover:bg-warning/20 transition-all duration-200">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <div className={`text-2xl font-black ${metrics.uncategorizedCount > 0 ? 'text-warning' : 'text-foreground'}`}>
+              {metrics.uncategorizedCount}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1.5 font-semibold leading-none">
+              {metrics.uncategorizedCount > 0 ? "Pending categorization" : "All categorized"}
+            </p>
+          </div>
+        </div>
+
+        {/* Duplicate Exp. */}
+        <div 
+          onClick={() => navigate('/risk-inbox?type=duplicate_payment')}
           className="premium-glass premium-glass-hover p-5 rounded-2xl border border-risk/20 hover:border-risk/40 bg-risk/5 flex flex-col justify-between cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Open Risks</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Duplicate Exp.</span>
             <div className="w-8 h-8 rounded-lg bg-risk/10 border border-risk/20 flex items-center justify-center text-risk group-hover:bg-risk/20 transition-all duration-200">
               <ShieldAlert className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-foreground">
-              {metrics.openRisksCount}
+            <div className={`text-2xl font-black ${metrics.duplicateExposure > 0 ? 'text-risk' : 'text-foreground'}`}>
+              {formatCurrency(metrics.duplicateExposure)}
             </div>
             <p className="text-[10px] text-muted-foreground mt-1.5 font-semibold leading-none">
-              Unresolved alerts requiring action
+              {metrics.duplicateExposure > 0 ? "Duplicate spend exposure" : "No duplicates flagged"}
             </p>
           </div>
         </div>
+      </div>
 
-        {/* Month-End Readiness */}
-        <div 
+      {/* Secondary Row Metrics (Compact Control/Operations Grid) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <MiniCard 
+          title="Open Risks"
+          value={metrics.openRisksCount > 0 ? `${metrics.openRisksCount} pending` : "No issues"}
+          ctaText={metrics.openRisksCount > 0 ? "Resolve →" : "View →"}
+          onClick={() => navigate('/risk-inbox')}
+          icon={ShieldAlert}
+          accentColor={metrics.openRisksCount > 0 ? 'red' : 'green'}
+        />
+        <MiniCard 
+          title="Needs Review"
+          value={metrics.unreviewedCount > 0 ? `${metrics.unreviewedCount} pending` : "No issues"}
+          ctaText={metrics.unreviewedCount > 0 ? "Review →" : "View →"}
+          onClick={() => navigate('/transactions?review=pending')}
+          icon={Clock}
+          accentColor={metrics.unreviewedCount > 0 ? 'amber' : 'green'}
+        />
+        <MiniCard 
+          title="Month-End Readiness"
+          value={readiness?.score !== undefined ? `${readiness.score}/100` : "Coming online"}
+          ctaText={readiness?.score !== undefined ? "View →" : undefined}
           onClick={() => navigate('/reports')}
-          className="premium-glass premium-glass-hover p-5 rounded-2xl border border-primary/25 hover:border-primary/45 bg-primary/5 flex flex-col justify-between cursor-pointer group"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Month-End Readiness</span>
-            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-all duration-200">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl font-black text-foreground">
-              {readiness?.score || 0}/100
-            </div>
-            <p className={`text-[10px] font-bold mt-1.5 leading-none uppercase ${
-              readiness?.status === 'Ready' ? 'text-success' : 
-              readiness?.status === 'Almost ready' ? 'text-primary' : 
-              readiness?.status === 'Needs review' ? 'text-amber-500' : 'text-risk'
-            }`}>
-              {readiness?.status || 'Not ready'}
-            </p>
-          </div>
-        </div>
+          icon={CheckCircle2}
+          accentColor={!hasTransactions ? 'neutral' : readiness?.score && readiness.score >= 90 ? 'green' : readiness?.score && readiness.score >= 70 ? 'amber' : 'red'}
+        />
+        <MiniCard 
+          title="Vendors"
+          value={metrics.uniqueVendorsCount > 0 ? `${metrics.uniqueVendorsCount} active` : "0 active"}
+          ctaText="Open →"
+          onClick={() => navigate('/vendors')}
+          icon={Building2}
+          accentColor={metrics.uniqueVendorsCount > 0 ? 'teal' : 'neutral'}
+        />
+        <MiniCard 
+          title="Invoice Matches"
+          value={metrics.totalInvoicesCount > 0 ? `${metrics.matchedInvoicesCount}/${metrics.totalInvoicesCount} matched` : "0 pending"}
+          ctaText={metrics.totalInvoicesCount > 0 ? (metrics.totalInvoicesCount > metrics.matchedInvoicesCount ? "Resolve →" : "View →") : "Open →"}
+          onClick={() => navigate('/files')}
+          icon={FileText}
+          accentColor={!hasTransactions ? 'neutral' : metrics.totalInvoicesCount > 0 ? (metrics.overdueInvoicesCount > 0 ? 'red' : metrics.matchedInvoicesCount === metrics.totalInvoicesCount ? 'green' : 'amber') : 'neutral'}
+        />
+        <MiniCard 
+          title="Unknown Rows"
+          value={metrics.unknownCount > 0 ? `${metrics.unknownCount} pending` : "No issues"}
+          ctaText={metrics.unknownCount > 0 ? "Resolve →" : "View →"}
+          onClick={() => navigate('/transactions?type=unknown')}
+          icon={AlertCircle}
+          accentColor={metrics.unknownCount > 0 ? 'amber' : 'green'}
+        />
+        <MiniCard 
+          title="High-Value Payments"
+          value={metrics.highValueCount > 0 ? `${metrics.highValueCount} active` : "0 active"}
+          ctaText={metrics.highValueCount > 0 ? "Review →" : "View →"}
+          onClick={() => navigate('/transactions')}
+          icon={TrendingDown}
+          accentColor={metrics.highValueCount > 0 ? 'amber' : 'green'}
+        />
+        <MiniCard 
+          title="Recurring Payments"
+          value={metrics.recurringCount > 0 ? `${metrics.recurringCount} active` : "0 active"}
+          ctaText={metrics.recurringCount > 0 ? "View →" : "Open →"}
+          onClick={() => navigate('/transactions?type=subscription')}
+          icon={Layers}
+          accentColor={metrics.recurringCount > 0 ? 'teal' : 'neutral'}
+        />
+        <MiniCard 
+          title="Recent Uploads"
+          value={metrics.uploadsCount > 0 ? `${metrics.uploadsCount} files` : "0 files"}
+          ctaText="View →"
+          onClick={() => navigate('/files')}
+          icon={Upload}
+          accentColor={metrics.uploadsCount > 0 ? 'teal' : 'neutral'}
+        />
+        <MiniCard 
+          title="Accountant Pack"
+          value={hasTransactions ? (readiness?.score && readiness.score >= 90 ? "Ready" : "Draft") : "Coming online"}
+          ctaText={hasTransactions ? "Export →" : undefined}
+          onClick={() => navigate('/reports')}
+          icon={Download}
+          accentColor={hasTransactions ? (readiness?.score && readiness.score >= 90 ? 'green' : 'amber') : 'neutral'}
+        />
+        <MiniCard 
+          title="Rules Active"
+          value={metrics.rulesActiveCount > 0 ? `${metrics.rulesActiveCount} active` : "0 active"}
+          ctaText="Open →"
+          onClick={() => navigate('/settings?tab=spend-rules')}
+          icon={ShieldCheck}
+          accentColor={metrics.rulesActiveCount > 0 ? 'green' : 'amber'}
+        />
+        <MiniCard 
+          title="Ask Kaeo Suggestions"
+          value={metrics.suggestionsCount > 0 ? `${metrics.suggestionsCount} suggestions` : "No issues"}
+          ctaText="Ask →"
+          onClick={() => navigate('/ask-kaeo')}
+          icon={Sparkles}
+          accentColor={metrics.suggestionsCount > 0 ? 'teal' : 'green'}
+        />
       </div>
 
       {hasTransactions && (
@@ -697,54 +953,7 @@ const Dashboard: React.FC = () => {
               </div>
             )}
 
-            {/* Secondary Row Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
-              {/* Revenue */}
-              <div className="premium-glass rounded-xl p-3.5 border border-border/20 flex flex-col justify-between min-w-0">
-                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">Revenue</span>
-                <div className="text-base font-extrabold text-success mt-1 truncate">{formatCurrency(metrics.income)}</div>
-                <span className="text-[8px] text-muted-foreground font-semibold mt-0.5 truncate">{metrics.incomeCount} inflows</span>
-              </div>
 
-              {/* Refunds */}
-              {metrics.refunds > 0 && (
-                <div className="premium-glass rounded-xl p-3.5 border border-border/20 flex flex-col justify-between min-w-0">
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">Refunds</span>
-                  <div className="text-base font-extrabold text-teal-400 mt-1 truncate">{formatCurrency(metrics.refunds)}</div>
-                  <span className="text-[8px] text-muted-foreground font-semibold mt-0.5 truncate">{metrics.refundCount} items</span>
-                </div>
-              )}
-
-              {/* Transactions */}
-              <div 
-                onClick={() => navigate('/transactions')}
-                className="premium-glass premium-glass-hover rounded-xl p-3.5 border border-border/20 flex flex-col justify-between min-w-0 cursor-pointer group"
-              >
-                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">Transactions</span>
-                <div className="text-base font-extrabold text-foreground mt-1 group-hover:text-primary transition-colors truncate">{metrics.count}</div>
-                <span className="text-[8px] text-muted-foreground font-semibold mt-0.5 truncate">View Ledger →</span>
-              </div>
-
-              {/* Uncategorized */}
-              <div 
-                onClick={() => navigate('/transactions?category=uncategorized')}
-                className="premium-glass premium-glass-hover rounded-xl p-3.5 border border-border/20 flex flex-col justify-between min-w-0 cursor-pointer group"
-              >
-                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">Uncategorized</span>
-                <div className="text-base font-extrabold text-foreground mt-1 group-hover:text-primary transition-colors truncate">{metrics.uncategorizedCount}</div>
-                <span className="text-[8px] text-muted-foreground font-semibold mt-0.5 truncate">Map Categories →</span>
-              </div>
-
-              {/* Duplicate Exposure */}
-              <div 
-                onClick={() => navigate('/risk-inbox?type=duplicate_payment')}
-                className="premium-glass premium-glass-hover rounded-xl p-3.5 border border-border/20 flex flex-col justify-between min-w-0 cursor-pointer group"
-              >
-                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">Duplicate Exp.</span>
-                <div className="text-base font-extrabold text-foreground mt-1 group-hover:text-primary transition-colors truncate">{formatCurrency(metrics.duplicateExposure)}</div>
-                <span className="text-[8px] text-muted-foreground font-semibold mt-0.5 truncate">Review Risks →</span>
-              </div>
-            </div>
           </div>
         </div>
       )}
