@@ -31,6 +31,70 @@ const formatReportCurrency = (val: number, _currency: string = 'INR') => {
   return formatINR(val);
 };
 
+export type ResponseMode =
+  | 'metric_answer'
+  | 'priority_advice'
+  | 'explanation'
+  | 'report_summary'
+  | 'vendor_review'
+  | 'risk_review'
+  | 'invoice_review'
+  | 'casual_followup';
+
+export function determineResponseMode(intent: AskKaeoCategory, query: string): ResponseMode {
+  const q = query.toLowerCase();
+  
+  if (intent === 'casual_check_in') {
+    return 'casual_followup';
+  }
+  
+  if (
+    q.includes('what should i do') || 
+    q.includes('what do i fix') || 
+    q.includes('where do i start') || 
+    q.includes('what to do') || 
+    q.includes('what now') ||
+    q.includes('priority') ||
+    q.includes('worry') ||
+    q.includes('are we cooked') ||
+    q.includes('is this ok') ||
+    intent === 'operational_next_steps'
+  ) {
+    return 'priority_advice';
+  }
+  
+  if (
+    q.includes('how much') || 
+    q.includes('how many') || 
+    q.includes('what is the total') || 
+    q.includes('total') || 
+    q.includes('show me the numbers') ||
+    q.includes('net cash') ||
+    q.includes('revenue') ||
+    q.includes('expense')
+  ) {
+    return 'metric_answer';
+  }
+  
+  if (intent === 'finance_summary') {
+    return 'report_summary';
+  }
+  
+  if (intent === 'vendor_analysis' || intent === 'recurring_spend' || q.includes('vendor')) {
+    return 'vendor_review';
+  }
+  
+  if (intent === 'risk_review' || q.includes('risk') || q.includes('duplicate')) {
+    return 'risk_review';
+  }
+  
+  if (q.includes('invoice') || q.includes('bill')) {
+    return 'invoice_review';
+  }
+  
+  return 'explanation';
+}
+
 export async function categorizeQuestion(query: string): Promise<AskKaeoCategory> {
   const q = query.toLowerCase().trim();
   
@@ -660,10 +724,13 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     notes: clientMetadata?.notes || ''
   };
 
+  const responseMode = determineResponseMode(intent, query);
+
   // BUILD STRUCTURED CONTEXT FOR AI
   const structuredContext: AIStructuredContext = {
     question: query + " (All financial amounts are in INR.)",
     intent,
+    response_mode: responseMode,
     invoice_summary,
     needs_web_research,
     active_client_name: activeClientName,
@@ -745,12 +812,16 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
           aiResult.caveats = aiResult.caveats.map(sanitizeMarkdown);
         }
 
-        // 2. Auto-inject math formula for net cash if omitted
+        // 2. Auto-inject math formula for net cash ONLY if user asked for it
         if (intent === 'finance_summary') {
-          const hasMath = aiResult.reasoning_summary.includes('=') && 
-                          (aiResult.reasoning_summary.toLowerCase().includes('net cash') || aiResult.reasoning_summary.toLowerCase().includes('math'));
-          if (!hasMath) {
-            aiResult.reasoning_summary += `\n\nHere’s the math:\n${formatReportCurrency(income, baseCurrency)} (Income) + ${formatReportCurrency(refunds, baseCurrency)} (Refunds) - ${formatReportCurrency(expenses, baseCurrency)} (Expenses) = ${formatReportCurrency(netCash, baseCurrency)} (Net Cash).`;
+          const q = query.toLowerCase();
+          const userAskedMath = q.includes('calculated') || q.includes('math') || q.includes('formula') || q.includes('why is net') || q.includes('breakdown') || q.includes('explain');
+          if (userAskedMath) {
+            const hasMath = aiResult.reasoning_summary.includes('=') && 
+                            (aiResult.reasoning_summary.toLowerCase().includes('net cash') || aiResult.reasoning_summary.toLowerCase().includes('math'));
+            if (!hasMath) {
+              aiResult.reasoning_summary += `\n\nHere’s the math:\n${formatReportCurrency(income, baseCurrency)} (Income) + ${formatReportCurrency(refunds, baseCurrency)} (Refunds) - ${formatReportCurrency(expenses, baseCurrency)} (Expenses) = ${formatReportCurrency(netCash, baseCurrency)} (Net Cash).`;
+            }
           }
         }
 
@@ -824,7 +895,26 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
 
   // IF REAL AI SUCCEEDS, USE IT
   if (aiResult) {
-    const formattedText = `${isSanitized ? sanitizedAnswer : aiResult.answer}\n\nBreakdown / Reasoning:\n${isSanitized ? sanitizedReasoning : aiResult.reasoning_summary}\n\nRecommended next steps:\n${aiResult.recommended_actions.map(a => `• ${a}`).join('\n')}\n\nCaveats:\n${aiResult.caveats.map(c => `• ${c}`).join('\n')}`;
+    let formattedText = `${isSanitized ? sanitizedAnswer : aiResult.answer}`;
+    
+    const reasoning = isSanitized ? sanitizedReasoning : aiResult.reasoning_summary;
+    if (reasoning && reasoning.trim()) {
+      const mode = determineResponseMode(intent, query);
+      if (mode === 'casual_followup' || mode === 'priority_advice') {
+        formattedText += `\n\n${reasoning}`;
+      } else {
+        formattedText += `\n\nWhy:\n${reasoning}`;
+      }
+    }
+    
+    if (aiResult.recommended_actions && aiResult.recommended_actions.length > 0) {
+      formattedText += `\n\nNext:\n${aiResult.recommended_actions.map(a => `• ${a}`).join('\n')}`;
+    }
+    
+    if (aiResult.caveats && aiResult.caveats.length > 0) {
+      formattedText += `\n\nWatch out:\n${aiResult.caveats.map(c => `• ${c}`).join('\n')}`;
+    }
+
     const mode = isSanitized ? 'ai_assisted_sanitized' : (intent === 'finance_summary' ? 'ai_assisted_locked_numbers' : 'ai_assisted');
     
     return {
