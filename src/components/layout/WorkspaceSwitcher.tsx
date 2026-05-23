@@ -136,17 +136,29 @@ const WorkspaceSwitcher: React.FC = () => {
                         Add Client
                       </button>
                     </div>
-                  ) : clients.map(client => (
-                    <button
-                      key={client.id}
-                      onClick={() => { setActiveClient(client); setIsOpen(false); }}
-                      className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary' : 'hover:bg-white/5'}`}
-                    >
-                      <Briefcase className="w-3 h-3" />
-                      <span className="truncate flex-1 text-left">{client.name}</span>
-                      {activeClient?.id === client.id && <Check className="w-3 h-3" />}
-                    </button>
-                  ))}
+                  ) : (
+                    <>
+                      {clients.map(client => (
+                        <button
+                          key={client.id}
+                          onClick={() => { setActiveClient(client); setIsOpen(false); }}
+                          className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary' : 'hover:bg-white/5'}`}
+                        >
+                          <Briefcase className="w-3 h-3" />
+                          <span className="truncate flex-1 text-left">{client.name}</span>
+                          {activeClient?.id === client.id && <Check className="w-3 h-3" />}
+                        </button>
+                      ))}
+                      <div className="h-px bg-border/10 my-1 mx-2" />
+                      <button
+                        onClick={() => { navigate('/settings?tab=clients'); setIsOpen(false); }}
+                        className="w-full flex items-center justify-between px-3 py-1 rounded-lg text-[11px] font-bold text-teal-400 hover:bg-white/5 transition-colors text-left"
+                      >
+                        <span>Manage clients</span>
+                        <span>→</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </>
             )}

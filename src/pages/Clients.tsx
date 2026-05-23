@@ -24,7 +24,11 @@ interface ClientStats {
   readinessStatus: string;
 }
 
-const Clients: React.FC = () => {
+interface ClientsProps {
+  embedMode?: boolean;
+}
+
+const Clients: React.FC<ClientsProps> = ({ embedMode = false }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { 
@@ -234,13 +238,27 @@ const Clients: React.FC = () => {
     ];
 
     return (
-      <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in duration-500">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Business Profile</h1>
-            <p className="text-sm text-muted-foreground mt-1">Configure your corporate workspace variables.</p>
+      <div className={embedMode ? "space-y-6" : "max-w-3xl mx-auto space-y-6 animate-in fade-in duration-500"}>
+        {!embedMode && (
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Business Profile</h1>
+              <p className="text-sm text-muted-foreground mt-1">Configure your corporate workspace variables.</p>
+            </div>
+            {!isEditingProfile && (
+              <button
+                onClick={() => setIsEditingProfile(true)}
+                className="px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl flex items-center gap-2 transition-all cursor-pointer"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                Edit Profile
+              </button>
+            )}
           </div>
-          {!isEditingProfile && (
+        )}
+
+        {embedMode && !isEditingProfile && (
+          <div className="flex justify-end">
             <button
               onClick={() => setIsEditingProfile(true)}
               className="px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl flex items-center gap-2 transition-all cursor-pointer"
@@ -248,8 +266,8 @@ const Clients: React.FC = () => {
               <Edit3 className="w-3.5 h-3.5" />
               Edit Profile
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {isEditingProfile ? (
           <form onSubmit={handleSaveProfile} className="premium-glass border border-border/40 rounded-2xl p-6 space-y-6">
@@ -470,20 +488,34 @@ const Clients: React.FC = () => {
     const activeOrgName = activeOrg?.name || 'Firm';
 
     return (
-      <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
-            <p className="text-sm text-muted-foreground mt-1">Manage the business accounts you review in Kaeo for <span className="text-foreground font-semibold">{activeOrgName}</span>.</p>
+      <div className={embedMode ? "space-y-6" : "max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500"}>
+        {!embedMode && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
+              <p className="text-sm text-muted-foreground mt-1">Manage the business accounts you review in Kaeo for <span className="text-foreground font-semibold">{activeOrgName}</span>.</p>
+            </div>
+            
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-4 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-xs flex items-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-primary/10 self-start sm:self-auto"
+            >
+              <Plus className="w-4 h-4" /> Add Client
+            </button>
           </div>
-          
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="px-4 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-xs flex items-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-primary/10 self-start sm:self-auto"
-          >
-            <Plus className="w-4 h-4" /> Add Client
-          </button>
-        </div>
+        )}
+
+        {embedMode && clients.length > 0 && (
+          <div className="flex justify-between items-center border-b border-border/15 pb-4">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Client Directory</h3>
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-4 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-xs flex items-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-primary/10"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Client
+            </button>
+          </div>
+        )}
 
         {clients.length === 0 ? (
           <div className="premium-glass border border-dashed border-border/40 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5 shadow-xl">
@@ -493,7 +525,7 @@ const Clients: React.FC = () => {
             <div className="space-y-1">
               <h3 className="text-lg font-bold tracking-tight">Add your first client</h3>
               <p className="text-xs text-muted-foreground max-w-sm font-medium">
-                Create a client business profile to start uploading statements and detecting spend leakages.
+                Clients are the businesses you review inside this workspace.
               </p>
             </div>
             <button 

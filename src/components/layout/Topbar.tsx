@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Search, Bell, X } from 'lucide-react';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
+import { useWorkspace } from '../../hooks/useWorkspace';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -28,6 +29,7 @@ const pathTitleMap: Record<string, string> = {
 
 
 const Topbar: React.FC = () => {
+  const { accountMode } = useWorkspace();
   const location = useLocation();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -97,9 +99,34 @@ const Topbar: React.FC = () => {
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden sm:inline-flex" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
-              </BreadcrumbItem>
+              
+              {currentPath === '/settings' && tabParam ? (
+                <>
+                  <BreadcrumbItem className="hidden sm:inline-flex">
+                    <BreadcrumbLink asChild>
+                      <Link to="/settings">Settings</Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="hidden sm:inline-flex" />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>
+                      {tabParam === 'clients'
+                        ? (accountMode === 'business_owner' ? 'Business Profile' : 'Clients')
+                        : tabParam === 'spend-rules'
+                        ? 'Spend Rules'
+                        : tabParam === 'data'
+                        ? 'Data & Reset'
+                        : tabParam === 'integrations'
+                        ? 'Integrations'
+                        : tabParam.charAt(0).toUpperCase() + tabParam.slice(1)}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                </>
+              ) : (
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
+                </BreadcrumbItem>
+              )}
             </BreadcrumbList>
           </Breadcrumb>
         </div>

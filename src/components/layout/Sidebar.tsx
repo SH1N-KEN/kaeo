@@ -14,28 +14,24 @@ import {
   Building2,
   Inbox,
   FileText,
-  UploadCloud,
-  Users
+  UploadCloud
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { useToast } from '../../hooks/useToast';
-import { useWorkspace } from '../../hooks/useWorkspace';
 import aeLogo from '../../assets/kaeo-ae-logo.png';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: Inbox, label: 'Risk Inbox', path: '/risk-inbox' },
+  { icon: UploadCloud, label: 'Files', path: '/files' },
   { icon: ArrowRightLeft, label: 'Transactions', path: '/transactions' },
   { icon: Building2, label: 'Vendors', path: '/vendors' },
+  { icon: Inbox, label: 'Risk Inbox', path: '/risk-inbox' },
   { icon: FileText, label: 'Reports', path: '/reports' },
-  { icon: UploadCloud, label: 'Files', path: '/files' },
-  { icon: Users, label: 'Clients', path: '/clients' },
 ];
 
 const Sidebar: React.FC = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
-  const { accountMode } = useWorkspace();
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Collapsible state
@@ -176,9 +172,7 @@ const Sidebar: React.FC = () => {
       <div className="flex-1 flex flex-col min-h-0 p-3 pt-4">
         <nav className="space-y-1 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar pr-1 -mr-1">
           {navItems.map((item) => {
-            const label = item.path === '/clients' && accountMode === 'business_owner'
-              ? 'Business Profile'
-              : item.label;
+            const label = item.label;
 
             return (
               <NavLink

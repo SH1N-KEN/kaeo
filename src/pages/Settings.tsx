@@ -16,17 +16,19 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import { getSpendRules, saveSpendRule, type SpendRule } from '../lib/spendRulesEngine';
 import { useToast } from '../hooks/useToast';
 import ResetClientModal from '../components/ui/ResetClientModal';
+import Clients from './Clients';
+import { Link as LinkIcon } from 'lucide-react';
 
-type Tab = 'workspace' | 'spend-rules' | 'data';
+type Tab = 'workspace' | 'clients' | 'spend-rules' | 'data' | 'integrations';
 
 const Settings: React.FC = () => {
-  const { activeClient, activeOrg } = useWorkspace();
+  const { activeClient, activeOrg, accountMode } = useWorkspace();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tabParam = searchParams.get('tab') as Tab | null;
   const [activeTab, setActiveTab] = useState<Tab>(
-    tabParam && ['workspace', 'spend-rules', 'data'].includes(tabParam)
+    tabParam && ['workspace', 'clients', 'spend-rules', 'data', 'integrations'].includes(tabParam)
       ? (tabParam as Tab)
       : 'workspace'
   );
@@ -90,8 +92,14 @@ const Settings: React.FC = () => {
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: 'workspace', label: 'Workspace', icon: Building2 },
+    { 
+      id: 'clients', 
+      label: accountMode === 'business_owner' ? 'Business Profile' : 'Clients', 
+      icon: Users 
+    },
     { id: 'spend-rules', label: 'Spend Rules', icon: ShieldCheck },
     { id: 'data', label: 'Data & Reset', icon: Database },
+    { id: 'integrations', label: 'Integrations', icon: LinkIcon }
   ];
 
   const getRuleDetails = (type: string) => {
@@ -176,7 +184,7 @@ const Settings: React.FC = () => {
             <div className="flex items-start gap-3 mt-2 p-3 bg-muted/20 rounded-xl border border-border/40">
               <Info className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Workspace name and client management can be configured from the <strong className="text-foreground">Clients</strong> page.
+                Workspace name and client management can be configured from the <strong className="text-foreground">{accountMode === 'business_owner' ? 'Business Profile' : 'Clients'}</strong> tab.
                 Switch between clients using the workspace switcher in the topbar.
               </p>
             </div>
@@ -185,18 +193,22 @@ const Settings: React.FC = () => {
           <div className="premium-glass rounded-2xl border border-border/50 p-6 space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <Users className="w-4 h-4 text-muted-foreground" />
-              <h2 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Client Workspaces</h2>
+              <h2 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">
+                {accountMode === 'business_owner' ? 'Business Profile' : 'Client Workspaces'}
+              </h2>
             </div>
             <p className="text-sm text-muted-foreground">
-              Manage clients and client workspaces from the dedicated Clients page.
+              {accountMode === 'business_owner'
+                ? 'Manage your business details and default workspace settings.'
+                : 'Manage clients and client workspaces from the Clients tab.'}
             </p>
-            <a
-              href="/clients"
+            <button
+              onClick={() => switchTab('clients')}
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg text-xs font-bold border border-primary/20 hover:bg-primary/20 transition-colors"
             >
               <Users className="w-3.5 h-3.5" />
-              Go to Clients
-            </a>
+              {accountMode === 'business_owner' ? 'Edit Business Profile' : 'Go to Clients'}
+            </button>
           </div>
         </div>
       )}
@@ -335,6 +347,91 @@ const Settings: React.FC = () => {
               ) : (
                 <p className="text-xs text-muted-foreground italic">Select a client to manage data.</p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── TAB: Clients / Business Profile ─── */}
+      {activeTab === 'clients' && (
+        <div className="space-y-6">
+          <Clients embedMode={true} />
+        </div>
+      )}
+
+      {/* ─── TAB: Integrations ─── */}
+      {activeTab === 'integrations' && (
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row gap-4 p-5 premium-glass rounded-2xl border border-primary/20 items-start">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+              <LinkIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-foreground mb-1">Integrations Directory</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Connect your bookkeeping software and billing platforms to automate transaction imports.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Tally */}
+            <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-foreground text-sm">Tally Prime / ERP 9</h4>
+                  <span className="text-[9px] font-black uppercase text-muted-foreground bg-muted/40 px-2 py-0.5 rounded border border-border/20">Offline / API</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Export XML/Excel tables directly from your Tally workspace and upload them using Kaeo Ingestion.
+                </p>
+              </div>
+              <button className="w-fit text-xs font-bold text-primary hover:underline mt-2">View export instructions →</button>
+            </div>
+
+            {/* Zoho Books */}
+            <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-foreground text-sm">Zoho Books API</h4>
+                  <span className="text-[9px] font-black uppercase text-muted-foreground bg-muted/40 px-2 py-0.5 rounded border border-border/20">Coming soon</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Direct OAuth interface to synchronize Zoho invoices, debit notes, and bank reconciliations automatically.
+                </p>
+              </div>
+              <button className="w-fit text-xs font-bold text-muted-foreground hover:text-foreground mt-2 disabled:opacity-50" disabled>Setup sync (Phase 16) →</button>
+            </div>
+
+            {/* Razorpay */}
+            <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-foreground text-sm">Razorpay Payouts</h4>
+                  <span className="text-[9px] font-black uppercase text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">Developer Link</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Real-time webhook connectivity to evaluate outgoing vendor payment risk immediately upon processing.
+                </p>
+              </div>
+              <button className="w-fit text-xs font-bold text-primary hover:underline mt-2">Configure Webhooks →</button>
+            </div>
+
+            {/* Excel / Google Sheets */}
+            <div className="premium-glass border border-primary/30 shadow-sm shadow-primary/5 rounded-2xl p-5 flex flex-col justify-between h-44">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-foreground text-sm">Excel / Google Sheets</h4>
+                  <span className="text-[9px] font-black uppercase text-success bg-success/15 px-2 py-0.5 rounded border border-success/20">Active</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Direct client-side file ingestion, schema column-mapping, and duplicate ledger entries protection.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-success font-semibold mt-2">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Ready to ingest files
+              </div>
             </div>
           </div>
         </div>

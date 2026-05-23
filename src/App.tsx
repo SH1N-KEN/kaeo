@@ -5,7 +5,6 @@ import SetupRequired from './components/auth/SetupRequired';
 import AppShell from './components/layout/AppShell';
 import Dashboard from './pages/Dashboard';
 import AskKaeo from './pages/AskKaeo';
-import SpendRules from './pages/SpendRules';
 import Account from './pages/Account';
 import Files from './pages/Files';
 import Mapping from './pages/Mapping';
@@ -14,7 +13,6 @@ import Vendors from './pages/Vendors';
 import RiskInbox from './pages/RiskInbox';
 import Reports from './pages/Reports';
 import ReportDetail from './pages/ReportDetail';
-import Clients from './pages/Clients';
 import Settings from './pages/Settings';
 import Billing from './pages/Billing';
 import Login from './pages/Login';
@@ -93,13 +91,12 @@ function App() {
               <Route path="files/:importId/mapping" element={<Mapping />} />
               <Route path="transactions" element={<Transactions />} />
               <Route path="vendors" element={<Vendors />} />
-              <Route path="spend-rules" element={<SpendRules />} />
+              <Route path="spend-rules" element={<Navigate to="/settings?tab=spend-rules" replace />} />
               <Route path="risk-inbox" element={<RiskInbox />} />
               <Route path="reports" element={<Reports />} />
               <Route path="reports/:reportId" element={<ReportDetail />} />
-              <Route path="spend-rules" element={<Navigate to="/settings?tab=spend-rules" replace />} />
               <Route path="account" element={<Account />} />
-              <Route path="clients" element={<Clients />} />
+              <Route path="clients" element={<Navigate to="/settings?tab=clients" replace />} />
               <Route path="settings" element={<Settings />} />
               <Route path="billing" element={<Billing />} />
             </Route>
