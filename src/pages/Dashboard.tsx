@@ -543,8 +543,71 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main KPI Row — 4 cards only */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* Top Financial KPI Row — 5 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
+        {/* Revenue */}
+        <div 
+          onClick={() => navigate('/transactions?type=income')}
+          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Revenue</span>
+            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
+              <ArrowDownLeft className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-success">
+              {hasTransactions ? formatCurrency(metrics.income) : '—'}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none">
+              {hasTransactions ? `${metrics.incomeCount} transactions` : 'No revenue data'}
+            </p>
+          </div>
+        </div>
+
+        {/* Refunds */}
+        <div 
+          onClick={() => navigate('/transactions?type=refund')}
+          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Refunds</span>
+            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
+              <Clock className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-success">
+              {hasTransactions ? formatCurrency(metrics.refunds) : '—'}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none">
+              {hasTransactions ? `${metrics.refundCount} transactions` : 'No refund data'}
+            </p>
+          </div>
+        </div>
+
+        {/* Expenses */}
+        <div 
+          onClick={() => navigate('/transactions?type=expense')}
+          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Expenses</span>
+            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-risk">
+              {hasTransactions ? formatCurrency(metrics.expenses) : '—'}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none">
+              {hasTransactions ? `${metrics.expenseCount} transactions` : 'No expense data'}
+            </p>
+          </div>
+        </div>
+
         {/* Net Cash Movement */}
         <div 
           onClick={() => navigate('/transactions')}
@@ -566,27 +629,30 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Total Expenses */}
+        {/* Transactions count */}
         <div 
-          onClick={() => navigate('/transactions?type=expense')}
+          onClick={() => navigate('/transactions')}
           className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Expenses</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Transactions</span>
             <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
-              <ArrowUpRight className="w-3.5 h-3.5" />
+              <Layers className="w-3.5 h-3.5" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-risk">
-              {hasTransactions ? formatCurrency(-metrics.expenses) : '—'}
+            <div className="text-2xl font-black text-foreground">
+              {hasTransactions ? metrics.count : '—'}
             </div>
             <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none">
-              {hasTransactions ? `${metrics.expenseCount} transactions` : 'No expense data'}
+              Total ingested entries
             </p>
           </div>
         </div>
+      </div>
 
+      {/* Control Metric Row — 4 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Open Risks */}
         <div 
           onClick={() => navigate('/risk-inbox')}
@@ -604,6 +670,48 @@ const Dashboard: React.FC = () => {
             </div>
             <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none truncate">
               {metrics.openRisksCount > 0 ? `${formatCurrency(metrics.duplicateExposure)} duplicate exposure` : 'No compliance issues'}
+            </p>
+          </div>
+        </div>
+
+        {/* Needs Review */}
+        <div 
+          onClick={() => navigate('/transactions?review=pending')}
+          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Needs Review</span>
+            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
+              <Clock className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div>
+            <div className={`text-2xl font-black ${metrics.unreviewedCount > 0 ? 'text-amber-500' : 'text-success'}`}>
+              {metrics.unreviewedCount}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none truncate">
+              {metrics.unreviewedCount > 0 ? 'Transactions needing validation' : 'All entries reviewed'}
+            </p>
+          </div>
+        </div>
+
+        {/* Uncategorized */}
+        <div 
+          onClick={() => navigate('/transactions?category=uncategorized')}
+          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Uncategorized</span>
+            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
+              <FileText className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div>
+            <div className={`text-2xl font-black ${metrics.uncategorizedCount > 0 ? 'text-amber-500' : 'text-success'}`}>
+              {metrics.uncategorizedCount}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none truncate">
+              {metrics.uncategorizedCount > 0 ? 'Pending category mapping' : 'All transactions mapped'}
             </p>
           </div>
         </div>
@@ -838,9 +946,131 @@ const Dashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Secondary Collapsible Sections */}
+          {/* File Interpretation and Strategic Insights Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4 border-t border-border/20">
+            {/* File Interpretation / Import Summary */}
+            <div className="premium-glass rounded-2xl p-6 border border-border/20 shadow-xl space-y-5">
+              <div className="flex items-center gap-3 border-b border-border/25 pb-4">
+                <div className="p-2 bg-teal-500/10 border border-teal-500/20 rounded-xl shrink-0 shadow-sm">
+                  <img src={aeLogo} alt="Kaeo logo" className="w-5 h-5 object-contain" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">File Interpretation</h3>
+                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-0.5">Import Summary</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-6 items-start">
+                <div className="flex-1 space-y-4">
+                  <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                    {isExpenseOnly ? (
+                      <>Kaeo detected this as an <span className="text-foreground font-bold">expense-only ledger</span>. To run cash flow comparisons, ingest an invoice register or a bank statement containing deposit logs.</>
+                    ) : isMixed ? (
+                      <>Kaeo detected a <span className="text-foreground font-bold">mixed income and expense register</span>. Multi-dimensional workspace categorizations are fully synchronized.</>
+                    ) : (
+                      <>Kaeo categorized your ledger. You can inspect composition details and make adjustments below.</>
+                    )}
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-border/20 pt-4">
+                    <div className="flex flex-col">
+                      <span className="text-[9px] font-bold text-muted-foreground uppercase">Income rows</span>
+                      <span className="text-xs font-bold text-success mt-0.5">{metrics.incomeCount}</span>
+                    </div>
+                    {metrics.refundCount > 0 && (
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase">Refund rows</span>
+                        <span className="text-xs font-bold text-success mt-0.5">{metrics.refundCount}</span>
+                      </div>
+                    )}
+                    <div className="flex flex-col">
+                      <span className="text-[9px] font-bold text-muted-foreground uppercase">Expense rows</span>
+                      <span className="text-xs font-bold text-risk mt-0.5">{metrics.expenseCount}</span>
+                    </div>
+                    {metrics.unknownCount > 0 && (
+                      <div 
+                        onClick={() => navigate('/transactions?type=unknown')}
+                        className="flex flex-col cursor-pointer hover:opacity-80 transition-all group"
+                      >
+                        <span className="text-[9px] font-bold text-muted-foreground group-hover:text-primary uppercase">Unknown rows</span>
+                        <span className="text-xs font-bold text-muted-foreground mt-0.5 group-hover:text-primary">{metrics.unknownCount}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* SVG Ring */}
+                <div className="hidden sm:flex items-center justify-center shrink-0 p-1.5 bg-white/5 border border-border/20 rounded-full">
+                  <div className="relative w-16 h-16">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        className="text-white/5"
+                        strokeWidth="2.5"
+                        stroke="currentColor"
+                        fill="none"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="text-success"
+                        strokeWidth="2.5"
+                        strokeDasharray={`${incomePercentage}, 100`}
+                        stroke="currentColor"
+                        fill="none"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                      <span className="text-[10px] font-bold">{incomePercentage}%</span>
+                      <span className="text-[6px] font-bold text-muted-foreground uppercase leading-none font-semibold">Inflow</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Strategic Insights */}
+            <div className="premium-glass rounded-2xl p-6 border border-border/20 shadow-xl space-y-4 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 border-b border-border/25 pb-4 mb-4">
+                  <Info className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="text-sm font-bold text-foreground">Strategic Insights</h3>
+                </div>
+                <ul className="space-y-3.5 text-xs text-muted-foreground font-semibold leading-relaxed">
+                  {metrics.topVendor.amount > 0 && (
+                    <li className="flex gap-2.5 items-start">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span>
+                        <strong className="text-foreground">{metrics.topVendor.name}</strong> is your largest expense destination ({formatCurrency(metrics.topVendor.amount)} total).
+                      </span>
+                    </li>
+                  )}
+                  <li className="flex gap-2.5 items-start">
+                    <span className="text-primary mt-0.5">•</span>
+                    <span>
+                      <strong className="text-foreground">{formatCurrency(metrics.duplicateExposure)}</strong> duplicate exposure needs review.
+                    </span>
+                  </li>
+                  <li className="flex gap-2.5 items-start">
+                    <span className="text-primary mt-0.5">•</span>
+                    <span>
+                      <strong className="text-foreground">{metrics.uncategorizedCount}</strong> transactions are uncategorized.
+                    </span>
+                  </li>
+                  {metrics.unreviewedCount > 0 && (
+                    <li className="flex gap-2.5 items-start">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span>
+                        <strong className="text-foreground">{metrics.unreviewedCount}</strong> transactions need review.
+                      </span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Lower Collapsible Sections */}
           <div className="space-y-4 pt-4 border-t border-border/20">
-            
             {/* Collapsible Recent Activity */}
             <div className="premium-glass rounded-2xl border border-border/20 overflow-hidden shadow-md">
               <button
@@ -916,7 +1146,7 @@ const Dashboard: React.FC = () => {
               )}
             </div>
 
-            {/* Collapsible More Workspace Details */}
+            {/* Collapsible Workspace Signals & Legend */}
             <div className="premium-glass rounded-2xl border border-border/20 overflow-hidden shadow-md">
               <button
                 onClick={() => setShowWorkspaceDetails(!showWorkspaceDetails)}
@@ -924,7 +1154,7 @@ const Dashboard: React.FC = () => {
               >
                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                   <Layers className="w-3.5 h-3.5 text-muted-foreground" />
-                  More Workspace Details
+                  Workspace Signals & Legend
                 </h3>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-muted-foreground font-semibold">
@@ -940,188 +1170,70 @@ const Dashboard: React.FC = () => {
 
               {showWorkspaceDetails && (
                 <div className="border-t border-border/10 p-6 bg-white/2 space-y-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    {/* Left Column: File Interpretation & Insights */}
-                    <div className="lg:col-span-8 space-y-6">
-                      {/* File Interpretation */}
-                      <div className="premium-glass rounded-xl p-5 border border-border/20 flex flex-col md:flex-row gap-5 items-start relative overflow-hidden">
-                        <div className="p-3 bg-teal-500/10 border border-teal-500/20 rounded-xl shrink-0 shadow-sm">
-                          <img src={aeLogo} alt="Ligature logo" className="w-6 h-6 object-contain" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Workspace Signals */}
+                    <div className="premium-glass rounded-xl p-5 border border-border/20 space-y-3">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        Workspace Signals
+                      </h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        <div 
+                          onClick={() => navigate('/vendors')}
+                          className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
+                        >
+                          <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Unique Vendors</span>
+                          <span className="font-bold text-foreground group-hover/item:text-primary">{metrics.uniqueVendorsCount} active</span>
                         </div>
-                        <div className="space-y-3 flex-1">
-                          <div>
-                            <h4 className="text-xs font-bold uppercase tracking-widest text-foreground">File Interpretation</h4>
-                            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed font-medium">
-                              {isExpenseOnly ? (
-                                <>Kaeo detected this as an <span className="text-foreground font-bold">expense-only ledger</span>. To run cash flow comparisons, ingest an invoice register or a bank statement containing deposit logs.</>
-                              ) : isMixed ? (
-                                <>Kaeo detected a <span className="text-foreground font-bold">mixed income & expense register</span>. Multi-dimensional workspace categorizations are fully synchronized.</>
-                              ) : (
-                                <>Kaeo categorized your ledger. You can inspect composition details and make adjustments below.</>
-                              )}
-                            </p>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-border/20 pt-3">
-                            <div className="flex flex-col">
-                              <span className="text-[9px] font-bold text-muted-foreground uppercase">Income rows</span>
-                              <span className="text-xs font-bold text-success mt-0.5">{metrics.incomeCount}</span>
-                            </div>
-                            {metrics.refundCount > 0 && (
-                              <div className="flex flex-col">
-                                <span className="text-[9px] font-bold text-muted-foreground uppercase">Refund rows</span>
-                                <span className="text-xs font-bold text-success mt-0.5">{metrics.refundCount}</span>
-                              </div>
-                            )}
-                            <div className="flex flex-col">
-                              <span className="text-[9px] font-bold text-muted-foreground uppercase">Expense rows</span>
-                              <span className="text-xs font-bold text-risk mt-0.5">{metrics.expenseCount}</span>
-                            </div>
-                            {metrics.unknownCount > 0 && (
-                              <div 
-                                onClick={() => navigate('/transactions?type=unknown')}
-                                className="flex flex-col cursor-pointer hover:opacity-80 transition-all group"
-                              >
-                                <span className="text-[9px] font-bold text-muted-foreground group-hover:text-primary uppercase">Unknown rows</span>
-                                <span className="text-xs font-bold text-muted-foreground mt-0.5 group-hover:text-primary">{metrics.unknownCount}</span>
-                              </div>
-                            )}
-                          </div>
+                        <div 
+                          onClick={() => navigate('/files')}
+                          className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
+                        >
+                           <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Invoice Matching Status</span>
+                           <span className="font-bold text-foreground group-hover/item:text-primary">
+                             {metrics.totalInvoicesCount > 0 ? `${metrics.matchedInvoicesCount} / ${metrics.totalInvoicesCount} matched` : "0 pending"}
+                           </span>
                         </div>
-
-                        {/* SVG Ring */}
-                        <div className="hidden sm:flex items-center justify-center shrink-0 p-1 bg-white/5 border border-border/20 rounded-full">
-                          <div className="relative w-16 h-16">
-                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                              <path
-                                className="text-white/5"
-                                strokeWidth="2.5"
-                                stroke="currentColor"
-                                fill="none"
-                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                              />
-                              <path
-                                className="text-success"
-                                strokeWidth="2.5"
-                                strokeDasharray={`${incomePercentage}, 100`}
-                                stroke="currentColor"
-                                fill="none"
-                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                              />
-                            </svg>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                              <span className="text-[10px] font-bold">{incomePercentage}%</span>
-                              <span className="text-[6px] font-bold text-muted-foreground uppercase leading-none font-semibold">Inflow</span>
-                            </div>
-                          </div>
+                        <div 
+                          onClick={() => navigate('/files')}
+                          className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
+                        >
+                          <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Imported Bank Sheets</span>
+                          <span className="font-bold text-foreground group-hover/item:text-primary">{metrics.uploadsCount} statement files</span>
                         </div>
-                      </div>
-
-                      {/* Strategic Insights */}
-                      <div className="premium-glass rounded-xl p-5 border border-border/20 space-y-4">
-                        <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                          <Info className="w-3.5 h-3.5 text-muted-foreground" />
-                          Strategic Insights
-                        </h4>
-                        <ul className="space-y-2 text-xs text-muted-foreground font-semibold leading-relaxed">
-                          {metrics.topVendor.amount > 0 && (
-                            <li className="flex gap-2.5 items-start">
-                              <span className="text-primary mt-0.5">•</span>
-                              <span>
-                                <strong className="text-foreground">{metrics.topVendor.name}</strong> is your largest expense destination ({formatCurrency(metrics.topVendor.amount)} total).
-                              </span>
-                            </li>
-                          )}
-                          <li className="flex gap-2.5 items-start">
-                            <span className="text-primary mt-0.5">•</span>
-                            <span>
-                              <strong className="text-foreground">{formatCurrency(metrics.duplicateExposure)}</strong> duplicate exposure needs review.
-                            </span>
-                          </li>
-                          <li className="flex gap-2.5 items-start">
-                            <span className="text-primary mt-0.5">•</span>
-                            <span>
-                              <strong className="text-foreground">{metrics.uncategorizedCount}</strong> transactions are uncategorized.
-                            </span>
-                          </li>
-                          {metrics.unreviewedCount > 0 && (
-                            <li className="flex gap-2.5 items-start">
-                              <span className="text-primary mt-0.5">•</span>
-                              <span>
-                                <strong className="text-foreground">{metrics.unreviewedCount}</strong> transactions need review.
-                              </span>
-                            </li>
-                          )}
-                        </ul>
+                        <div 
+                          onClick={() => navigate('/settings?tab=spend-rules')}
+                          className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
+                        >
+                          <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Active Compliance Rules</span>
+                          <span className="font-bold text-foreground group-hover/item:text-primary">{metrics.rulesActiveCount} rules active</span>
+                        </div>
+                        <div 
+                          onClick={() => navigate('/ask-kaeo')}
+                          className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
+                        >
+                          <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Ask Kaeo Suggestions</span>
+                          <span className="font-bold text-foreground group-hover/item:text-primary">
+                            {metrics.suggestionsCount > 0 ? `${metrics.suggestionsCount} tips ready` : "No issues"}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Right Column: Workspace Signals & Legend */}
-                    <div className="lg:col-span-4 space-y-6">
-                      {/* Workspace Signals */}
-                      <div className="premium-glass rounded-xl p-5 border border-border/20 space-y-3">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                          Workspace Signals
-                        </h4>
-                        <div className="grid grid-cols-1 gap-2">
-                          <div 
-                            onClick={() => navigate('/vendors')}
-                            className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
-                          >
-                            <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Unique Vendors</span>
-                            <span className="font-bold text-foreground group-hover/item:text-primary">{metrics.uniqueVendorsCount} active</span>
-                          </div>
-                          <div 
-                            onClick={() => navigate('/files')}
-                            className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
-                          >
-                             <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Invoice Matching Status</span>
-                             <span className="font-bold text-foreground group-hover/item:text-primary">
-                               {metrics.totalInvoicesCount > 0 ? `${metrics.matchedInvoicesCount} / ${metrics.totalInvoicesCount} matched` : "0 pending"}
-                             </span>
-                          </div>
-                          <div 
-                            onClick={() => navigate('/files')}
-                            className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
-                          >
-                            <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Imported Bank Sheets</span>
-                            <span className="font-bold text-foreground group-hover/item:text-primary">{metrics.uploadsCount} statement files</span>
-                          </div>
-                          <div 
-                            onClick={() => navigate('/settings?tab=spend-rules')}
-                            className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
-                          >
-                            <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Active Compliance Rules</span>
-                            <span className="font-bold text-foreground group-hover/item:text-primary">{metrics.rulesActiveCount} rules active</span>
-                          </div>
-                          <div 
-                            onClick={() => navigate('/ask-kaeo')}
-                            className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
-                          >
-                            <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Ask Kaeo Suggestions</span>
-                            <span className="font-bold text-foreground group-hover/item:text-primary">
-                              {metrics.suggestionsCount > 0 ? `${metrics.suggestionsCount} tips ready` : "No issues"}
-                            </span>
-                          </div>
+                    {/* Intelligence Legend */}
+                    <div className="p-5 bg-white/2 rounded-xl border border-border/20 space-y-2 flex flex-col justify-center">
+                      <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-2">Intelligence Legend</h4>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold">
+                          <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                          Income: Verified revenue entries
                         </div>
-                      </div>
-
-                      {/* Intelligence Legend */}
-                      <div className="p-5 bg-white/2 rounded-xl border border-border/20 space-y-2">
-                        <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-2">Intelligence Legend</h4>
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold">
-                            <div className="w-1.5 h-1.5 rounded-full bg-success" />
-                            Income: Verified revenue entries
-                          </div>
-                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold">
-                            <div className="w-1.5 h-1.5 rounded-full bg-risk" />
-                            Expenses: Direct outflow entries
-                          </div>
-                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold">
-                            <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
-                            Unknown: Uncategorized context
-                          </div>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold">
+                          <div className="w-1.5 h-1.5 rounded-full bg-risk" />
+                          Expenses: Direct outflow entries
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold">
+                          <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+                          Unknown: Uncategorized context
                         </div>
                       </div>
                     </div>
@@ -1129,6 +1241,7 @@ const Dashboard: React.FC = () => {
                 </div>
               )}
             </div>
+
 
             {/* Collapsible Launch Checklist */}
             <div className="premium-glass rounded-2xl border border-border/20 overflow-hidden shadow-md">
