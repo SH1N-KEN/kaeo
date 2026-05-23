@@ -1,6 +1,6 @@
 // No date-fns needed
 import { inferCategory, normalizeVendorName } from './vendorEngine';
-import { formatMoney } from './currency';
+import { formatINR } from './formatters';
 
 export interface ReportInput {
   organization: any;
@@ -16,8 +16,8 @@ export interface ReportInput {
   generatedBy?: string;
 }
 
-export function formatReportCurrency(amount: number, currency: string = "INR") {
-  return formatMoney(amount, currency);
+export function formatReportCurrency(amount: number, _currency: string = "INR") {
+  return formatINR(amount);
 }
 
 export function calculateReportPeriod(transactions: any[]) {
@@ -279,13 +279,8 @@ export function buildReportSections(data: any) {
     recurringCommitment: vendorSummary.recurringCommitment,
   };
 
-  const clientCurrency = client?.base_currency || 'INR';
-  const convertedTxs = data.transactions?.filter((t: any) => t.original_currency && t.original_currency !== clientCurrency) || [];
-  const hasConverted = convertedTxs.length > 0;
-  
-  const warnings = hasConverted
-    ? ["Some transactions were converted into workspace base currency using stored FX rates."]
-    : [];
+  const clientCurrency = 'INR';
+  const warnings: string[] = [];
 
   const isExpenseOnly = transactionSummary.incomeCount === 0 && transactionSummary.expenseCount > 0;
   
@@ -300,9 +295,7 @@ export function buildReportSections(data: any) {
     deterministicText += ` and ${formatReportCurrency(transactionSummary.expenses, clientCurrency)} expenses, resulting in net cash movement of ${formatReportCurrency(transactionSummary.netCashMovement, clientCurrency)}. `;
   }
 
-  if (hasConverted) {
-    deterministicText += `Some transactions in this report were converted into ${clientCurrency} using stored FX rates. `;
-  }
+
 
   if (riskSummary.openRisksCount > 0) {
     deterministicText += `There are ${riskSummary.openRisksCount} open risks requiring review. `;

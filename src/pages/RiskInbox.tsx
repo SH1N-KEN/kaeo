@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
-import { formatMoney, needsConversion } from '../lib/currency';
+import { formatINR } from '../lib/formatters';
 import { analyzeRisksForClient } from '../lib/riskEngine';
 import EmptyState from '../components/ui/EmptyState';
 import MetricCard from '../components/ui/MetricCard';
@@ -241,7 +241,7 @@ const RiskInbox: React.FC = () => {
   };
 
   const formatCurrency = (val: number) => {
-    return formatMoney(val, activeClient?.base_currency || 'INR');
+    return formatINR(val);
   };
 
   const getSeverityColor = (sev: string) => {
@@ -448,22 +448,6 @@ const RiskInbox: React.FC = () => {
                             {selectedRisk.evidence_json.reason && <p className="opacity-70">• {selectedRisk.evidence_json.reason}</p>}
                             {selectedRisk.evidence_json.vendor_name && <p className="opacity-70">• Vendor: {selectedRisk.evidence_json.vendor_name}</p>}
                             {selectedRisk.evidence_json.transaction_count && <p className="opacity-70">• Occurrences: {selectedRisk.evidence_json.transaction_count}</p>}
-                            {(() => {
-                              const baseCurrency = activeClient?.base_currency || 'INR';
-                              const isConverted = selectedRisk.evidence_json.original_currency && needsConversion(selectedRisk.evidence_json.original_currency, baseCurrency);
-                              if (isConverted) {
-                                const origAmt = selectedRisk.evidence_json.original_amount !== null && selectedRisk.evidence_json.original_amount !== undefined
-                                  ? selectedRisk.evidence_json.original_amount
-                                  : selectedRisk.evidence_json.amount;
-                                return (
-                                  <>
-                                    <p className="opacity-70">• Original Amount: {formatMoney(origAmt, selectedRisk.evidence_json.original_currency)}</p>
-                                    <p className="opacity-70">• Converted using stored FX rate: {Number(selectedRisk.evidence_json.exchange_rate || 1).toFixed(2)}</p>
-                                  </>
-                                );
-                              }
-                              return null;
-                            })()}
                           </div>
                         </div>
                       )}

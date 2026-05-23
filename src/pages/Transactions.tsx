@@ -36,11 +36,11 @@ import { trackAuditEvent } from '../lib/auditEngine';
 import { AIReviewQueueModal } from '../components/ai/AIReviewQueueModal';
 import { applyReviewSuggestion } from '../lib/reviewActions';
 import { Sparkles } from 'lucide-react';
-import { formatMoney, needsConversion } from '../lib/currency';
+import { formatINR } from '../lib/formatters';
 
 // ── Shared currency formatter ────────────────────────────────────────────────
-function formatCurrency(amount: number, currencyCode: string = 'INR', forceSign: boolean = false): string {
-  return formatMoney(amount, currencyCode, { forceSign });
+function formatCurrency(amount: number, _currencyCode: string = 'INR', forceSign: boolean = false): string {
+  return formatINR(amount, { showSign: forceSign });
 }
 
 // ── Sort types ────────────────────────────────────────────────────────────────
@@ -864,28 +864,12 @@ const Transactions: React.FC = () => {
                               <ArrowDownLeft className="w-3.5 h-3.5" />
                             )}
                             {(() => {
-                              const baseCurrency = activeClient.base_currency || 'INR';
-                              const isConverted = tx.original_currency && needsConversion(tx.original_currency, baseCurrency);
-                              const displayAmt = isConverted && tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+                              const displayAmt = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
                                 ? tx.amount_in_base_currency
                                 : tx.amount;
-                              const displayCurrency = isConverted ? baseCurrency : (tx.currency || 'INR');
-                              return formatCurrency(displayAmt, displayCurrency, true);
+                              return formatCurrency(displayAmt, 'INR', true);
                             })()}
                           </span>
-                          {(() => {
-                            const baseCurrency = activeClient.base_currency || 'INR';
-                            const isConverted = tx.original_currency && needsConversion(tx.original_currency, baseCurrency);
-                            if (isConverted) {
-                              const origAmt = tx.original_amount !== null && tx.original_amount !== undefined ? tx.original_amount : tx.amount;
-                              return (
-                                <div className="text-[10px] text-muted-foreground mt-0.5 font-semibold">
-                                  Original: {formatMoney(origAmt, tx.original_currency || 'INR', { forceSign: true })} · FX {Number(tx.exchange_rate || 1).toFixed(2)}
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()}
                         </div>
                       </td>
 

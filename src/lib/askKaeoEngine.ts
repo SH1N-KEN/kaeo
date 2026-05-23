@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { formatMoney } from './currency';
+import { formatINR } from './formatters';
 import { summarizeVendors } from './reportEngine';
 import { askKaeoAi } from './ai/aiClient';
 import type { AIStructuredContext } from './ai/aiClient';
@@ -26,8 +26,8 @@ interface AskKaeoResponse {
   source_json: any;
 }
 
-const formatReportCurrency = (val: number, currency: string = 'INR') => {
-  return formatMoney(val, currency);
+const formatReportCurrency = (val: number, _currency: string = 'INR') => {
+  return formatINR(val);
 };
 
 export async function categorizeQuestion(query: string): Promise<AskKaeoCategory> {
@@ -319,7 +319,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     .select('name, industry, base_currency, metadata')
     .eq('id', clientId)
     .single();
-  const baseCurrency = clientData?.base_currency || 'INR';
+  const baseCurrency = 'INR';
   const activeClientName = clientData?.name || 'Active Client';
 
   const { data: latestReport } = await supabase
@@ -388,7 +388,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
 
   // BUILD STRUCTURED CONTEXT FOR AI
   const structuredContext: AIStructuredContext = {
-    question: query,
+    question: query + " (All financial amounts are in INR.)",
     intent,
     invoice_summary,
     needs_web_research,
@@ -403,8 +403,8 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       transaction_count,
       period_start,
       period_end,
-      base_currency: baseCurrency,
-      has_converted_transactions: transactions.some(t => t.original_currency && t.original_currency !== baseCurrency)
+      base_currency: "INR",
+      has_converted_transactions: false
     },
     top_vendors: vendorSummary.topVendors.slice(0, 5).map(v => ({
       name: v.normalized_name,
@@ -423,17 +423,11 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     high_priority_risks: risks.filter(r => r.severity === 'high').length,
     latest_report_summary: latestReportSummary,
     relevant_notes: relevantNotes.slice(0, 10),
-    caveats: (() => {
-      const list = [
-        "AI explanations are for informational purposes only. Use validated reports for official decisions.",
-        "Calculations are strictly grounded in deterministic database aggregates."
-      ];
-      const hasConverted = transactions.some(t => t.original_currency && t.original_currency !== baseCurrency);
-      if (hasConverted) {
-        list.push(`Some transactions were converted into ${baseCurrency} using stored FX rates.`);
-      }
-      return list;
-    })(),
+    caveats: [
+      "AI explanations are for informational purposes only. Use validated reports for official decisions.",
+      "Calculations are strictly grounded in deterministic database aggregates.",
+      "All financial amounts are in INR."
+    ],
     counts: {
       transactions: transactions.length,
       vendors: vendors.length,

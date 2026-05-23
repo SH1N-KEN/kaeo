@@ -3,7 +3,7 @@ import { normalizeVendorName, inferCategory } from './vendorEngine';
 import { getSpendRules } from './spendRulesEngine';
 import { getDisplayCategory } from './categoryEngine';
 import { matchInvoicesToTransactions } from './invoice/invoiceMatcher';
-import { formatMoney } from './currency';
+import { formatINR } from './formatters';
 
 /**
  * Risk Detection Engine
@@ -47,15 +47,10 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
   if (error) throw error;
   if (!txs || txs.length === 0) return [];
 
-  const { data: clientObj } = await supabase
-    .from('clients')
-    .select('base_currency')
-    .eq('id', clientId)
-    .single();
-  const baseCurrency = clientObj?.base_currency || 'INR';
+  const baseCurrency = 'INR';
 
   const fmtCurrency = (val: number) => {
-    return formatMoney(val, baseCurrency);
+    return formatINR(val);
   };
 
   const getTxAmount = (t: any) => {
@@ -450,6 +445,6 @@ export type RiskEvent = {
   created_at: string;
 };
 
-export const formatCurrency = (val: number, currency: string = 'INR') => {
-  return formatMoney(val, currency);
+export const formatCurrency = (val: number, _currency: string = 'INR') => {
+  return formatINR(val);
 };

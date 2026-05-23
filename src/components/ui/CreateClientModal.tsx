@@ -15,7 +15,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
 }) => {
   const [name, setName] = useState('');
   const [industry, setIndustry] = useState('');
-  const [currency, setCurrency] = useState('INR');
+  const currency = 'INR';
   const [spendRange, setSpendRange] = useState('under_10k');
   const [accountingTool, setAccountingTool] = useState('Tally');
   const [notes, setNotes] = useState('');
@@ -136,26 +136,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Base Currency</label>
-                <div className="relative">
-                  <select
-                    className="w-full px-4 py-3 rounded-xl border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-primary outline-none transition-all appearance-none"
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                  >
-                    <option value="INR">INR (₹)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="GBP">GBP (£)</option>
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
-                    <X className="w-4 h-4 rotate-45" />
-                  </div>
-                </div>
-              </div>
-
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Monthly Spend</label>
                 <div className="relative">

@@ -31,7 +31,7 @@ import { analyzeRisksForClient } from '../lib/riskEngine';
 import { getSpendRules } from '../lib/spendRulesEngine';
 import { getTimeBasedGreeting } from '../lib/greeting';
 import { AIReviewQueueModal } from '../components/ai/AIReviewQueueModal';
-import { getFallbackRate, convertToBaseCurrency, formatMoney, needsConversion } from '../lib/currency';
+import { formatINR } from '../lib/formatters';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -75,22 +75,6 @@ const Dashboard: React.FC = () => {
   const [showWorkspaceDetails, setShowWorkspaceDetails] = useState(false);
   const [showChecklist, setShowChecklist] = useState(false);
 
-  const baseCurrency = activeClient?.base_currency || 'INR';
-  const [manualTxCurrency, setManualTxCurrency] = useState(baseCurrency);
-  const [manualTxExchangeRate, setManualTxExchangeRate] = useState<number>(1);
-
-  useEffect(() => {
-    if (activeClient) {
-      setManualTxCurrency(activeClient.base_currency || 'INR');
-      setManualTxExchangeRate(1);
-    }
-  }, [activeClient, isAddTxOpen]);
-
-  const handleCurrencyChange = (newCurrency: string) => {
-    setManualTxCurrency(newCurrency);
-    const rate = getFallbackRate(newCurrency, baseCurrency);
-    setManualTxExchangeRate(rate);
-  };
 
   // Smart category suggestion hook
   useEffect(() => {
@@ -116,8 +100,6 @@ const Dashboard: React.FC = () => {
       }
       
       const finalAmt = (manualTxType === 'expense' || manualTxType === 'unknown') ? -Math.abs(amt) : Math.abs(amt);
-      const exchangeRate = needsConversion(manualTxCurrency, baseCurrency) ? (manualTxExchangeRate || 1) : 1;
-      const amtInBaseCurrency = finalAmt * exchangeRate;
 
       const { error } = await supabase
         .from('transactions')
@@ -128,13 +110,13 @@ const Dashboard: React.FC = () => {
           description: manualTxDesc,
           amount: finalAmt,
           original_amount: finalAmt,
-          original_currency: manualTxCurrency,
-          currency: manualTxCurrency,
-          exchange_rate: exchangeRate,
-          amount_in_base_currency: amtInBaseCurrency,
-          fx_date: manualTxDate || new Date().toISOString().split('T')[0],
-          fx_source: needsConversion(manualTxCurrency, baseCurrency) ? 'manual' : null,
-          fx_metadata: needsConversion(manualTxCurrency, baseCurrency) ? { conversion_type: 'manual' } : {},
+          original_currency: 'INR',
+          currency: 'INR',
+          exchange_rate: 1,
+          amount_in_base_currency: finalAmt,
+          fx_date: null,
+          fx_source: null,
+          fx_metadata: {},
           type: manualTxType,
           category: manualTxCat,
           counterparty_name: manualTxVendor || null,
@@ -157,8 +139,6 @@ const Dashboard: React.FC = () => {
       setManualTxCat('Uncategorized');
       setManualTxVendor('');
       setManualTxNote('');
-      setManualTxCurrency(baseCurrency);
-      setManualTxExchangeRate(1);
 
       fetchDashboardData();
 
@@ -453,7 +433,7 @@ const Dashboard: React.FC = () => {
   };
 
   const formatCurrency = (val: number) => {
-    return formatMoney(val, activeClient?.base_currency || 'INR');
+    return formatINR(val);
   };
 
   const handleDownloadReport = () => {
@@ -1382,24 +1362,9 @@ const Dashboard: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Currency */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Currency</label>
-                  <select
-                    value={manualTxCurrency}
-                    onChange={(e) => handleCurrencyChange(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#161a18] border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="INR">INR (₹)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="GBP">GBP (£)</option>
-                  </select>
-                </div>
-
                 {/* Amount */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Amount</label>
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Amount (INR)</label>
                   <input 
                     type="number"
                     required
@@ -1412,37 +1377,6 @@ const Dashboard: React.FC = () => {
                   />
                 </div>
               </div>
-
-              {needsConversion(manualTxCurrency, baseCurrency) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Exchange Rate */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Exchange Rate</label>
-                    <input 
-                      type="number"
-                      required
-                      step="0.0001"
-                      min="0.0001"
-                      value={manualTxExchangeRate}
-                      onChange={(e) => setManualTxExchangeRate(parseFloat(e.target.value) || 0)}
-                      className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
-                    />
-                  </div>
-
-                  {/* Converted Preview */}
-                  <div className="space-y-1.5 flex flex-col justify-end">
-                    <div className="px-3 py-2 bg-muted/20 border border-border/40 rounded-xl text-xs text-muted-foreground font-semibold h-[38px] flex items-center">
-                      {manualTxAmt && !isNaN(parseFloat(manualTxAmt)) ? (
-                        <span>
-                          {formatMoney(convertToBaseCurrency(parseFloat(manualTxAmt), manualTxCurrency, baseCurrency, manualTxExchangeRate), baseCurrency)} in workspace currency
-                        </span>
-                      ) : (
-                        <span>—</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Vendor / Counterparty */}

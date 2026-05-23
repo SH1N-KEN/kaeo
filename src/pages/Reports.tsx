@@ -279,7 +279,7 @@ export default function Reports() {
                 }
 
                 // Generate CSV
-                const headers = ['Date', 'Description', 'Amount', 'Type', 'Category', 'Source', 'Review Status'];
+                const headers = ['Date', 'Description', 'Amount (INR)', 'Type', 'Category', 'Source', 'Review Status'];
                 const rows = data.map(tx => [
                   tx.transaction_date?.split('T')[0] || '',
                   `"${(tx.description || '').replace(/"/g, '""')}"`,

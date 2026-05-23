@@ -1228,7 +1228,7 @@ const Files: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div className="space-y-1">
                     <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">GSTIN</label>
                     <input 
@@ -1238,16 +1238,11 @@ const Files: React.FC = () => {
                       className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Currency</label>
-                    <input 
-                      type="text" 
-                      name="currency"
-                      required
-                      defaultValue={selectedInvoice.currency || 'INR'}
-                      className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
-                    />
-                  </div>
+                  <input 
+                    type="hidden" 
+                    name="currency"
+                    value="INR"
+                  />
                   <div className="space-y-1">
                     <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Status</label>
                     <select
