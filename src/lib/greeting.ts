@@ -20,10 +20,8 @@ export const getTimeBasedGreeting = (name?: string): string => {
       return cleanName ? `Good morning, ${cleanName}` : 'Good morning';
     } else if (hour >= 12 && hour < 17) {
       return cleanName ? `Good afternoon, ${cleanName}` : 'Good afternoon';
-    } else if (hour >= 17 && hour < 21) {
-      return cleanName ? `Good evening, ${cleanName}` : 'Good evening';
     } else {
-      return cleanName ? `Working late, ${cleanName}?` : 'Working late?';
+      return cleanName ? `Good evening, ${cleanName}` : 'Good evening';
     }
   } catch (e) {
     console.error('[Greeting Engine] Failed to parse local browser time:', e);

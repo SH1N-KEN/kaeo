@@ -490,27 +490,8 @@ const Dashboard: React.FC = () => {
     ? user.user_metadata.full_name.split(' ')[0] 
     : user?.email?.split('@')[0] || 'Guest';
 
-  const topReasonText = (() => {
-    if (metrics.unreviewedCount > 0) {
-      return `${metrics.unreviewedCount} transactions still need review`;
-    }
-    if (metrics.uncategorizedCount > 0) {
-      return `${metrics.uncategorizedCount} transactions are uncategorized`;
-    }
-    if (metrics.openRisksCount > 0) {
-      return `${metrics.openRisksCount} unresolved risks require attention`;
-    }
-    if (readiness?.deductions && readiness.deductions.length > 0) {
-      const topDeduction = [...readiness.deductions].sort((a, b) => b.amount - a.amount)[0];
-      return topDeduction.reason;
-    }
-    return "All close preparation checks passed";
-  })();
-
-
-
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 pb-16">
+    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 pb-32">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -651,8 +632,8 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Control Metric Row — 4 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* Control Metric Row — 3 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         {/* Open Risks */}
         <div 
           onClick={() => navigate('/risk-inbox')}
@@ -669,7 +650,9 @@ const Dashboard: React.FC = () => {
               {metrics.openRisksCount}
             </div>
             <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none truncate">
-              {metrics.openRisksCount > 0 ? `${formatCurrency(metrics.duplicateExposure)} duplicate exposure` : 'No compliance issues'}
+              {metrics.openRisksCount > 0 
+                ? (metrics.duplicateExposure > 0 ? `${formatCurrency(metrics.duplicateExposure)} duplicate exposure` : 'Risks need review') 
+                : 'No compliance issues'}
             </p>
           </div>
         </div>
@@ -712,40 +695,6 @@ const Dashboard: React.FC = () => {
             </div>
             <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none truncate">
               {metrics.uncategorizedCount > 0 ? 'Pending category mapping' : 'All transactions mapped'}
-            </p>
-          </div>
-        </div>
-
-        {/* Month-End Readiness */}
-        <div 
-          onClick={() => navigate('/reports')}
-          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Month-End Readiness</span>
-            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-baseline gap-2">
-              <span className={`text-2xl font-black ${
-                !hasTransactions ? 'text-foreground' :
-                readiness?.score && readiness.score >= 90 ? 'text-success' :
-                readiness?.score && readiness.score >= 70 ? 'text-amber-500' : 'text-risk'
-              }`}>
-                {readiness?.score !== undefined ? `${readiness.score}%` : '—'}
-              </span>
-              <span className={`text-[10px] font-bold ${
-                !hasTransactions ? 'text-muted-foreground' :
-                readiness?.score && readiness.score >= 90 ? 'text-success' :
-                readiness?.score && readiness.score >= 70 ? 'text-amber-500' : 'text-risk'
-              }`}>
-                {!hasTransactions ? 'No data' : readiness?.status || 'Needs review'}
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none truncate">
-              {!hasTransactions ? 'Ingest data' : topReasonText}
             </p>
           </div>
         </div>
@@ -836,7 +785,7 @@ const Dashboard: React.FC = () => {
                 <div className="space-y-2">
                   <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Quick Actions</h4>
                   <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">
-                    Clear outstanding ledger items to sync compliance rules and prepare for close.
+                    Start with the items blocking month-end readiness.
                   </p>
                 </div>
 
@@ -858,9 +807,13 @@ const Dashboard: React.FC = () => {
 
                   <div className="flex flex-wrap items-center gap-4 pt-2.5 border-t border-border/20">
                     <button
-                      onClick={() => navigate('/ask-kaeo')}
-                      className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer bg-transparent border-0 p-0"
+                      onClick={() => {
+                        const event = new CustomEvent('open-ask-kaeo', { detail: { query: 'What should I fix first?' } });
+                        window.dispatchEvent(event);
+                      }}
+                      className="text-xs font-semibold text-teal-400 hover:text-teal-300 hover:underline transition-all cursor-pointer bg-transparent border-0 p-0 flex items-center gap-1.5"
                     >
+                      <Sparkles className="w-3.5 h-3.5 text-teal-400" />
                       Ask Kaeo what to fix first
                     </button>
                     

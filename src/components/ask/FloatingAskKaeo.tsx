@@ -49,6 +49,19 @@ const FloatingAskKaeo: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen]);
 
+  // Listen to open-ask-kaeo event to open widget and send query
+  useEffect(() => {
+    const handleOpenAsk = (e: Event) => {
+      const customEvent = e as CustomEvent<{ query?: string }>;
+      setIsOpen(true);
+      if (customEvent.detail?.query) {
+        sendMessage(customEvent.detail.query);
+      }
+    };
+    window.addEventListener('open-ask-kaeo', handleOpenAsk);
+    return () => window.removeEventListener('open-ask-kaeo', handleOpenAsk);
+  }, [sendMessage]);
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
