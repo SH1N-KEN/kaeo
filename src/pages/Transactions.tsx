@@ -119,6 +119,13 @@ const Transactions: React.FC = () => {
     const categoryParam = searchParams.get('category');
     const typeParam = searchParams.get('type');
     const sourceParam = searchParams.get('source');
+    const searchParamVal = searchParams.get('search');
+
+    if (searchParamVal) {
+      setSearchTerm(searchParamVal);
+    } else {
+      setSearchTerm('');
+    }
 
     // 1. Review status query param mapping
     if (reviewStatusParam === 'needs_review') {

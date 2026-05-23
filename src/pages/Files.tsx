@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { 
   AlertCircle,
   CheckCircle2,
@@ -51,6 +51,8 @@ const Files: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const searchVal = searchParams.get('search') || '';
   
   // Tab control
   const [activeTab, setActiveTab] = useState<FilesTab>('transactions');
@@ -74,6 +76,21 @@ const Files: React.FC = () => {
   const [matchingCandidates, setMatchingCandidates] = useState<any[]>([]);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [manualMatchId, setManualMatchId] = useState<string>('');
+
+  const filteredHistory = React.useMemo(() => {
+    if (!searchVal) return history;
+    const term = searchVal.toLowerCase();
+    return history.filter(f => f.file_name?.toLowerCase().includes(term));
+  }, [history, searchVal]);
+
+  const filteredInvoices = React.useMemo(() => {
+    if (!searchVal) return invoices;
+    const term = searchVal.toLowerCase();
+    return invoices.filter(i => 
+      i.vendor_name?.toLowerCase().includes(term) ||
+      i.invoice_number?.toLowerCase().includes(term)
+    );
+  }, [invoices, searchVal]);
 
   useEffect(() => {
     if (activeClient) {
@@ -999,7 +1016,7 @@ const Files: React.FC = () => {
                 Scanned Bills Directory
               </h3>
               <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                {invoices.length} Documents
+                {filteredInvoices.length} Documents
               </span>
             </div>
 
@@ -1014,6 +1031,10 @@ const Files: React.FC = () => {
                   title="No Invoices Uploaded"
                   description="Upload vendor invoices to match them against payments and catch missing or duplicate invoices."
                 />
+              </div>
+            ) : filteredInvoices.length === 0 ? (
+              <div className="p-12 text-center text-muted-foreground">
+                <p className="text-xs font-semibold">No matching invoices found for "{searchVal}"</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -1030,7 +1051,7 @@ const Files: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/10">
-                    {invoices.map((inv) => {
+                    {filteredInvoices.map((inv) => {
                       const match = inv.invoice_matches?.[0];
                       const tx = match?.transactions;
                       return (
@@ -1101,7 +1122,7 @@ const Files: React.FC = () => {
 
       {/* ─── TAB: History ─── */}
       {activeTab === 'history' && (
-        <FileHistory history={history} />
+        <FileHistory history={filteredHistory} />
       )}
 
       {/* Invoice Details Edit/Verification Modal */}

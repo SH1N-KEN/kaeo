@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useWorkspace } from '../hooks/useWorkspace';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { generateCFOReport, formatReportCurrency } from '../lib/reportEngine';
 import { FileText, Plus, AlertCircle, Eye, Calendar, ShieldAlert, Loader2, Zap, DownloadCloud } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
@@ -15,6 +15,8 @@ export default function Reports() {
   const { activeOrg, activeClient } = useWorkspace();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const searchVal = searchParams.get('search') || '';
 
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +27,14 @@ export default function Reports() {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [readinessPlan, setReadinessPlan] = useState<any>(null);
   const { toast } = useToast();
+
+  const filteredReports = React.useMemo(() => {
+    if (!searchVal) return reports;
+    const term = searchVal.toLowerCase();
+    return reports.filter(r => 
+      r.title?.toLowerCase().includes(term)
+    );
+  }, [reports, searchVal]);
 
   useEffect(() => {
     if (activeOrg && activeClient) {
@@ -384,9 +394,13 @@ export default function Reports() {
             {generating ? 'Generating...' : 'Generate First Report'}
           </button>
         </div>
+      ) : filteredReports.length === 0 ? (
+        <div className="bg-card border rounded-2xl p-16 text-center text-muted-foreground">
+          <p className="text-sm font-semibold">No matching reports found for "{searchVal}"</p>
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {reports.map((report) => (
+          {filteredReports.map((report) => (
             <div key={report.id} className="bg-card border rounded-lg p-5 flex flex-col hover:border-primary/50 transition-colors">
               <div className="flex items-start justify-between mb-4">
                 <div className="p-2 bg-primary/10 rounded-lg">

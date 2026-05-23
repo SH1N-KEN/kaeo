@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   TrendingUp, 
   AlertCircle, 
@@ -27,12 +28,22 @@ interface EnrichedVendor extends Vendor {
 
 const Vendors: React.FC = () => {
   const { activeClient, activeOrg } = useWorkspace();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [vendors, setVendors] = useState<EnrichedVendor[]>([]);
   const [txCount, setTxCount] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const searchVal = searchParams.get('search');
+    if (searchVal) {
+      setSearchTerm(searchVal);
+    } else {
+      setSearchTerm('');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (activeClient) {

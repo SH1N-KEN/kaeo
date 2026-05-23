@@ -25,12 +25,13 @@ import EmptyState from '../components/ui/EmptyState';
 import MetricCard from '../components/ui/MetricCard';
 import type { RiskEvent, Note } from '../types/finance';
 import { trackAuditEvent } from '../lib/auditEngine';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { applyReviewSuggestion } from '../lib/reviewActions';
 import { useToast } from '../hooks/useToast';
 
 const RiskInbox: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { activeClient, activeOrg } = useWorkspace();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -53,6 +54,29 @@ const RiskInbox: React.FC = () => {
     open: 0
   });
   const [suggestions, setSuggestions] = useState<any[]>([]);
+
+  const searchVal = searchParams.get('search') || '';
+
+  const filteredRisks = React.useMemo(() => {
+    if (!searchVal) return risks;
+    const term = searchVal.toLowerCase();
+    return risks.filter(r => 
+      r.title?.toLowerCase().includes(term) ||
+      r.description?.toLowerCase().includes(term) ||
+      r.risk_type?.toLowerCase().includes(term) ||
+      r.suggested_action?.toLowerCase().includes(term)
+    );
+  }, [risks, searchVal]);
+
+  useEffect(() => {
+    if (searchVal && filteredRisks.length > 0) {
+      const exists = selectedRisk && filteredRisks.some(r => r.id === selectedRisk.id);
+      if (!exists) {
+        setSelectedRisk(filteredRisks[0]);
+        fetchNotes(filteredRisks[0].id);
+      }
+    }
+  }, [searchVal, filteredRisks, selectedRisk]);
 
   useEffect(() => {
     if (activeClient) {
@@ -366,58 +390,64 @@ const RiskInbox: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-8 space-y-4">
-              {risks.map((risk) => (
-                <div 
-                  key={risk.id} 
-                  onClick={() => {
-                    setSelectedRisk(risk);
-                    fetchNotes(risk.id);
-                  }}
-                  className={`bg-card border rounded-2xl p-6 transition-all cursor-pointer group hover:border-primary/40 shadow-sm relative overflow-hidden ${selectedRisk?.id === risk.id ? 'border-primary ring-1 ring-primary/20' : 'border-border'}`}
-                >
-                  {risk.status !== 'open' && (
-                    <div className="absolute top-0 right-0 px-3 py-1 bg-success/10 text-success text-[8px] font-black uppercase tracking-tighter rounded-bl-lg border-l border-b border-success/20">
-                      {risk.status.replace(/_/g, ' ')}
-                    </div>
-                  )}
-                  
-                  <div className="flex gap-6">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${risk.severity === 'critical' ? 'bg-risk text-white' : 'bg-muted text-muted-foreground'}`}>
-                      {risk.risk_type.includes('duplicate') ? <MoreHorizontal className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
-                    </div>
-                    
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-foreground">{risk.title}</h3>
-                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${getSeverityColor(risk.severity)}`}>
-                              {risk.severity}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground line-clamp-1">{risk.description || risk.suggested_action}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-black text-risk">{formatCurrency(risk.amount_at_risk)}</p>
-                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{risk.risk_type.replace(/_/g, ' ')}</p>
-                        </div>
+              {filteredRisks.length === 0 ? (
+                <div className="bg-card border border-dashed border-border rounded-2xl p-12 text-center text-muted-foreground text-xs font-semibold">
+                  No risks matching "{searchVal}" found.
+                </div>
+              ) : (
+                filteredRisks.map((risk) => (
+                  <div 
+                    key={risk.id} 
+                    onClick={() => {
+                      setSelectedRisk(risk);
+                      fetchNotes(risk.id);
+                    }}
+                    className={`bg-card border rounded-2xl p-6 transition-all cursor-pointer group hover:border-primary/40 shadow-sm relative overflow-hidden ${selectedRisk?.id === risk.id ? 'border-primary ring-1 ring-primary/20' : 'border-border'}`}
+                  >
+                    {risk.status !== 'open' && (
+                      <div className="absolute top-0 right-0 px-3 py-1 bg-success/10 text-success text-[8px] font-black uppercase tracking-tighter rounded-bl-lg border-l border-b border-success/20">
+                        {risk.status.replace(/_/g, ' ')}
                       </div>
-
-                      <div className="flex items-center justify-between pt-2 border-t border-border/30">
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                            <Clock className="w-3 h-3" /> {new Date(risk.created_at).toLocaleDateString()}
+                    )}
+                    
+                    <div className="flex gap-6">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${risk.severity === 'critical' ? 'bg-risk text-white' : 'bg-muted text-muted-foreground'}`}>
+                        {risk.risk_type.includes('duplicate') ? <MoreHorizontal className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
+                      </div>
+                      
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-foreground">{risk.title}</h3>
+                              <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${getSeverityColor(risk.severity)}`}>
+                                {risk.severity}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-1">{risk.description || risk.suggested_action}</p>
                           </div>
-                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                            <MessageSquare className="w-3 h-3" /> {risk.notes_count || 0} Notes
+                          <div className="text-right">
+                            <p className="text-lg font-black text-risk">{formatCurrency(risk.amount_at_risk)}</p>
+                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{risk.risk_type.replace(/_/g, ' ')}</p>
                           </div>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
+
+                        <div className="flex items-center justify-between pt-2 border-t border-border/30">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                              <Clock className="w-3 h-3" /> {new Date(risk.created_at).toLocaleDateString()}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                              <MessageSquare className="w-3 h-3" /> {risk.notes_count || 0} Notes
+                            </div>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             <div className="lg:col-span-4">
