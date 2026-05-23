@@ -339,7 +339,7 @@ export function matchInvoicesToTransactions(
         client_id: tx.client_id,
         title: `Missing Invoice: ${tx.description.split(' ')[0]}`,
         severity: 'medium',
-        risk_type: 'missing_data', // matches missing invoice risk category
+        risk_type: 'missing_invoice', // matches missing invoice risk category
         amount_at_risk: txAmount,
         description: `Outflow of ${txAmount} recorded on ${tx.transaction_date} has no matching vendor invoice.`,
         evidence_json: {
