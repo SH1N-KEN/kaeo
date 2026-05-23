@@ -21,6 +21,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Landing from './pages/Landing';
 import LoadingState from './components/ui/LoadingState';
+import Onboarding from './pages/Onboarding';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading, isConfigured, error } = useAuth();
@@ -67,6 +68,16 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+
+            {/* Onboarding Route */}
+            <Route 
+              path="/onboarding" 
+              element={
+                <ProtectedRoute>
+                  <Onboarding />
+                </ProtectedRoute>
+              } 
+            />
 
             {/* Protected Routes */}
             <Route 

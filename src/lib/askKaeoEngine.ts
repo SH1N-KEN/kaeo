@@ -210,6 +210,26 @@ const checkAIContradictions = (aiText: string, context: AIStructuredContext): bo
 };
 
 export async function askKaeo(query: string, clientId: string, _orgId: string): Promise<AskKaeoResponse> {
+  // 1. Get current user and profile onboarding status
+  const { data: { user } } = await supabase.auth.getUser();
+  let profile = null;
+  if (user) {
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+    profile = prof;
+  }
+
+  if (profile && !profile.onboarding_completed) {
+    return {
+      intent: 'unknown_general',
+      text: "I can answer your questions much better after you complete the initial onboarding setup. Please set up your business profile or client list first.",
+      source_json: { mode: 'onboarding_incomplete' }
+    };
+  }
+
   const intent = await categorizeQuestion(query);
 
   // Fetch contextual data
@@ -244,7 +264,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   // FETCH ADDITIONAL SECURE SERVER CONTEXT FOR AI
   const { data: clientData } = await supabase
     .from('clients')
-    .select('name')
+    .select('name, industry, base_currency, metadata')
     .eq('id', clientId)
     .single();
   const activeClientName = clientData?.name || 'Active Client';
@@ -293,12 +313,27 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   const isWebEligibleIntent = ['service_alternatives', 'cost_optimization', 'business_advice', 'vendor_analysis'].includes(intent);
   const needs_web_research = isWebEligibleIntent || needsWebResearchKeywords.some(kw => qStr.includes(kw));
 
+  // Assemble business profile grounding metadata
+  const clientMetadata = clientData?.metadata || {};
+  const business_profile = {
+    account_mode: (profile?.account_mode || null) as 'business_owner' | 'accountant' | null,
+    onboarding_completed: !!profile?.onboarding_completed,
+    business_name: clientData?.name || '',
+    industry: clientData?.industry || clientMetadata?.industry || '',
+    monthly_spend_range: clientMetadata?.monthly_spend_range || '',
+    team_size: clientMetadata?.team_size || '',
+    accounting_tools: clientMetadata?.accounting_tools || [],
+    pain_points: clientMetadata?.pain_points || [],
+    notes: clientMetadata?.notes || ''
+  };
+
   // BUILD STRUCTURED CONTEXT FOR AI
   const structuredContext: AIStructuredContext = {
     question: query,
     intent,
     needs_web_research,
     active_client_name: activeClientName,
+    business_profile,
     financial_summary: {
       income,
       refunds,

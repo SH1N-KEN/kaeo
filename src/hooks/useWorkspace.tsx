@@ -16,6 +16,18 @@ interface Client {
   organization_id: string;
   industry?: string;
   base_currency?: string;
+  metadata?: any;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  account_mode: 'business_owner' | 'accountant' | null;
+  onboarding_completed: boolean;
+  onboarding_answers: any;
+  default_organization_id: string | null;
 }
 
 interface WorkspaceContextType {
@@ -23,12 +35,23 @@ interface WorkspaceContextType {
   clients: Client[];
   activeOrg: Organization | null;
   activeClient: Client | null;
+  profile: UserProfile | null;
+  onboardingCompleted: boolean;
+  accountMode: 'business_owner' | 'accountant' | null;
   loading: boolean;
   error: string | null;
   setActiveOrg: (org: Organization | null) => void;
   setActiveClient: (client: Client | null) => void;
   createOrganization: (name: string, type?: string) => Promise<Organization | null>;
-  createClient: (name: string, orgId: string, industry?: string, currency?: string) => Promise<Client | null>;
+  createClient: (name: string, orgId: string, industry?: string, currency?: string, metadata?: any) => Promise<Client | null>;
+  completeOnboarding: (
+    mode: 'business_owner' | 'accountant',
+    answers: any,
+    orgName: string,
+    clientName?: string,
+    clientMetadata?: any
+  ) => Promise<void>;
+  updateClientMetadata: (clientId: string, metadata: any) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -40,6 +63,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [clients, setClients] = useState<Client[]>([]);
   const [activeOrg, setActiveOrgState] = useState<Organization | null>(null);
   const [activeClient, setActiveClientState] = useState<Client | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +79,68 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     console.log('useWorkspace: Fetching workspaces for user:', user.id);
 
     try {
-      // 1. Fetch Organizations
+      // 1. Fetch/Initialize Profile
+      let profileData: UserProfile | null = null;
+      const { data: prof, error: profError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      // Check if user already has organizations to infer onboarding completion status
+      const { data: orgsCheck } = await supabase
+        .from('organizations')
+        .select('id')
+        .limit(1);
+
+      const hasOrgs = orgsCheck && orgsCheck.length > 0;
+
+      if (profError) {
+        console.error('useWorkspace: Error fetching profile:', profError);
+      } else if (prof) {
+        profileData = prof as UserProfile;
+        
+        // Infer onboarding completed if user already has organizations but database flags are false
+        if (!prof.onboarding_completed && hasOrgs) {
+          console.log('useWorkspace: Inferring onboarding completed for existing organization user');
+          const { data: updatedProf } = await supabase
+            .from('profiles')
+            .update({
+              onboarding_completed: true,
+              account_mode: prof.account_mode || 'business_owner'
+            })
+            .eq('id', user.id)
+            .select()
+            .maybeSingle();
+            
+          if (updatedProf) {
+            profileData = updatedProf as UserProfile;
+          }
+        }
+      } else {
+        // Create profile if missing
+        const { data: newProf, error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email || '',
+            full_name: user.user_metadata?.full_name || '',
+            avatar_url: user.user_metadata?.avatar_url || '',
+            onboarding_completed: hasOrgs,
+            account_mode: hasOrgs ? 'business_owner' : null
+          })
+          .select()
+          .maybeSingle();
+        
+        if (insertError) {
+          console.error('useWorkspace: Error inserting missing profile:', insertError);
+        } else if (newProf) {
+          profileData = newProf as UserProfile;
+        }
+      }
+      setProfile(profileData);
+
+      // 2. Fetch Organizations
       const { data: orgs, error: orgsError } = await supabase
         .from('organizations')
         .select('*')
@@ -69,7 +154,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.log('useWorkspace: Organizations found:', orgs?.length || 0);
       setOrganizations(orgs || []);
 
-      // 2. Load stored selection or pick first
+      // 3. Load stored selection or pick first
       const storedOrgId = localStorage.getItem(`kaeo_org_${user.id}`);
       const storedClientId = localStorage.getItem(`kaeo_client_${user.id}`);
 
@@ -78,7 +163,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setActiveOrgState(foundOrg);
         console.log('useWorkspace: Active organization set to:', foundOrg.name);
 
-        // 3. Fetch Clients for active org
+        // 4. Fetch Clients for active org
         const { data: cls, error: clsError } = await supabase
           .from('clients')
           .select('*')
@@ -181,7 +266,6 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.log('createOrganization: Organization created:', org);
 
       // 2. Create Member (Owner)
-      // IMPORTANT: We use the ID returned from the first insert
       const { data: member, error: memError } = await supabase
         .from('organization_members')
         .insert({ 
@@ -208,17 +292,17 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } catch (err: any) {
       console.error('createOrganization: Exception caught:', err);
       setError(err.message);
-      throw err; // Re-throw to let modal catch it
+      throw err;
     }
   };
 
-  const createClient = async (name: string, orgId: string, industry?: string, currency = 'INR') => {
+  const createClient = async (name: string, orgId: string, industry?: string, currency = 'INR', metadata: any = {}) => {
     if (!user) {
       setError('You must be logged in to create a client.');
       return null;
     }
 
-    console.log('createClient: Payload:', { name, organization_id: orgId, industry, base_currency: currency, created_by: user.id });
+    console.log('createClient: Payload:', { name, organization_id: orgId, industry, base_currency: currency, metadata, created_by: user.id });
     setError(null);
 
     try {
@@ -237,6 +321,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           organization_id: orgId, 
           industry, 
           base_currency: currency,
+          metadata,
           created_by: user.id 
         })
         .select()
@@ -270,18 +355,152 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
+  const completeOnboarding = async (
+    mode: 'business_owner' | 'accountant',
+    answers: any,
+    orgName: string,
+    clientName?: string,
+    clientMetadata: any = {}
+  ) => {
+    if (!user) {
+      setError('You must be logged in to complete onboarding.');
+      throw new Error('No user authenticated');
+    }
+    setLoading(true);
+    setError(null);
+
+    try {
+      // 1. Create Organization
+      const { data: org, error: orgError } = await supabase
+        .from('organizations')
+        .insert({ 
+          name: orgName, 
+          type: mode === 'business_owner' ? 'business' : 'accountant',
+          created_by: user.id 
+        })
+        .select()
+        .single();
+
+      if (orgError) {
+        console.error('completeOnboarding: Organization creation error:', orgError);
+        throw orgError;
+      }
+
+      // 2. Create Organization Member
+      const { error: memError } = await supabase
+        .from('organization_members')
+        .insert({ 
+          organization_id: org.id, 
+          user_id: user.id, 
+          role: 'owner' 
+        });
+
+      if (memError) {
+        console.error('completeOnboarding: Member record creation error:', memError);
+        throw memError;
+      }
+
+      // 3. Create Default Client for business_owner
+      let client = null;
+      if (mode === 'business_owner') {
+        const cName = clientName || orgName;
+        const { data: newClient, error: clError } = await supabase
+          .from('clients')
+          .insert({
+            name: cName,
+            organization_id: org.id,
+            industry: clientMetadata.industry || '',
+            base_currency: clientMetadata.base_currency || 'INR',
+            metadata: clientMetadata,
+            created_by: user.id
+          })
+          .select()
+          .single();
+
+        if (clError) {
+          console.error('completeOnboarding: Client creation error:', clError);
+          throw clError;
+        }
+        client = newClient;
+      }
+
+      // 4. Update Profile
+      const { error: profError } = await supabase
+        .from('profiles')
+        .update({
+          account_mode: mode,
+          onboarding_completed: true,
+          onboarding_answers: answers,
+          default_organization_id: org.id
+        })
+        .eq('id', user.id);
+
+      if (profError) {
+        console.error('completeOnboarding: Profile update error:', profError);
+        throw profError;
+      }
+
+      // 5. Update local storage selections
+      localStorage.setItem(`kaeo_org_${user.id}`, org.id);
+      if (client) {
+        localStorage.setItem(`kaeo_client_${user.id}`, client.id);
+      } else {
+        localStorage.removeItem(`kaeo_client_${user.id}`);
+      }
+
+      // 6. Refresh state
+      await fetchWorkspaces(true);
+
+    } catch (err: any) {
+      console.error('completeOnboarding error:', err);
+      setError(err.message || 'Failed to complete onboarding');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateClientMetadata = async (clientId: string, metadata: any) => {
+    if (!user) {
+      setError('You must be logged in to update client metadata.');
+      throw new Error('No user authenticated');
+    }
+    try {
+      const { error: err } = await supabase
+        .from('clients')
+        .update({ metadata })
+        .eq('id', clientId);
+        
+      if (err) throw err;
+      
+      // Refresh clients list locally
+      if (activeOrg) {
+        await fetchClientsForOrg(activeOrg.id);
+      }
+    } catch (err: any) {
+      console.error('updateClientMetadata error:', err);
+      setError(err.message || 'Failed to update client metadata');
+      throw err;
+    }
+  };
+
   return (
     <WorkspaceContext.Provider value={{
       organizations,
       clients,
       activeOrg,
       activeClient,
+      profile,
+      onboardingCompleted: !!profile?.onboarding_completed,
+      accountMode: profile?.account_mode || null,
       loading,
       error,
       setActiveOrg,
       setActiveClient,
       createOrganization,
       createClient,
+      completeOnboarding,
+      updateClientMetadata,
       refresh: () => fetchWorkspaces(true)
     }}>
       {children}

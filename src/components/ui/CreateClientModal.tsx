@@ -5,7 +5,7 @@ import ModalPortal from './ModalPortal';
 interface CreateClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (name: string, industry?: string, currency?: string) => Promise<any>;
+  onCreate: (name: string, industry?: string, currency?: string, metadata?: any) => Promise<any>;
 }
 
 const CreateClientModal: React.FC<CreateClientModalProps> = ({ 
@@ -16,6 +16,9 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
   const [name, setName] = useState('');
   const [industry, setIndustry] = useState('');
   const [currency, setCurrency] = useState('INR');
+  const [spendRange, setSpendRange] = useState('under_10k');
+  const [accountingTool, setAccountingTool] = useState('Tally');
+  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,10 +57,18 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
     setError(null);
     
     try {
-      const result = await onCreate(name, industry, currency);
+      const metadata = {
+        monthly_spend_range: spendRange,
+        accounting_tools: [accountingTool],
+        notes: notes
+      };
+      const result = await onCreate(name, industry, currency, metadata);
       if (result) {
         setName('');
         setIndustry('');
+        setSpendRange('under_10k');
+        setAccountingTool('Tally');
+        setNotes('');
         onClose();
       }
     } catch (err: any) {
@@ -125,23 +136,74 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Base Currency</label>
+                <div className="relative">
+                  <select
+                    className="w-full px-4 py-3 rounded-xl border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-primary outline-none transition-all appearance-none"
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                  >
+                    <option value="INR">INR (₹)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
+                    <X className="w-4 h-4 rotate-45" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Monthly Spend</label>
+                <div className="relative">
+                  <select
+                    className="w-full px-4 py-3 rounded-xl border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-primary outline-none transition-all appearance-none"
+                    value={spendRange}
+                    onChange={(e) => setSpendRange(e.target.value)}
+                  >
+                    <option value="under_10k">Under ₹10k</option>
+                    <option value="10k_50k">₹10k - ₹50k</option>
+                    <option value="50k_2l">₹50k - ₹2L</option>
+                    <option value="above_2l">Above ₹2L</option>
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
+                    <X className="w-4 h-4 rotate-45" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Base Currency</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Primary Accounting Tool</label>
               <div className="relative">
                 <select
                   className="w-full px-4 py-3 rounded-xl border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-primary outline-none transition-all appearance-none"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
+                  value={accountingTool}
+                  onChange={(e) => setAccountingTool(e.target.value)}
                 >
-                  <option value="INR">INR (₹) - Indian Rupee</option>
-                  <option value="USD">USD ($) - US Dollar</option>
-                  <option value="EUR">EUR (€) - Euro</option>
-                  <option value="GBP">GBP (£) - British Pound</option>
+                  <option value="Tally">Tally</option>
+                  <option value="Zoho Books">Zoho Books</option>
+                  <option value="Excel/Sheets">Excel / Google Sheets</option>
+                  <option value="Razorpay">Razorpay</option>
+                  <option value="Other">Other</option>
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
                   <X className="w-4 h-4 rotate-45" />
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Notes / Context (Optional)</label>
+              <textarea
+                placeholder="Add special instructions, client background, or tax rules..."
+                className="w-full px-4 py-3 rounded-xl border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted-foreground/50 h-20 resize-none"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
             </div>
           </form>
 

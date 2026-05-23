@@ -40,6 +40,17 @@ export interface AIStructuredContext {
     monthly_average: number;
     category: string;
   } | null;
+  business_profile?: {
+    account_mode: 'business_owner' | 'accountant' | null;
+    onboarding_completed: boolean;
+    business_name?: string;
+    industry?: string;
+    monthly_spend_range?: string;
+    team_size?: string;
+    accounting_tools?: string[];
+    pain_points?: string[];
+    notes?: string;
+  } | null;
 }
 
 export const askKaeoAi = async (context: AIStructuredContext): Promise<AskKaeoAIResponse | null> => {
