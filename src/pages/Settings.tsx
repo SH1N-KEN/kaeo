@@ -13,6 +13,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
+import { supabase } from '../lib/supabase';
 import { getSpendRules, saveSpendRule, type SpendRule } from '../lib/spendRulesEngine';
 import { useToast } from '../hooks/useToast';
 import ResetClientModal from '../components/ui/ResetClientModal';
@@ -22,7 +23,7 @@ import { Link as LinkIcon } from 'lucide-react';
 type Tab = 'workspace' | 'clients' | 'spend-rules' | 'data' | 'integrations';
 
 const Settings: React.FC = () => {
-  const { activeClient, activeOrg, accountMode } = useWorkspace();
+  const { activeClient, activeOrg, accountMode, refresh } = useWorkspace();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -87,6 +88,30 @@ const Settings: React.FC = () => {
       toast('Rule saved', 'success');
     } catch (err: any) {
       toast('Failed to save rule: ' + err.message, 'error');
+    }
+  };
+
+  const handleUpdateBaseCurrency = async (newVal: string) => {
+    if (!activeClient || !activeOrg) return;
+    try {
+      const { error: orgErr } = await supabase
+        .from('organizations')
+        .update({ base_currency: newVal })
+        .eq('id', activeOrg.id);
+        
+      const { error: clientErr } = await supabase
+        .from('clients')
+        .update({ base_currency: newVal })
+        .eq('id', activeClient.id);
+
+      if (orgErr || clientErr) {
+        throw orgErr || clientErr;
+      }
+      
+      toast('Base currency updated successfully', 'success');
+      refresh();
+    } catch (err: any) {
+      toast('Failed to update base currency: ' + err.message, 'error');
     }
   };
 
@@ -179,6 +204,28 @@ const Settings: React.FC = () => {
                   {activeClient?.name ?? 'None selected'}
                 </div>
               </div>
+            </div>
+
+            {/* Base Currency Selector */}
+            <div className="space-y-2 pt-4 border-t border-border/20">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
+                Base Currency
+              </label>
+              <div className="max-w-xs">
+                <select
+                  value={activeClient?.base_currency || 'INR'}
+                  onChange={(e) => handleUpdateBaseCurrency(e.target.value)}
+                  className="w-full bg-muted/30 border border-border rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-foreground cursor-pointer"
+                >
+                  <option value="INR" className="bg-background">INR (₹)</option>
+                  <option value="USD" className="bg-background">USD ($)</option>
+                  <option value="EUR" className="bg-background">EUR (€)</option>
+                  <option value="GBP" className="bg-background">GBP (£)</option>
+                </select>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Changing base currency affects future imports. Existing imported transactions are not automatically revalued yet.
+              </p>
             </div>
 
             <div className="flex items-start gap-3 mt-2 p-3 bg-muted/20 rounded-xl border border-border/40">

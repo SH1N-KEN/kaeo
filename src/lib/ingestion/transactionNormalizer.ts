@@ -1,5 +1,62 @@
 import { inferTransactionType } from '../normalizationEngine';
 import { inferTransactionCategory } from '../categoryEngine';
+import { 
+  normalizeCurrencyCode, 
+  getFallbackRate, 
+  convertToBaseCurrency, 
+  needsConversion 
+} from '../currency';
+
+/**
+ * Detects currency from row mappings, cell values, and row headers/keys.
+ */
+export const detectCurrency = (
+  row: any,
+  mapping: Record<string, string>,
+  baseCurrency: string
+): string => {
+  // 1. Check if there is an explicit mapped currency column and it has a value
+  if (mapping['currency'] && row[mapping['currency']]) {
+    const val = String(row[mapping['currency']]).trim();
+    if (val) {
+      const normalized = normalizeCurrencyCode(val);
+      if (normalized) return normalized;
+    }
+  }
+
+  // 2. Scan the amount-related cell values for currency symbols
+  const amountCols = [mapping['amount'], mapping['debit'], mapping['credit']].filter(Boolean);
+  for (const col of amountCols) {
+    if (row[col] !== undefined && row[col] !== null) {
+      const strVal = String(row[col]);
+      if (strVal.includes('₹') || strVal.includes('INR')) return 'INR';
+      if (strVal.includes('$') || strVal.includes('USD')) return 'USD';
+      if (strVal.includes('€') || strVal.includes('EUR')) return 'EUR';
+      if (strVal.includes('£') || strVal.includes('GBP')) return 'GBP';
+    }
+  }
+
+  // 3. Scan the row object keys (headers) and row values for any currency indications
+  for (const key of Object.keys(row)) {
+    const keyLower = key.toLowerCase();
+    const valStr = String(row[key]);
+    
+    // Check key headers first
+    if (keyLower.includes('currency')) {
+      const normalized = normalizeCurrencyCode(valStr);
+      if (normalized) return normalized;
+    }
+    
+    // Check if key names contain currency symbols/codes
+    if (keyLower.includes('₹') || keyLower.includes('inr')) return 'INR';
+    if (keyLower.includes('$') || keyLower.includes('usd')) return 'USD';
+    if (keyLower.includes('€') || keyLower.includes('eur')) return 'EUR';
+    if (keyLower.includes('£') || keyLower.includes('gbp')) return 'GBP';
+  }
+
+  // 4. Default to the workspace base currency
+  return normalizeCurrencyCode(baseCurrency);
+};
 
 export interface NormalizerContext {
   provider: string;
@@ -250,12 +307,28 @@ export const normalizeIngestedRows = (
       ? inferTransactionCategory(rawDesc, counterparty, type)
       : storedCat;
 
+    // Detect currency for this row
+    const originalCurrency = detectCurrency(row, mapping, context.currency);
+    const exchangeRate = needsConversion(originalCurrency, context.currency)
+      ? getFallbackRate(originalCurrency, context.currency)
+      : 1;
+    const amountInBaseCurrency = convertToBaseCurrency(amount, originalCurrency, context.currency, exchangeRate);
+
     // 6. Build standardized transaction schema
     transactions.push({
       transaction_date: date.toISOString(),
       description: rawDesc,
       amount: amount,
-      currency: context.currency,
+      original_amount: amount,
+      original_currency: originalCurrency,
+      currency: originalCurrency,
+      exchange_rate: exchangeRate,
+      amount_in_base_currency: amountInBaseCurrency,
+      fx_date: date.toISOString().split('T')[0],
+      fx_source: needsConversion(originalCurrency, context.currency) ? 'fallback_static' : null,
+      fx_metadata: needsConversion(originalCurrency, context.currency)
+        ? { conversion_type: 'static', fallback_rate: true }
+        : {},
       type: type,
       category: inferredCategory,
       counterparty_name: counterparty,

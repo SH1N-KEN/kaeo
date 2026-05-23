@@ -36,20 +36,11 @@ import { trackAuditEvent } from '../lib/auditEngine';
 import { AIReviewQueueModal } from '../components/ai/AIReviewQueueModal';
 import { applyReviewSuggestion } from '../lib/reviewActions';
 import { Sparkles } from 'lucide-react';
+import { formatMoney, needsConversion } from '../lib/currency';
 
 // ── Shared currency formatter ────────────────────────────────────────────────
 function formatCurrency(amount: number, currencyCode: string = 'INR', forceSign: boolean = false): string {
-  const isNegative = amount < 0;
-  const absVal = Math.abs(amount);
-  const formatted = new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: currencyCode,
-    maximumFractionDigits: 0,
-  }).format(absVal);
-  if (forceSign) {
-    return isNegative ? `-${formatted}` : `+${formatted}`;
-  }
-  return isNegative ? `-${formatted}` : formatted;
+  return formatMoney(amount, currencyCode, { forceSign });
 }
 
 // ── Sort types ────────────────────────────────────────────────────────────────
@@ -295,7 +286,10 @@ const Transactions: React.FC = () => {
 
       // Amount range (absolute value)
       if (filterAmountRange !== 'all') {
-        const abs = Math.abs(tx.amount);
+        const amtVal = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+          ? Number(tx.amount_in_base_currency)
+          : Number(tx.amount);
+        const abs = Math.abs(amtVal);
         if (filterAmountRange === 'under_10k' && abs >= 10000) return false;
         if (filterAmountRange === '10k_50k' && (abs < 10000 || abs > 50000)) return false;
         if (filterAmountRange === 'above_50k' && abs <= 50000) return false;
@@ -335,8 +329,8 @@ const Transactions: React.FC = () => {
           bVal = new Date(b.transaction_date).getTime();
           break;
         case 'amount':
-          aVal = a.amount;
-          bVal = b.amount;
+          aVal = a.amount_in_base_currency !== null && a.amount_in_base_currency !== undefined ? a.amount_in_base_currency : a.amount;
+          bVal = b.amount_in_base_currency !== null && b.amount_in_base_currency !== undefined ? b.amount_in_base_currency : b.amount;
           break;
         case 'category':
           aVal = a._displayCategory ?? '';
@@ -371,8 +365,11 @@ const Transactions: React.FC = () => {
     let inflow = 0;
     let outflow = 0;
     filteredTransactions.forEach((tx) => {
-      if (tx.amount > 0) inflow += tx.amount;
-      else outflow += Math.abs(tx.amount);
+      const amtVal = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+        ? Number(tx.amount_in_base_currency)
+        : Number(tx.amount);
+      if (amtVal > 0) inflow += amtVal;
+      else outflow += Math.abs(amtVal);
     });
     return { inflow, outflow, net: inflow - outflow };
   }, [filteredTransactions]);
@@ -855,18 +852,41 @@ const Transactions: React.FC = () => {
 
                       {/* Amount */}
                       <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <span
-                          className={`text-sm font-black flex items-center justify-end gap-1 ${
-                            isExpense ? 'text-risk' : 'text-success'
-                          }`}
-                        >
-                          {isExpense ? (
-                            <ArrowUpRight className="w-3.5 h-3.5" />
-                          ) : (
-                            <ArrowDownLeft className="w-3.5 h-3.5" />
-                          )}
-                          {formatCurrency(tx.amount, tx.currency || 'INR', true)}
-                        </span>
+                        <div className="flex flex-col items-end">
+                          <span
+                            className={`text-sm font-black flex items-center gap-1 ${
+                              isExpense ? 'text-risk' : 'text-success'
+                            }`}
+                          >
+                            {isExpense ? (
+                              <ArrowUpRight className="w-3.5 h-3.5" />
+                            ) : (
+                              <ArrowDownLeft className="w-3.5 h-3.5" />
+                            )}
+                            {(() => {
+                              const baseCurrency = activeClient.base_currency || 'INR';
+                              const isConverted = tx.original_currency && needsConversion(tx.original_currency, baseCurrency);
+                              const displayAmt = isConverted && tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+                                ? tx.amount_in_base_currency
+                                : tx.amount;
+                              const displayCurrency = isConverted ? baseCurrency : (tx.currency || 'INR');
+                              return formatCurrency(displayAmt, displayCurrency, true);
+                            })()}
+                          </span>
+                          {(() => {
+                            const baseCurrency = activeClient.base_currency || 'INR';
+                            const isConverted = tx.original_currency && needsConversion(tx.original_currency, baseCurrency);
+                            if (isConverted) {
+                              const origAmt = tx.original_amount !== null && tx.original_amount !== undefined ? tx.original_amount : tx.amount;
+                              return (
+                                <div className="text-[10px] text-muted-foreground mt-0.5 font-semibold">
+                                  Original: {formatMoney(origAmt, tx.original_currency || 'INR', { forceSign: true })} · FX {Number(tx.exchange_rate || 1).toFixed(2)}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
                       </td>
 
                       {/* Type */}

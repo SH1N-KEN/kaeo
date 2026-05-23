@@ -31,6 +31,7 @@ import { analyzeRisksForClient } from '../lib/riskEngine';
 import { getSpendRules } from '../lib/spendRulesEngine';
 import { getTimeBasedGreeting } from '../lib/greeting';
 import { AIReviewQueueModal } from '../components/ai/AIReviewQueueModal';
+import { getFallbackRate, convertToBaseCurrency, formatMoney, needsConversion } from '../lib/currency';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -74,6 +75,23 @@ const Dashboard: React.FC = () => {
   const [showWorkspaceDetails, setShowWorkspaceDetails] = useState(false);
   const [showChecklist, setShowChecklist] = useState(false);
 
+  const baseCurrency = activeClient?.base_currency || 'INR';
+  const [manualTxCurrency, setManualTxCurrency] = useState(baseCurrency);
+  const [manualTxExchangeRate, setManualTxExchangeRate] = useState<number>(1);
+
+  useEffect(() => {
+    if (activeClient) {
+      setManualTxCurrency(activeClient.base_currency || 'INR');
+      setManualTxExchangeRate(1);
+    }
+  }, [activeClient, isAddTxOpen]);
+
+  const handleCurrencyChange = (newCurrency: string) => {
+    setManualTxCurrency(newCurrency);
+    const rate = getFallbackRate(newCurrency, baseCurrency);
+    setManualTxExchangeRate(rate);
+  };
+
   // Smart category suggestion hook
   useEffect(() => {
     if (manualTxDesc) {
@@ -98,6 +116,8 @@ const Dashboard: React.FC = () => {
       }
       
       const finalAmt = (manualTxType === 'expense' || manualTxType === 'unknown') ? -Math.abs(amt) : Math.abs(amt);
+      const exchangeRate = needsConversion(manualTxCurrency, baseCurrency) ? (manualTxExchangeRate || 1) : 1;
+      const amtInBaseCurrency = finalAmt * exchangeRate;
 
       const { error } = await supabase
         .from('transactions')
@@ -107,6 +127,14 @@ const Dashboard: React.FC = () => {
           transaction_date: manualTxDate || new Date().toISOString().split('T')[0],
           description: manualTxDesc,
           amount: finalAmt,
+          original_amount: finalAmt,
+          original_currency: manualTxCurrency,
+          currency: manualTxCurrency,
+          exchange_rate: exchangeRate,
+          amount_in_base_currency: amtInBaseCurrency,
+          fx_date: manualTxDate || new Date().toISOString().split('T')[0],
+          fx_source: needsConversion(manualTxCurrency, baseCurrency) ? 'manual' : null,
+          fx_metadata: needsConversion(manualTxCurrency, baseCurrency) ? { conversion_type: 'manual' } : {},
           type: manualTxType,
           category: manualTxCat,
           counterparty_name: manualTxVendor || null,
@@ -129,6 +157,8 @@ const Dashboard: React.FC = () => {
       setManualTxCat('Uncategorized');
       setManualTxVendor('');
       setManualTxNote('');
+      setManualTxCurrency(baseCurrency);
+      setManualTxExchangeRate(1);
 
       fetchDashboardData();
 
@@ -202,7 +232,10 @@ const Dashboard: React.FC = () => {
       const dailyMap: Record<string, { inflow: number; outflow: number; rawDate: string }> = {};
 
       const stats = (allTransactions || []).reduce((acc, tx) => {
-        const amt = Math.abs(Number(tx.amount));
+        const txAmountVal = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+          ? Number(tx.amount_in_base_currency)
+          : Number(tx.amount);
+        const amt = Math.abs(txAmountVal);
         
         const cat = getDisplayCategory(tx);
         if (cat === 'Uncategorized') acc.uncategorizedCount++;
@@ -334,9 +367,12 @@ const Dashboard: React.FC = () => {
         console.error('Error fetching active rules count:', e);
       }
 
-      const highValueCount = (allTransactions || []).filter(tx => 
-        ['expense', 'vendor_payment', 'subscription'].includes(tx.type) && Math.abs(Number(tx.amount)) >= 50000
-      ).length;
+      const highValueCount = (allTransactions || []).filter(tx => {
+        const val = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+          ? Number(tx.amount_in_base_currency)
+          : Number(tx.amount);
+        return ['expense', 'vendor_payment', 'subscription'].includes(tx.type) && Math.abs(val) >= 50000;
+      }).length;
 
       const recurringCount = (allTransactions || []).filter(tx => tx.type === 'subscription').length;
 
@@ -417,15 +453,7 @@ const Dashboard: React.FC = () => {
   };
 
   const formatCurrency = (val: number) => {
-    const isNegative = val < 0;
-    const absVal = Math.abs(val);
-    const formatted = new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(absVal);
-    
-    return isNegative ? `-${formatted}` : formatted;
+    return formatMoney(val, activeClient?.base_currency || 'INR');
   };
 
   const handleDownloadReport = () => {
@@ -1337,24 +1365,7 @@ const Dashboard: React.FC = () => {
                   />
                 </div>
 
-                {/* Amount */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Amount (INR ₹)</label>
-                  <input 
-                    type="number"
-                    required
-                    step="0.01"
-                    min="0.01"
-                    placeholder="5,000.00"
-                    value={manualTxAmt}
-                    onChange={(e) => setManualTxAmt(e.target.value)}
-                    className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Type */}
+                {/* Flow Type */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Flow Type</label>
                   <select
@@ -1368,7 +1379,72 @@ const Dashboard: React.FC = () => {
                     <option value="unknown">Unknown Outflow</option>
                   </select>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Currency */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Currency</label>
+                  <select
+                    value={manualTxCurrency}
+                    onChange={(e) => handleCurrencyChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#161a18] border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="INR">INR (₹)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                  </select>
+                </div>
+
+                {/* Amount */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Amount</label>
+                  <input 
+                    type="number"
+                    required
+                    step="0.01"
+                    min="0.01"
+                    placeholder="5,000.00"
+                    value={manualTxAmt}
+                    onChange={(e) => setManualTxAmt(e.target.value)}
+                    className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                  />
+                </div>
+              </div>
+
+              {needsConversion(manualTxCurrency, baseCurrency) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Exchange Rate */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Exchange Rate</label>
+                    <input 
+                      type="number"
+                      required
+                      step="0.0001"
+                      min="0.0001"
+                      value={manualTxExchangeRate}
+                      onChange={(e) => setManualTxExchangeRate(parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                    />
+                  </div>
+
+                  {/* Converted Preview */}
+                  <div className="space-y-1.5 flex flex-col justify-end">
+                    <div className="px-3 py-2 bg-muted/20 border border-border/40 rounded-xl text-xs text-muted-foreground font-semibold h-[38px] flex items-center">
+                      {manualTxAmt && !isNaN(parseFloat(manualTxAmt)) ? (
+                        <span>
+                          {formatMoney(convertToBaseCurrency(parseFloat(manualTxAmt), manualTxCurrency, baseCurrency, manualTxExchangeRate), baseCurrency)} in workspace currency
+                        </span>
+                      ) : (
+                        <span>—</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Vendor / Counterparty */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Vendor / Counterparty</label>
@@ -1377,6 +1453,18 @@ const Dashboard: React.FC = () => {
                     placeholder="e.g. AWS, Stripe, Google"
                     value={manualTxVendor}
                     onChange={(e) => setManualTxVendor(e.target.value)}
+                    className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                  />
+                </div>
+
+                {/* Audit / Internal Note */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Audit / Internal Note</label>
+                  <input 
+                    type="text"
+                    placeholder="Optional memo..."
+                    value={manualTxNote}
+                    onChange={(e) => setManualTxNote(e.target.value)}
                     className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
                   />
                 </div>
@@ -1395,37 +1483,23 @@ const Dashboard: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Category */}
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</label>
-                    {manualTxDesc && (
-                      <span className="text-[8px] font-black uppercase text-teal-400 bg-teal-500/10 px-1 py-0.2 rounded border border-teal-500/20">Auto suggested</span>
-                    )}
-                  </div>
-                  <select
-                    value={manualTxCat}
-                    onChange={(e) => setManualTxCat(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#161a18] border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    {ALL_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+              {/* Category */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</label>
+                  {manualTxDesc && (
+                    <span className="text-[8px] font-black uppercase text-teal-400 bg-teal-500/10 px-1 py-0.2 rounded border border-teal-500/20">Auto suggested</span>
+                  )}
                 </div>
-
-                {/* Review Note */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Audit / Internal Note</label>
-                  <input 
-                    type="text"
-                    placeholder="Optional memo..."
-                    value={manualTxNote}
-                    onChange={(e) => setManualTxNote(e.target.value)}
-                    className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
-                  />
-                </div>
+                <select
+                  value={manualTxCat}
+                  onChange={(e) => setManualTxCat(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#161a18] border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {ALL_CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex gap-3 border-t border-border/20 pt-4 mt-6">

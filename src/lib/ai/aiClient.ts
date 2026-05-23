@@ -16,6 +16,8 @@ export interface AIStructuredContext {
     transaction_count?: number;
     period_start?: string | null;
     period_end?: string | null;
+    base_currency?: string;
+    has_converted_transactions?: boolean;
   };
   top_vendors: Array<{ name: string; spend: number; category?: string }>;
   recurring_spend: {

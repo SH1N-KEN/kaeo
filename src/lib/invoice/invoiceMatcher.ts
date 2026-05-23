@@ -1,4 +1,4 @@
-
+import { formatMoney } from '../currency';
 
 export interface InvoiceRecord {
   id: string;
@@ -34,6 +34,14 @@ export interface TransactionRecord {
   counterparty_name?: string;
   reference_number?: string;
   source?: string;
+  currency?: string;
+  original_amount?: number;
+  original_currency?: string;
+  exchange_rate?: number;
+  amount_in_base_currency?: number;
+  fx_date?: string;
+  fx_source?: string;
+  fx_metadata?: any;
 }
 
 export interface MatchSuggestion {
@@ -86,7 +94,8 @@ function calculateSimilarity(str1: string, str2: string): number {
  */
 export function matchInvoicesToTransactions(
   invoices: InvoiceRecord[],
-  transactions: TransactionRecord[]
+  transactions: TransactionRecord[],
+  baseCurrency: string = 'INR'
 ): { matches: MatchSuggestion[]; risks: any[] } {
   const matches: MatchSuggestion[] = [];
   const risks: any[] = [];
@@ -331,9 +340,14 @@ export function matchInvoicesToTransactions(
   for (const tx of payments) {
     if (matchedTxIds.has(tx.id)) continue;
 
-    const txAmount = Math.abs(tx.amount);
-    // Flag unmatched expenses above 15,000 INR as missing invoice risk
+    const txAmount = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+      ? Math.abs(tx.amount_in_base_currency)
+      : Math.abs(tx.amount);
+    // Flag unmatched expenses above 15,000 INR (or base currency equivalent) as missing invoice risk
     if (txAmount >= 15000) {
+      const origAmt = tx.original_amount !== null && tx.original_amount !== undefined ? tx.original_amount : tx.amount;
+      const origCurr = tx.original_currency || tx.currency || 'INR';
+      const formattedAmount = formatMoney(txAmount, baseCurrency);
       risks.push({
         organization_id: tx.organization_id,
         client_id: tx.client_id,
@@ -341,10 +355,13 @@ export function matchInvoicesToTransactions(
         severity: 'medium',
         risk_type: 'missing_invoice', // matches missing invoice risk category
         amount_at_risk: txAmount,
-        description: `Outflow of ${txAmount} recorded on ${tx.transaction_date} has no matching vendor invoice.`,
+        description: `Outflow of ${formattedAmount} recorded on ${tx.transaction_date} has no matching vendor invoice.`,
         evidence_json: {
           transaction_id: tx.id,
           amount: txAmount,
+          original_amount: origAmt,
+          original_currency: origCurr,
+          exchange_rate: tx.exchange_rate || 1,
           description: tx.description,
           date: tx.transaction_date
         },

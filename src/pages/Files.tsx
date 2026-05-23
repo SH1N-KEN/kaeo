@@ -30,6 +30,7 @@ import { trackUsageEvent } from '../lib/billing';
 import { checkUsageEventAllowed } from '../lib/billingGuards';
 import { normalizeIngestedRows } from '../lib/ingestion/transactionNormalizer';
 import { checkDuplicateTransactions } from '../lib/ingestion/duplicateEngine';
+import { formatMoney } from '../lib/currency';
 
 // Invoice imports
 import { extractInvoiceFields, type InvoiceExtractedFields } from '../lib/invoice/invoiceExtractor';
@@ -1045,7 +1046,7 @@ const Files: React.FC = () => {
                             {inv.due_date ? new Date(inv.due_date).toLocaleDateString('en-IN') : '—'}
                           </td>
                           <td className="px-6 py-4 font-extrabold text-foreground">
-                            {new Intl.NumberFormat('en-IN', { style: 'currency', currency: inv.currency || 'INR', maximumFractionDigits: 0 }).format(inv.total_amount || 0)}
+                            {formatMoney(inv.total_amount || 0, inv.currency || 'INR')}
                           </td>
                           <td className="px-6 py-4">
                             <StatusBadge 
@@ -1332,7 +1333,7 @@ const Files: React.FC = () => {
                               <h5 className="font-bold text-xs truncate mt-0.5">{cand.description}</h5>
                             </div>
                             <span className="font-black text-xs text-foreground shrink-0 pl-2">
-                              {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Math.abs(cand.amount))}
+                              {formatMoney(Math.abs(cand.amount), cand.currency || 'INR')}
                             </span>
                           </div>
                         );

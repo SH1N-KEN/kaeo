@@ -3,6 +3,7 @@ import { normalizeVendorName, inferCategory } from './vendorEngine';
 import { getSpendRules } from './spendRulesEngine';
 import { getDisplayCategory } from './categoryEngine';
 import { matchInvoicesToTransactions } from './invoice/invoiceMatcher';
+import { formatMoney } from './currency';
 
 /**
  * Risk Detection Engine
@@ -46,13 +47,30 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
   if (error) throw error;
   if (!txs || txs.length === 0) return [];
 
+  const { data: clientObj } = await supabase
+    .from('clients')
+    .select('base_currency')
+    .eq('id', clientId)
+    .single();
+  const baseCurrency = clientObj?.base_currency || 'INR';
+
+  const fmtCurrency = (val: number) => {
+    return formatMoney(val, baseCurrency);
+  };
+
+  const getTxAmount = (t: any) => {
+    return t.amount_in_base_currency !== null && t.amount_in_base_currency !== undefined
+      ? Number(t.amount_in_base_currency)
+      : Number(t.amount);
+  };
+
   // Fetch invoices for matching
   const { data: invoices } = await supabase
     .from('invoices')
     .select('*')
     .eq('client_id', clientId);
 
-  const { matches: invoiceMatches, risks: invoiceRisks } = matchInvoicesToTransactions(invoices || [], txs);
+  const { matches: invoiceMatches, risks: invoiceRisks } = matchInvoicesToTransactions(invoices || [], txs, baseCurrency);
 
   // Sync matches to the database
   if (invoices && invoices.length > 0) {
@@ -101,7 +119,7 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
       if (processedIndices.has(i)) continue;
       
       const current = txs[i];
-      const currentAmt = Math.abs(current.amount);
+      const currentAmt = Math.abs(getTxAmount(current));
       const currentDate = new Date(current.transaction_date);
       const currentNorm = normalizeForDuplicateCheck(current.description);
       const currentIsGeneric = isGenericVendorPaymentDescription(current.description);
@@ -113,7 +131,7 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
         if (processedIndices.has(j)) continue;
         
         const other = txs[j];
-        const otherAmt = Math.abs(other.amount);
+        const otherAmt = Math.abs(getTxAmount(other));
         const otherDate = new Date(other.transaction_date);
         const otherNorm = normalizeForDuplicateCheck(other.description);
         const otherIsGeneric = isGenericVendorPaymentDescription(other.description);
@@ -163,16 +181,18 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
           description: isPossible 
             ? 'Multiple generic vendor payments with identical amounts found on the same date.'
             : `Multiple entries with identical amounts and similar descriptions within a ${thresholdDays}-day window.`,
-          evidence_json: {
-            transaction_ids: group.map(d => d.id),
-            descriptions: group.map(d => d.description),
-            dates: group.map(d => d.transaction_date),
-            reason: isPossible 
-              ? 'Generic vendor labels found with matching financials on the same day.'
-              : group.some(d => d.description.toLowerCase().includes('duplicate')) 
-                ? 'Explicit "duplicate" marker found in transaction description.'
-                : 'Structural similarity in description and financial data.'
-          },
+            evidence_json: {
+              transaction_ids: group.map(d => d.id),
+              descriptions: group.map(d => d.description),
+              dates: group.map(d => d.transaction_date),
+              original_currency: group[0].original_currency || group[0].currency || baseCurrency,
+              exchange_rate: group[0].exchange_rate || 1,
+              reason: isPossible 
+                ? 'Generic vendor labels found with matching financials on the same day.'
+                : group.some(d => d.description.toLowerCase().includes('duplicate')) 
+                  ? 'Explicit "duplicate" marker found in transaction description.'
+                  : 'Structural similarity in description and financial data.'
+            },
           suggested_action: isPossible
             ? 'Verify whether these payments were made to distinct vendors or if one is a duplicate entry.'
             : 'Verify if these represent multiple services or a single erroneous billing event.',
@@ -198,8 +218,8 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
       const months = new Set(cluster.map(tx => new Date(tx.transaction_date).getMonth()));
       const years = new Set(cluster.map(tx => new Date(tx.transaction_date).getFullYear()));
       const hasMultipleMonths = months.size > 1 || years.size > 1;
-      const baseAmt = Math.abs(cluster[0].amount);
-      const consistentAmount = cluster.every(tx => Math.abs(Math.abs(tx.amount) - baseAmt) / baseAmt < 0.05);
+      const baseAmt = Math.abs(getTxAmount(cluster[0]));
+      const consistentAmount = cluster.every(tx => Math.abs(Math.abs(getTxAmount(tx)) - baseAmt) / baseAmt < 0.05);
 
       const category = inferCategory(vendor);
       const isSubscriptionKeyword = vendor.includes('subscription') || 
@@ -232,7 +252,9 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
               frequency: 'Monthly (estimated)',
               transaction_count: cluster.length,
               vendor_name: vendor,
-              consistent_amount: formatCurrency(baseAmt)
+              consistent_amount: fmtCurrency(baseAmt),
+              original_currency: cluster[0].original_currency || cluster[0].currency || baseCurrency,
+              exchange_rate: cluster[0].exchange_rate || 1
             },
             suggested_action: 'Audit this subscription to ensure continued utility and ROI.',
             status: 'open',
@@ -252,7 +274,7 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
       title: 'Missing Data: Unknown Transactions',
       severity: 'medium',
       risk_type: 'missing_data',
-      amount_at_risk: unknownTxs.reduce((acc, tx) => acc + Math.abs(tx.amount), 0),
+      amount_at_risk: unknownTxs.reduce((acc, tx) => acc + Math.abs(getTxAmount(tx)), 0),
       description: `${unknownTxs.length} transactions could not be automatically classified into types.`,
       evidence_json: {
         count: unknownTxs.length,
@@ -266,8 +288,11 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
 
   // --- 4. High-Value Payment (using Rule) ---
   if (highValueRule && highValueRule.threshold_amount != null) {
-    txs.filter(tx => tx.amount < 0 && Math.abs(tx.amount) >= (highValueRule.threshold_amount ?? 50000)).forEach(tx => {
-      const amt = Math.abs(tx.amount);
+    txs.filter(tx => {
+      const val = getTxAmount(tx);
+      return val < 0 && Math.abs(val) >= (highValueRule.threshold_amount ?? 50000);
+    }).forEach(tx => {
+      const amt = Math.abs(getTxAmount(tx));
       risks.push({
         organization_id: orgId,
         client_id: clientId,
@@ -275,11 +300,13 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
         severity: 'high',
         risk_type: 'high_value_payment',
         amount_at_risk: amt,
-        description: `Payment of ${formatCurrency(amt)} exceeds rule threshold of ${formatCurrency(highValueRule.threshold_amount!)}.`,
+        description: `Payment of ${fmtCurrency(amt)} exceeds rule threshold of ${fmtCurrency(highValueRule.threshold_amount!)}.`,
         evidence_json: {
-          threshold: formatCurrency(highValueRule.threshold_amount!),
-          actual_expense: formatCurrency(amt),
-          transaction_id: tx.id
+          threshold: fmtCurrency(highValueRule.threshold_amount!),
+          actual_expense: fmtCurrency(amt),
+          transaction_id: tx.id,
+          original_currency: tx.original_currency || tx.currency || baseCurrency,
+          exchange_rate: tx.exchange_rate || 1
         },
         suggested_action: 'Confirm this large outflow was planned and has proper authorization.',
         status: 'open',
@@ -288,13 +315,13 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
     });
   } else {
     // Fallback: Unusual Spend relative to median
-    const expenses = txs.filter(tx => tx.amount < 0).map(tx => Math.abs(tx.amount));
+    const expenses = txs.filter(tx => getTxAmount(tx) < 0).map(tx => Math.abs(getTxAmount(tx)));
     if (expenses.length > 5) {
       const sorted = [...expenses].sort((a, b) => a - b);
       const median = sorted[Math.floor(sorted.length / 2)];
       
       txs.filter(tx => tx.type === 'vendor_payment' || tx.type === 'expense').forEach(tx => {
-        const amt = Math.abs(tx.amount);
+        const amt = Math.abs(getTxAmount(tx));
         if (amt > median * 10 && amt > 100000) {
           risks.push({
             organization_id: orgId,
@@ -303,11 +330,13 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
             severity: 'high',
             risk_type: 'unusual_spend',
             amount_at_risk: amt,
-            description: `Payment of ${formatCurrency(amt)} is 10x higher than your median expense.`,
+            description: `Payment of ${fmtCurrency(amt)} is 10x higher than your median expense.`,
             evidence_json: {
-              median_expense: formatCurrency(median),
-              actual_expense: formatCurrency(amt),
-              transaction_id: tx.id
+              median_expense: fmtCurrency(median),
+              actual_expense: fmtCurrency(amt),
+              transaction_id: tx.id,
+              original_currency: tx.original_currency || tx.currency || baseCurrency,
+              exchange_rate: tx.exchange_rate || 1
             },
             suggested_action: 'Confirm this large outflow was planned and has proper authorization.',
             status: 'open',
@@ -332,7 +361,7 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
         title: 'Uncategorized Spend',
         severity: 'low',
         risk_type: 'uncategorized_transaction',
-        amount_at_risk: uncategorizedTxs.reduce((acc, tx) => acc + Math.abs(tx.amount), 0),
+        amount_at_risk: uncategorizedTxs.reduce((acc, tx) => acc + Math.abs(getTxAmount(tx)), 0),
         description: `${uncategorizedTxs.length} expense transactions have no category assigned.`,
         evidence_json: {
           count: uncategorizedTxs.length,
@@ -361,7 +390,7 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
         title: 'Unknown Vendors Detected',
         severity: 'medium',
         risk_type: 'unknown_vendor',
-        amount_at_risk: unknownVendorTxs.reduce((acc, tx) => acc + Math.abs(tx.amount), 0),
+        amount_at_risk: unknownVendorTxs.reduce((acc, tx) => acc + Math.abs(getTxAmount(tx)), 0),
         description: `${unknownVendorTxs.length} payments have generic descriptions with no vendor specified.`,
         evidence_json: {
           count: unknownVendorTxs.length,
@@ -421,13 +450,6 @@ export type RiskEvent = {
   created_at: string;
 };
 
-export const formatCurrency = (val: number) => {
-  const isNegative = val < 0;
-  const absVal = Math.abs(val);
-  const formatted = new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0
-  }).format(absVal);
-  return isNegative ? `-${formatted}` : formatted;
+export const formatCurrency = (val: number, currency: string = 'INR') => {
+  return formatMoney(val, currency);
 };

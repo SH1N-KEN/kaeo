@@ -1,5 +1,6 @@
 // No date-fns needed
 import { inferCategory, normalizeVendorName } from './vendorEngine';
+import { formatMoney } from './currency';
 
 export interface ReportInput {
   organization: any;
@@ -16,15 +17,7 @@ export interface ReportInput {
 }
 
 export function formatReportCurrency(amount: number, currency: string = "INR") {
-  const isNegative = amount < 0;
-  const absVal = Math.abs(amount);
-  const formatted = new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(absVal);
-  return isNegative ? `-${formatted}` : formatted;
+  return formatMoney(amount, currency);
 }
 
 export function calculateReportPeriod(transactions: any[]) {
@@ -60,7 +53,10 @@ export function summarizeTransactions(transactions: any[]) {
   let refundCount = 0;
 
   for (const t of transactions) {
-    const amount = Math.abs(Number(t.amount) || 0);
+    const amountVal = t.amount_in_base_currency !== null && t.amount_in_base_currency !== undefined
+      ? Number(t.amount_in_base_currency)
+      : Number(t.amount);
+    const amount = Math.abs(amountVal || 0);
     if (t.type === 'income') {
       income += amount;
       incomeCount++;
@@ -98,7 +94,10 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
 
   for (const t of transactions) {
     if (['expense', 'vendor_payment', 'subscription'].includes(t.type)) {
-      const amt = Math.abs(Number(t.amount) || 0);
+      const amtVal = t.amount_in_base_currency !== null && t.amount_in_base_currency !== undefined
+        ? Number(t.amount_in_base_currency)
+        : Number(t.amount);
+      const amt = Math.abs(amtVal || 0);
       const { display: tempName, normalized: normName } = normalizeVendorName(t.description);
 
       const dbVendor = vendors.find(dv => 
@@ -161,11 +160,16 @@ export function summarizeVendors(vendors: any[], transactions: any[]) {
     if (v.monthly_average) {
       return sum + Number(v.monthly_average);
     }
-    const vendorTxs = transactions.filter(t => 
+    const vendorTxs = transactions.filter((t: any) => 
       (t.vendor_id && t.vendor_id === v.id) || 
       normalizeVendorName(t.description).normalized === v.normalized_name
     );
-    const amounts = vendorTxs.map(t => Math.abs(Number(t.amount) || 0));
+    const amounts = vendorTxs.map((t: any) => {
+      const val = t.amount_in_base_currency !== null && t.amount_in_base_currency !== undefined
+        ? Number(t.amount_in_base_currency)
+        : Number(t.amount);
+      return Math.abs(val || 0);
+    });
     const sortedAmts = [...amounts].sort((a, b) => a - b);
     const medianSpend = sortedAmts[Math.floor(sortedAmts.length / 2)] || 0;
     return sum + medianSpend;
@@ -275,17 +279,29 @@ export function buildReportSections(data: any) {
     recurringCommitment: vendorSummary.recurringCommitment,
   };
 
+  const clientCurrency = client?.base_currency || 'INR';
+  const convertedTxs = data.transactions?.filter((t: any) => t.original_currency && t.original_currency !== clientCurrency) || [];
+  const hasConverted = convertedTxs.length > 0;
+  
+  const warnings = hasConverted
+    ? ["Some transactions were converted into workspace base currency using stored FX rates."]
+    : [];
+
   const isExpenseOnly = transactionSummary.incomeCount === 0 && transactionSummary.expenseCount > 0;
   
   let deterministicText = `Kaeo analyzed ${transactionSummary.transactionCount} transactions for this client. `;
   if (isExpenseOnly) {
     deterministicText += `This appears to be an expense-only import. Revenue cannot be assessed from the current data. `;
   } else {
-    deterministicText += `The client recorded ${formatReportCurrency(transactionSummary.income)} income`;
+    deterministicText += `The client recorded ${formatReportCurrency(transactionSummary.income, clientCurrency)} income`;
     if (transactionSummary.refunds > 0) {
-      deterministicText += ` and ${formatReportCurrency(transactionSummary.refunds)} refunds/recoveries`;
+      deterministicText += ` and ${formatReportCurrency(transactionSummary.refunds, clientCurrency)} refunds/recoveries`;
     }
-    deterministicText += ` and ${formatReportCurrency(transactionSummary.expenses)} expenses, resulting in net cash movement of ${formatReportCurrency(transactionSummary.netCashMovement)}. `;
+    deterministicText += ` and ${formatReportCurrency(transactionSummary.expenses, clientCurrency)} expenses, resulting in net cash movement of ${formatReportCurrency(transactionSummary.netCashMovement, clientCurrency)}. `;
+  }
+
+  if (hasConverted) {
+    deterministicText += `Some transactions in this report were converted into ${clientCurrency} using stored FX rates. `;
   }
 
   if (riskSummary.openRisksCount > 0) {
@@ -300,7 +316,7 @@ export function buildReportSections(data: any) {
     unknownCount: transactionSummary.unknownCount,
     missingDates: transactionSummary.missingDates,
     missingDescriptions: transactionSummary.missingDescriptions,
-    warnings: [],
+    warnings: warnings,
     expenseOnly: isExpenseOnly,
     importedDataCaveat: "This report is based only on uploaded/imported files for this client."
   };
@@ -353,7 +369,8 @@ export async function generateCFOReport(input: ReportInput) {
     vendorSummary,
     riskSummary,
     noteSummary,
-    sourceSummary
+    sourceSummary,
+    transactions
   });
 
   const title = `CFO Report - ${client?.name || 'Client'} - ${new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(new Date())}`;

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { formatMoney } from './currency';
 import { summarizeVendors } from './reportEngine';
 import { askKaeoAi } from './ai/aiClient';
 import type { AIStructuredContext } from './ai/aiClient';
@@ -25,15 +26,8 @@ interface AskKaeoResponse {
   source_json: any;
 }
 
-const formatReportCurrency = (val: number) => {
-  const isNegative = val < 0;
-  const absVal = Math.abs(val);
-  const formatted = new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0
-  }).format(absVal);
-  return isNegative ? `-${formatted}` : formatted;
+const formatReportCurrency = (val: number, currency: string = 'INR') => {
+  return formatMoney(val, currency);
 };
 
 export async function categorizeQuestion(query: string): Promise<AskKaeoCategory> {
@@ -311,9 +305,10 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     top_invoiced_vendors
   };
   
-  const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
-  const refunds = transactions.filter(t => t.type === 'refund').reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
-  const expenses = transactions.filter(t => ['expense', 'vendor_payment', 'subscription'].includes(t.type)).reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+  const getTxAmount = (t: any) => t.amount_in_base_currency !== null && t.amount_in_base_currency !== undefined ? Number(t.amount_in_base_currency) : Number(t.amount);
+  const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + Math.abs(getTxAmount(t) || 0), 0);
+  const refunds = transactions.filter(t => t.type === 'refund').reduce((sum, t) => sum + Math.abs(getTxAmount(t) || 0), 0);
+  const expenses = transactions.filter(t => ['expense', 'vendor_payment', 'subscription'].includes(t.type)).reduce((sum, t) => sum + Math.abs(getTxAmount(t) || 0), 0);
   const netCash = income + refunds - expenses;
 
   const vendorSummary = summarizeVendors(vendors, transactions);
@@ -324,6 +319,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     .select('name, industry, base_currency, metadata')
     .eq('id', clientId)
     .single();
+  const baseCurrency = clientData?.base_currency || 'INR';
   const activeClientName = clientData?.name || 'Active Client';
 
   const { data: latestReport } = await supabase
@@ -406,7 +402,9 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       net_cash_movement: netCash,
       transaction_count,
       period_start,
-      period_end
+      period_end,
+      base_currency: baseCurrency,
+      has_converted_transactions: transactions.some(t => t.original_currency && t.original_currency !== baseCurrency)
     },
     top_vendors: vendorSummary.topVendors.slice(0, 5).map(v => ({
       name: v.normalized_name,
@@ -425,10 +423,17 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     high_priority_risks: risks.filter(r => r.severity === 'high').length,
     latest_report_summary: latestReportSummary,
     relevant_notes: relevantNotes.slice(0, 10),
-    caveats: [
-      "AI explanations are for informational purposes only. Use validated reports for official decisions.",
-      "Calculations are strictly grounded in deterministic database aggregates."
-    ],
+    caveats: (() => {
+      const list = [
+        "AI explanations are for informational purposes only. Use validated reports for official decisions.",
+        "Calculations are strictly grounded in deterministic database aggregates."
+      ];
+      const hasConverted = transactions.some(t => t.original_currency && t.original_currency !== baseCurrency);
+      if (hasConverted) {
+        list.push(`Some transactions were converted into ${baseCurrency} using stored FX rates.`);
+      }
+      return list;
+    })(),
     counts: {
       transactions: transactions.length,
       vendors: vendors.length,
@@ -477,7 +482,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
           const hasMath = aiResult.reasoning_summary.includes('=') && 
                           (aiResult.reasoning_summary.toLowerCase().includes('net cash') || aiResult.reasoning_summary.toLowerCase().includes('math'));
           if (!hasMath) {
-            aiResult.reasoning_summary += `\n\nHere’s the math:\n${formatReportCurrency(income)} (Income) + ${formatReportCurrency(refunds)} (Refunds) - ${formatReportCurrency(expenses)} (Expenses) = ${formatReportCurrency(netCash)} (Net Cash).`;
+            aiResult.reasoning_summary += `\n\nHere’s the math:\n${formatReportCurrency(income, baseCurrency)} (Income) + ${formatReportCurrency(refunds, baseCurrency)} (Refunds) - ${formatReportCurrency(expenses, baseCurrency)} (Expenses) = ${formatReportCurrency(netCash, baseCurrency)} (Net Cash).`;
           }
         }
 
@@ -579,9 +584,9 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
 
     case 'finance_summary': {
       const netCashPositive = netCash >= 0;
-      responseText = `Your net cash movement is ${netCashPositive ? 'positive' : 'negative'} at ${formatReportCurrency(netCash)}. That means the client ${netCashPositive ? 'brought in more cash than it spent' : 'spent more cash than it brought in'} during this imported period.\n\n` +
-      `Breakdown:\n• Income: ${formatReportCurrency(income)}\n• Refunds / Recoveries: ${formatReportCurrency(refunds)}\n• Expenses: ${formatReportCurrency(expenses)}\n\n` +
-      `Formula:\n${formatReportCurrency(income)} + ${formatReportCurrency(refunds)} - ${formatReportCurrency(expenses)} = ${formatReportCurrency(netCash)}\n\n` +
+      responseText = `Your net cash movement is ${netCashPositive ? 'positive' : 'negative'} at ${formatReportCurrency(netCash, baseCurrency)}. That means the client ${netCashPositive ? 'brought in more cash than it spent' : 'spent more cash than it brought in'} during this imported period.\n\n` +
+      `Breakdown:\n• Income: ${formatReportCurrency(income, baseCurrency)}\n• Refunds / Recoveries: ${formatReportCurrency(refunds, baseCurrency)}\n• Expenses: ${formatReportCurrency(expenses, baseCurrency)}\n\n` +
+      `Formula:\n${formatReportCurrency(income, baseCurrency)} + ${formatReportCurrency(refunds, baseCurrency)} - ${formatReportCurrency(expenses, baseCurrency)} = ${formatReportCurrency(netCash, baseCurrency)}\n\n` +
       `What this means:\nThe business is cash-${netCashPositive ? 'positive' : 'negative'} in this period, but the quality of that cash movement still depends on whether the open risks are resolved. Duplicate vendor payments and unclassified bank adjustments can distort the true picture.\n\n` +
       `Recommended next step:\nReview your Risk Inbox to ensure no false expenses are skewing the cash calculation.\n\n` +
       `Source:\nCalculated directly from ${txCount} transactions imported via your accounting data.`;
@@ -614,16 +619,19 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       }
 
       // Check for large payments lacking invoices
-      const missingInvoicePayments = transactions.filter(t => t.amount < 0 && Math.abs(t.amount) >= 15000);
+      const missingInvoicePayments = transactions.filter(t => {
+        const val = getTxAmount(t);
+        return val < 0 && Math.abs(val) >= 15000;
+      });
       if (missingInvoicePayments.length > 0) {
-        invoiceText += `\n• Large transactions missing supporting invoices: ${missingInvoicePayments.length} payments (> ₹15,000)`;
+        invoiceText += `\n• Large transactions missing supporting invoices: ${missingInvoicePayments.length} payments (> ${formatReportCurrency(15000, baseCurrency)})`;
       }
 
       responseText = `You have ${risks.length} open risk events and ${unknownTxs.length} unclassified transactions that need attention.${invoiceText}\n\n` +
       `Breakdown:\n` +
       `1. High-severity risks: ${highSeverityRisks.length > 0 ? highSeverityRisks.map(r => r.title).join(', ') : 'None'}\n` +
       `2. Possible duplicate vendor payments: ${risks.filter(r => r.title.toLowerCase().includes('duplicate')).length} detected\n` +
-      `3. Unknown transactions: ${unknownTxs.length} items (${formatReportCurrency(unknownTxs.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0))})\n` +
+      `3. Unknown transactions: ${unknownTxs.length} items (${formatReportCurrency(unknownTxs.reduce((sum, t) => sum + Math.abs(getTxAmount(t) || 0), 0), baseCurrency)})\n` +
       `4. Recurring SaaS commitments: ${recurringCount} active vendors\n` +
       `5. High spend vendors: Your top vendor is ${vendorSummary.topVendors[0]?.normalized_name || 'N/A'}\n\n` +
       `What this means:\nLeaving high-severity risks, overdue invoices, and missing invoices unreviewed means your ledger compliance is low and duplicate payments can slide through.\n\n` +
@@ -638,8 +646,8 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       const mentionedVendor = vendors.find(v => query.toLowerCase().includes(v.normalized_name.toLowerCase()));
       if (mentionedVendor) {
         const spend = mentionedVendor.monthly_average || vendorSummary.topVendors.find(tv => tv.normalized_name === mentionedVendor.normalized_name)?.totalSpend || 0;
-        responseText = `You are currently spending ${formatReportCurrency(spend)} on ${mentionedVendor.display_name || mentionedVendor.name}.\n\n` +
-        `Breakdown:\n• Vendor: ${mentionedVendor.display_name || mentionedVendor.name}\n• Category: ${mentionedVendor.category || 'Vendor'}\n• Detected Spend: ${formatReportCurrency(spend)}\n\n` +
+        responseText = `You are currently spending ${formatReportCurrency(spend, baseCurrency)} on ${mentionedVendor.display_name || mentionedVendor.name}.\n\n` +
+        `Breakdown:\n• Vendor: ${mentionedVendor.display_name || mentionedVendor.name}\n• Category: ${mentionedVendor.category || 'Vendor'}\n• Detected Spend: ${formatReportCurrency(spend, baseCurrency)}\n\n` +
         `What this means:\nThis service is a measurable component of your operational overhead. Replacing it could yield cost savings, but might also incur switching costs or productivity downtime for your team.\n\n` +
         `Recommended next step:\nBefore switching, audit your active user seats for ${mentionedVendor.name} to see if you can reduce the current tier. Live market/pricing research is not enabled yet. I can evaluate this service using your internal Kaeo data and give comparison criteria.\n\n` +
         `Source:\nBased on historical vendor extraction from your imported transactions.`;
@@ -658,8 +666,8 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       const mentionedVendor = vendors.find(v => query.toLowerCase().includes(v.normalized_name.toLowerCase()));
       if (mentionedVendor) {
         const spend = vendorSummary.topVendors.find(tv => tv.normalized_name === mentionedVendor.normalized_name)?.totalSpend || 0;
-        responseText = `Your recorded spend with ${mentionedVendor.display_name || mentionedVendor.name} is ${formatReportCurrency(spend)}.\n\n` +
-        `Breakdown:\n• Vendor Name: ${mentionedVendor.display_name || mentionedVendor.name}\n• Categorization: ${mentionedVendor.category || 'Uncategorized'}\n• Total Spend: ${formatReportCurrency(spend)}\n\n` +
+        responseText = `Your recorded spend with ${mentionedVendor.display_name || mentionedVendor.name} is ${formatReportCurrency(spend, baseCurrency)}.\n\n` +
+        `Breakdown:\n• Vendor Name: ${mentionedVendor.display_name || mentionedVendor.name}\n• Categorization: ${mentionedVendor.category || 'Uncategorized'}\n• Total Spend: ${formatReportCurrency(spend, baseCurrency)}\n\n` +
         `What this means:\nThis represents a direct operational expense. If this vendor is categorized as 'Generic Vendor Payments', it may obscure the true nature of the spend.\n\n` +
         `Recommended next step:\nReview if this spend is a one-time project cost or a recurring necessity. If it is recurring, consider negotiating an annual contract for a discount.\n\n` +
         `Source:\nBased on ${txCount} imported transactions.`;
@@ -667,8 +675,8 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       } else {
         const top = vendorSummary.topVendors[0];
         if (top) {
-          responseText = `Your highest capital concentration is with ${top.normalized_name}, totaling ${formatReportCurrency(top.totalSpend)}.\n\n` +
-          `Breakdown:\n• Top Vendor: ${top.normalized_name}\n• Spend: ${formatReportCurrency(top.totalSpend)}\n• Total Identified Vendors: ${vendors.length}\n\n` +
+          responseText = `Your highest capital concentration is with ${top.normalized_name}, totaling ${formatReportCurrency(top.totalSpend, baseCurrency)}.\n\n` +
+          `Breakdown:\n• Top Vendor: ${top.normalized_name}\n• Spend: ${formatReportCurrency(top.totalSpend, baseCurrency)}\n• Total Identified Vendors: ${vendors.length}\n\n` +
           `What this means:\nHeavy reliance on a single vendor can represent both operational leverage and strategic risk. If this is a core service (like payroll or cloud hosting), the spend is expected. If it's an agency or variable cost, it warrants close monitoring.\n\n` +
           `Recommended next step:\nOpen the Spend Advisor to review the top 5 vendor breakdown and ensure no unusual billing spikes occurred.\n\n` +
           `Source:\nBased on ${txCount} imported transactions.`;
@@ -687,8 +695,8 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     
     case 'recurring_spend':
     case 'cost_optimization': {
-      responseText = `Your estimated recurring commitment is ${formatReportCurrency(vendorSummary.recurringCommitment)} per month.\n\n` +
-      `Breakdown:\n• Recurring Subscriptions: ${vendorSummary.recurringVendors.length} active\n• Total Monthly Commitment: ${formatReportCurrency(vendorSummary.recurringCommitment)}\n• Top SaaS Vendor: ${vendorSummary.recurringVendors[0]?.normalized_name || 'None'}\n\n` +
+      responseText = `Your estimated recurring commitment is ${formatReportCurrency(vendorSummary.recurringCommitment, baseCurrency)} per month.\n\n` +
+      `Breakdown:\n• Recurring Subscriptions: ${vendorSummary.recurringVendors.length} active\n• Total Monthly Commitment: ${formatReportCurrency(vendorSummary.recurringCommitment, baseCurrency)}\n• Top SaaS Vendor: ${vendorSummary.recurringVendors[0]?.normalized_name || 'None'}\n\n` +
       `What this means:\nThis is your "burn floor" — the fixed operational cost you must pay every month regardless of revenue. High recurring commitments reduce your capital flexibility.\n\n` +
       `Recommended next step:\nPerform a seat audit on your active SaaS tools. Cancel any dormant accounts or duplicate services performing the same function.\n\n` +
       `Source:\nBased on heuristic detection of recurring payments across ${txCount} imported transactions.`;
@@ -698,7 +706,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     
     case 'business_advice': {
       responseText = `Based on your internal financial profile, the primary directive is to resolve operational blind spots and secure your cash flow.\n\n` +
-      `Breakdown:\n• Financial Health: ${netCash >= 0 ? 'Positive' : 'Negative'} cash flow (${formatReportCurrency(netCash)})\n• Open Risks: ${risks.length} pending items\n• Spending Concentration: Top vendor is ${vendorSummary.topVendors[0]?.normalized_name || 'N/A'}\n• Recurring Commitments: ${formatReportCurrency(vendorSummary.recurringCommitment)}/mo\n\n` +
+      `Breakdown:\n• Financial Health: ${netCash >= 0 ? 'Positive' : 'Negative'} cash flow (${formatReportCurrency(netCash, baseCurrency)})\n• Open Risks: ${risks.length} pending items\n• Spending Concentration: Top vendor is ${vendorSummary.topVendors[0]?.normalized_name || 'N/A'}\n• Recurring Commitments: ${formatReportCurrency(vendorSummary.recurringCommitment, baseCurrency)}/mo\n\n` +
       `What this means:\nYour business data has anomalies. CFOs rely on high-fidelity data. Until the risk inbox is cleared and unknown transactions are categorized, your executive reporting contains a margin of error.\n\n` +
       `Recommended next step:\nClear your Risk Inbox and categorize unknown transactions.\n\n` +
       `Source:\nBased strictly on ${txCount} imported transactions and your verified Kaeo risk profile.`;

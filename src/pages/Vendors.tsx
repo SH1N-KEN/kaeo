@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
+import { formatMoney } from '../lib/currency';
 import { analyzeVendorsForClient } from '../lib/vendorEngine';
 import EmptyState from '../components/ui/EmptyState';
 import MetricCard from '../components/ui/MetricCard';
@@ -119,14 +120,7 @@ const Vendors: React.FC = () => {
   };
 
   const formatCurrency = (val: number) => {
-    const isNegative = val < 0;
-    const absVal = Math.abs(val);
-    const formatted = new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(absVal);
-    return isNegative ? `-${formatted}` : formatted;
+    return formatMoney(val, activeClient?.base_currency || 'INR');
   };
 
   const filteredVendors = vendors.filter(v => 
