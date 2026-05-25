@@ -38,14 +38,27 @@ const isGenericVendorPaymentDescription = (desc: string): boolean => {
 
 export const analyzeRisksForClient = async (orgId: string, clientId: string) => {
   // 1. Fetch all transactions
-  const { data: txs, error } = await supabase
+  const { data: rawTxs, error } = await supabase
     .from('transactions')
     .select('*')
     .eq('client_id', clientId)
     .order('transaction_date', { ascending: false });
 
   if (error) throw error;
-  if (!txs || txs.length === 0) return [];
+  if (!rawTxs || rawTxs.length === 0) return [];
+
+  const isMetadataTransaction = (description: string): boolean => {
+    const desc = (description || '').toLowerCase().trim();
+    if (!desc) return true;
+    if (['posting date', 'value date', 'particulars', 'debit amount', 'credit amount', 'running balance', 'instrument', 'category hint'].includes(desc)) {
+      return true;
+    }
+    return ['opening balance', 'closing balance', 'total', 'totals', 'subtotal', 'carried forward', 'brought forward'].some(
+      k => desc === k || desc.startsWith(k)
+    );
+  };
+
+  const txs = rawTxs.filter(tx => !isMetadataTransaction(tx.description));
 
   const baseCurrency = 'INR';
 
@@ -172,7 +185,7 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
             : `Duplicate Payment Suspected: ${group[0].description.replace(/ duplicate/gi, '')}`,
           severity: tier,
           risk_type: 'duplicate_payment',
-          amount_at_risk: currentAmt,
+          amount_at_risk: currentAmt * group.length,
           description: isPossible 
             ? 'Multiple generic vendor payments with identical amounts found on the same date.'
             : `Multiple entries with identical amounts and similar descriptions within a ${thresholdDays}-day window.`,

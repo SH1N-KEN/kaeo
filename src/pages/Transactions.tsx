@@ -231,15 +231,28 @@ const Transactions: React.FC = () => {
 
   // ── Derive display transactions (category inference) ─────────────────────
   const displayTransactions = useMemo(() => {
-    return transactions.map((tx) => ({
-      ...tx,
-      _displayCategory: getDisplayCategory({
-        category: tx.category,
-        description: tx.description,
-        counterparty_name: tx.counterparty_name,
-        type: tx.type,
-      }),
-    }));
+    const isMetadataTransaction = (description: string): boolean => {
+      const desc = (description || '').toLowerCase().trim();
+      if (!desc) return true;
+      if (['posting date', 'value date', 'particulars', 'debit amount', 'credit amount', 'running balance', 'instrument', 'category hint'].includes(desc)) {
+        return true;
+      }
+      return ['opening balance', 'closing balance', 'total', 'totals', 'subtotal', 'carried forward', 'brought forward'].some(
+        k => desc === k || desc.startsWith(k)
+      );
+    };
+
+    return transactions
+      .filter((tx) => !isMetadataTransaction(tx.description))
+      .map((tx) => ({
+        ...tx,
+        _displayCategory: getDisplayCategory({
+          category: tx.category,
+          description: tx.description,
+          counterparty_name: tx.counterparty_name,
+          type: tx.type,
+        }),
+      }));
   }, [transactions]);
 
   // ── Derive filter options ─────────────────────────────────────────────────

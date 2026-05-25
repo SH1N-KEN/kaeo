@@ -197,6 +197,19 @@ const Dashboard: React.FC = () => {
         .eq('client_id', activeClient.id);
 
       if (metricsErr) throw metricsErr;
+
+      const isMetadataTransaction = (description: string): boolean => {
+        const desc = (description || '').toLowerCase().trim();
+        if (!desc) return true;
+        if (['posting date', 'value date', 'particulars', 'debit amount', 'credit amount', 'running balance', 'instrument', 'category hint'].includes(desc)) {
+          return true;
+        }
+        return ['opening balance', 'closing balance', 'total', 'totals', 'subtotal', 'carried forward', 'brought forward'].some(
+          k => desc === k || desc.startsWith(k)
+        );
+      };
+
+      const cleanTransactions = (allTransactions || []).filter(tx => !isMetadataTransaction(tx.description));
       
       // Fetch open risks
       const { data: openRisksData } = await supabase
@@ -211,7 +224,7 @@ const Dashboard: React.FC = () => {
       const vendors: Record<string, number> = {};
       const dailyMap: Record<string, { inflow: number; outflow: number; rawDate: string }> = {};
 
-      const stats = (allTransactions || []).reduce((acc, tx) => {
+      const stats = cleanTransactions.reduce((acc, tx) => {
         const txAmountVal = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
           ? Number(tx.amount_in_base_currency)
           : Number(tx.amount);
@@ -289,6 +302,20 @@ const Dashboard: React.FC = () => {
         unreviewedCount: 0
       });
 
+      // Override uncategorized and unknown counts from allTransactions to include metadata rows
+      let totalUncategorizedCount = 0;
+      let totalUnknownCount = 0;
+      (allTransactions || []).forEach(tx => {
+        const cat = getDisplayCategory(tx);
+        if (cat === 'Uncategorized') {
+          totalUncategorizedCount++;
+        } else if (cat === 'Unknown') {
+          totalUnknownCount++;
+        }
+      });
+      stats.uncategorizedCount = totalUncategorizedCount;
+      stats.unknownCount = totalUnknownCount;
+
       let duplicateExposure = 0;
       (openRisksData || []).forEach(r => {
         if (r.risk_type.includes('duplicate')) {
@@ -347,14 +374,14 @@ const Dashboard: React.FC = () => {
         console.error('Error fetching active rules count:', e);
       }
 
-      const highValueCount = (allTransactions || []).filter(tx => {
+      const highValueCount = cleanTransactions.filter(tx => {
         const val = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
           ? Number(tx.amount_in_base_currency)
           : Number(tx.amount);
         return ['expense', 'vendor_payment', 'subscription'].includes(tx.type) && Math.abs(val) >= 50000;
       }).length;
 
-      const recurringCount = (allTransactions || []).filter(tx => tx.type === 'subscription').length;
+      const recurringCount = cleanTransactions.filter(tx => tx.type === 'subscription').length;
 
       let pendingSugsCount = 0;
       let safeSugsCount = 0;
@@ -413,16 +440,17 @@ const Dashboard: React.FC = () => {
 
       setChartData(sortedDailySeries);
 
-      // Fetch recent 5 ledger entries
+      // Fetch recent entries and filter out metadata rows
       const { data: recent, error: recentErr } = await supabase
         .from('transactions')
         .select('*')
         .eq('client_id', activeClient.id)
         .order('transaction_date', { ascending: false })
-        .limit(5);
+        .limit(20);
 
       if (recentErr) throw recentErr;
-      setRecentTransactions(recent || []);
+      const cleanRecent = (recent || []).filter(tx => !isMetadataTransaction(tx.description)).slice(0, 5);
+      setRecentTransactions(cleanRecent);
 
     } catch (err: any) {
       console.error('[Dashboard] Fetch error:', err);
@@ -678,23 +706,23 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Uncategorized */}
+        {/* Uncategorized & Unknown */}
         <div 
           onClick={() => navigate('/transactions?category=uncategorized')}
           className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Uncategorized</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Uncategorized & Unknown</span>
             <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
               <FileText className="w-3.5 h-3.5" />
             </div>
           </div>
           <div>
-            <div className={`text-2xl font-black ${metrics.uncategorizedCount > 0 ? 'text-amber-500' : 'text-success'}`}>
-              {metrics.uncategorizedCount}
+            <div className={`text-2xl font-black ${(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'text-amber-500' : 'text-success'}`}>
+              {metrics.uncategorizedCount + metrics.unknownCount}
             </div>
             <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none truncate">
-              {metrics.uncategorizedCount > 0 ? 'Pending category mapping' : 'All transactions mapped'}
+              {(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'Pending category mapping' : 'All transactions mapped'}
             </p>
           </div>
         </div>
@@ -747,19 +775,21 @@ const Dashboard: React.FC = () => {
                   </span>
                 </div>
 
-                {/* 3. Uncategorized rows */}
+                {/* 3. Uncategorized & Unknown rows */}
                 <div 
                   onClick={() => navigate('/transactions?category=uncategorized')}
                   className="flex items-center justify-between p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 transition-all cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-1.5 h-1.5 rounded-full ${metrics.uncategorizedCount > 0 ? 'bg-amber-500' : 'bg-success'}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full ${(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'bg-amber-500' : 'bg-success'}`} />
                     <span className="text-xs font-semibold text-foreground">
-                      {metrics.uncategorizedCount > 0 ? `${metrics.uncategorizedCount} uncategorized rows` : 'All transactions categorized'}
+                      {(metrics.uncategorizedCount + metrics.unknownCount) > 0 
+                        ? `${metrics.uncategorizedCount + metrics.unknownCount} uncategorized or unknown rows` 
+                        : 'All transactions categorized'}
                     </span>
                   </div>
                   <span className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors font-medium">
-                    {metrics.uncategorizedCount > 0 ? 'Map categories →' : 'Verified'}
+                    {(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'Map categories →' : 'Verified'}
                   </span>
                 </div>
 

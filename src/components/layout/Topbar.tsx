@@ -101,8 +101,21 @@ const Topbar: React.FC = () => {
         supabase.from('reports').select('*').eq('client_id', activeClient.id),
       ]);
 
+      const isMetadataTransaction = (description: string): boolean => {
+        const desc = (description || '').toLowerCase().trim();
+        if (!desc) return true;
+        if (['posting date', 'value date', 'particulars', 'debit amount', 'credit amount', 'running balance', 'instrument', 'category hint'].includes(desc)) {
+          return true;
+        }
+        return ['opening balance', 'closing balance', 'total', 'totals', 'subtotal', 'carried forward', 'brought forward'].some(
+          k => desc === k || desc.startsWith(k)
+        );
+      };
+
+      const cleanTxs = (txsRes.data || []).filter(tx => !isMetadataTransaction(tx.description));
+
       setDbData({
-        transactions: txsRes.data || [],
+        transactions: cleanTxs,
         risks: risksRes.data || [],
         invoices: invoicesRes.data || [],
         vendors: vendorsRes.data || [],

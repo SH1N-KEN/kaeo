@@ -87,11 +87,24 @@ const RiskInbox: React.FC = () => {
 
   const fetchTxCount = async () => {
     if (!activeClient) return;
-    const { count } = await supabase
+    const { data } = await supabase
       .from('transactions')
-      .select('*', { count: 'exact', head: true })
+      .select('description')
       .eq('client_id', activeClient.id);
-    setTxCount(count || 0);
+    
+    const isMetadataTransaction = (description: string): boolean => {
+      const desc = (description || '').toLowerCase().trim();
+      if (!desc) return true;
+      if (['posting date', 'value date', 'particulars', 'debit amount', 'credit amount', 'running balance', 'instrument', 'category hint'].includes(desc)) {
+        return true;
+      }
+      return ['opening balance', 'closing balance', 'total', 'totals', 'subtotal', 'carried forward', 'brought forward'].some(
+        k => desc === k || desc.startsWith(k)
+      );
+    };
+
+    const cleanTxs = (data || []).filter(tx => !isMetadataTransaction(tx.description));
+    setTxCount(cleanTxs.length);
   };
 
   const fetchRisks = async () => {

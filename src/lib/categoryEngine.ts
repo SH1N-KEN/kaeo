@@ -20,7 +20,8 @@ export type TransactionCategory =
   | 'Taxes / Compliance'
   | 'Refunds / Recoveries'
   | 'Revenue / Sales'
-  | 'Uncategorized';
+  | 'Uncategorized'
+  | 'Unknown';
 
 export const ALL_CATEGORIES: TransactionCategory[] = [
   'Software / SaaS',
@@ -37,6 +38,7 @@ export const ALL_CATEGORIES: TransactionCategory[] = [
   'Refunds / Recoveries',
   'Revenue / Sales',
   'Uncategorized',
+  'Unknown',
 ];
 
 // ── Keyword rule table ──────────────────────────────────────────────────────
@@ -186,9 +188,9 @@ export function inferTransactionCategory(
     return 'Refunds / Recoveries';
   }
 
-  // 3. Unknown type stays Uncategorized
+  // 3. Unknown type stays Unknown
   if (t === 'unknown' || t === 'failed_payment') {
-    return 'Uncategorized';
+    return 'Unknown';
   }
 
   // 4. Keyword scan for expense types (expense, vendor_payment, subscription, etc.)
