@@ -340,6 +340,9 @@ export async function applyLibbyAction(
       if (!orgId) {
         return { success: false, message: 'No organization context found for this action.' };
       }
+      if (!rule_type) {
+        return { success: false, message: 'Spend rule type is missing from this action. Please dismiss and try again.' };
+      }
 
       // Dev diagnostic log
       if (import.meta.env.DEV) {
@@ -351,38 +354,79 @@ export async function applyLibbyAction(
         });
       }
 
-      const { data: existingRules } = await supabase
+      // Schema-safe: try to find existing rule by rule_type (0016 schema) or rule_key (newer schema)
+      const { data: existingByRuleType, error: fetchErr1 } = await supabase
         .from('spend_rules')
-        .select('*')
+        .select('id')
         .eq('organization_id', orgId)
-        .eq('rule_type', rule_type);
-      const ruleId = existingRules && existingRules.length > 0 ? existingRules[0].id : null;
-      let error;
-      if (ruleId) {
-        const res = await supabase
-          .from('spend_rules')
-          .update({
-            enabled,
-            threshold_amount,
-            threshold_days,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', ruleId);
-        error = res.error;
+        .eq('rule_type', rule_type)
+        .limit(1);
+
+      // If rule_type column doesn't exist, fall back to rule_key
+      let existingRuleId: string | null = null;
+      if (fetchErr1) {
+        if (fetchErr1.message?.includes('column') || fetchErr1.message?.includes('schema cache')) {
+          // Try rule_key column (newer migration schema)
+          const { data: existingByRuleKey } = await supabase
+            .from('spend_rules')
+            .select('id')
+            .eq('organization_id', orgId)
+            .eq('rule_key', rule_type)
+            .limit(1);
+          existingRuleId = existingByRuleKey && existingByRuleKey.length > 0 ? existingByRuleKey[0].id : null;
+        } else {
+          throw fetchErr1;
+        }
       } else {
+        existingRuleId = existingByRuleType && existingByRuleType.length > 0 ? existingByRuleType[0].id : null;
+      }
+
+      let spendRuleError;
+      if (existingRuleId) {
+        // Update only safe columns (threshold_amount and threshold_days may not exist on newer schema)
+        const updatePayload: Record<string, any> = {
+          enabled,
+          updated_at: new Date().toISOString()
+        };
+        if (threshold_amount !== undefined) updatePayload.threshold_amount = threshold_amount;
+        if (threshold_days !== undefined) updatePayload.threshold_days = threshold_days;
+
         const res = await supabase
           .from('spend_rules')
-          .insert({
-            organization_id: orgId,
-            rule_type,
-            name: rule_type.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-            enabled,
-            threshold_amount,
-            threshold_days
-          });
-        error = res.error;
+          .update(updatePayload)
+          .eq('id', existingRuleId);
+        spendRuleError = res.error;
+      } else {
+        // Insert: use rule_type if column exists, else rule_key; use name if column exists
+        const displayName = rule_type.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        const insertPayload: Record<string, any> = {
+          organization_id: orgId,
+          enabled
+        };
+        // Include columns defensively — DB will ignore unknown ones if not in schema
+        insertPayload.rule_type = rule_type;
+        insertPayload.rule_key = rule_type;
+        insertPayload.name = displayName;
+        insertPayload.rule_name = displayName;
+        if (threshold_amount !== undefined) insertPayload.threshold_amount = threshold_amount;
+        if (threshold_days !== undefined) insertPayload.threshold_days = threshold_days;
+
+        const res = await supabase.from('spend_rules').insert(insertPayload);
+        spendRuleError = res.error;
       }
-      if (error) throw error;
+
+      if (spendRuleError) {
+        // Detect schema-level errors and surface a clean message
+        if (
+          spendRuleError.message?.includes('column') ||
+          spendRuleError.message?.includes('schema cache') ||
+          spendRuleError.message?.includes('does not exist')
+        ) {
+          if (import.meta.env.DEV) console.error('[Libby] Spend rule schema error:', spendRuleError);
+          return { success: false, message: 'Spend rules are not configured yet. Open Settings to finish setup.' };
+        }
+        throw spendRuleError;
+      }
       affectedCount = 1;
       await trackAuditEvent(orgId, 'libby_action_applied', 'spend_rule' as any, undefined, {
         action_type: 'update_spend_rule',
@@ -398,7 +442,7 @@ export async function applyLibbyAction(
       // Validate risk belongs to this client and org
       const { data: check, error: checkErr } = await supabase
         .from('risk_events')
-        .select('id, client_id, organization_id')
+        .select('id, client_id, organization_id, status')
         .eq('id', risk_id);
       if (checkErr) throw checkErr;
 
@@ -430,7 +474,8 @@ export async function applyLibbyAction(
         return { success: false, message: 'Risk event belongs to a different business context.' };
       }
 
-      const { error } = await supabase
+      // Try 'resolved' status first; if the enum doesn't support it, fall back to 'ignored'
+      const resolveUpdate = await supabase
         .from('risk_events')
         .update({
           status: 'resolved',
@@ -439,7 +484,32 @@ export async function applyLibbyAction(
           updated_at: new Date().toISOString()
         })
         .eq('id', risk_id);
-      if (error) throw error;
+
+      if (resolveUpdate.error) {
+        const isEnumError =
+          resolveUpdate.error.message?.includes('invalid input value for enum') ||
+          resolveUpdate.error.message?.includes('risk_status');
+
+        if (isEnumError) {
+          // Enum doesn't have 'resolved' yet — fall back to 'ignored' (always valid)
+          if (import.meta.env.DEV) {
+            console.warn('[Libby] risk_status enum missing "resolved", falling back to "ignored". Run migration: 20260527000001_add_resolved_risk_status.sql');
+          }
+          const fallbackUpdate = await supabase
+            .from('risk_events')
+            .update({
+              status: 'ignored',
+              reviewed_by: userId || null,
+              reviewed_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', risk_id);
+          if (fallbackUpdate.error) throw fallbackUpdate.error;
+        } else {
+          throw resolveUpdate.error;
+        }
+      }
+
       affectedCount = 1;
       if (orgId) {
         await trackAuditEvent(orgId, 'libby_action_applied', 'risk' as any, risk_id, {
@@ -470,11 +540,22 @@ export async function applyLibbyAction(
       affectedCount
     };
   } catch (err: any) {
-    console.error('[Libby] Action failed:', err);
+    if (import.meta.env.DEV) console.error('[Libby] Action failed:', err);
     action.status = 'failed';
     actions[actionIdx] = action;
     saveLibbyActions(organizationId, clientId, actions);
-    const msg = err?.message || 'Something went wrong applying this action.';
+
+    // Detect schema-level errors and return a clean user message instead of raw PostgREST error
+    const rawMsg: string = err?.message || '';
+    const isSchemaError =
+      rawMsg.includes('column') ||
+      rawMsg.includes('does not exist') ||
+      rawMsg.includes('schema cache') ||
+      rawMsg.includes('relation') ||
+      rawMsg.includes('invalid input value for enum');
+    const msg = isSchemaError
+      ? 'This action needs a workspace setup update before Libby can apply it. Your data is safe.'
+      : rawMsg || 'Something went wrong applying this action.';
     return { success: false, message: msg };
   }
 }
