@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   Sparkles, 
-  ShieldAlert, 
   AlertTriangle, 
   Layers, 
   Users, 
@@ -194,31 +193,15 @@ const Billing: React.FC = () => {
     return (
       <div className="max-w-xl mx-auto my-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="bg-card border border-border rounded-3xl p-8 shadow-2xl space-y-6 text-center">
-          <div className="w-16 h-16 bg-risk/10 rounded-2xl flex items-center justify-center text-risk mx-auto">
-            <ShieldAlert className="w-10 h-10" />
+          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mx-auto">
+            <CreditCard className="w-8 h-8" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-2xl font-black tracking-tight text-foreground">Billing schema required</h2>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              The billing plan tables and subscription triggers have not been deployed to your database.
+            <h2 className="text-2xl font-black tracking-tight text-foreground font-sans">Billing is not fully configured yet</h2>
+            <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto">
+              We are setting up payment workflows for your workspace. In the meantime, you have unlimited access to all platform features.
             </p>
           </div>
-          
-          <div className="p-4 bg-muted/50 border rounded-2xl text-left space-y-2">
-            <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5 text-primary" /> How to resolve:
-            </p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Execute the latest migration file in your Supabase SQL editor or console:
-            </p>
-            <code className="block text-[10px] bg-card p-3 rounded-lg border border-border text-primary font-mono select-all">
-              supabase/migrations/0012_billing_plans_subscriptions.sql
-            </code>
-          </div>
-
-          <p className="text-[11px] text-muted-foreground/80 italic">
-            This dashboard will fully load as soon as the tables are created.
-          </p>
         </div>
       </div>
     );

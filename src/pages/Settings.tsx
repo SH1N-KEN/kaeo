@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import {
   Building2,
   Database,
@@ -9,8 +9,6 @@ import {
   CheckCircle2,
   X,
   Loader2,
-  Settings2,
-  Info,
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { getSpendRules, saveSpendRule, type SpendRule } from '../lib/spendRulesEngine';
@@ -18,11 +16,12 @@ import { useToast } from '../hooks/useToast';
 import ResetClientModal from '../components/ui/ResetClientModal';
 import Clients from './Clients';
 import { Link as LinkIcon } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 type Tab = 'workspace' | 'clients' | 'spend-rules' | 'data' | 'integrations';
 
 const Settings: React.FC = () => {
-  const { activeClient, activeOrg, accountMode, clients } = useWorkspace();
+  const { activeClient, activeOrg, accountMode, clients, profile, refresh } = useWorkspace();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -35,6 +34,84 @@ const Settings: React.FC = () => {
 
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Spend rules states
+  const [rulesSchemaMissing, setRulesSchemaMissing] = useState(false);
+  const [savingRules, setSavingRules] = useState(false);
+  const [duplicateDays, setDuplicateDays] = useState<number>(7);
+  const [duplicateEnabled, setDuplicateEnabled] = useState(true);
+  const [highValueAmount, setHighValueAmount] = useState<number>(100000);
+  const [highValueEnabled, setHighValueEnabled] = useState(true);
+  const [subscriptionAmount, setSubscriptionAmount] = useState<number>(5000);
+  const [subscriptionEnabled, setSubscriptionEnabled] = useState(true);
+  const [unknownVendorEnabled, setUnknownVendorEnabled] = useState(true);
+  const [uncategorizedEnabled, setUncategorizedEnabled] = useState(true);
+
+  // Accountant Firm Profile editing states
+  const [isEditingFirm, setIsEditingFirm] = useState(false);
+  const [editFirmName, setEditFirmName] = useState('');
+  const [editClientsManaged, setEditClientsManaged] = useState('1-5');
+  const [editTypicalSize, setEditTypicalSize] = useState('Small (10-50 employees)');
+  const [editIndustriesServed, setEditIndustriesServed] = useState('');
+  const [editFirmTool, setEditFirmTool] = useState('Tally');
+  const [editFirmNotes, setEditFirmNotes] = useState('');
+  const [savingFirm, setSavingFirm] = useState(false);
+
+  useEffect(() => {
+    if (activeOrg) {
+      setEditFirmName(activeOrg.name || '');
+    }
+    if (profile?.onboarding_answers) {
+      const ans = profile.onboarding_answers;
+      setEditClientsManaged(ans.clients_managed || '1-5');
+      setEditTypicalSize(ans.typical_client_size || 'Small (10-50 employees)');
+      setEditIndustriesServed(ans.industries_served || '');
+      setEditFirmTool(ans.accounting_tools?.[0] || 'Tally');
+      setEditFirmNotes(ans.notes || '');
+    }
+  }, [activeOrg, profile, isEditingFirm]);
+
+  const handleSaveFirm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editFirmName.trim()) {
+      toast('Firm name cannot be empty', 'error');
+      return;
+    }
+    setSavingFirm(true);
+    try {
+      if (activeOrg) {
+        const { error: orgErr } = await supabase
+          .from('organizations')
+          .update({ name: editFirmName })
+          .eq('id', activeOrg.id);
+        if (orgErr) throw orgErr;
+      }
+
+      if (profile) {
+        const updatedAnswers = {
+          ...(profile.onboarding_answers || {}),
+          clients_managed: editClientsManaged,
+          typical_client_size: editTypicalSize,
+          industries_served: editIndustriesServed,
+          accounting_tools: [editFirmTool],
+          notes: editFirmNotes
+        };
+        const { error: profErr } = await supabase
+          .from('profiles')
+          .update({ onboarding_answers: updatedAnswers })
+          .eq('id', profile.id);
+        if (profErr) throw profErr;
+      }
+
+      toast('Workspace Firm Profile updated successfully', 'success');
+      setIsEditingFirm(false);
+      refresh();
+    } catch (err: any) {
+      toast(err.message || 'Failed to save firm profile', 'error');
+    } finally {
+      setSavingFirm(false);
+    }
+  };
 
   // Spend Rules state
   const [rulesLoading, setRulesLoading] = useState(false);
@@ -60,9 +137,36 @@ const Settings: React.FC = () => {
   const fetchRules = async () => {
     if (!activeOrg) return;
     setRulesLoading(true);
+    setRulesSchemaMissing(false);
     try {
+      const { error: testErr } = await supabase.from('spend_rules').select('id').limit(1);
+      if (testErr && testErr.message?.includes('does not exist')) {
+        setRulesSchemaMissing(true);
+        return;
+      }
+
       const data = await getSpendRules(activeOrg.id);
       setRules(data);
+
+      const dup = data.find(r => r.rule_type === 'duplicate_payment');
+      if (dup) {
+        setDuplicateDays(dup.threshold_days || 7);
+        setDuplicateEnabled(dup.enabled);
+      }
+      const hv = data.find(r => r.rule_type === 'high_value_payment');
+      if (hv) {
+        setHighValueAmount(hv.threshold_amount || 100000);
+        setHighValueEnabled(hv.enabled);
+      }
+      const sub = data.find(r => r.rule_type === 'subscription_threshold');
+      if (sub) {
+        setSubscriptionAmount(sub.threshold_amount || 5000);
+        setSubscriptionEnabled(sub.enabled);
+      }
+      const uk = data.find(r => r.rule_type === 'unknown_vendor');
+      if (uk) setUnknownVendorEnabled(uk.enabled);
+      const uc = data.find(r => r.rule_type === 'uncategorized_transaction');
+      if (uc) setUncategorizedEnabled(uc.enabled);
     } catch (err: any) {
       toast('Failed to load spend rules: ' + err.message, 'error');
     } finally {
@@ -70,27 +174,95 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleToggle = async (rule: SpendRule, enabled: boolean) => {
+  const handleSaveAllRules = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!activeOrg) return;
-    setRules(prev => prev.map(r => r.rule_type === rule.rule_type ? { ...r, enabled } : r));
+
+    if (duplicateDays < 0 || highValueAmount < 0 || subscriptionAmount < 0) {
+      toast('Rule threshold limits or days cannot be negative', 'error');
+      return;
+    }
+
+    setSavingRules(true);
     try {
-      await saveSpendRule(activeOrg.id, { ...rule, enabled });
-      toast('Rule updated', 'success');
-    } catch (err: any) {
-      toast('Failed to update rule: ' + err.message, 'error');
+      const rulesToSave = [
+        {
+          rule_type: 'duplicate_payment',
+          name: 'Duplicate Vendor Payment',
+          enabled: duplicateEnabled,
+          threshold_amount: null,
+          threshold_days: duplicateDays,
+          id: rules.find(r => r.rule_type === 'duplicate_payment')?.id
+        },
+        {
+          rule_type: 'high_value_payment',
+          name: 'High-Value Payment Threshold',
+          enabled: highValueEnabled,
+          threshold_amount: highValueAmount,
+          threshold_days: null,
+          id: rules.find(r => r.rule_type === 'high_value_payment')?.id
+        },
+        {
+          rule_type: 'subscription_threshold',
+          name: 'Subscription Review Threshold',
+          enabled: subscriptionEnabled,
+          threshold_amount: subscriptionAmount,
+          threshold_days: null,
+          id: rules.find(r => r.rule_type === 'subscription_threshold')?.id
+        },
+        {
+          rule_type: 'unknown_vendor',
+          name: 'Flag Unknown Vendors',
+          enabled: unknownVendorEnabled,
+          threshold_amount: null,
+          threshold_days: null,
+          id: rules.find(r => r.rule_type === 'unknown_vendor')?.id
+        },
+        {
+          rule_type: 'uncategorized_transaction',
+          name: 'Flag Uncategorized Transactions',
+          enabled: uncategorizedEnabled,
+          threshold_amount: null,
+          threshold_days: null,
+          id: rules.find(r => r.rule_type === 'uncategorized_transaction')?.id
+        }
+      ];
+
+      await Promise.all(
+        rulesToSave.map(rule => saveSpendRule(activeOrg.id, rule))
+      );
+
+      toast('Compliance rules updated successfully', 'success');
       fetchRules();
+    } catch (err: any) {
+      toast('Failed to save rules: ' + err.message, 'error');
+    } finally {
+      setSavingRules(false);
     }
   };
 
-  const handleUpdateValue = async (rule: SpendRule, updates: Partial<SpendRule>) => {
+  const handleResetRulesToDefault = async () => {
     if (!activeOrg) return;
+    if (!confirm('Are you sure you want to reset compliance rules to platform defaults?')) return;
+
+    setSavingRules(true);
     try {
-      const updated = { ...rule, ...updates };
-      await saveSpendRule(activeOrg.id, updated);
-      setRules(prev => prev.map(r => r.rule_type === rule.rule_type ? updated : r));
-      toast('Rule saved', 'success');
+      const { DEFAULT_RULES } = await import('../lib/spendRulesEngine');
+      const rulesToSave = DEFAULT_RULES.map(rule => ({
+        ...rule,
+        id: rules.find(r => r.rule_type === rule.rule_type)?.id
+      }));
+
+      await Promise.all(
+        rulesToSave.map(rule => saveSpendRule(activeOrg.id, rule))
+      );
+
+      toast('Rules reset to defaults successfully', 'success');
+      fetchRules();
     } catch (err: any) {
-      toast('Failed to save rule: ' + err.message, 'error');
+      toast('Reset failed: ' + err.message, 'error');
+    } finally {
+      setSavingRules(false);
     }
   };
 
@@ -106,22 +278,6 @@ const Settings: React.FC = () => {
     { id: 'integrations', label: 'Integrations', icon: LinkIcon }
   ];
 
-  const getRuleDetails = (type: string) => {
-    switch (type) {
-      case 'duplicate_payment':
-        return { title: 'Duplicate Payment Detection', desc: 'Flag identical payments within a time window.', hasDays: true, hasAmount: false };
-      case 'high_value_payment':
-        return { title: 'High-Value Outflow', desc: 'Flag single transactions exceeding the defined limit.', hasDays: false, hasAmount: true };
-      case 'subscription_threshold':
-        return { title: 'Large Subscriptions', desc: 'Monitor recurring payments above the monthly threshold.', hasDays: false, hasAmount: true };
-      case 'unknown_vendor':
-        return { title: 'Unknown Vendor Protection', desc: 'Flag outgoing payments with no vendor identified.', hasDays: false, hasAmount: false };
-      case 'uncategorized_transaction':
-        return { title: 'Enforce Categorization', desc: 'Flag expenses with no assigned category.', hasDays: false, hasAmount: false };
-      default:
-        return { title: type.replace(/_/g, ' '), desc: 'Custom rule.', hasDays: false, hasAmount: false };
-    }
-  };
 
   const getSpendDisplay = (range: string) => {
     switch (range) {
@@ -384,35 +540,162 @@ const Settings: React.FC = () => {
       {/* ─── TAB: Workspace (Firm Settings) ─── */}
       {activeTab === 'workspace' && (
         <div className="space-y-6">
-          <div className="premium-glass rounded-2xl border border-border/50 p-6 space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Building2 className="w-4 h-4 text-muted-foreground" />
-              <h2 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Workspace Profile</h2>
+          <form onSubmit={handleSaveFirm} className="premium-glass rounded-2xl border border-border/50 p-6 space-y-6">
+            <div className="flex items-center justify-between border-b border-border/20 pb-4">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-muted-foreground" />
+                <h2 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Firm Profile</h2>
+              </div>
+              {!isEditingFirm && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingFirm(true)}
+                  className="px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  Edit Profile
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Firm Name */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Firm / Workspace Name</label>
-                <div className="px-4 py-2.5 bg-muted/30 border border-border rounded-xl text-sm font-semibold text-foreground">
-                  {activeOrg?.name ?? '—'}
-                </div>
+                {isEditingFirm ? (
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                    value={editFirmName}
+                    onChange={(e) => setEditFirmName(e.target.value)}
+                  />
+                ) : (
+                  <div className="px-4 py-2.5 bg-muted/30 border border-border rounded-xl text-sm font-semibold text-foreground">
+                    {activeOrg?.name ?? '—'}
+                  </div>
+                )}
               </div>
+
+              {/* Number of Clients */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Selected Client Business</label>
-                <div className="px-4 py-2.5 bg-muted/30 border border-border rounded-xl text-sm font-semibold text-foreground">
-                  {activeClient?.name ?? 'None selected'}
-                </div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Clients Managed</label>
+                {isEditingFirm ? (
+                  <select
+                    className="w-full px-4 py-2.5 bg-[#161a18] border border-border rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-primary"
+                    value={editClientsManaged}
+                    onChange={(e) => setEditClientsManaged(e.target.value)}
+                  >
+                    <option value="1-5">1 - 5 clients</option>
+                    <option value="6-15">6 - 15 clients</option>
+                    <option value="16-50">16 - 50 clients</option>
+                    <option value="50+">50+ clients</option>
+                  </select>
+                ) : (
+                  <div className="px-4 py-2.5 bg-muted/30 border border-border rounded-xl text-sm font-semibold text-foreground">
+                    {profile?.onboarding_answers?.clients_managed ?? '1-5'}
+                  </div>
+                )}
+              </div>
+
+              {/* Typical Client Size */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Typical Client Size</label>
+                {isEditingFirm ? (
+                  <select
+                    className="w-full px-4 py-2.5 bg-[#161a18] border border-border rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-primary"
+                    value={editTypicalSize}
+                    onChange={(e) => setEditTypicalSize(e.target.value)}
+                  >
+                    <option value="Micro (< 10 employees)">Micro (&lt; 10 employees)</option>
+                    <option value="Small (10-50 employees)">Small (10-50 employees)</option>
+                    <option value="Medium (50-250 employees)">Medium (50-250 employees)</option>
+                    <option value="Large (250+ employees)">Large (250+ employees)</option>
+                  </select>
+                ) : (
+                  <div className="px-4 py-2.5 bg-muted/30 border border-border rounded-xl text-sm font-semibold text-foreground">
+                    {profile?.onboarding_answers?.typical_client_size ?? 'Small (10-50 employees)'}
+                  </div>
+                )}
+              </div>
+
+              {/* Industries Served */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Industries Served</label>
+                {isEditingFirm ? (
+                  <input
+                    type="text"
+                    placeholder="e.g. SaaS, E-commerce, Manufacturing"
+                    className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                    value={editIndustriesServed}
+                    onChange={(e) => setEditIndustriesServed(e.target.value)}
+                  />
+                ) : (
+                  <div className="px-4 py-2.5 bg-muted/30 border border-border rounded-xl text-sm font-semibold text-foreground">
+                    {profile?.onboarding_answers?.industries_served || 'Not specified'}
+                  </div>
+                )}
+              </div>
+
+              {/* Accounting Tool */}
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Accounting Tools Used</label>
+                {isEditingFirm ? (
+                  <select
+                    className="w-full px-4 py-2.5 bg-[#161a18] border border-border rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-primary"
+                    value={editFirmTool}
+                    onChange={(e) => setEditFirmTool(e.target.value)}
+                  >
+                    <option value="Tally">Tally</option>
+                    <option value="Zoho Books">Zoho Books</option>
+                    <option value="Excel/Sheets">Excel / Google Sheets</option>
+                    <option value="Razorpay">Razorpay</option>
+                    <option value="Other">Other</option>
+                  </select>
+                ) : (
+                  <div className="px-4 py-2.5 bg-muted/30 border border-border rounded-xl text-sm font-semibold text-foreground">
+                    {profile?.onboarding_answers?.accounting_tools?.[0] || 'Tally'}
+                  </div>
+                )}
+              </div>
+
+              {/* Custom Notes / Ask Kaeo Context */}
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Notes & custom context for Ask Kaeo</label>
+                {isEditingFirm ? (
+                  <textarea
+                    placeholder="Enter context, special rules, or instructions for the AI advisor..."
+                    className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background h-24 resize-none transition-all"
+                    value={editFirmNotes}
+                    onChange={(e) => setEditFirmNotes(e.target.value)}
+                  />
+                ) : (
+                  <div className="px-4 py-2.5 bg-muted/30 border border-border rounded-xl text-xs font-semibold text-muted-foreground leading-relaxed">
+                    {profile?.onboarding_answers?.notes || 'No special context or firm notes provided. Edit profile to supply workspace instructions for Ask Kaeo.'}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex items-start gap-3 mt-2 p-3 bg-muted/20 rounded-xl border border-border/40">
-              <Info className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Workspace name and client management can be configured from the <strong className="text-foreground">Client Businesses</strong> tab.
-                Switch between client businesses using the dropdown switcher in the topbar.
-              </p>
-            </div>
-          </div>
+            {isEditingFirm && (
+              <div className="flex gap-3 border-t border-border/20 pt-5">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingFirm(false)}
+                  disabled={savingFirm}
+                  className="flex-1 py-3 px-4 bg-card border rounded-xl font-semibold hover:bg-muted transition-colors text-xs text-center"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingFirm}
+                  className="flex-1 py-3 px-4 bg-primary text-primary-foreground rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-colors shadow-lg shadow-primary/20 disabled:opacity-50 text-xs"
+                >
+                  {savingFirm ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle2 className="w-4 h-4" /> Save Profile</>}
+                </button>
+              </div>
+            )}
+          </form>
 
           <div className="premium-glass rounded-2xl border border-border/50 p-6 space-y-4">
             <div className="flex items-center gap-2 mb-4">
@@ -437,7 +720,7 @@ const Settings: React.FC = () => {
 
       {/* ─── TAB: Spend Rules ─── */}
       {activeTab === 'spend-rules' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-300">
           {/* Explainer */}
           <div className="flex flex-col md:flex-row gap-4 p-5 premium-glass rounded-2xl border border-primary/20 items-start">
             <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
@@ -459,109 +742,253 @@ const Settings: React.FC = () => {
               <Loader2 className="w-5 h-5 animate-spin" />
               <span className="text-sm">Loading rules…</span>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {rules.map(rule => {
-                const details = getRuleDetails(rule.rule_type);
-                return (
-                  <div
-                    key={rule.rule_type}
-                    className={`premium-glass rounded-2xl border transition-all duration-300 ${
-                      rule.enabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'
-                    }`}
-                  >
-                    <div className="p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-1 flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-foreground">{details.title}</h3>
-                            {!rule.enabled && (
-                              <span className="px-2 py-0.5 bg-muted rounded text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Disabled</span>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">{details.desc}</p>
-                        </div>
-
-                        {/* Toggle */}
-                        <button
-                          onClick={() => handleToggle(rule, !rule.enabled)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-                            rule.enabled ? 'bg-primary' : 'bg-muted-foreground/30'
-                          }`}
-                          aria-label={`Toggle ${details.title}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              rule.enabled ? 'translate-x-5' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      {rule.enabled && (details.hasAmount || details.hasDays) && (
-                        <div className="mt-5 pt-5 border-t border-border/30 flex flex-wrap gap-4 items-end">
-                          {details.hasAmount && (
-                            <div className="space-y-1.5 flex-1 min-w-[180px]">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                <Settings2 className="w-3 h-3" /> Amount Threshold (₹)
-                              </label>
-                              <input
-                                type="number"
-                                className="w-full bg-muted/30 border border-border rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                defaultValue={rule.threshold_amount || 0}
-                                onBlur={e => {
-                                  const val = Number(e.target.value);
-                                  if (val !== rule.threshold_amount) handleUpdateValue(rule, { threshold_amount: val });
-                                }}
-                              />
-                            </div>
-                          )}
-                          {details.hasDays && (
-                            <div className="space-y-1.5 flex-1 min-w-[180px]">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                <Settings2 className="w-3 h-3" /> Time Window (Days)
-                              </label>
-                              <input
-                                type="number"
-                                className="w-full bg-muted/30 border border-border rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                defaultValue={rule.threshold_days || 0}
-                                onBlur={e => {
-                                  const val = Number(e.target.value);
-                                  if (val !== rule.threshold_days) handleUpdateValue(rule, { threshold_days: val });
-                                }}
-                              />
-                            </div>
-                          )}
-                          <div className="px-4 py-2.5 bg-success/10 text-success rounded-lg text-xs font-bold border border-success/20 flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4" /> Auto-saved on blur
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+          ) : rulesSchemaMissing ? (
+            <div className="premium-glass rounded-2xl border border-border/40 p-6 text-center space-y-4">
+              <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto opacity-50" />
+              <div className="space-y-1">
+                <h4 className="font-bold text-foreground">Spend Rules Setup Required</h4>
+                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                  Spend Rules is not fully configured yet. Deploy database migrations to begin.
+                </p>
+              </div>
             </div>
+          ) : (
+            <form onSubmit={handleSaveAllRules} className="space-y-6">
+              <div className="space-y-4">
+                {/* 1. Duplicate Window */}
+                <div className={`premium-glass rounded-2xl border p-5 transition-all duration-300 ${duplicateEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-foreground">Duplicate Payment Detection</h3>
+                        {!duplicateEnabled && (
+                          <span className="px-2 py-0.5 bg-muted rounded text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Disabled</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">Flag repeated payments to the same vendor within this window.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDuplicateEnabled(!duplicateEnabled)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${duplicateEnabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${duplicateEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                  {duplicateEnabled && (
+                    <div className="mt-4 pt-4 border-t border-border/30 max-w-xs space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1">Time Window (Days)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        className="w-full bg-muted/30 border border-border rounded-xl px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-foreground"
+                        value={duplicateDays}
+                        onChange={e => setDuplicateDays(Math.max(0, Number(e.target.value)))}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. High Value Outflow */}
+                <div className={`premium-glass rounded-2xl border p-5 transition-all duration-300 ${highValueEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-foreground">High-Value Outflow</h3>
+                        {!highValueEnabled && (
+                          <span className="px-2 py-0.5 bg-muted rounded text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Disabled</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">Payments above this amount will be marked for review.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setHighValueEnabled(!highValueEnabled)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${highValueEnabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${highValueEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                  {highValueEnabled && (
+                    <div className="mt-4 pt-4 border-t border-border/30 max-w-xs space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1">Amount Threshold (₹)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        className="w-full bg-muted/30 border border-border rounded-xl px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-foreground"
+                        value={highValueAmount}
+                        onChange={e => setHighValueAmount(Math.max(0, Number(e.target.value)))}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Large Subscriptions */}
+                <div className={`premium-glass rounded-2xl border p-5 transition-all duration-300 ${subscriptionEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-foreground">Large Subscriptions</h3>
+                        {!subscriptionEnabled && (
+                          <span className="px-2 py-0.5 bg-muted rounded text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Disabled</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">Recurring tool or subscription charges above this amount need review.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSubscriptionEnabled(!subscriptionEnabled)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${subscriptionEnabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${subscriptionEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                  {subscriptionEnabled && (
+                    <div className="mt-4 pt-4 border-t border-border/30 max-w-xs space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1">Amount Threshold (₹)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        className="w-full bg-muted/30 border border-border rounded-xl px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-foreground"
+                        value={subscriptionAmount}
+                        onChange={e => setSubscriptionAmount(Math.max(0, Number(e.target.value)))}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Unknown Vendor Protection */}
+                <div className={`premium-glass rounded-2xl border p-5 transition-all duration-300 ${unknownVendorEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-foreground">Unknown Vendor Protection</h3>
+                        {!unknownVendorEnabled && (
+                          <span className="px-2 py-0.5 bg-muted rounded text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Disabled</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">Mark payments to vendors Kaeo has not seen before.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setUnknownVendorEnabled(!unknownVendorEnabled)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${unknownVendorEnabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${unknownVendorEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 5. Enforce Categorization */}
+                <div className={`premium-glass rounded-2xl border p-5 transition-all duration-300 ${uncategorizedEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-foreground">Enforce Categorization</h3>
+                        {!uncategorizedEnabled && (
+                          <span className="px-2 py-0.5 bg-muted rounded text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Disabled</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">Keep uncategorized rows in the review queue.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setUncategorizedEnabled(!uncategorizedEnabled)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${uncategorizedEnabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${uncategorizedEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-border/20">
+                <button
+                  type="submit"
+                  disabled={savingRules}
+                  className="flex-1 py-3 px-4 bg-primary text-primary-foreground rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-colors shadow-lg shadow-primary/20 disabled:opacity-50 text-xs cursor-pointer"
+                >
+                  {savingRules ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle2 className="w-4 h-4" /> Save Compliance Rules</>}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetRulesToDefault}
+                  disabled={savingRules}
+                  className="flex-1 py-3 px-4 bg-card border border-border rounded-xl font-semibold hover:bg-muted transition-colors text-xs text-center text-foreground cursor-pointer"
+                >
+                  Reset to Defaults
+                </button>
+              </div>
+            </form>
           )}
         </div>
       )}
 
       {/* ─── TAB: Data & Reset ─── */}
       {activeTab === 'data' && (
-        <div className="space-y-6">
-          <div className="premium-glass rounded-2xl border border-border/50 overflow-hidden">
-            <div className="p-6 flex items-start justify-between gap-6">
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Header Copy */}
+          <div className="flex flex-col md:flex-row gap-4 p-5 premium-glass rounded-2xl border border-primary/20 items-start">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-foreground mb-1">Data & Reset Management</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Use this only when you want to clear imported finance data.
+              </p>
+            </div>
+          </div>
+
+          {/* Safe Data Areas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-40">
+              <div>
+                <h4 className="font-bold text-foreground text-sm mb-1">Uploaded Files</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  View and manage uploaded statements, invoices, and ledger sheets.
+                </p>
+              </div>
+              <Link to="/files" className="w-fit px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl transition-all">
+                Go to Files
+              </Link>
+            </div>
+
+            <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-40">
+              <div>
+                <h4 className="font-bold text-foreground text-sm mb-1">Imported Transactions</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  View normal and clean transactions parsed into the system database.
+                </p>
+              </div>
+              <Link to="/transactions" className="w-fit px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl transition-all">
+                View Transactions
+              </Link>
+            </div>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="premium-glass rounded-2xl border border-risk/30 overflow-hidden shadow-lg shadow-risk/5">
+            <div className="p-6 bg-risk/5 border-b border-risk/10">
+              <h4 className="font-bold text-risk flex items-center gap-2 text-sm uppercase tracking-wider">
+                <ShieldCheck className="w-4 h-4 text-risk" /> Danger Zone
+              </h4>
+            </div>
+            <div className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
               <div className="space-y-1">
-                <h4 className="font-bold text-foreground">Reset Data</h4>
+                <h5 className="font-bold text-foreground">Reset Current Business Data</h5>
                 <p className="text-xs text-muted-foreground max-w-md leading-relaxed">
-                  Permanently clear all uploaded files, imports, and transactions for the current business.
-                  Useful for starting fresh or re-testing imports. <strong className="text-risk">This cannot be undone.</strong>
+                  Permanently clear all financial ledger statements, invoices, and parsed transactions for the current business. <strong className="text-risk font-semibold">This operation cannot be undone.</strong>
                 </p>
               </div>
               {activeClient && activeOrg ? (
                 <button
                   onClick={() => setIsResetModalOpen(true)}
-                  className="shrink-0 px-4 py-2 bg-muted hover:bg-risk/10 text-muted-foreground hover:text-risk rounded-lg text-xs font-bold flex items-center gap-2 transition-colors border border-transparent hover:border-risk/20"
+                  className="shrink-0 px-4 py-2 bg-risk text-white hover:opacity-90 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-risk/20 cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   Reset {activeClient.name}
@@ -583,7 +1010,7 @@ const Settings: React.FC = () => {
 
       {/* ─── TAB: Integrations ─── */}
       {activeTab === 'integrations' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-300">
           <div className="flex flex-col md:flex-row gap-4 p-5 premium-glass rounded-2xl border border-primary/20 items-start">
             <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
               <LinkIcon className="w-5 h-5" />
@@ -591,60 +1018,18 @@ const Settings: React.FC = () => {
             <div>
               <h3 className="font-bold text-foreground mb-1">Integrations Directory</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Connect your bookkeeping software and billing platforms to automate transaction imports.
+                Connect tools later. Uploads work today.
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Tally */}
-            <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold text-foreground text-sm">Tally Prime / ERP 9</h4>
-                  <span className="text-[9px] font-black uppercase text-muted-foreground bg-muted/40 px-2 py-0.5 rounded border border-border/20">Offline / API</span>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Export XML/Excel tables directly from your Tally workspace and upload them using Kaeo Ingestion.
-                </p>
-              </div>
-              <button className="w-fit text-xs font-bold text-primary hover:underline mt-2">View export instructions →</button>
-            </div>
-
-            {/* Zoho Books */}
-            <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold text-foreground text-sm">Zoho Books API</h4>
-                  <span className="text-[9px] font-black uppercase text-muted-foreground bg-muted/40 px-2 py-0.5 rounded border border-border/20">Coming soon</span>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Direct OAuth interface to synchronize Zoho invoices, debit notes, and bank reconciliations automatically.
-                </p>
-              </div>
-              <button className="w-fit text-xs font-bold text-muted-foreground hover:text-foreground mt-2 disabled:opacity-50" disabled>Setup sync (Phase 16) →</button>
-            </div>
-
-            {/* Razorpay */}
-            <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold text-foreground text-sm">Razorpay Payouts</h4>
-                  <span className="text-[9px] font-black uppercase text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">Developer Link</span>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Real-time webhook connectivity to evaluate outgoing vendor payment risk immediately upon processing.
-                </p>
-              </div>
-              <button className="w-fit text-xs font-bold text-primary hover:underline mt-2">Configure Webhooks →</button>
-            </div>
-
             {/* Excel / Google Sheets */}
-            <div className="premium-glass border border-primary/30 shadow-sm shadow-primary/5 rounded-2xl p-5 flex flex-col justify-between h-44">
+            <div className="premium-glass border border-success/30 shadow-sm shadow-success/5 rounded-2xl p-5 flex flex-col justify-between h-44">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-bold text-foreground text-sm">Excel / Google Sheets</h4>
-                  <span className="text-[9px] font-black uppercase text-success bg-success/15 px-2 py-0.5 rounded border border-success/20">Active</span>
+                  <span className="text-[9px] font-black uppercase text-success bg-success/15 px-2 py-0.5 rounded border border-success/20">Connected</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Direct client-side file ingestion, schema column-mapping, and duplicate ledger entries protection.
@@ -652,8 +1037,72 @@ const Settings: React.FC = () => {
               </div>
               <div className="flex items-center gap-1.5 text-xs text-success font-semibold mt-2">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Ready to ingest files
+                Active — Ready to ingest files
               </div>
+            </div>
+
+            {/* Razorpay */}
+            <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-foreground text-sm">Razorpay</h4>
+                  <span className="text-[9px] font-black uppercase text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">Available</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Real-time webhook connectivity to evaluate outgoing vendor payment risk immediately upon processing. Connect later. Manage subscription and check integration options.
+                </p>
+              </div>
+              <Link to="/billing" className="w-fit text-xs font-bold text-primary hover:underline mt-2">
+                Manage billing / Connect later →
+              </Link>
+            </div>
+
+            {/* Tally */}
+            <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44 opacity-70">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-foreground text-sm">Tally Prime / ERP 9</h4>
+                  <span className="text-[9px] font-black uppercase text-muted-foreground bg-muted/40 px-2 py-0.5 rounded border border-border/20">Coming soon</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Planned for accountant-ready sync. Export files offline today. Direct sync coming soon.
+                </p>
+              </div>
+              <button disabled className="w-fit text-xs font-bold text-muted-foreground mt-2 text-left cursor-not-allowed">
+                Direct sync coming soon
+              </button>
+            </div>
+
+            {/* Zoho Books */}
+            <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44 opacity-70">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-foreground text-sm">Zoho Books</h4>
+                  <span className="text-[9px] font-black uppercase text-muted-foreground bg-muted/40 px-2 py-0.5 rounded border border-border/20">Coming soon</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Direct OAuth interface to synchronize Zoho invoices, debit notes, and bank reconciliations automatically.
+                </p>
+              </div>
+              <button disabled className="w-fit text-xs font-bold text-muted-foreground mt-2 text-left cursor-not-allowed">
+                Zoho OAuth coming soon
+              </button>
+            </div>
+
+            {/* Bank Feeds */}
+            <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44 opacity-70">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-foreground text-sm">Bank Feeds</h4>
+                  <span className="text-[9px] font-black uppercase text-muted-foreground bg-muted/40 px-2 py-0.5 rounded border border-border/20">Planned</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Synchronize bank statement line entries in real-time from supported corporate bank accounts.
+                </p>
+              </div>
+              <button disabled className="w-fit text-xs font-bold text-muted-foreground mt-2 text-left cursor-not-allowed">
+                Bank feed sync planned
+              </button>
             </div>
           </div>
         </div>

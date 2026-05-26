@@ -7,12 +7,16 @@ interface CreateClientModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (name: string, industry?: string, currency?: string, metadata?: any) => Promise<any>;
+  clientToEdit?: any;
+  onUpdate?: (id: string, name: string, industry?: string, metadata?: any) => Promise<any>;
 }
 
 const CreateClientModal: React.FC<CreateClientModalProps> = ({ 
   isOpen, 
   onClose, 
-  onCreate 
+  onCreate,
+  clientToEdit,
+  onUpdate
 }) => {
   const { accountMode } = useWorkspace();
   const isBusiness = accountMode === 'business_owner';
@@ -28,9 +32,21 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      console.log('CreateClientModal: Rendered (isOpen: true)');
+      if (clientToEdit) {
+        setName(clientToEdit.name || '');
+        setIndustry(clientToEdit.industry || '');
+        setSpendRange(clientToEdit.metadata?.monthly_spend_range || 'under_10k');
+        setAccountingTool(clientToEdit.metadata?.accounting_tools?.[0] || 'Tally');
+        setNotes(clientToEdit.metadata?.notes || '');
+      } else {
+        setName('');
+        setIndustry('');
+        setSpendRange('under_10k');
+        setAccountingTool('Tally');
+        setNotes('');
+      }
     }
-  }, [isOpen]);
+  }, [clientToEdit, isOpen]);
 
   // Close on Escape
   useEffect(() => {
@@ -66,7 +82,12 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
         accounting_tools: [accountingTool],
         notes: notes
       };
-      const result = await onCreate(name, industry, currency, metadata);
+      let result;
+      if (clientToEdit && onUpdate) {
+        result = await onUpdate(clientToEdit.id, name, industry, metadata);
+      } else {
+        result = await onCreate(name, industry, currency, metadata);
+      }
       if (result) {
         setName('');
         setIndustry('');
@@ -76,7 +97,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
         onClose();
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to create business profile');
+      setError(err.message || 'Failed to save business profile');
     } finally {
       setLoading(false);
     }

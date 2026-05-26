@@ -44,6 +44,32 @@ const Clients: React.FC<ClientsProps> = ({ embedMode = false }) => {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [clientStats, setClientStats] = useState<Record<string, ClientStats>>({});
+  const [clientToEdit, setClientToEdit] = useState<any | null>(null);
+
+  const handleEditClientClick = (client: any) => {
+    setClientToEdit(client);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleUpdateClient = async (clientId: string, name: string, industry?: string, metadata?: any) => {
+    try {
+      const { error: clErr } = await supabase
+        .from('clients')
+        .update({ name, industry })
+        .eq('id', clientId);
+      if (clErr) throw clErr;
+
+      await updateClientMetadata(clientId, metadata);
+      toast(`Client business "${name}" updated successfully`, 'success');
+      setClientToEdit(null);
+      fetchAllClientsStats();
+      refresh();
+      return true;
+    } catch (err: any) {
+      toast(err.message || 'Failed to update client', 'error');
+      throw err;
+    }
+  };
 
   // Business Owner Profile Edit State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -633,6 +659,13 @@ const Clients: React.FC<ClientsProps> = ({ embedMode = false }) => {
                       Open Client Business
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
+                    <button
+                      onClick={() => handleEditClientClick(client)}
+                      className="px-3 py-2 bg-white/5 border border-border/40 hover:border-border text-foreground text-xs font-bold rounded-xl flex items-center gap-1 transition-all cursor-pointer shrink-0"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
                   </div>
                 </div>
               );
@@ -642,7 +675,10 @@ const Clients: React.FC<ClientsProps> = ({ embedMode = false }) => {
 
         <CreateClientModal
           isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            setClientToEdit(null);
+          }}
           onCreate={async (name, industry, currency, metadata) => {
             if (!activeOrg) return null;
             const res = await createClient(name, activeOrg.id, industry, currency, metadata);
@@ -652,6 +688,8 @@ const Clients: React.FC<ClientsProps> = ({ embedMode = false }) => {
             }
             return res;
           }}
+          clientToEdit={clientToEdit}
+          onUpdate={handleUpdateClient}
         />
       </div>
     );
