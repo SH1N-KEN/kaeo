@@ -49,17 +49,10 @@ const AskKaeo = () => {
     await sendMessage(userText);
   };
 
-  const handleApproveAction = async (action: LibbyAction) => {
-    if (!activeClient?.id) return;
-    
-    // Safety confirmation: explain changes and allow cancellation
-    if (action.requires_confirmation) {
-      const confirmApproval = window.confirm(
-        `Are you sure you want to approve this Libby action: "${action.title}"?\n\nThis will execute data updates directly in your ledger configurations. This action cannot be undone.`
-      );
-      if (!confirmApproval) return;
-    }
+  const [activeModalAction, setActiveModalAction] = useState<LibbyAction | null>(null);
 
+  const handleExecuteAction = async (action: LibbyAction) => {
+    if (!activeClient?.id) return;
     const success = await applyLibbyAction(activeClient.id, action.id, user?.id || undefined);
     if (success) {
       toast("Libby applied approved change.", "success");
@@ -208,9 +201,14 @@ const AskKaeo = () => {
                         </div>
                       )}
                       {!isUser && !isGreeting && !isLimitExceeded && !isError && (
-                        <div className="mt-3 pt-3 border-t border-border/50 text-[10px] text-muted-foreground flex items-center gap-1.5 font-medium">
+                        <div className="mt-3 pt-3 border-t border-border/50 text-[10px] text-muted-foreground flex items-center gap-1.5 font-medium animate-in fade-in">
                           <Shield className="w-3 h-3 text-teal-400" />
-                          {msg.source_json?.mode === 'deterministic' ? 'Answered from verified Kaeo data.' : 'Grounded in verified Kaeo data.'}
+                          {(() => {
+                            const status = msg.source_json?.grounding_status;
+                            if (status === 'verified') return 'Verified from Kaeo data';
+                            if (status === 'general') return 'General recommendation';
+                            return 'Based on Kaeo data';
+                          })()}
                         </div>
                       )}
                     </div>
@@ -274,7 +272,7 @@ const AskKaeo = () => {
       </div>
 
       {/* Right Column: Actions Sidebar */}
-      <div className="lg:col-span-1 bg-card border border-border/80 rounded-2xl p-5 shadow-sm space-y-4 max-h-[calc(100vh-10rem)] overflow-y-auto">
+      <div className="lg:col-span-1 bg-card border border-border/80 rounded-2xl p-5 shadow-sm space-y-4 max-h-[calc(100vh-10rem)] overflow-y-auto animate-in fade-in duration-300">
         <div className="flex items-center gap-2 pb-2 border-b border-border/40">
           <Sparkles className="w-4 h-4 text-teal-400" />
           <h3 className="font-bold text-xs uppercase tracking-wider text-foreground">Actions Prepared by Libby</h3>
@@ -289,57 +287,170 @@ const AskKaeo = () => {
           </div>
         ) : (
           <div className="space-y-3.5 animate-in fade-in duration-300">
-            {preparedActions.map((act) => (
-              <div key={act.id} className="p-4 bg-white/[0.01] border border-border/20 rounded-xl space-y-2.5 hover:border-border/40 transition-all flex flex-col justify-between">
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <span className="text-xs font-bold text-foreground leading-snug">{act.title}</span>
-                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border shrink-0 ${
-                      act.risk_level === 'high' ? 'bg-risk/10 text-risk border-risk/20' :
-                      act.risk_level === 'medium' ? 'bg-warning/10 text-warning border-warning/20' :
-                      act.risk_level === 'safe' ? 'bg-success/10 text-success border-success/20' :
-                      'bg-muted text-muted-foreground border-border/30'
-                    }`}>
-                      {act.risk_level}
-                    </span>
+            {preparedActions.map((act) => {
+              const isSafeOrLow = act.risk_level === 'safe' || act.risk_level === 'low';
+              return (
+                <div key={act.id} className="p-4 bg-white/[0.01] border border-border/20 rounded-xl space-y-2.5 hover:border-border/40 transition-all flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <span className="text-xs font-bold text-foreground leading-snug">{act.title}</span>
+                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border shrink-0 ${
+                        act.risk_level === 'high' ? 'bg-risk/10 text-risk border-risk/20' :
+                        act.risk_level === 'medium' ? 'bg-warning/10 text-warning border-warning/20' :
+                        act.risk_level === 'low' ? 'bg-teal-500/10 text-teal-400 border-teal-500/20' :
+                        'bg-success/10 text-success border-success/20'
+                      }`}>
+                        {act.risk_level}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed font-medium mb-2">{act.description}</p>
+                    
+                    {/* Metadata detail block */}
+                    <div className="space-y-1 mt-2 pt-2 border-t border-border/10">
+                      {act.affected_count !== undefined && (
+                        <div className="flex justify-between text-[9px] font-medium text-muted-foreground">
+                          <span>Affected items:</span>
+                          <span className="text-foreground font-semibold">{act.affected_count}</span>
+                        </div>
+                      )}
+                      {act.example_item && (
+                        <div className="flex justify-between text-[9px] font-medium text-muted-foreground gap-2">
+                          <span className="shrink-0">Example:</span>
+                          <span className="text-foreground font-semibold truncate text-right max-w-[120px]">{act.example_item}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground leading-relaxed font-medium mb-2">{act.description}</p>
+                  
+                  <div className="flex gap-2 pt-2 border-t border-border/10">
+                    {isSafeOrLow ? (
+                      <button
+                        onClick={() => handleExecuteAction(act)}
+                        className="flex-1 py-1.5 bg-primary hover:opacity-90 text-primary-foreground font-black rounded-lg text-[10px] transition-all cursor-pointer text-center"
+                      >
+                        Approve
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setActiveModalAction(act)}
+                        className="flex-1 py-1.5 bg-warning text-black hover:opacity-90 font-black rounded-lg text-[10px] transition-all cursor-pointer text-center"
+                      >
+                        Review
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleRejectAction(act.id)}
+                      className="flex-1 py-1.5 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-lg text-[10px] transition-all cursor-pointer text-center border border-border/40"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (act.entity_type === 'transaction') {
+                          navigate(`/transactions?search=${act.entity_id || ''}`);
+                        } else if (act.entity_type === 'risk') {
+                          navigate(`/risk-inbox?search=${act.entity_id || ''}`);
+                        } else {
+                          navigate(`/transactions`);
+                        }
+                      }}
+                      className="px-2 py-1.5 bg-white/5 hover:bg-white/10 text-foreground font-bold rounded-lg text-[10px] transition-all cursor-pointer border border-border/40"
+                      title="Open details"
+                    >
+                      Open
+                    </button>
+                  </div>
                 </div>
-                
-                <div className="flex gap-2 pt-2 border-t border-border/10">
-                  <button
-                    onClick={() => handleApproveAction(act)}
-                    className="flex-1 py-1.5 bg-primary hover:opacity-90 text-primary-foreground font-black rounded-lg text-[10px] transition-all cursor-pointer text-center"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => handleRejectAction(act.id)}
-                    className="flex-1 py-1.5 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-lg text-[10px] transition-all cursor-pointer text-center border border-border/40"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (act.entity_type === 'transaction') {
-                        navigate(`/transactions?search=${act.entity_id || ''}`);
-                      } else if (act.entity_type === 'risk') {
-                        navigate(`/risk-inbox?search=${act.entity_id || ''}`);
-                      } else {
-                        navigate(`/transactions`);
-                      }
-                    }}
-                    className="px-2 py-1.5 bg-white/5 hover:bg-white/10 text-foreground font-bold rounded-lg text-[10px] transition-all cursor-pointer border border-border/40"
-                    title="Open details"
-                  >
-                    Open
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
+
+      {/* Libby Action Confirmation Modal */}
+      {activeModalAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="premium-glass max-w-md w-full border border-border/40 rounded-2xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 text-left">
+            <h3 className="text-lg font-bold text-foreground">Approve Libby action?</h3>
+            
+            <div className="space-y-3 bg-white/[0.02] border border-border/10 rounded-xl p-4">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Action</span>
+                <p className="text-xs font-bold text-foreground">{activeModalAction.title}</p>
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">What will change</span>
+                <p className="text-xs text-muted-foreground leading-relaxed">{activeModalAction.description}</p>
+              </div>
+              {activeModalAction.affected_count !== undefined && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Affected records count</span>
+                  <span className="text-foreground font-semibold">{activeModalAction.affected_count}</span>
+                </div>
+              )}
+              {activeModalAction.example_item && (
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Example item</span>
+                  <p className="text-xs text-muted-foreground italic font-medium">"{activeModalAction.example_item}"</p>
+                </div>
+              )}
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Risk level</span>
+                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border shrink-0 ${
+                  activeModalAction.risk_level === 'high' ? 'bg-risk/10 text-risk border-risk/20' :
+                  activeModalAction.risk_level === 'medium' ? 'bg-warning/10 text-warning border-warning/20' :
+                  activeModalAction.risk_level === 'low' ? 'bg-teal-500/10 text-teal-400 border-teal-500/20' :
+                  'bg-success/10 text-success border-success/20'
+                }`}>
+                  {activeModalAction.risk_level}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Can be changed later</span>
+                <span className="text-xs text-foreground font-medium">
+                  {activeModalAction.risk_level === 'high' ? 'No' : 'Yes'}
+                </span>
+              </div>
+            </div>
+
+            {/* Confirmation Warning Copy */}
+            <div className="p-3 bg-white/5 rounded-lg border border-border/10 text-xs">
+              {activeModalAction.risk_level === 'high' && (
+                <p className="text-risk font-semibold">⚠️ This cannot be undone.</p>
+              )}
+              {activeModalAction.risk_level === 'medium' && (
+                <p className="text-warning font-semibold">⚠️ Review the affected records before approving.</p>
+              )}
+              {(activeModalAction.risk_level === 'safe' || activeModalAction.risk_level === 'low') && (
+                <p className="text-success font-medium">💡 Libby will update these selected items. You can change them later.</p>
+              )}
+            </div>
+
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                onClick={() => setActiveModalAction(null)}
+                className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-xl text-xs transition-all cursor-pointer border border-border/40"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const act = activeModalAction;
+                  setActiveModalAction(null);
+                  handleExecuteAction(act);
+                }}
+                className={`px-4 py-2 font-black rounded-xl text-xs transition-all cursor-pointer shadow-lg ${
+                  activeModalAction.risk_level === 'high' ? 'bg-risk text-white hover:opacity-90 shadow-risk/10' :
+                  activeModalAction.risk_level === 'medium' ? 'bg-warning text-black hover:opacity-90 shadow-warning/10' :
+                  'bg-primary text-primary-foreground hover:opacity-90 shadow-primary/10'
+                }`}
+              >
+                Approve action
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

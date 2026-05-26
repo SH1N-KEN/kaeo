@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { trackAuditEvent } from './auditEngine';
+import { getCleanTransactions } from './transactionFilters';
 
 export interface LibbyAction {
   id: string;
@@ -13,6 +14,8 @@ export interface LibbyAction {
   requires_confirmation: boolean;
   status: 'prepared' | 'approved' | 'applied' | 'rejected' | 'failed';
   created_at: string;
+  affected_count?: number;
+  example_item?: string;
 }
 
 const STORAGE_KEY = 'kaeo_libby_actions';
@@ -264,7 +267,7 @@ export async function getAvailableLibbyActionsForContext(
     supabase.from('risk_events').select('*').eq('client_id', clientId).eq('status', 'open')
   ]);
 
-  const transactions = txRes.data || [];
+  const transactions = getCleanTransactions(txRes.data || []);
   const rules = rulesRes.data || [];
   const risks = riskRes.data || [];
 
@@ -276,38 +279,48 @@ export async function getAvailableLibbyActionsForContext(
     );
     
     if (softwareList.length > 0) {
+      const isSingular = softwareList.length === 1;
       prepared.push({
         id: `libby_cat_software_${clientId}`,
         action_type: 'categorize_bulk',
         entity_type: 'transaction',
-        title: `Categorize ${softwareList.length} SaaS payments`,
-        description: `Map ${softwareList.length} uncategorized SaaS transaction rows to Software / SaaS.`,
+        title: isSingular ? `Categorize 1 SaaS payment` : `Categorize ${softwareList.length} SaaS payments`,
+        description: isSingular 
+          ? `Map 1 uncategorized SaaS transaction to Software / SaaS.` 
+          : `Map ${softwareList.length} uncategorized SaaS transactions to Software / SaaS.`,
         proposed_changes: {
           organization_id: orgId,
           ids: softwareList.map(t => t.id),
           category: 'Software / SaaS'
         },
-        risk_level: 'low',
+        risk_level: softwareList.length > 5 ? 'medium' : 'low',
         requires_confirmation: true,
         status: 'prepared',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        affected_count: softwareList.length,
+        example_item: softwareList[0]?.description || undefined
       });
     } else {
+      const isSingular = uncategorized.length === 1;
       prepared.push({
         id: `libby_cat_bulk_${clientId}`,
         action_type: 'categorize_bulk',
         entity_type: 'transaction',
-        title: `Categorize ${uncategorized.length} transaction rows`,
-        description: `Define categories for ${uncategorized.length} uncategorized transaction lines.`,
+        title: isSingular ? `Categorize 1 transaction` : `Categorize ${uncategorized.length} transactions`,
+        description: isSingular 
+          ? `Define category for 1 uncategorized transaction.` 
+          : `Define categories for ${uncategorized.length} uncategorized transactions.`,
         proposed_changes: {
           organization_id: orgId,
           ids: uncategorized.map(t => t.id),
           category: 'Office Expenses'
         },
-        risk_level: 'low',
+        risk_level: uncategorized.length > 5 ? 'medium' : 'low',
         requires_confirmation: true,
         status: 'prepared',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        affected_count: uncategorized.length,
+        example_item: uncategorized[0]?.description || undefined
       });
     }
   }
@@ -319,20 +332,25 @@ export async function getAvailableLibbyActionsForContext(
     Math.abs(t.amount) < 15000
   );
   if (unreviewedLowRisk.length > 0) {
+    const isSingular = unreviewedLowRisk.length === 1;
     prepared.push({
       id: `libby_rev_bulk_${clientId}`,
       action_type: 'mark_reviewed_bulk',
       entity_type: 'transaction',
-      title: `Mark ${unreviewedLowRisk.length} low-risk transactions as reviewed`,
-      description: `Approve and validate ${unreviewedLowRisk.length} fully-categorized transactions under ₹15,000.`,
+      title: isSingular ? `Mark 1 low-risk transaction as reviewed` : `Mark ${unreviewedLowRisk.length} low-risk transactions as reviewed`,
+      description: isSingular 
+        ? `Approve and validate 1 fully-categorized transaction under ₹15,000.` 
+        : `Approve and validate ${unreviewedLowRisk.length} fully-categorized transactions under ₹15,000.`,
       proposed_changes: {
         organization_id: orgId,
         ids: unreviewedLowRisk.map(t => t.id)
       },
-      risk_level: 'safe',
+      risk_level: unreviewedLowRisk.length > 5 ? 'medium' : 'safe',
       requires_confirmation: true,
       status: 'prepared',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      affected_count: unreviewedLowRisk.length,
+      example_item: unreviewedLowRisk[0]?.description || undefined
     });
   }
 
@@ -355,7 +373,9 @@ export async function getAvailableLibbyActionsForContext(
       risk_level: 'medium',
       requires_confirmation: true,
       status: 'prepared',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      affected_count: 1,
+      example_item: "High-value Payment Rule"
     });
   }
 
@@ -375,7 +395,9 @@ export async function getAvailableLibbyActionsForContext(
       risk_level: 'high',
       requires_confirmation: true,
       status: 'prepared',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      affected_count: 1,
+      example_item: duplicateRisks[0].title || undefined
     });
   }
 

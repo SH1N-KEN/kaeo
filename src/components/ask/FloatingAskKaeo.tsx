@@ -13,6 +13,81 @@ import { motion, AnimatePresence } from 'framer-motion';
 import aeLogo from '../../assets/kaeo-ae-logo.png';
 import { useAskKaeoChat } from '../../hooks/useAskKaeoChat';
 
+const shortenMessage = (content: string, userQuery: string): string => {
+  if (!content) return content;
+  
+  const q = (userQuery || '').toLowerCase();
+  const askedForMath = q.includes('math') || q.includes('calculated') || q.includes('formula') || q.includes('breakdown') || q.includes('why is net');
+  
+  let formatted = content;
+  
+  // 1. Strip equations if not asked
+  if (!askedForMath) {
+    const mathEquationRegex = /([₹$]|Rs\.?|INR)?\s*[\d,.]+\s*[\+\-\*\/]\s*([₹$]|Rs\.?|INR)?\s*[\d,.]+\s*([\+\-\*\/]\s*([₹$]|Rs\.?|INR)?\s*[\d,.]+)*\s*=\s*([₹$]|Rs\.?|INR)?\s*[\d,.]+/g;
+    formatted = formatted.replace(mathEquationRegex, '');
+  }
+
+  // Split content into blocks
+  const blocks = formatted.split('\n\n');
+  const shortBlocks: string[] = [];
+
+  for (const block of blocks) {
+    const cleanBlock = block.trim();
+    if (!cleanBlock) continue;
+
+    const lower = cleanBlock.toLowerCase();
+    
+    // Skip "Why:" section entirely to keep floating responses concise
+    if (lower.startsWith('why:')) {
+      continue;
+    }
+    
+    // Handle recommended actions ("Next:")
+    if (lower.startsWith('next:')) {
+      const lines = cleanBlock.split('\n').slice(1);
+      if (lines.length > 0) {
+        shortBlocks.push(lines.join('\n'));
+      }
+      continue;
+    }
+
+    // Handle caveats ("Watch out:")
+    if (lower.startsWith('watch out:')) {
+      const lines = cleanBlock.split('\n').slice(1);
+      if (lines.length > 0) {
+        shortBlocks.push(lines.join('\n'));
+      }
+      continue;
+    }
+
+    // Otherwise, keep the block
+    shortBlocks.push(cleanBlock);
+  }
+
+  // Combine the blocks
+  const combined = shortBlocks.join('\n\n');
+
+  // Limit bullets to max 3
+  const lines = combined.split('\n');
+  let bulletCount = 0;
+  const filteredLines: string[] = [];
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const isBullet = trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*');
+    if (isBullet) {
+      bulletCount++;
+      if (bulletCount <= 3) {
+        filteredLines.push(line);
+      }
+    } else {
+      filteredLines.push(line);
+    }
+  }
+  
+  return filteredLines.join('\n');
+};
+
 const FloatingAskKaeo: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -249,7 +324,7 @@ const FloatingAskKaeo: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                messages.map((msg) => {
+                messages.map((msg, idx) => {
                   const isUser = msg.role === 'user';
                   const isLimitExceeded = msg.source_json?.mode === 'limit_exceeded';
                   const isGreeting = msg.source_json?.mode === 'greeting';
@@ -278,7 +353,7 @@ const FloatingAskKaeo: React.FC = () => {
                             : 'bg-muted/40 border border-border/40 text-foreground rounded-tl-sm'
                         }`}
                       >
-                        {msg.content}
+                        {isUser ? msg.content : shortenMessage(msg.content, idx > 0 ? messages[idx - 1].content : '')}
 
                         {/* Limit exceeded CTA */}
                         {isLimitExceeded && (
@@ -325,9 +400,14 @@ const FloatingAskKaeo: React.FC = () => {
 
                         {/* Grounded badge */}
                         {!isUser && !isGreeting && !isLimitExceeded && !isError && (
-                          <p className="text-[9px] text-muted-foreground mt-2 pt-2 border-t border-border/30 flex items-center gap-1 font-medium">
+                          <p className="text-[9px] text-muted-foreground mt-2 pt-2 border-t border-border/30 flex items-center gap-1 font-medium animate-in fade-in">
                             <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
-                            {msg.source_json?.mode === 'deterministic' ? 'Answered from verified Kaeo data.' : 'Grounded in Kaeo data.'}
+                            {(() => {
+                              const status = msg.source_json?.grounding_status;
+                              if (status === 'verified') return 'Verified from Kaeo data';
+                              if (status === 'general') return 'General recommendation';
+                              return 'Based on Kaeo data';
+                            })()}
                           </p>
                         )}
                       </div>

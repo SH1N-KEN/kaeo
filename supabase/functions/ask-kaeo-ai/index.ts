@@ -60,6 +60,8 @@ Adjust your response based on the "response_mode" parameter in your context:
 Core Advisor Tone:
 - Talk like a trusted operator: "Here’s what I’m seeing", "I’d review this first", "From the data Kaeo has, here’s the move", "honestly", "my take", "the move is...".
 - Strictly INR (₹) first: Always format currency using ₹ and Indian comma layout (e.g., ₹9,10,303 or ₹12,000). Never use dollar signs ($) or mention USD.
+- Use context figures for cash, and do NOT print calculations or formulas unless explicitly asked.
+- If recommending software/vendors/tools: use workspace data if available. Mention explicitly when it is general advice, ask exactly one clarifying question if client context is missing, and never present generic SaaS lists as grounded financial recommendations.
 `;
 
 const corsHeaders = {

@@ -5,6 +5,7 @@ import { askKaeoAi } from './ai/aiClient';
 import type { AIStructuredContext } from './ai/aiClient';
 import { syncReviewSuggestions } from './aiReviewEngine';
 import { calculateMonthEndReadiness } from './readinessEngine';
+import { getCleanTransactions } from './transactionFilters';
 
 export type AskKaeoCategory = 
   | 'finance_summary' 
@@ -187,134 +188,6 @@ export async function categorizeQuestion(query: string): Promise<AskKaeoCategory
   return 'unknown_general';
 }
 
-const checkAIContradictions = (aiText: string, context: AIStructuredContext): boolean => {
-  const approvedNumbers = new Set<number>([
-    Math.round(context.financial_summary.income),
-    Math.round(context.financial_summary.refunds),
-    Math.round(context.financial_summary.expenses),
-    Math.round(context.financial_summary.netCash),
-    Math.round(context.recurring_spend.commitment),
-    context.recurring_spend.active_vendors,
-    context.high_priority_risks,
-    context.counts.transactions,
-    context.counts.vendors,
-    context.counts.risks
-  ]);
-  
-  context.top_vendors.forEach(v => approvedNumbers.add(Math.round(v.spend)));
-
-  if (context.approved_extra_numbers) {
-    context.approved_extra_numbers.forEach(n => approvedNumbers.add(Math.round(n)));
-  }
-
-  // Also approve any numbers mentioned in the user question
-  const numbersInQuery = context.question.replace(/\b20\d{2}\b/g, '').match(/\d[\d,.]*/g) || [];
-  numbersInQuery.forEach(numStr => {
-    const cleanDigits = numStr.replace(/[^\d]/g, '');
-    if (cleanDigits.length >= 3) {
-      approvedNumbers.add(parseInt(cleanDigits, 10));
-    }
-  });
-  
-  const approvedStrings = new Set<string>();
-  approvedNumbers.forEach(n => {
-    if (n >= 0) {
-      approvedStrings.add(String(n));
-      approvedStrings.add(formatReportCurrency(n).replace(/[^\d]/g, ''));
-    }
-  });
-
-  // Remove 4-digit years (like 2026, 2024, etc.) to prevent false alarms
-  const sanitizedText = aiText.replace(/\b20\d{2}\b/g, '');
-
-  const numbersInText: string[] = [];
-
-  // If non-numeric intent, we ONLY check numbers formatted as currency (e.g., prefixed/suffixed with currency signs)
-  // or large financial numbers (e.g. >= 1000) to ignore seat counts/days/options.
-  const isNonNumericIntent = ['service_alternatives', 'business_advice', 'operational_next_steps', 'cost_optimization', 'casual_check_in'].includes(context.intent);
-
-  if (isNonNumericIntent) {
-    // Extract numbers that are explicitly currency formatted (preceded by ₹, $, Rs., INR) 
-    // or are >= 1000 (which are likely financial claims, while ignoring small user/day counts)
-    const currencyOrLargeRegex = /(?:[₹$]|Rs\.?|INR)\s*(\d[\d,.]*)\b|\b(\d[\d,.]+)\b/gi;
-    let currencyMatch;
-    while ((currencyMatch = currencyOrLargeRegex.exec(sanitizedText)) !== null) {
-      const numStr = currencyMatch[1] || currencyMatch[2];
-      if (!numStr) continue;
-      
-      const cleanDigits = numStr.replace(/[^\d]/g, '');
-      const val = parseInt(cleanDigits, 10);
-      if (isNaN(val)) continue;
-      
-      const hasSymbol = currencyMatch[0].match(/[₹$]|Rs|INR/i);
-      if (hasSymbol || val >= 1000) {
-        // Skip percentage numbers
-        const endIndex = currencyMatch.index + currencyMatch[0].length;
-        const nextChar = sanitizedText.substring(endIndex).trim().charAt(0);
-        if (nextChar === '%') {
-          continue;
-        }
-        numbersInText.push(numStr);
-      }
-    }
-  } else {
-    // For numeric/finance intents, extract all numbers not followed by %
-    const numberRegex = /\d[\d,.]*/g;
-    let match;
-    while ((match = numberRegex.exec(sanitizedText)) !== null) {
-      const numStr = match[0];
-      const endIndex = match.index + numStr.length;
-      const nextChar = sanitizedText.substring(endIndex).trim().charAt(0);
-      if (nextChar === '%') {
-        continue;
-      }
-      numbersInText.push(numStr);
-    }
-  }
-
-  for (const numStr of numbersInText) {
-    const cleanDigits = numStr.replace(/[^\d]/g, '');
-    if (cleanDigits.length >= 3) {
-      const val = parseInt(cleanDigits, 10);
-      if (val > 100 && !approvedStrings.has(cleanDigits)) {
-        // Check if this number matches any metric or vendor keyword context window
-        const startWindow = Math.max(0, sanitizedText.indexOf(numStr) - 50);
-        const endWindow = Math.min(sanitizedText.length, sanitizedText.indexOf(numStr) + numStr.length + 50);
-        const contextSnippet = sanitizedText.slice(startWindow, endWindow).toLowerCase();
-
-        const metricKeywords = [
-          "risk", "exposure", "threat",
-          "uncategorized", "unclassified", "unmapped",
-          "review", "pending", "validate",
-          "revenue", "income", "sales", "inflow",
-          "expense", "spend", "outflow",
-          "net cash", "net flow", "net movement", "profit",
-          "refund", "recovery", "recoveries",
-          "readiness", "score",
-          "transaction", "ledger", "row", "entry", "entries",
-          "vendor", "provider",
-          "invoice", "bill"
-        ];
-
-        const hasKeyword = metricKeywords.some(kw => contextSnippet.includes(kw));
-        let hasVendor = false;
-        if (context.top_vendors) {
-          hasVendor = context.top_vendors.some(v => contextSnippet.includes(v.name.toLowerCase()));
-        }
-
-        if (hasKeyword || hasVendor) {
-          if (isDev) {
-            console.debug(`[AI Contradiction Checker] AI output contained unapproved number: ${numStr} (digits: ${cleanDigits}) associated with verified metric keywords.`);
-          }
-          return true;
-        }
-      }
-    }
-  }
-
-  return false;
-};
-
 const isDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
 
 function sanitizeTextNumbers(text: string, context: {
@@ -336,7 +209,6 @@ function sanitizeTextNumbers(text: string, context: {
   vendorSummary: any;
 }): { sanitizedText: string; repairedCount: number; hasUnrepairable: boolean } {
   let repairedCount = 0;
-  let hasUnrepairable = false;
 
   const numRegex = /([₹$]|Rs\.?|INR)?\s*(\d[\d,.]*)\b/gi;
 
@@ -364,18 +236,7 @@ function sanitizeTextNumbers(text: string, context: {
     const isSmall = val < 10;
     const isPercentage = text.substring(match.index + fullMatch.length).trim().startsWith('%');
     
-    let isApproved = isYear || isSmall || isPercentage || context.approvedNumbers.has(val);
-    
-    if (!isApproved) {
-      for (const approvedVal of context.approvedNumbers) {
-        if (Math.abs(approvedVal - val) / Math.max(1, approvedVal) < 0.02) {
-          isApproved = true;
-          break;
-        }
-      }
-    }
-
-    if (isApproved) {
+    if (isYear || isSmall || isPercentage) {
       resultText += fullMatch;
       continue;
     }
@@ -384,24 +245,17 @@ function sanitizeTextNumbers(text: string, context: {
     const endWindow = Math.min(text.length, match.index + fullMatch.length + 50);
     const contextSnippet = text.slice(startWindow, endWindow).toLowerCase();
 
-    let replacementStr = "";
+    let expectedVal: number | null = null;
     let keywordMatched = false;
+    let replacementStr = "";
 
-    if (contextSnippet.includes("risk") || contextSnippet.includes("exposure") || contextSnippet.includes("threat")) {
+    if (contextSnippet.includes("net cash") || contextSnippet.includes("net flow") || contextSnippet.includes("net movement") || contextSnippet.includes("profit")) {
       keywordMatched = true;
-      if (currencyPrefix || val > 500) {
-        replacementStr = formatINR(context.duplicateExposure);
-      } else {
-        replacementStr = String(context.openRisksCount);
-      }
-    } else if (contextSnippet.includes("uncategorized") || contextSnippet.includes("unclassified") || contextSnippet.includes("unmapped")) {
-      keywordMatched = true;
-      replacementStr = String(context.uncategorizedCount);
-    } else if (contextSnippet.includes("review") || contextSnippet.includes("pending") || contextSnippet.includes("validate")) {
-      keywordMatched = true;
-      replacementStr = String(context.unreviewedCount);
+      expectedVal = context.netCash;
+      replacementStr = formatINR(context.netCash);
     } else if (contextSnippet.includes("revenue") || contextSnippet.includes("income") || contextSnippet.includes("sales") || contextSnippet.includes("inflow")) {
       keywordMatched = true;
+      expectedVal = context.income;
       replacementStr = formatINR(context.income);
     } else if (contextSnippet.includes("expense") || contextSnippet.includes("spend") || contextSnippet.includes("outflow")) {
       keywordMatched = true;
@@ -414,116 +268,80 @@ function sanitizeTextNumbers(text: string, context: {
         }
       }
       if (foundVendorSpend !== null) {
+        expectedVal = foundVendorSpend;
         replacementStr = formatINR(foundVendorSpend);
       } else {
+        expectedVal = context.expenses;
         replacementStr = formatINR(context.expenses);
       }
-    } else if (contextSnippet.includes("net cash") || contextSnippet.includes("net flow") || contextSnippet.includes("net movement") || contextSnippet.includes("profit")) {
-      keywordMatched = true;
-      replacementStr = formatINR(context.netCash);
     } else if (contextSnippet.includes("refund") || contextSnippet.includes("recovery") || contextSnippet.includes("recoveries")) {
       keywordMatched = true;
+      expectedVal = context.refunds;
       replacementStr = formatINR(context.refunds);
-    } else if (contextSnippet.includes("readiness") || contextSnippet.includes("score")) {
-      keywordMatched = true;
-      replacementStr = `${context.readinessScore}`;
     } else if (contextSnippet.includes("transaction") || contextSnippet.includes("ledger") || contextSnippet.includes("row") || contextSnippet.includes("entry") || contextSnippet.includes("entries")) {
       keywordMatched = true;
+      expectedVal = context.transactionCount;
       replacementStr = String(context.transactionCount);
-    } else if (contextSnippet.includes("vendor") || contextSnippet.includes("provider")) {
+    } else if (contextSnippet.includes("risk") || contextSnippet.includes("exposure") || contextSnippet.includes("threat")) {
       keywordMatched = true;
       if (currencyPrefix || val > 500) {
-        let foundVendorSpend = null;
-        for (const vendor of context.vendorsList) {
-          if (contextSnippet.includes(vendor.normalized_name.toLowerCase())) {
-            const spend = context.vendorSummary.topVendors.find((tv: any) => tv.normalized_name === vendor.normalized_name)?.totalSpend || vendor.total_spend || vendor.spend || 0;
-            foundVendorSpend = spend;
+        expectedVal = context.duplicateExposure;
+        replacementStr = formatINR(context.duplicateExposure);
+      } else {
+        expectedVal = context.openRisksCount;
+        replacementStr = String(context.openRisksCount);
+      }
+    } else if (contextSnippet.includes("uncategorized") || contextSnippet.includes("unclassified") || contextSnippet.includes("unmapped")) {
+      keywordMatched = true;
+      expectedVal = context.uncategorizedCount;
+      replacementStr = String(context.uncategorizedCount);
+    } else if (contextSnippet.includes("review") || contextSnippet.includes("pending") || contextSnippet.includes("validate")) {
+      keywordMatched = true;
+      expectedVal = context.unreviewedCount;
+      replacementStr = String(context.unreviewedCount);
+    } else if (contextSnippet.includes("readiness") || contextSnippet.includes("score")) {
+      keywordMatched = true;
+      expectedVal = context.readinessScore;
+      replacementStr = String(context.readinessScore);
+    }
+
+    if (keywordMatched && expectedVal !== null) {
+      const isCorrect = Math.abs(expectedVal - val) / Math.max(1, expectedVal) < 0.02;
+      if (isCorrect) {
+        resultText += fullMatch;
+      } else {
+        repairedCount++;
+        resultText += (currencyPrefix && !replacementStr.startsWith('₹') && !replacementStr.startsWith('$') ? currencyPrefix : '') + replacementStr;
+        if (isDev) {
+          console.debug(`[Libby Sanitizer] Repaired conflicting number '${fullMatch}' with expected metric value '${replacementStr}'`);
+        }
+      }
+    } else {
+      let isApproved = context.approvedNumbers.has(val);
+      if (!isApproved) {
+        for (const approvedVal of context.approvedNumbers) {
+          if (Math.abs(approvedVal - val) / Math.max(1, approvedVal) < 0.02) {
+            isApproved = true;
             break;
           }
         }
-        if (foundVendorSpend !== null) {
-          replacementStr = formatINR(foundVendorSpend);
-        } else {
-          replacementStr = String(context.totalVendorsCount);
-        }
-      } else {
-        replacementStr = String(context.totalVendorsCount);
       }
-    } else if (contextSnippet.includes("invoice") || contextSnippet.includes("bill")) {
-      keywordMatched = true;
-      if (currencyPrefix || val > 500) {
-        let closestInvAmount = null;
-        let minDiff = Infinity;
-        for (const inv of context.invoicesList) {
-          const amt = Number(inv.total_amount || 0);
-          if (amt > 0) {
-            const diff = Math.abs(amt - val);
-            if (diff < minDiff) {
-              minDiff = diff;
-              closestInvAmount = amt;
-            }
-          }
-        }
-        if (closestInvAmount !== null && minDiff / closestInvAmount < 0.3) {
-          replacementStr = formatINR(closestInvAmount);
-        } else {
-          const totalInvAmount = context.invoicesList.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
-          replacementStr = formatINR(totalInvAmount);
-        }
-      } else {
-        replacementStr = String(context.totalInvoicesCount);
-      }
-    } else {
-      for (const vendor of context.vendorsList) {
-        if (contextSnippet.includes(vendor.normalized_name.toLowerCase())) {
-          keywordMatched = true;
-          const spend = context.vendorSummary.topVendors.find((tv: any) => tv.normalized_name === vendor.normalized_name)?.totalSpend || vendor.total_spend || vendor.spend || 0;
-          replacementStr = formatINR(spend);
-          break;
-        }
-      }
-    }
 
-    if (keywordMatched) {
-      if (replacementStr) {
-        repairedCount++;
-        resultText += replacementStr;
-        if (isDev) {
-          console.debug(`[Libby Sanitizer] Repaired conflicting number '${fullMatch}' with '${replacementStr}' in context '${contextSnippet.trim()}'`);
-        }
-      } else {
-        if (val > 1000) {
-          const candidates = [
-            { val: context.income, str: formatINR(context.income) },
-            { val: context.expenses, str: formatINR(context.expenses) },
-            { val: context.netCash, str: formatINR(context.netCash) },
-            { val: context.refunds, str: formatINR(context.refunds) }
-          ];
-          candidates.sort((a, b) => Math.abs(a.val - val) - Math.abs(b.val - val));
-          
-          if (Math.abs(candidates[0].val - val) / Math.max(1, candidates[0].val) < 0.3) {
-            repairedCount++;
-            resultText += candidates[0].str;
-            if (isDev) {
-              console.debug(`[Libby Sanitizer] Repaired close financial number '${fullMatch}' with '${candidates[0].str}'`);
-            }
-            continue;
-          }
-        }
-
-        hasUnrepairable = true;
+      if (isApproved) {
         resultText += fullMatch;
-      }
-    } else {
-      resultText += fullMatch;
-      if (isDev) {
-        console.debug(`[Libby Sanitizer] Passed qualitative/advice number '${fullMatch}' without replacement in context: '${contextSnippet.trim()}'`);
+      } else {
+        repairedCount++;
+        const qualitativeStr = currencyPrefix ? "the recorded amount" : "multiple";
+        resultText += qualitativeStr;
+        if (isDev) {
+          console.debug(`[Libby Sanitizer] Replaced unverified number '${fullMatch}' with qualitative '${qualitativeStr}'`);
+        }
       }
     }
   }
 
   resultText += text.slice(lastIndex);
-  return { sanitizedText: resultText, repairedCount, hasUnrepairable };
+  return { sanitizedText: resultText, repairedCount, hasUnrepairable: false };
 }
 
 export async function askKaeo(query: string, clientId: string, _orgId: string): Promise<AskKaeoResponse> {
@@ -576,7 +394,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     .select('*')
     .eq('client_id', clientId);
     
-  const transactions = txs || [];
+  const transactions = getCleanTransactions(txs || []);
   const vendors = vendorsData || [];
   const risks = risksData || [];
   const invoices = invoicesData || [];
@@ -812,6 +630,15 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
           aiResult.caveats = aiResult.caveats.map(sanitizeMarkdown);
         }
 
+        // 1.5. If user didn't ask for math, strip any equations or formulas in format "A + B - C = D" or "A - B = C"
+        const q = query.toLowerCase();
+        const userAskedMath = q.includes('calculated') || q.includes('math') || q.includes('formula') || q.includes('why is net') || q.includes('breakdown') || q.includes('explain');
+        if (!userAskedMath) {
+          const mathEquationRegex = /([₹$]|Rs\.?|INR)?\s*[\d,.]+\s*[\+\-\*\/]\s*([₹$]|Rs\.?|INR)?\s*[\d,.]+\s*([\+\-\*\/]\s*([₹$]|Rs\.?|INR)?\s*[\d,.]+)*\s*=\s*([₹$]|Rs\.?|INR)?\s*[\d,.]+/g;
+          aiResult.answer = aiResult.answer.replace(mathEquationRegex, '');
+          aiResult.reasoning_summary = aiResult.reasoning_summary.replace(mathEquationRegex, '');
+        }
+
         // 2. Auto-inject math formula for net cash ONLY if user asked for it
         if (intent === 'finance_summary') {
           const q = query.toLowerCase();
@@ -831,45 +658,57 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
         const readinessResult = calculateMonthEndReadiness(transactions, risks);
         const readinessScore = readinessResult.score;
 
-        const hasContradiction = checkAIContradictions(aiResult.answer + " " + aiResult.reasoning_summary, structuredContext);
-        checkContradictionResult = hasContradiction;
-
         isSanitized = false;
         sanitizedAnswer = aiResult.answer;
         sanitizedReasoning = aiResult.reasoning_summary;
 
-        if (hasContradiction) {
-          const sanitizeContext = {
-            income,
-            expenses,
-            netCash,
-            refunds,
-            transactionCount: transactions.length,
-            openRisksCount: risks.length,
-            duplicateExposure,
-            uncategorizedCount,
-            readinessScore,
-            unreviewedCount,
-            totalVendorsCount: vendors.length,
-            totalInvoicesCount: invoices.length,
-            approvedNumbers,
-            vendorsList: vendors,
-            invoicesList: invoices,
-            vendorSummary
-          };
+        const sanitizeContext = {
+          income,
+          expenses,
+          netCash,
+          refunds,
+          transactionCount: transactions.length,
+          openRisksCount: risks.length,
+          duplicateExposure,
+          uncategorizedCount,
+          readinessScore,
+          unreviewedCount,
+          totalVendorsCount: vendors.length,
+          totalInvoicesCount: invoices.length,
+          approvedNumbers,
+          vendorsList: vendors,
+          invoicesList: invoices,
+          vendorSummary
+        };
 
-          const ansRep = sanitizeTextNumbers(aiResult.answer, sanitizeContext);
-          const reasonRep = sanitizeTextNumbers(aiResult.reasoning_summary, sanitizeContext);
+        const ansRep = sanitizeTextNumbers(aiResult.answer, sanitizeContext);
+        const reasonRep = sanitizeTextNumbers(aiResult.reasoning_summary, sanitizeContext);
 
-          if (!ansRep.hasUnrepairable && !reasonRep.hasUnrepairable) {
-            sanitizedAnswer = ansRep.sanitizedText;
-            sanitizedReasoning = reasonRep.sanitizedText;
-            isSanitized = true;
-          } else {
-            aiResult = null;
-            fallbackReason = 'AI response contained unrepairable numeric contradictions';
-          }
+        if (ansRep.repairedCount > 0 || reasonRep.repairedCount > 0) {
+          isSanitized = true;
+          sanitizedAnswer = ansRep.sanitizedText;
+          sanitizedReasoning = reasonRep.sanitizedText;
         }
+
+        if (aiResult.recommended_actions) {
+          aiResult.recommended_actions = aiResult.recommended_actions.map(act => {
+            const rep = sanitizeTextNumbers(act, sanitizeContext);
+            if (rep.repairedCount > 0) {
+              isSanitized = true;
+            }
+            return rep.sanitizedText;
+          });
+        }
+        if (aiResult.caveats) {
+          aiResult.caveats = aiResult.caveats.map(cav => {
+            const rep = sanitizeTextNumbers(cav, sanitizeContext);
+            if (rep.repairedCount > 0) {
+              isSanitized = true;
+            }
+            return rep.sanitizedText;
+          });
+        }
+        checkContradictionResult = isSanitized;
       } else {
         fallbackReason = 'AI server returned null or failed validation/repair checks';
       }
@@ -917,12 +756,26 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
 
     const mode = isSanitized ? 'ai_assisted_sanitized' : (intent === 'finance_summary' ? 'ai_assisted_locked_numbers' : 'ai_assisted');
     
+    let grounding_status: 'verified' | 'based_on_data' | 'general' = 'based_on_data';
+    const isGeneralIntent = ['unknown_general', 'tax_or_legal_sensitive', 'unsupported_needs_ai_or_web', 'casual_check_in'].includes(intent);
+    if (isGeneralIntent) {
+      grounding_status = 'general';
+    } else if (isSanitized) {
+      grounding_status = 'based_on_data'; // Replaced contradictory numbers, so it is based on data but not verified/clean raw AI output
+    } else {
+      const isNumericIntent = ['finance_summary', 'risk_review', 'vendor_analysis', 'recurring_spend', 'ai_review'].includes(intent);
+      if (isNumericIntent) {
+        grounding_status = 'verified';
+      }
+    }
+
     return {
       intent,
       text: formattedText,
       source_json: {
         mode,
         intent,
+        grounding_status,
         ai_confidence: aiResult.confidence,
         caveats: aiResult.caveats,
         needs_external_research: aiResult.needs_external_research,
@@ -1147,12 +1000,19 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     }
   }
 
+  let grounding_status: 'verified' | 'based_on_data' | 'general' = 'verified';
+  const isGeneralIntent = ['unknown_general', 'tax_or_legal_sensitive', 'unsupported_needs_ai_or_web', 'casual_check_in'].includes(intent);
+  if (isGeneralIntent) {
+    grounding_status = 'general';
+  }
+
   return {
     intent,
     text: responseText,
     source_json: {
       mode: "deterministic",
       intent,
+      grounding_status,
       fallback_reason: fallbackReason,
       ...sourceJson
     }
