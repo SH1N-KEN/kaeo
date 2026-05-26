@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
 import { trackUsageEvent } from '../lib/billing';
 import { checkUsageEventAllowed } from '../lib/billingGuards';
+import { useToast } from './useToast';
 
 interface Organization {
   id: string;
@@ -65,6 +66,7 @@ const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefin
 
 export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [activeOrg, setActiveOrgState] = useState<Organization | null>(null);
@@ -164,16 +166,55 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.log('useWorkspace: Organizations found:', orgs?.length || 0);
       setOrganizations(orgs || []);
 
-      // 3. Load stored selection or pick first
-      const storedOrgId = localStorage.getItem(`kaeo_org_${user.id}`);
-      const storedClientId = localStorage.getItem(`kaeo_client_${user.id}`);
+      // 3. Migrate & load stored selection or pick first
+      const newOrgKey = `kaeo:${user.id}:activeOrganizationId`;
+      const newClientKey = `kaeo:${user.id}:activeClientId`;
+      const oldOrgKey = `kaeo_org_${user.id}`;
+      const oldClientKey = `kaeo_client_${user.id}`;
+
+      if (localStorage.getItem(oldOrgKey) && !localStorage.getItem(newOrgKey)) {
+        localStorage.setItem(newOrgKey, localStorage.getItem(oldOrgKey)!);
+      }
+      if (localStorage.getItem(oldClientKey) && !localStorage.getItem(newClientKey)) {
+        localStorage.setItem(newClientKey, localStorage.getItem(oldClientKey)!);
+      }
+
+      const storedOrgId = localStorage.getItem(newOrgKey);
+      const storedClientId = localStorage.getItem(newClientKey);
+
+      // Check all accessible clients to search specifically for "type shi"
+      const { data: allUserCls } = await supabase
+        .from('clients')
+        .select('*');
+
+      console.log('=== DEV DIAGNOSTICS ===');
+      console.log('User ID:', user.id);
+      console.log('Organizations:', orgs);
+      console.log('All visible clients:', allUserCls);
+      console.log('localStorage keys:', {
+        oldOrg: localStorage.getItem(oldOrgKey),
+        oldClient: localStorage.getItem(oldClientKey),
+        newOrg: localStorage.getItem(newOrgKey),
+        newClient: localStorage.getItem(newClientKey),
+      });
+
+      const typeShiClient = (allUserCls || []).find(c => 
+        (c.name?.toLowerCase().includes('type shi') || 
+        c.metadata?.business_name?.toLowerCase().includes('type shi')) &&
+        c.status?.toLowerCase() !== 'archived' &&
+        c.status?.toLowerCase() !== 'deleted'
+      );
+      if (typeShiClient) {
+        console.log('Found "type shi" client in DB:', typeShiClient);
+      } else {
+        console.log('"type shi" client NOT found in DB.');
+      }
+      console.log('========================');
 
       if (orgs && orgs.length > 0) {
-        const foundOrg = orgs.find(o => o.id === storedOrgId) || orgs[0];
-        setActiveOrgState(foundOrg);
-        console.log('useWorkspace: Active organization set to:', foundOrg.name);
+        let foundOrg = orgs.find(o => o.id === storedOrgId) || orgs[0];
 
-        // 4. Fetch Clients for active org
+        // 4. Fetch Clients for resolved org
         const { data: cls, error: clsError } = await supabase
           .from('clients')
           .select('*')
@@ -184,16 +225,55 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           console.error('useWorkspace: Error fetching clients:', clsError);
           throw clsError;
         }
-        
-        console.log('useWorkspace: Clients found for org:', cls?.length || 0);
-        setClients(cls || []);
 
-        if (cls && cls.length > 0) {
-          const foundClient = cls.find(c => c.id === storedClientId) || cls[0];
-          setActiveClientState(foundClient);
-          console.log('useWorkspace: Active client set to:', foundClient.name);
+        // Active clients are those not explicitly archived or deleted
+        const activeCls = (cls || []).filter(c => {
+          const status = c.status?.toLowerCase();
+          return status !== 'archived' && status !== 'deleted';
+        });
+        
+        console.log('useWorkspace: Active clients found for org:', activeCls?.length || 0);
+        setClients(activeCls);
+
+        let resolvedClient = activeCls.find(c => c.id === storedClientId);
+
+        // Auto-recovery / Select "type shi" if no valid client selection is stored and it exists
+        if (!resolvedClient && typeShiClient) {
+          const correspondingOrg = orgs.find(o => o.id === typeShiClient.organization_id);
+          if (correspondingOrg) {
+            foundOrg = correspondingOrg;
+            
+            // Re-fetch clients for type shi's org
+            const { data: tsCls } = await supabase
+              .from('clients')
+              .select('*')
+              .eq('organization_id', foundOrg.id)
+              .order('name');
+            
+            const activeTsCls = (tsCls || []).filter(c => {
+              const status = c.status?.toLowerCase();
+              return status !== 'archived' && status !== 'deleted';
+            });
+            setClients(activeTsCls);
+            resolvedClient = activeTsCls.find(c => c.id === typeShiClient.id) || typeShiClient;
+          }
+        }
+
+        // If no active client selected but activeCls exists, select the first one
+        if (!resolvedClient && activeCls.length > 0) {
+          resolvedClient = activeCls[0];
+        }
+
+        setActiveOrgState(foundOrg);
+        localStorage.setItem(newOrgKey, foundOrg.id);
+
+        if (resolvedClient) {
+          setActiveClientState(resolvedClient);
+          localStorage.setItem(newClientKey, resolvedClient.id);
+          console.log('useWorkspace: Resolved active client set to:', resolvedClient.name);
         } else {
           setActiveClientState(null);
+          localStorage.removeItem(newClientKey);
         }
       } else {
         console.log('useWorkspace: No organizations found for user');
@@ -210,8 +290,17 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [user]);
 
   useEffect(() => {
+    if (!user) {
+      setOrganizations([]);
+      setClients([]);
+      setActiveOrgState(null);
+      setActiveClientState(null);
+      setProfile(null);
+      setError(null);
+      return;
+    }
     fetchWorkspaces();
-  }, [fetchWorkspaces]);
+  }, [user, fetchWorkspaces]);
 
   const fetchClientsForOrg = async (orgId: string) => {
     try {
@@ -222,14 +311,24 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         .order('name');
       
       if (error) throw error;
-      setClients(data || []);
+      const activeCls = (data || []).filter(c => {
+        const status = c.status?.toLowerCase();
+        return status !== 'archived' && status !== 'deleted';
+      });
+      setClients(activeCls);
       
-      if (data && data.length > 0) {
-        const storedClientId = user ? localStorage.getItem(`kaeo_client_${user.id}`) : null;
-        const found = data.find(c => c.id === storedClientId) || data[0];
+      if (activeCls && activeCls.length > 0) {
+        const storedClientId = user ? localStorage.getItem(`kaeo:${user.id}:activeClientId`) : null;
+        const found = activeCls.find(c => c.id === storedClientId) || activeCls[0];
         setActiveClientState(found);
+        if (user) {
+          localStorage.setItem(`kaeo:${user.id}:activeClientId`, found.id);
+        }
       } else {
         setActiveClientState(null);
+        if (user) {
+          localStorage.removeItem(`kaeo:${user.id}:activeClientId`);
+        }
       }
     } catch (err) {
       console.error('Fetch clients error:', err);
@@ -239,7 +338,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const setActiveOrg = (org: Organization | null) => {
     setActiveOrgState(org);
     if (org && user) {
-      localStorage.setItem(`kaeo_org_${user.id}`, org.id);
+      localStorage.setItem(`kaeo:${user.id}:activeOrganizationId`, org.id);
       fetchClientsForOrg(org.id);
     }
   };
@@ -247,7 +346,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const setActiveClient = (client: Client | null) => {
     setActiveClientState(client);
     if (client && user) {
-      localStorage.setItem(`kaeo_client_${user.id}`, client.id);
+      localStorage.setItem(`kaeo:${user.id}:activeClientId`, client.id);
     }
   };
 
@@ -296,7 +395,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Refresh and select
       await fetchWorkspaces(true);
       setActiveOrgState(org);
-      localStorage.setItem(`kaeo_org_${user.id}`, org.id);
+      localStorage.setItem(`kaeo:${user.id}:activeOrganizationId`, org.id);
       
       return org;
     } catch (err: any) {
@@ -316,6 +415,26 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setError(null);
 
     try {
+      // Check if client/business with same name already exists under same organization
+      const { data: existingClient, error: checkError } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('organization_id', orgId)
+        .ilike('name', name.trim())
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('createClient: Error checking for existing client:', checkError);
+      }
+
+      if (existingClient) {
+        setActiveClientState(existingClient);
+        localStorage.setItem(`kaeo:${user.id}:activeClientId`, existingClient.id);
+        await fetchClientsForOrg(orgId);
+        toast('Business already exists. Switched to it.', 'success');
+        return existingClient;
+      }
+
       // 1. Enforce monthly client created limit
       const check = await checkUsageEventAllowed(orgId, 'client_created', 1);
       if (!check.allowed) {
@@ -355,7 +474,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       await fetchClientsForOrg(orgId);
       setActiveClientState(client);
-      localStorage.setItem(`kaeo_client_${user.id}`, client.id);
+      localStorage.setItem(`kaeo:${user.id}:activeClientId`, client.id);
       
       return client;
     } catch (err: any) {
@@ -451,11 +570,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       // 5. Update local storage selections
-      localStorage.setItem(`kaeo_org_${user.id}`, org.id);
+      localStorage.setItem(`kaeo:${user.id}:activeOrganizationId`, org.id);
       if (client) {
-        localStorage.setItem(`kaeo_client_${user.id}`, client.id);
+        localStorage.setItem(`kaeo:${user.id}:activeClientId`, client.id);
       } else {
-        localStorage.removeItem(`kaeo_client_${user.id}`);
+        localStorage.removeItem(`kaeo:${user.id}:activeClientId`);
       }
 
       // 6. Refresh state
