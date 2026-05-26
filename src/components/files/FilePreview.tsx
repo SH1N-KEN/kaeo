@@ -223,36 +223,82 @@ const FilePreview: React.FC<FilePreviewProps> = ({
               <div>
                 <h4 className="text-xs font-bold text-foreground">Import Preview Summary</h4>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Breakdown of detected rows based on the current column mapping.
+                  {result.metadata?.isHDFC 
+                    ? "Breakdown of HDFC bank statement transactions, merged continuation narrations, and balance verification."
+                    : "Breakdown of detected rows based on the current column mapping."
+                  }
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-              <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
-                <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Rows Detected</span>
-                <span className="text-base font-black text-foreground">{previewStats.totalDetected}</span>
+            {result.metadata?.isHDFC && result.metadata?.hdfcStats ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
+                  <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Transactions Detected</span>
+                  <span className="text-base font-black text-foreground">{result.metadata.hdfcStats.transactionsCount}</span>
+                </div>
+                <div className="bg-primary/5 p-3 rounded-xl border border-primary/15 text-center">
+                  <span className="text-[9px] text-primary/70 font-black uppercase tracking-wider block">Continuation Rows Merged</span>
+                  <span className="text-base font-black text-primary">{result.metadata.hdfcStats.continuationRowsMerged}</span>
+                </div>
+                <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
+                  <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Skipped Orphan Rows</span>
+                  <span className="text-base font-black text-foreground">{result.metadata.hdfcStats.orphanRowsSkipped}</span>
+                </div>
+                <div className={`p-3 rounded-xl text-center ${
+                  result.metadata.hdfcStats.balanceWarnings > 0
+                    ? 'bg-warning/10 border border-warning/20 text-warning'
+                    : 'bg-success/5 border border-success/15 text-success'
+                }`}>
+                  <span className="text-[9px] font-black uppercase tracking-wider block">Balance Warnings</span>
+                  <span className="text-base font-black">{result.metadata.hdfcStats.balanceWarnings}</span>
+                </div>
+                <div className="bg-success/5 p-3 rounded-xl border border-success/15 text-center">
+                  <span className="text-[9px] text-success/70 font-black uppercase tracking-wider block">Deposits</span>
+                  <span className="text-sm font-black text-success truncate block">
+                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(result.metadata.hdfcStats.totalDeposits)}
+                  </span>
+                </div>
+                <div className="bg-risk/5 p-3 rounded-xl border border-risk/15 text-center">
+                  <span className="text-[9px] text-risk/70 font-black uppercase tracking-wider block">Withdrawals</span>
+                  <span className="text-sm font-black text-risk truncate block">
+                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(result.metadata.hdfcStats.totalWithdrawals)}
+                  </span>
+                </div>
+                <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
+                  <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Net Cash</span>
+                  <span className={`text-sm font-black truncate block ${result.metadata.hdfcStats.netCashMovement >= 0 ? 'text-success' : 'text-risk'}`}>
+                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(result.metadata.hdfcStats.netCashMovement)}
+                  </span>
+                </div>
               </div>
-              <div className="bg-success/5 p-3 rounded-xl border border-success/15 text-center">
-                <span className="text-[9px] text-success/70 font-black uppercase tracking-wider block">Income Rows</span>
-                <span className="text-base font-black text-success">{previewStats.incomeRows}</span>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
+                  <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Rows Detected</span>
+                  <span className="text-base font-black text-foreground">{previewStats.totalDetected}</span>
+                </div>
+                <div className="bg-success/5 p-3 rounded-xl border border-success/15 text-center">
+                  <span className="text-[9px] text-success/70 font-black uppercase tracking-wider block">Income Rows</span>
+                  <span className="text-base font-black text-success">{previewStats.incomeRows}</span>
+                </div>
+                <div className="bg-risk/5 p-3 rounded-xl border border-risk/15 text-center">
+                  <span className="text-[9px] text-risk/70 font-black uppercase tracking-wider block">Expense Rows</span>
+                  <span className="text-base font-black text-risk">{previewStats.expenseRows}</span>
+                </div>
+                <div className="bg-teal-500/5 p-3 rounded-xl border border-teal-500/15 text-center">
+                  <span className="text-[9px] text-teal-400 font-black uppercase tracking-wider block">Refund Rows</span>
+                  <span className="text-base font-black text-teal-400">{previewStats.refundRows}</span>
+                </div>
+                <div className="bg-amber-500/5 p-3 rounded-xl border border-amber-500/15 text-center">
+                  <span className="text-[9px] text-amber-500/70 font-black uppercase tracking-wider block">Unknown Rows</span>
+                  <span className="text-base font-black text-amber-500">{previewStats.unknownRows}</span>
+                </div>
+                <div className="bg-primary/5 p-3 rounded-xl border border-primary/15 text-center flex flex-col justify-center">
+                  <span className="text-[9px] text-primary/70 font-black uppercase tracking-wider block">Recommended</span>
+                  <span className="text-[10px] font-black text-foreground truncate">{previewStats.recommendedAction}</span>
+                </div>
               </div>
-              <div className="bg-risk/5 p-3 rounded-xl border border-risk/15 text-center">
-                <span className="text-[9px] text-risk/70 font-black uppercase tracking-wider block">Expense Rows</span>
-                <span className="text-base font-black text-risk">{previewStats.expenseRows}</span>
-              </div>
-              <div className="bg-teal-500/5 p-3 rounded-xl border border-teal-500/15 text-center">
-                <span className="text-[9px] text-teal-400 font-black uppercase tracking-wider block">Refund Rows</span>
-                <span className="text-base font-black text-teal-400">{previewStats.refundRows}</span>
-              </div>
-              <div className="bg-amber-500/5 p-3 rounded-xl border border-amber-500/15 text-center">
-                <span className="text-[9px] text-amber-500/70 font-black uppercase tracking-wider block">Unknown Rows</span>
-                <span className="text-base font-black text-amber-500">{previewStats.unknownRows}</span>
-              </div>
-              <div className="bg-primary/5 p-3 rounded-xl border border-primary/15 text-center flex flex-col justify-center">
-                <span className="text-[9px] text-primary/70 font-black uppercase tracking-wider block">Recommended</span>
-                <span className="text-[10px] font-black text-foreground truncate">{previewStats.recommendedAction}</span>
-              </div>
-            </div>
+            )}
           </div>
         )}
 

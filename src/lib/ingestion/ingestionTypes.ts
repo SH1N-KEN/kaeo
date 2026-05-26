@@ -9,6 +9,8 @@ export interface ParsedSheet {
   detectedHeaderRow?: number;
   skippedRows?: number;
   isNonFinancial?: boolean;
+  isHDFC?: boolean;
+  hdfcStats?: any;
 }
 
 export interface ParsedFinancialFile {
@@ -31,6 +33,8 @@ export interface ParsedFinancialFile {
     skippedRows?: number;
     dateRange?: { start?: string; end?: string };
     currency?: string;
+    isHDFC?: boolean;
+    hdfcStats?: any;
   };
   
   // Backward compatibility fields (Optional in base type)

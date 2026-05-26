@@ -110,83 +110,236 @@ function inferTransactionType(desc, amount, rawType) {
   return 'unknown';
 }
 
+function isHDFCSheet(headers) {
+  const hdfcHeaders = ['Date', 'Narration', 'Chq./Ref.No.', 'Value Dt', 'Withdrawal Amt.', 'Deposit Amt.', 'Closing Balance'];
+  const normalized = headers.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
+  const normalizedHdfc = hdfcHeaders.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
+  return normalizedHdfc.every(h => normalized.includes(h));
+}
+
+function parseExcelSerialDate(serial) {
+  if (serial === null || serial === undefined || serial === '') return null;
+  if (serial instanceof Date) return serial.toISOString().split('T')[0];
+  const num = Number(serial);
+  if (!isNaN(num) && num > 0) {
+    const date = new Date(Math.round((num - 25569) * 86400 * 1000));
+    const yyyy = date.getUTCFullYear();
+    const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(date.getUTCDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return String(serial).trim();
+}
+
+function cleanHdfcAmount(val) {
+  if (val === null || val === undefined || val === '') return null;
+  if (typeof val === 'number') return val;
+  const cleanStr = String(val).replace(/,/g, '').trim();
+  if (cleanStr === '' || cleanStr === '-') return null;
+  const num = parseFloat(cleanStr);
+  return isNaN(num) ? null : num;
+}
+
 workbook.SheetNames.forEach(sheetName => {
-  console.log(`\n--- Sheet: ${sheetName} ---`);
   const sheet = workbook.Sheets[sheetName];
-  // use the frontend logic: { header: 1, defval: null }
-  const rawGrid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+  const displayGrid = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: null });
+  const rawGrid = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: null });
   if (!rawGrid || rawGrid.length === 0) return;
-  const { headerRowIndex, headers } = detectHeaderRow(rawGrid);
-  const mapping = suggestMappingFromColumns(headers);
 
-  let income = 0, expenses = 0, refunds = 0, txCount = 0, unknownCount = 0;
+  const { headerRowIndex, headers } = detectHeaderRow(displayGrid);
 
-  const dataGrid = rawGrid.slice(headerRowIndex + 1);
-  dataGrid.forEach((row, i) => {
-    const obj = {};
-    headers.forEach((h, idx) => obj[h] = row[idx]);
+  if (isHDFCSheet(headers)) {
+    const dateIdx = headers.indexOf('Date');
+    const narrationIdx = headers.indexOf('Narration');
+    const refIdx = headers.indexOf('Chq./Ref.No.');
+    const valueDtIdx = headers.indexOf('Value Dt');
+    const withdrawalIdx = headers.indexOf('Withdrawal Amt.');
+    const depositIdx = headers.indexOf('Deposit Amt.');
+    const balanceIdx = headers.indexOf('Closing Balance');
 
-    // Skip messy rows (simplified filter)
-    const hasValues = Object.values(obj).some(v => v !== null && v !== undefined && v.toString().trim() !== '');
-    if (!hasValues) return;
-    const isSummary = Object.values(obj).some(v => v && ['total', 'totals', 'opening balance', 'closing balance'].some(k => v.toString().toLowerCase().trim().startsWith(k)));
-    if (isSummary) return;
+    const cleanRows = [];
+    let skippedCount = 0;
+    let continuationRowsMerged = 0;
+    let orphanRowsSkipped = 0;
+    let blankRowsSkipped = 0;
+    let currentTx = null;
+    let orphanSkipped = false;
 
-    // Normalizer logic
-    let amount = 0, explicitExpense = false, explicitIncome = false;
-    let debitCol = mapping.debit, creditCol = mapping.credit;
+    const dataGrid = rawGrid.slice(headerRowIndex + 1);
+    const displayDataGrid = displayGrid.slice(headerRowIndex + 1);
 
-    if (debitCol || creditCol) {
-      let parsedDebit = 0, parsedCredit = 0, hasDebit = false, hasCredit = false;
-      if (debitCol && obj[debitCol] != null) {
-        let str = obj[debitCol].toString().trim();
-        if (str && str !== '-' && str !== '0' && str !== '0.00') {
-          const { amount: rawAmt } = cleanAmount(obj[debitCol]);
-          if (Math.abs(rawAmt) > 0) { parsedDebit = Math.abs(rawAmt); hasDebit = true; }
+    for (let r = 0; r < dataGrid.length; r++) {
+      const rawRow = dataGrid[r];
+      const displayRow = displayDataGrid[r];
+
+      if (!rawRow || rawRow.length === 0) {
+        blankRowsSkipped++;
+        skippedCount++;
+        continue;
+      }
+
+      const isBlank = rawRow.every(val => val === null || val === undefined || String(val).trim() === '');
+      if (isBlank) {
+        blankRowsSkipped++;
+        skippedCount++;
+        continue;
+      }
+
+      const rawDate = rawRow[dateIdx];
+      const rawNarration = rawRow[narrationIdx];
+      const rawRef = displayRow[refIdx];
+      const rawValueDt = rawRow[valueDtIdx];
+      const rawWithdrawal = rawRow[withdrawalIdx];
+      const rawDeposit = rawRow[depositIdx];
+      const rawBalance = rawRow[balanceIdx];
+
+      const hasDate = rawDate !== null && rawDate !== undefined && String(rawDate).trim() !== '';
+      const hasNarration = rawNarration !== null && rawNarration !== undefined && String(rawNarration).trim() !== '';
+      const hasWithdrawal = rawWithdrawal !== null && rawWithdrawal !== undefined && String(rawWithdrawal).trim() !== '' && cleanHdfcAmount(rawWithdrawal) !== null;
+      const hasDeposit = rawDeposit !== null && rawDeposit !== undefined && String(rawDeposit).trim() !== '' && cleanHdfcAmount(rawDeposit) !== null;
+      const hasBalance = rawBalance !== null && rawBalance !== undefined && String(rawBalance).trim() !== '' && cleanHdfcAmount(rawBalance) !== null;
+
+      const isTransactionStart = hasDate && hasNarration && (hasWithdrawal || hasDeposit || hasBalance);
+
+      if (isTransactionStart) {
+        const txDate = parseExcelSerialDate(rawDate);
+        const valDate = parseExcelSerialDate(rawValueDt);
+        const withdrawal = cleanHdfcAmount(rawWithdrawal) || 0;
+        const deposit = cleanHdfcAmount(rawDeposit) || 0;
+        const balance = cleanHdfcAmount(rawBalance) || 0;
+
+        currentTx = {
+          date: txDate,
+          narration: String(rawNarration).trim(),
+          reference: rawRef ? String(rawRef).trim() : '',
+          valueDate: valDate,
+          withdrawal,
+          deposit,
+          balance
+        };
+        cleanRows.push(currentTx);
+      } else {
+        const isContinuation = !hasDate && !hasWithdrawal && !hasDeposit && !hasBalance && hasNarration;
+        if (isContinuation) {
+          if (currentTx) {
+            const prev = currentTx.narration;
+            const next = String(rawNarration).trim();
+            const lastChar = prev.charAt(prev.length - 1);
+            const firstChar = next.charAt(0);
+            const isAlphanumeric = (ch) => /[a-zA-Z0-9]/.test(ch);
+            if (isAlphanumeric(lastChar) && isAlphanumeric(firstChar)) {
+              currentTx.narration = prev + next;
+            } else {
+              currentTx.narration = prev + ' ' + next;
+            }
+            continuationRowsMerged++;
+          } else {
+            orphanRowsSkipped++;
+            skippedCount++;
+          }
+        } else {
+          skippedCount++;
         }
       }
-      if (creditCol && obj[creditCol] != null) {
-        let str = obj[creditCol].toString().trim();
-        if (str && str !== '-' && str !== '0' && str !== '0.00') {
-          const { amount: rawAmt } = cleanAmount(obj[creditCol]);
-          if (Math.abs(rawAmt) > 0) { parsedCredit = Math.abs(rawAmt); hasCredit = true; }
-        }
+    }
+
+    let balanceWarnings = 0;
+    let prevBalance = null;
+    let totalDeposits = 0;
+    let totalWithdrawals = 0;
+
+    cleanRows.forEach((tx, idx) => {
+      totalDeposits += tx.deposit;
+      totalWithdrawals += tx.withdrawal;
+
+      if (idx === 0) {
+        prevBalance = tx.balance;
+        return;
       }
-      if (hasDebit && hasCredit) {
-        amount = parsedCredit - parsedDebit;
-        if (amount < 0) { explicitExpense = true; amount = -Math.abs(amount); }
-        else if (amount > 0) { explicitIncome = true; amount = Math.abs(amount); }
-      } else if (hasDebit) { amount = -parsedDebit; explicitExpense = true; }
-      else if (hasCredit) { amount = parsedCredit; explicitIncome = true; }
-    } else {
-      const { amount: parsedAmt, isExpense, isIncome } = cleanAmount(obj[mapping.amount]);
-      amount = parsedAmt; explicitExpense = isExpense; explicitIncome = isIncome;
-    }
+      
+      const expectedDelta = tx.deposit - tx.withdrawal;
+      const actualDelta = tx.balance - prevBalance;
+      const diff = Math.abs(expectedDelta - actualDelta);
+      if (diff > 0.02) {
+        balanceWarnings++;
+      }
+      prevBalance = tx.balance;
+    });
 
-    const desc = obj[mapping.description] || '';
-    let rawType = mapping.type ? obj[mapping.type] : undefined;
-    if (explicitExpense) rawType = 'debit';
-    if (explicitIncome) rawType = 'credit';
+    console.log(`Transactions: ${cleanRows.length}`);
+    console.log(`Deposits: ${totalDeposits.toFixed(2)}`);
+    console.log(`Withdrawals: ${totalWithdrawals.toFixed(2)}`);
+    console.log(`Net: ${(totalDeposits - totalWithdrawals).toFixed(2)}`);
+    console.log(`Continuation rows merged: ${continuationRowsMerged}`);
+    console.log(`Orphan rows skipped: ${orphanRowsSkipped}`);
+    console.log(`Balance mismatches: ${balanceWarnings}`);
+  } else {
+    console.log(`\n--- Sheet: ${sheetName} ---`);
+    const mapping = suggestMappingFromColumns(headers);
 
-    const type = inferTransactionType(desc, amount, rawType);
-    
-    if (type === 'income') income += amount;
-    else if (type === 'expense') expenses += Math.abs(amount);
-    else if (type === 'refund') refunds += amount;
-    else unknownCount++;
-    
-    txCount++;
+    let income = 0, expenses = 0, refunds = 0, txCount = 0, unknownCount = 0;
 
-    if (i < 5 || amount === 96 || amount === 43) {
-      console.log(`[row ${i}] desc: ${desc.substring(0,20)} | amt: ${amount} | type: ${type} | debitColRaw: ${obj[debitCol]} | creditColRaw: ${obj[creditCol]}`);
-    }
-  });
+    const dataGrid = rawGrid.slice(headerRowIndex + 1);
+    dataGrid.forEach((row, i) => {
+      const obj = {};
+      headers.forEach((h, idx) => obj[h] = row[idx]);
 
-  console.log(`Totals for ${sheetName}:`);
-  console.log(`  Revenue: ₹${income}`);
-  console.log(`  Refunds: ₹${refunds}`);
-  console.log(`  Expenses: ₹${expenses}`);
-  console.log(`  Net cash: ₹${income + refunds - expenses}`);
-  console.log(`  Transactions: ${txCount}`);
-  console.log(`  Unknown rows: ${unknownCount}`);
+      const hasValues = Object.values(obj).some(v => v !== null && v !== undefined && v.toString().trim() !== '');
+      if (!hasValues) return;
+      const isSummary = Object.values(obj).some(v => v && ['total', 'totals', 'opening balance', 'closing balance'].some(k => v.toString().toLowerCase().trim().startsWith(k)));
+      if (isSummary) return;
+
+      let amount = 0, explicitExpense = false, explicitIncome = false;
+      let debitCol = mapping.debit, creditCol = mapping.credit;
+
+      if (debitCol || creditCol) {
+        let parsedDebit = 0, parsedCredit = 0, hasDebit = false, hasCredit = false;
+        if (debitCol && obj[debitCol] != null) {
+          let str = obj[debitCol].toString().trim();
+          if (str && str !== '-' && str !== '0' && str !== '0.00') {
+            const { amount: rawAmt } = cleanAmount(obj[debitCol]);
+            if (Math.abs(rawAmt) > 0) { parsedDebit = Math.abs(rawAmt); hasDebit = true; }
+          }
+        }
+        if (creditCol && obj[creditCol] != null) {
+          let str = obj[creditCol].toString().trim();
+          if (str && str !== '-' && str !== '0' && str !== '0.00') {
+            const { amount: rawAmt } = cleanAmount(obj[creditCol]);
+            if (Math.abs(rawAmt) > 0) { parsedCredit = Math.abs(rawAmt); hasCredit = true; }
+          }
+        }
+        if (hasDebit && hasCredit) {
+          amount = parsedCredit - parsedDebit;
+          if (amount < 0) { explicitExpense = true; amount = -Math.abs(amount); }
+          else if (amount > 0) { explicitIncome = true; amount = Math.abs(amount); }
+        } else if (hasDebit) { amount = -parsedDebit; explicitExpense = true; }
+        else if (hasCredit) { amount = parsedCredit; explicitIncome = true; }
+      } else {
+        const { amount: parsedAmt, isExpense, isIncome } = cleanAmount(obj[mapping.amount]);
+        amount = parsedAmt; explicitExpense = isExpense; explicitIncome = isIncome;
+      }
+
+      const desc = obj[mapping.description] || '';
+      let rawType = mapping.type ? obj[mapping.type] : undefined;
+      if (explicitExpense) rawType = 'debit';
+      if (explicitIncome) rawType = 'credit';
+
+      const type = inferTransactionType(desc, amount, rawType);
+      
+      if (type === 'income') income += amount;
+      else if (type === 'expense') expenses += Math.abs(amount);
+      else if (type === 'refund') refunds += amount;
+      else unknownCount++;
+      
+      txCount++;
+    });
+
+    console.log(`Totals for ${sheetName}:`);
+    console.log(`  Revenue: ₹${income}`);
+    console.log(`  Refunds: ₹${refunds}`);
+    console.log(`  Expenses: ₹${expenses}`);
+    console.log(`  Net cash: ₹${income + refunds - expenses}`);
+    console.log(`  Transactions: ${txCount}`);
+    console.log(`  Unknown rows: ${unknownCount}`);
+  }
 });

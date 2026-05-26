@@ -461,14 +461,17 @@ const Files: React.FC = () => {
           return;
         }
         
-        const transactionsToInsert = dupReport.cleanTransactions.map(tx => ({
-          organization_id: activeOrg.id,
-          client_id: activeClient.id,
-          import_id: importData.id,
-          file_id: importData.file_id?.id,
-          source_sheet_name: parseResult.selectedSheetId || null,
-          ...tx
-        }));
+        const transactionsToInsert = dupReport.cleanTransactions.map(tx => {
+          const { metadata, valueDate, ...dbTx } = tx;
+          return {
+            organization_id: activeOrg.id,
+            client_id: activeClient.id,
+            import_id: importData.id,
+            file_id: importData.file_id?.id,
+            source_sheet_name: parseResult.selectedSheetId || null,
+            ...dbTx
+          };
+        });
 
         const { error: insertErr } = await supabase
           .from('transactions')

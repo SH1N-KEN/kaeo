@@ -197,6 +197,7 @@ export const normalizeIngestedRows = (
   const warnings: string[] = [];
   const transactions: any[] = [];
   let dateAmbiguityCount = 0;
+  let prevBalance: number | null = null;
 
   rows.forEach((row, index) => {
     // 1. Resolve date
@@ -314,8 +315,34 @@ export const normalizeIngestedRows = (
       : 1;
     const amountInBaseCurrency = convertToBaseCurrency(amount, originalCurrency, context.currency, exchangeRate);
 
+    // Map reference field if mapped
+    const refCol = mapping['reference'];
+    const reference = refCol && row[refCol] !== undefined && row[refCol] !== null ? String(row[refCol]).trim() : null;
+
+    // Resolve balance and check reconciliation
+    let balanceMismatch = false;
+    const balanceKey = Object.keys(row).find(k => k.toLowerCase().trim().replace(/[^a-z0-9]/g, '') === 'closingbalance');
+    if (balanceKey) {
+      const balanceVal = row[balanceKey];
+      if (balanceVal !== null && balanceVal !== undefined && balanceVal !== '') {
+        const cleanBal = typeof balanceVal === 'number' ? balanceVal : parseFloat(String(balanceVal).replace(/,/g, '').trim());
+        if (!isNaN(cleanBal)) {
+          if (prevBalance !== null) {
+            const expectedDelta = amount;
+            const actualDelta = cleanBal - prevBalance;
+            const diff = Math.abs(expectedDelta - actualDelta);
+            if (diff > 0.02) {
+              balanceMismatch = true;
+              warnings.push(`Row ${index + 1}: Balance movement does not match debit/credit amount.`);
+            }
+          }
+          prevBalance = cleanBal;
+        }
+      }
+    }
+
     // 6. Build standardized transaction schema
-    transactions.push({
+    const txObj: any = {
       transaction_date: date.toISOString(),
       description: rawDesc,
       amount: amount,
@@ -333,8 +360,25 @@ export const normalizeIngestedRows = (
       category: inferredCategory,
       counterparty_name: counterparty,
       source_provider: context.provider,
+      reference: reference,
       raw_row_json: row
-    });
+    };
+
+    if (balanceMismatch) {
+      txObj.review_status = 'needs_review';
+      txObj.raw_row_json = {
+        ...row,
+        metadata: {
+          ...(row && row.metadata),
+          balance_mismatch: true
+        }
+      };
+      if ('metadata' in txObj) {
+        txObj.metadata = { ...txObj.metadata, balance_mismatch: true };
+      }
+    }
+
+    transactions.push(txObj);
   });
 
   if (dateAmbiguityCount > 0) {
