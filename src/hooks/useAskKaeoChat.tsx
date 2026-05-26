@@ -194,6 +194,56 @@ export const AskKaeoChatProvider: React.FC<{ children: React.ReactNode }> = ({
         if (error) setDbError(true);
       }
 
+      // Intercept special queries
+      const lowerText = trimmed.toLowerCase();
+      if (lowerText.includes('add a new client') || lowerText.includes('add client') || lowerText.includes('add a client') || lowerText.includes('new client')) {
+        const content = "I can help you add a new client business workspace to Kaeo. Click the action button below to open the creation form.";
+        const asstMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content,
+          created_at: new Date().toISOString(),
+          source_json: { cta: 'open_add_client_business' }
+        };
+        setMessages((prev) => [...prev, asstMsg]);
+        if (threadId && !dbError) {
+          await supabase.from('chat_messages').insert({
+            organization_id: activeOrg.id,
+            client_id: activeClient.id,
+            thread_id: threadId,
+            role: 'assistant',
+            content,
+            source_json: { cta: 'open_add_client_business' }
+          });
+        }
+        setLoading(false);
+        return;
+      }
+
+      if (lowerText.includes('add another business') || lowerText.includes('add business') || lowerText.includes('add a business') || lowerText.includes('new business')) {
+        const content = "I can help you add another company or business profile to your workspace. Click the action button below to open the creation form.";
+        const asstMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content,
+          created_at: new Date().toISOString(),
+          source_json: { cta: 'open_add_business' }
+        };
+        setMessages((prev) => [...prev, asstMsg]);
+        if (threadId && !dbError) {
+          await supabase.from('chat_messages').insert({
+            organization_id: activeOrg.id,
+            client_id: activeClient.id,
+            thread_id: threadId,
+            role: 'assistant',
+            content,
+            source_json: { cta: 'open_add_business' }
+          });
+        }
+        setLoading(false);
+        return;
+      }
+
       // 5. Ask the engine
       try {
         const reply = await askKaeo(trimmed, activeClient.id, activeOrg.id);

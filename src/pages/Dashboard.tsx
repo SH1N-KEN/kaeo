@@ -52,7 +52,13 @@ interface ChartDataPoint {
 }
 
 const Dashboard: React.FC = () => {
-  const { activeClient } = useWorkspace();
+  const { 
+    activeClient,
+    accountMode,
+    setModalMode,
+    setClientToEdit,
+    setIsCreateModalOpen
+  } = useWorkspace();
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -192,6 +198,21 @@ const Dashboard: React.FC = () => {
   useWorkspaceRefresh(useCallback(() => {
     if (activeClient) fetchDashboardData();
   }, [activeClient]));
+
+  // Profile completion card checks
+  const needsProfileCompletion = !!activeClient && (
+    !activeClient.industry || 
+    !activeClient.metadata?.accounting_tools?.[0] || 
+    !activeClient.metadata?.monthly_spend_range
+  );
+  
+  const [isProfileCardDismissed, setIsProfileCardDismissed] = useState(true);
+  
+  useEffect(() => {
+    if (activeClient) {
+      setIsProfileCardDismissed(localStorage.getItem(`kaeo_profile_dismiss_${activeClient.id}`) === 'true');
+    }
+  }, [activeClient]);
 
   const fetchDashboardData = async () => {
     if (!activeClient) return;
@@ -472,13 +493,17 @@ const Dashboard: React.FC = () => {
 
   if (!activeClient) {
     return (
-      <div className="h-[70vh] flex items-center justify-center">
+      <div className="h-[70vh] flex items-center justify-center animate-in fade-in">
         <EmptyState 
-          title="Set up your business to start reviewing finances."
+          title="Add a business to start reviewing finances."
           description="Add your business details or select a workspace to begin."
           action={{
-            label: "Set up business",
-            onClick: () => navigate('/settings?tab=clients')
+            label: accountMode === 'business_owner' ? "Add business" : "Add client business",
+            onClick: () => {
+              setModalMode(accountMode === 'business_owner' ? 'create_business' : 'create_client_business');
+              setClientToEdit(null);
+              setIsCreateModalOpen(true);
+            }
           }}
         />
       </div>
@@ -553,6 +578,44 @@ const Dashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {needsProfileCompletion && !isProfileCardDismissed && (
+        <div className="p-4 bg-teal-500/5 border border-teal-500/20 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-top-2">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5 animate-pulse">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-foreground">Complete business profile</h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Kaeo and Libby can give better suggestions if you add industry, accounting tool, and spend range.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
+            <button
+              onClick={() => {
+                localStorage.setItem(`kaeo_profile_dismiss_${activeClient.id}`, 'true');
+                setIsProfileCardDismissed(true);
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground font-semibold px-2 py-1 transition-colors"
+            >
+              Dismiss
+            </button>
+            <button
+              onClick={() => {
+                setModalMode(accountMode === 'business_owner' ? 'edit_business' : 'edit_client_business');
+                setClientToEdit(activeClient);
+                setIsCreateModalOpen(true);
+              }}
+              className="px-3.5 py-1.5 bg-primary text-primary-foreground font-bold rounded-xl text-xs hover:opacity-90 transition-all shadow-md shadow-primary/10 cursor-pointer"
+            >
+              Complete profile
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Top Financial KPI Row — 5 cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">

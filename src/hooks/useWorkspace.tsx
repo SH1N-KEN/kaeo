@@ -52,6 +52,12 @@ interface WorkspaceContextType {
     clientMetadata?: any
   ) => Promise<void>;
   updateClientMetadata: (clientId: string, metadata: any) => Promise<void>;
+  isCreateModalOpen: boolean;
+  setIsCreateModalOpen: (open: boolean) => void;
+  modalMode: 'create_business' | 'edit_business' | 'create_client_business' | 'edit_client_business' | null;
+  setModalMode: (mode: 'create_business' | 'edit_business' | 'create_client_business' | 'edit_client_business' | null) => void;
+  clientToEdit: any | null;
+  setClientToEdit: (client: any | null) => void;
   refresh: () => Promise<void>;
 }
 
@@ -66,6 +72,10 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create_business' | 'edit_business' | 'create_client_business' | 'edit_client_business' | null>(null);
+  const [clientToEdit, setClientToEdit] = useState<any | null>(null);
 
   const fetchWorkspaces = useCallback(async (isRefresh = false) => {
     if (!user) {
@@ -501,6 +511,12 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       createClient,
       completeOnboarding,
       updateClientMetadata,
+      isCreateModalOpen,
+      setIsCreateModalOpen,
+      modalMode,
+      setModalMode,
+      clientToEdit,
+      setClientToEdit,
       refresh: () => fetchWorkspaces(true)
     }}>
       {children}

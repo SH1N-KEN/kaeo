@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Search,
   ArrowUpRight,
@@ -59,8 +59,14 @@ type AmountRange = 'all' | 'under_10k' | '10k_50k' | 'above_50k';
 type ReviewFilter = 'all' | 'pending' | 'new' | 'needs_review' | 'reviewed' | 'ignored' | 'resolved' | 'uncategorized' | 'unknown' | 'high_value' | 'ai_suggested';
 
 const Transactions: React.FC = () => {
-  const navigate = useNavigate();
-  const { activeClient, activeOrg } = useWorkspace();
+  const { 
+    activeClient, 
+    activeOrg,
+    accountMode,
+    setModalMode,
+    setClientToEdit,
+    setIsCreateModalOpen
+  } = useWorkspace();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -444,13 +450,17 @@ const Transactions: React.FC = () => {
 
   if (!activeClient || !activeOrg) {
     return (
-      <div className="h-[70vh] flex items-center justify-center">
+      <div className="h-[70vh] flex items-center justify-center animate-in fade-in">
         <EmptyState
-          title="Finish setup to start reviewing your finances."
+          title="Transactions appear after you add a business and upload files."
           description="Complete your business profile or select a workspace to view transactions ledger."
           action={{
-            label: "Complete setup",
-            onClick: () => navigate('/settings?tab=clients')
+            label: accountMode === 'business_owner' ? "Add business" : "Add client business",
+            onClick: () => {
+              setModalMode(accountMode === 'business_owner' ? 'create_business' : 'create_client_business');
+              setClientToEdit(null);
+              setIsCreateModalOpen(true);
+            }
           }}
         />
       </div>
@@ -685,22 +695,22 @@ const Transactions: React.FC = () => {
         </div>
       ) : transactions.length === 0 ? (
         /* No data at all */
-        <div className="bg-card border rounded-2xl p-16 text-center space-y-5">
+        <div className="bg-card border rounded-2xl p-16 text-center space-y-5 animate-in fade-in">
           <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto">
             <UploadCloud className="w-8 h-8 text-muted-foreground/50" />
           </div>
           <div>
-            <h3 className="text-lg font-black mb-1">Upload a CSV/XLSX statement to see transactions here.</h3>
+            <h3 className="text-lg font-black mb-1">Transactions appear after you upload statements.</h3>
             <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              Transactions will appear after you import a statement.
+              Please upload financial statements or invoices to get started.
             </p>
           </div>
           <Link
             to="/files"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:opacity-95 transition-all animate-pulse"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:opacity-95 transition-all"
           >
             <UploadCloud className="w-4 h-4" />
-            Go to Files
+            Upload Files
           </Link>
         </div>
       ) : sortedTransactions.length === 0 ? (

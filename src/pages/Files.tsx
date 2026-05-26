@@ -60,7 +60,14 @@ const getFriendlyInvoiceStatus = (status: string): string => {
 };
 
 const Files: React.FC = () => {
-  const { activeClient, activeOrg } = useWorkspace();
+  const { 
+    activeClient, 
+    activeOrg,
+    accountMode,
+    setModalMode,
+    setClientToEdit,
+    setIsCreateModalOpen
+  } = useWorkspace();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -714,13 +721,17 @@ const Files: React.FC = () => {
 
   if (!activeClient) {
     return (
-      <div className="h-[70vh] flex items-center justify-center">
+      <div className="h-[70vh] flex items-center justify-center animate-in fade-in">
         <EmptyState 
-          title="Set up your business before uploading files."
-          description="Add your business profile details or select a workspace to start importing files."
+          title="Add a business before uploading statements."
+          description="Add your business details or select a workspace to begin."
           action={{
-            label: "Set up business",
-            onClick: () => navigate('/settings?tab=clients')
+            label: accountMode === 'business_owner' ? "Add business" : "Add client business",
+            onClick: () => {
+              setModalMode(accountMode === 'business_owner' ? 'create_business' : 'create_client_business');
+              setClientToEdit(null);
+              setIsCreateModalOpen(true);
+            }
           }}
         />
       </div>

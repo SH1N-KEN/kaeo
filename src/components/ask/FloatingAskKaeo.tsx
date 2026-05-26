@@ -12,6 +12,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import aeLogo from '../../assets/kaeo-ae-logo.png';
 import { useAskKaeoChat } from '../../hooks/useAskKaeoChat';
+import { useWorkspace } from '../../hooks/useWorkspace';
+import { Plus } from 'lucide-react';
 
 const shortenMessage = (content: string, userQuery: string): string => {
   if (!content) return content;
@@ -93,6 +95,11 @@ const FloatingAskKaeo: React.FC = () => {
   const [input, setInput] = useState('');
   const { messages, loading, hasContext, sendMessage, clearMessages } =
     useAskKaeoChat();
+  const { 
+    setModalMode, 
+    setClientToEdit, 
+    setIsCreateModalOpen 
+  } = useWorkspace();
 
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -380,6 +387,38 @@ const FloatingAskKaeo: React.FC = () => {
                           >
                             <Sparkles className="w-3.5 h-3.5" />
                             Open AI Review
+                          </button>
+                        )}
+
+                        {/* Open Add Client Business CTA */}
+                        {msg.source_json?.cta === 'open_add_client_business' && (
+                          <button
+                            onClick={() => {
+                              setIsOpen(false);
+                              setModalMode('create_client_business');
+                              setClientToEdit(null);
+                              setIsCreateModalOpen(true);
+                            }}
+                            className="mt-3 px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-black text-[11px] font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Open Add Client Business
+                          </button>
+                        )}
+
+                        {/* Open Add Business CTA */}
+                        {msg.source_json?.cta === 'open_add_business' && (
+                          <button
+                            onClick={() => {
+                              setIsOpen(false);
+                              setModalMode('create_business');
+                              setClientToEdit(null);
+                              setIsCreateModalOpen(true);
+                            }}
+                            className="mt-3 px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-black text-[11px] font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Open Add Business
                           </button>
                         )}
 

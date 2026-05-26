@@ -21,7 +21,17 @@ import { supabase } from '../lib/supabase';
 type Tab = 'workspace' | 'clients' | 'spend-rules' | 'data' | 'integrations';
 
 const Settings: React.FC = () => {
-  const { activeClient, activeOrg, accountMode, clients, profile, refresh } = useWorkspace();
+  const { 
+    activeClient, 
+    activeOrg, 
+    accountMode, 
+    clients, 
+    profile, 
+    refresh,
+    setIsCreateModalOpen,
+    setModalMode,
+    setClientToEdit
+  } = useWorkspace();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -289,18 +299,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  const getPainLabel = (id: string) => {
-    switch (id) {
-      case 'duplicate_payments': return 'Duplicate Payments & Overdrafts';
-      case 'messy_statements': return 'Messy Bank Statements';
-      case 'vendor_overspend': return 'Software / Vendor Overspend';
-      case 'month_end_reports': return 'Month-End Readiness Reports';
-      case 'cashflow_visibility': return 'Real-time Cashflow Visibility';
-      case 'accountant_handoff': return 'Accountant Collaboration';
-      default: return id;
-    }
-  };
-
   const isBusinessOwner = accountMode === 'business_owner';
 
   return (
@@ -382,9 +380,6 @@ const Settings: React.FC = () => {
                     <div className="flex justify-between"><span className="text-muted-foreground">Industry:</span> <span className="font-semibold text-foreground">{activeClient.industry || '—'}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Accounting Tool:</span> <span className="font-semibold text-foreground">{activeClient.metadata?.accounting_tools?.[0] || '—'}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Monthly Spend Range:</span> <span className="font-semibold text-foreground">{getSpendDisplay(activeClient.metadata?.monthly_spend_range)}</span></div>
-                    {activeClient.metadata?.pain_points && activeClient.metadata.pain_points.length > 0 && (
-                      <div className="flex justify-between"><span className="text-muted-foreground">Main Pain:</span> <span className="font-semibold text-foreground truncate max-w-[180px]">{getPainLabel(activeClient.metadata.pain_points[0])}</span></div>
-                    )}
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground italic">Complete your business details profile.</p>
@@ -402,21 +397,76 @@ const Settings: React.FC = () => {
             <div className="pt-4 border-t border-border/10 flex flex-col space-y-2 mt-auto">
               <span className="text-[9.5px] text-muted-foreground leading-snug">
                 {isBusinessOwner
-                  ? 'Kaeo uses this context to categorize transactions, detect risks, and make Libby more specific.'
+                  ? 'Kaeo uses this context to personalize Libby suggestions and risk flags.'
                   : 'Manage accounting practice name, defaults, and details.'
                 }
               </span>
               <button
-                onClick={() => switchTab(isBusinessOwner ? 'clients' : 'workspace')}
+                onClick={() => {
+                  if (isBusinessOwner) {
+                    setModalMode('edit_business');
+                    setClientToEdit(activeClient);
+                    setIsCreateModalOpen(true);
+                  } else {
+                    switchTab('workspace');
+                  }
+                }}
                 className="px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all w-full cursor-pointer mt-2"
               >
-                {isBusinessOwner ? 'Edit Business Profile' : 'Edit Firm Profile'}
+                {isBusinessOwner ? 'Edit Profile' : 'Edit Firm Profile'}
               </button>
             </div>
           </div>
 
-          {/* Card 2: Client Businesses (Only for Accountant) */}
-          {!isBusinessOwner && (
+          {/* Card 2: Businesses (Business Owner) / Client Businesses (Accountant) */}
+          {isBusinessOwner ? (
+            <div className="premium-glass rounded-2xl border border-border/40 p-6 flex flex-col justify-between h-[300px] shadow-md hover:border-border/60 transition-all duration-300">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-border/10 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-teal-400" />
+                    <h3 className="text-sm font-bold text-foreground">Businesses</h3>
+                  </div>
+                  <span className="text-[10px] bg-teal-500/10 text-teal-400 px-2 py-0.5 rounded border border-teal-500/20 font-bold">
+                    {clients.length} Active
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1 custom-scrollbar">
+                  {clients.map((c: any) => (
+                    <div key={c.id} className={`flex justify-between items-center text-xs p-1.5 rounded-lg border ${activeClient?.id === c.id ? 'border-primary/45 bg-primary/5 text-foreground' : 'border-border/10 bg-white/5 text-muted-foreground'}`}>
+                      <span className="font-semibold truncate max-w-[150px]">{c.name}</span>
+                      <span className="text-[10px]">{c.industry || 'General'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-border/10 flex flex-col space-y-2 mt-auto">
+                <span className="text-[9.5px] text-muted-foreground leading-snug">
+                  Add and switch between multiple companies or business profiles.
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setModalMode('create_business');
+                      setClientToEdit(null);
+                      setIsCreateModalOpen(true);
+                    }}
+                    className="flex-1 px-3 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer font-semibold"
+                  >
+                    Add business
+                  </button>
+                  <button
+                    onClick={() => switchTab('clients')}
+                    className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    Manage
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
             <div className="premium-glass rounded-2xl border border-border/40 p-6 flex flex-col justify-between h-[300px] shadow-md hover:border-border/60 transition-all duration-300">
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-border/10 pb-2">
@@ -428,34 +478,34 @@ const Settings: React.FC = () => {
                     {clients.length} Active
                   </span>
                 </div>
-
-                <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1 custom-scrollbar">
-                  {clients.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic py-2">No client businesses added yet.</p>
-                  ) : (
-                    clients.slice(0, 3).map((c: any) => (
-                      <div key={c.id} className="flex justify-between items-center text-xs p-1.5 bg-white/5 rounded-lg border border-border/10">
-                        <span className="font-semibold text-foreground truncate max-w-[150px]">{c.name}</span>
-                        <span className="text-[10px] text-muted-foreground">{c.industry || 'General'}</span>
-                      </div>
-                    ))
-                  )}
-                  {clients.length > 3 && (
-                    <div className="text-[10px] text-muted-foreground font-semibold text-right">+ {clients.length - 3} more</div>
-                  )}
-                </div>
+                
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Add, edit, and switch between client businesses.
+                </p>
               </div>
 
               <div className="pt-4 border-t border-border/10 flex flex-col space-y-2 mt-auto">
                 <span className="text-[9.5px] text-muted-foreground leading-snug">
-                  Each client has separate uploads, transactions, risks, and reports.
+                  Each client business has isolated financial reports and transactions.
                 </span>
-                <button
-                  onClick={() => switchTab('clients')}
-                  className="px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all w-full cursor-pointer mt-2"
-                >
-                  Manage Client Businesses
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setModalMode('create_client_business');
+                      setClientToEdit(null);
+                      setIsCreateModalOpen(true);
+                    }}
+                    className="flex-1 px-3 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer font-semibold"
+                  >
+                    Add client business
+                  </button>
+                  <button
+                    onClick={() => switchTab('clients')}
+                    className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    Manage clients
+                  </button>
+                </div>
               </div>
             </div>
           )}

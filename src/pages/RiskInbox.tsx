@@ -51,7 +51,14 @@ const getFriendlyRiskType = (type: string): string => {
 const RiskInbox: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { activeClient, activeOrg } = useWorkspace();
+  const { 
+    activeClient, 
+    activeOrg,
+    accountMode,
+    setModalMode,
+    setClientToEdit,
+    setIsCreateModalOpen
+  } = useWorkspace();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
@@ -310,11 +317,15 @@ const RiskInbox: React.FC = () => {
     return (
       <div className="h-[70vh] flex items-center justify-center animate-in fade-in duration-500">
         <EmptyState 
-          title="Finish setup to start reviewing your finances." 
+          title="Risks appear after you upload data for a business." 
           description="Complete your business profile or select a workspace to inspect ledger anomalies and risks." 
           action={{
-            label: "Complete setup",
-            onClick: () => navigate('/settings?tab=clients')
+            label: accountMode === 'business_owner' ? "Add business" : "Add client business",
+            onClick: () => {
+              setModalMode(accountMode === 'business_owner' ? 'create_business' : 'create_client_business');
+              setClientToEdit(null);
+              setIsCreateModalOpen(true);
+            }
           }}
         />
       </div>
@@ -372,16 +383,22 @@ const RiskInbox: React.FC = () => {
           <p className="text-sm text-muted-foreground animate-pulse font-medium">Scanning ledger for anomalies...</p>
         </div>
       ) : txCount === 0 ? (
-        <div className="bg-card/30 border border-dashed border-border/60 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5">
+        <div className="bg-card/30 border border-dashed border-border/60 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5 animate-in fade-in">
           <div className="w-16 h-16 bg-muted/30 rounded-2xl flex items-center justify-center border border-border/50 text-muted-foreground/30">
             <Search className="w-8 h-8" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-xl font-bold tracking-tight">No data to scan</h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              Import transactions first to enable automated risk monitoring.
+            <h3 className="text-xl font-bold tracking-tight">Risks appear after you upload data for a business.</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              Please upload financial statements or invoices to run risk evaluation.
             </p>
           </div>
+          <button
+            onClick={() => navigate('/files')}
+            className="px-6 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-xs flex items-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-primary/10"
+          >
+            Upload files
+          </button>
         </div>
       ) : risks.length === 0 ? (
         <div className="bg-card/30 border border-dashed border-border/60 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5">

@@ -6,6 +6,8 @@ import FloatingAskKaeo from '../ask/FloatingAskKaeo';
 import { AskKaeoChatProvider } from '../../hooks/useAskKaeoChat';
 import { useWorkspace } from '../../hooks/useWorkspace';
 
+import CreateClientModal from '../ui/CreateClientModal';
+
 const AppShell: React.FC = () => {
   const { onboardingCompleted, loading: workspaceLoading, profile } = useWorkspace();
   const location = useLocation();
@@ -37,6 +39,7 @@ const AppShell: React.FC = () => {
         </div>
         <FloatingAskKaeo />
       </div>
+      <CreateClientModal />
     </AskKaeoChatProvider>
   );
 };
