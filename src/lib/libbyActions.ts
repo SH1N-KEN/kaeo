@@ -7,6 +7,9 @@ export interface LibbyAction {
   action_type: string;
   entity_type: string;
   entity_id?: string;
+  // Scope metadata — stamped at generation time so stale actions are detected immediately
+  client_id?: string;
+  organization_id?: string;
   title: string;
   description: string;
   proposed_changes: any;
@@ -55,6 +58,18 @@ export function saveStoredLibbyActions(clientId: string, actions: LibbyAction[])
   }
 }
 
+/**
+ * Clears all prepared Libby actions for a given client scope.
+ * Call this when the active client or org changes to avoid stale-scope rejections.
+ */
+export function clearLibbyActionsForClient(clientId: string): void {
+  try {
+    localStorage.removeItem(`${STORAGE_KEY}_${clientId}`);
+  } catch (err) {
+    console.error('Failed to clear Libby actions from storage:', err);
+  }
+}
+
 export function prepareLibbyAction(
   clientId: string,
   action: Omit<LibbyAction, 'id' | 'status' | 'created_at'>
@@ -99,6 +114,18 @@ export async function applyLibbyAction(
     return {
       success: false,
       message: `"${action.action_type}" is a recommendation only and cannot be auto-applied. Please review it manually.`
+    };
+  }
+
+  // Guard: scope mismatch check — stale action belongs to a different business
+  if (action.client_id && action.client_id !== clientId) {
+    // Mark as rejected so it doesn't accumulate
+    action.status = 'rejected';
+    actions[actionIdx] = action;
+    saveStoredLibbyActions(clientId, actions);
+    return {
+      success: false,
+      message: 'This suggestion belongs to a different business. Refresh Libby to get fresh suggestions.'
     };
   }
 
@@ -150,7 +177,7 @@ export async function applyLibbyAction(
       if (checkErr) throw checkErr;
       const validIds = (check || []).map((r: any) => r.id);
       if (validIds.length === 0) {
-        return { success: false, message: 'None of the target transactions belong to this workspace.' };
+        return { success: false, message: 'This suggestion is out of date or belongs to another business. Refresh Libby and try again.' };
       }
       const { error } = await supabase
         .from('transactions')
@@ -337,6 +364,8 @@ export async function getAvailableLibbyActionsForContext(
         id: `libby_cat_software_${clientId}`,
         action_type: 'categorize_bulk',
         entity_type: 'transaction',
+        client_id: clientId,
+        organization_id: orgId,
         title: isSingular ? `Categorize 1 SaaS payment` : `Categorize ${softwareList.length} SaaS payments`,
         description: isSingular 
           ? `Map 1 uncategorized SaaS transaction to Software / SaaS.` 
@@ -359,6 +388,8 @@ export async function getAvailableLibbyActionsForContext(
         id: `libby_cat_bulk_${clientId}`,
         action_type: 'categorize_bulk',
         entity_type: 'transaction',
+        client_id: clientId,
+        organization_id: orgId,
         title: isSingular ? `Categorize 1 transaction` : `Categorize ${uncategorized.length} transactions`,
         description: isSingular 
           ? `Define category for 1 uncategorized transaction.` 
@@ -390,6 +421,8 @@ export async function getAvailableLibbyActionsForContext(
       id: `libby_rev_bulk_${clientId}`,
       action_type: 'mark_reviewed_bulk',
       entity_type: 'transaction',
+      client_id: clientId,
+      organization_id: orgId,
       title: isSingular ? `Mark 1 low-risk transaction as reviewed` : `Mark ${unreviewedLowRisk.length} low-risk transactions as reviewed`,
       description: isSingular 
         ? `Approve and validate 1 fully-categorized transaction under ₹15,000.` 
@@ -415,6 +448,8 @@ export async function getAvailableLibbyActionsForContext(
       id: `libby_rule_highval_${clientId}`,
       action_type: 'update_spend_rule',
       entity_type: 'spend_rule',
+      client_id: clientId,
+      organization_id: orgId,
       title: `Update high-value threshold to ₹50,000`,
       description: `Tune high-value flag limit from ₹${currentThreshold.toLocaleString('en-IN')} to ₹50,000 to catch smaller outliers.`,
       proposed_changes: {
@@ -439,6 +474,8 @@ export async function getAvailableLibbyActionsForContext(
       id: `libby_resolve_duplicate_${duplicateRisks[0].id}`,
       action_type: 'resolve_risk',
       entity_type: 'risk',
+      client_id: clientId,
+      organization_id: orgId,
       title: `Review duplicate payment: ${duplicateRisks[0].title}`,
       description: `Verify and mark duplicate payment risk as resolved. Amount at risk: ₹${Number(duplicateRisks[0].amount_at_risk || 0).toLocaleString('en-IN')}.`,
       proposed_changes: {

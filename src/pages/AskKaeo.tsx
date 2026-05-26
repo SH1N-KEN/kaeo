@@ -12,6 +12,7 @@ import {
   getAvailableLibbyActionsForContext,
   applyLibbyAction,
   rejectLibbyAction,
+  clearLibbyActionsForClient,
   EXECUTABLE_ACTION_TYPES,
   type LibbyAction
 } from '../lib/libbyActions';
@@ -26,6 +27,8 @@ const AskKaeo = () => {
   const [preparedActions, setPreparedActions] = useState<LibbyAction[]>([]);
   
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
+  // Track previous client to clear stale actions on scope switch
+  const prevClientIdRef = useRef<string | null>(null);
 
   const loadPreparedActions = useCallback(async () => {
     if (activeClient?.id && activeOrg?.id) {
@@ -37,6 +40,24 @@ const AskKaeo = () => {
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  // Clear stale actions when the active client/org changes, then reload for new scope
+  useEffect(() => {
+    const newClientId = activeClient?.id ?? null;
+    const prevClientId = prevClientIdRef.current;
+
+    if (prevClientId && prevClientId !== newClientId) {
+      // Wipe stale actions that belonged to the old client
+      clearLibbyActionsForClient(prevClientId);
+      setPreparedActions([]);
+    }
+
+    prevClientIdRef.current = newClientId;
+
+    if (newClientId && activeOrg?.id) {
+      loadPreparedActions();
+    }
+  }, [activeClient?.id, activeOrg?.id]);
 
   useEffect(() => {
     loadPreparedActions();
@@ -66,8 +87,13 @@ const AskKaeo = () => {
       triggerWorkspaceRefresh('libby_action_applied');
       loadPreparedActions();
     } else {
-      // Keep action in pending state; show real error message
+      // Show the real error
       toast(result.message, 'error');
+      // If it's a scope mismatch, auto-refresh actions to clear stale suggestions
+      const isScopeMismatch = result.message.includes('another business') || result.message.includes('different business') || result.message.includes('out of date');
+      if (isScopeMismatch) {
+        loadPreparedActions();
+      }
     }
   };
 
