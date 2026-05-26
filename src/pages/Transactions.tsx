@@ -38,6 +38,7 @@ import { AIReviewQueueModal } from '../components/ai/AIReviewQueueModal';
 import { applyReviewSuggestion } from '../lib/reviewActions';
 import { Sparkles } from 'lucide-react';
 import { formatINR } from '../lib/formatters';
+import { useWorkspaceRefresh } from '../hooks/useWorkspaceRefresh';
 
 // ── Shared currency formatter ────────────────────────────────────────────────
 function formatCurrency(amount: number, _currencyCode: string = 'INR', forceSign: boolean = false): string {
@@ -180,6 +181,11 @@ const Transactions: React.FC = () => {
   useEffect(() => {
     if (activeClient) fetchTransactions();
   }, [activeClient]);
+
+  // Re-fetch when Libby applies a transaction action workspace-wide
+  useWorkspaceRefresh(useCallback(() => {
+    if (activeClient) fetchTransactions();
+  }, [activeClient]));
 
   const fetchTransactions = async () => {
     if (!activeClient) return;

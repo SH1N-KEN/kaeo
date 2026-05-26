@@ -18,6 +18,23 @@ export interface LibbyAction {
   example_item?: string;
 }
 
+export interface LibbyActionResult {
+  success: boolean;
+  message: string;
+  affectedCount?: number;
+}
+
+/**
+ * Action types that are fully wired to Supabase and can be executed.
+ * Anything outside this set should be shown as a recommendation only (no Approve button).
+ */
+export const EXECUTABLE_ACTION_TYPES = new Set([
+  'categorize_bulk',
+  'mark_reviewed_bulk',
+  'resolve_risk',
+  'update_spend_rule',
+]);
+
 const STORAGE_KEY = 'kaeo_libby_actions';
 
 export function getStoredLibbyActions(clientId: string): LibbyAction[] {
@@ -68,146 +85,176 @@ export async function applyLibbyAction(
   clientId: string,
   actionId: string,
   userId?: string
-): Promise<boolean> {
+): Promise<LibbyActionResult> {
   const actions = getStoredLibbyActions(clientId);
   const actionIdx = actions.findIndex(a => a.id === actionId);
-  if (actionIdx === -1) return false;
+  if (actionIdx === -1) {
+    return { success: false, message: 'Action not found. It may have already been applied or dismissed.' };
+  }
 
   const action = actions[actionIdx];
-  
+
+  // Guard: only allow executable action types
+  if (!EXECUTABLE_ACTION_TYPES.has(action.action_type)) {
+    return {
+      success: false,
+      message: `"${action.action_type}" is a recommendation only and cannot be auto-applied. Please review it manually.`
+    };
+  }
+
   try {
     const orgId = action.proposed_changes?.organization_id;
-    
+    let affectedCount = 0;
+
     // 1. Database execution based on action_type
     if (action.action_type === 'categorize_bulk') {
       const { ids, category } = action.proposed_changes;
-      if (ids && ids.length > 0) {
-        const { error } = await supabase
-          .from('transactions')
-          .update({ category })
-          .in('id', ids);
-        if (error) throw error;
-        
-        if (orgId) {
-          await trackAuditEvent(orgId, 'libby_action_applied', 'transaction' as any, ids[0], {
-            action_type: 'categorize_bulk',
-            entity_type: 'transaction',
-            proposed_changes: action.proposed_changes
-          });
-        }
+      if (!ids || ids.length === 0) {
+        return { success: false, message: 'No transaction IDs found in this action. It may be stale.' };
       }
-    } 
-    else if (action.action_type === 'mark_reviewed_bulk') {
-      const { ids } = action.proposed_changes;
-      if (ids && ids.length > 0) {
-        const { error } = await supabase
-          .from('transactions')
-          .update({
-            review_status: 'reviewed',
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: userId || null
-          })
-          .in('id', ids);
-        if (error) throw error;
-        
-        if (orgId) {
-          await trackAuditEvent(orgId, 'libby_action_applied', 'transaction' as any, ids[0], {
-            action_type: 'mark_reviewed_bulk',
-            entity_type: 'transaction',
-            proposed_changes: action.proposed_changes
-          });
-        }
+      // Validate records still belong to this client
+      const { data: check, error: checkErr } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('client_id', clientId)
+        .in('id', ids);
+      if (checkErr) throw checkErr;
+      const validIds = (check || []).map((r: any) => r.id);
+      if (validIds.length === 0) {
+        return { success: false, message: 'None of the target transactions belong to this workspace.' };
       }
-    }
-    else if (action.action_type === 'update_spend_rule') {
-      const { rule_type, threshold_amount, threshold_days, enabled } = action.proposed_changes;
+      const { error } = await supabase
+        .from('transactions')
+        .update({ category })
+        .in('id', validIds);
+      if (error) throw error;
+      affectedCount = validIds.length;
       if (orgId) {
-        // Find existing rule
-        const { data: existingRules } = await supabase
-          .from('spend_rules')
-          .select('*')
-          .eq('organization_id', orgId)
-          .eq('rule_type', rule_type);
-        
-        const ruleId = existingRules && existingRules.length > 0 ? existingRules[0].id : null;
-        
-        let error;
-        if (ruleId) {
-          const res = await supabase
-            .from('spend_rules')
-            .update({
-              enabled,
-              threshold_amount,
-              threshold_days,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', ruleId);
-          error = res.error;
-        } else {
-          const res = await supabase
-            .from('spend_rules')
-            .insert({
-              organization_id: orgId,
-              rule_type,
-              name: rule_type.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-              enabled,
-              threshold_amount,
-              threshold_days
-            });
-          error = res.error;
-        }
-        if (error) throw error;
-        
-        await trackAuditEvent(orgId, 'libby_action_applied', 'spend_rule' as any, undefined, {
-          action_type: 'update_spend_rule',
-          entity_type: 'spend_rule',
+        await trackAuditEvent(orgId, 'libby_action_applied', 'transaction' as any, validIds[0], {
+          action_type: 'categorize_bulk',
+          entity_type: 'transaction',
           proposed_changes: action.proposed_changes
         });
       }
     }
-    else if (action.action_type === 'resolve_risk') {
-      const { risk_id } = action.proposed_changes;
-      if (risk_id) {
-        const { error } = await supabase
-          .from('risk_events')
+    else if (action.action_type === 'mark_reviewed_bulk') {
+      const { ids } = action.proposed_changes;
+      if (!ids || ids.length === 0) {
+        return { success: false, message: 'No transaction IDs found in this action. It may be stale.' };
+      }
+      const { data: check, error: checkErr } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('client_id', clientId)
+        .in('id', ids);
+      if (checkErr) throw checkErr;
+      const validIds = (check || []).map((r: any) => r.id);
+      if (validIds.length === 0) {
+        return { success: false, message: 'None of the target transactions belong to this workspace.' };
+      }
+      const { error } = await supabase
+        .from('transactions')
+        .update({
+          review_status: 'reviewed',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: userId || null
+        })
+        .in('id', validIds);
+      if (error) throw error;
+      affectedCount = validIds.length;
+      if (orgId) {
+        await trackAuditEvent(orgId, 'libby_action_applied', 'transaction' as any, validIds[0], {
+          action_type: 'mark_reviewed_bulk',
+          entity_type: 'transaction',
+          proposed_changes: action.proposed_changes
+        });
+      }
+    }
+    else if (action.action_type === 'update_spend_rule') {
+      const { rule_type, threshold_amount, threshold_days, enabled } = action.proposed_changes;
+      if (!orgId) {
+        return { success: false, message: 'No organization context found for this action.' };
+      }
+      const { data: existingRules } = await supabase
+        .from('spend_rules')
+        .select('*')
+        .eq('organization_id', orgId)
+        .eq('rule_type', rule_type);
+      const ruleId = existingRules && existingRules.length > 0 ? existingRules[0].id : null;
+      let error;
+      if (ruleId) {
+        const res = await supabase
+          .from('spend_rules')
           .update({
-            status: 'resolved',
-            reviewed_by: userId || null,
-            reviewed_at: new Date().toISOString(),
+            enabled,
+            threshold_amount,
+            threshold_days,
             updated_at: new Date().toISOString()
           })
-          .eq('id', risk_id);
-        if (error) throw error;
-        
-        if (orgId) {
-          await trackAuditEvent(orgId, 'libby_action_applied', 'risk' as any, risk_id, {
-            action_type: 'resolve_risk',
-            entity_type: 'risk',
-            proposed_changes: action.proposed_changes
-          });
-        }
-      }
-    }
-    else if (action.action_type === 'save_vendor_note') {
-      const { note } = action.proposed_changes;
-      if (note) {
-        const { error } = await supabase
-          .from('notes')
+          .eq('id', ruleId);
+        error = res.error;
+      } else {
+        const res = await supabase
+          .from('spend_rules')
           .insert({
-            client_id: clientId,
-            note: `Libby Note (Vendor Review): ${note}`,
-            created_by: userId || null
+            organization_id: orgId,
+            rule_type,
+            name: rule_type.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+            enabled,
+            threshold_amount,
+            threshold_days
           });
-        if (error) throw error;
+        error = res.error;
+      }
+      if (error) throw error;
+      affectedCount = 1;
+      await trackAuditEvent(orgId, 'libby_action_applied', 'spend_rule' as any, undefined, {
+        action_type: 'update_spend_rule',
+        entity_type: 'spend_rule',
+        proposed_changes: action.proposed_changes
+      });
+    }
+    else if (action.action_type === 'resolve_risk') {
+      const { risk_id } = action.proposed_changes;
+      if (!risk_id) {
+        return { success: false, message: 'No risk ID found in this action.' };
+      }
+      // Validate risk belongs to this client
+      const { data: check, error: checkErr } = await supabase
+        .from('risk_events')
+        .select('id')
+        .eq('id', risk_id)
+        .eq('client_id', clientId);
+      if (checkErr) throw checkErr;
+      if (!check || check.length === 0) {
+        return { success: false, message: 'Risk event not found in this workspace.' };
+      }
+      const { error } = await supabase
+        .from('risk_events')
+        .update({
+          status: 'resolved',
+          reviewed_by: userId || null,
+          reviewed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', risk_id);
+      if (error) throw error;
+      affectedCount = 1;
+      if (orgId) {
+        await trackAuditEvent(orgId, 'libby_action_applied', 'risk' as any, risk_id, {
+          action_type: 'resolve_risk',
+          entity_type: 'risk',
+          proposed_changes: action.proposed_changes
+        });
       }
     }
-    
+
     // 2. Update local state status
     action.status = 'applied';
     actions[actionIdx] = action;
     saveStoredLibbyActions(clientId, actions);
-    
-    // 3. Track audit trail
+
+    // 3. Shared audit trail
     if (orgId) {
       await trackAuditEvent(orgId, 'libby_action_approved', 'libby_action' as any, action.id, {
         action_type: action.action_type,
@@ -215,13 +262,19 @@ export async function applyLibbyAction(
         risk_level: action.risk_level
       });
     }
-    return true;
-  } catch (err) {
-    console.error('Failed to apply Libby action:', err);
+
+    return {
+      success: true,
+      message: `Done. ${affectedCount > 0 ? `${affectedCount} record${affectedCount === 1 ? '' : 's'} updated.` : 'Changes applied.'}`,
+      affectedCount
+    };
+  } catch (err: any) {
+    console.error('[Libby] Action failed:', err);
     action.status = 'failed';
     actions[actionIdx] = action;
     saveStoredLibbyActions(clientId, actions);
-    return false;
+    const msg = err?.message || 'Something went wrong applying this action.';
+    return { success: false, message: msg };
   }
 }
 

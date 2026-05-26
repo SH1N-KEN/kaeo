@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   ShieldAlert, 
   AlertCircle, 
@@ -29,6 +29,7 @@ import { trackAuditEvent } from '../lib/auditEngine';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { applyReviewSuggestion } from '../lib/reviewActions';
 import { useToast } from '../hooks/useToast';
+import { useWorkspaceRefresh } from '../hooks/useWorkspaceRefresh';
 
 const getFriendlyRiskType = (type: string): string => {
   const mapping: Record<string, string> = {
@@ -102,6 +103,14 @@ const RiskInbox: React.FC = () => {
       fetchRisks();
     }
   }, [activeClient]);
+
+  // Re-fetch when Libby resolves a risk workspace-wide
+  useWorkspaceRefresh(useCallback(() => {
+    if (activeClient) {
+      fetchTxCount();
+      fetchRisks();
+    }
+  }, [activeClient]));
 
   const fetchTxCount = async () => {
     if (!activeClient) return;

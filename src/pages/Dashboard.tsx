@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   DollarSign, 
@@ -33,6 +33,7 @@ import { getSpendRules } from '../lib/spendRulesEngine';
 import { getTimeBasedGreeting } from '../lib/greeting';
 import { AIReviewQueueModal } from '../components/ai/AIReviewQueueModal';
 import { formatINR } from '../lib/formatters';
+import { useWorkspaceRefresh } from '../hooks/useWorkspaceRefresh';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -186,6 +187,11 @@ const Dashboard: React.FC = () => {
       fetchDashboardData();
     }
   }, [activeClient]);
+
+  // Re-fetch when Libby applies an action workspace-wide
+  useWorkspaceRefresh(useCallback(() => {
+    if (activeClient) fetchDashboardData();
+  }, [activeClient]));
 
   const fetchDashboardData = async () => {
     if (!activeClient) return;

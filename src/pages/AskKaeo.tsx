@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useAskKaeoChat } from '../hooks/useAskKaeoChat';
-import { Send, AlertCircle, User, Shield, Zap, Sparkles } from 'lucide-react';
+import { Send, AlertCircle, User, Shield, Zap, Sparkles, ExternalLink } from 'lucide-react';
 import EmptyState from '../components/ui/EmptyState';
 import aeLogo from '../assets/kaeo-ae-logo.png';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../components/auth/AuthProvider';
+import { useWorkspaceRefresh, triggerWorkspaceRefresh } from '../hooks/useWorkspaceRefresh';
 import {
   getAvailableLibbyActionsForContext,
   applyLibbyAction,
   rejectLibbyAction,
+  EXECUTABLE_ACTION_TYPES,
   type LibbyAction
 } from '../lib/libbyActions';
 
@@ -25,12 +27,12 @@ const AskKaeo = () => {
   
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
-  const loadPreparedActions = async () => {
+  const loadPreparedActions = useCallback(async () => {
     if (activeClient?.id && activeOrg?.id) {
       const acts = await getAvailableLibbyActionsForContext(activeClient.id, activeOrg.id);
       setPreparedActions(acts);
     }
-  };
+  }, [activeClient?.id, activeOrg?.id]);
 
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -38,7 +40,12 @@ const AskKaeo = () => {
 
   useEffect(() => {
     loadPreparedActions();
-  }, [activeClient?.id, activeOrg?.id, messages]);
+  }, [loadPreparedActions, messages]);
+
+  // Refresh prepared actions when a workspace-wide refresh is triggered
+  useWorkspaceRefresh(useCallback(() => {
+    loadPreparedActions();
+  }, [loadPreparedActions]));
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,12 +60,14 @@ const AskKaeo = () => {
 
   const handleExecuteAction = async (action: LibbyAction) => {
     if (!activeClient?.id) return;
-    const success = await applyLibbyAction(activeClient.id, action.id, user?.id || undefined);
-    if (success) {
-      toast("Libby applied approved change.", "success");
+    const result = await applyLibbyAction(activeClient.id, action.id, user?.id || undefined);
+    if (result.success) {
+      toast(result.message, 'success');
+      triggerWorkspaceRefresh('libby_action_applied');
       loadPreparedActions();
     } else {
-      toast("Failed to apply action.", "error");
+      // Keep action in pending state; show real error message
+      toast(result.message, 'error');
     }
   };
 
@@ -66,7 +75,7 @@ const AskKaeo = () => {
     if (!activeClient?.id) return;
     const success = await rejectLibbyAction(activeClient.id, actionId, user?.id || undefined);
     if (success) {
-      toast("Suggestion dismissed.", "success");
+      toast('Suggestion dismissed.', 'success');
       loadPreparedActions();
     }
   };
@@ -288,6 +297,7 @@ const AskKaeo = () => {
         ) : (
           <div className="space-y-3.5 animate-in fade-in duration-300">
             {preparedActions.map((act) => {
+              const isExecutable = EXECUTABLE_ACTION_TYPES.has(act.action_type);
               const isSafeOrLow = act.risk_level === 'safe' || act.risk_level === 'low';
               return (
                 <div key={act.id} className="p-4 bg-white/[0.01] border border-border/20 rounded-xl space-y-2.5 hover:border-border/40 transition-all flex flex-col justify-between">
@@ -323,42 +333,60 @@ const AskKaeo = () => {
                   </div>
                   
                   <div className="flex gap-2 pt-2 border-t border-border/10">
-                    {isSafeOrLow ? (
-                      <button
-                        onClick={() => handleExecuteAction(act)}
-                        className="flex-1 py-1.5 bg-primary hover:opacity-90 text-primary-foreground font-black rounded-lg text-[10px] transition-all cursor-pointer text-center"
-                      >
-                        Approve
-                      </button>
+                    {isExecutable ? (
+                      isSafeOrLow ? (
+                        <button
+                          onClick={() => handleExecuteAction(act)}
+                          className="flex-1 py-1.5 bg-primary hover:opacity-90 text-primary-foreground font-black rounded-lg text-[10px] transition-all cursor-pointer text-center"
+                        >
+                          Approve
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setActiveModalAction(act)}
+                          className="flex-1 py-1.5 bg-warning text-black hover:opacity-90 font-black rounded-lg text-[10px] transition-all cursor-pointer text-center"
+                        >
+                          Review
+                        </button>
+                      )
                     ) : (
+                      // Non-executable: show Open instead of Approve
                       <button
-                        onClick={() => setActiveModalAction(act)}
-                        className="flex-1 py-1.5 bg-warning text-black hover:opacity-90 font-black rounded-lg text-[10px] transition-all cursor-pointer text-center"
+                        onClick={() => {
+                          if (act.entity_type === 'transaction') navigate('/transactions');
+                          else if (act.entity_type === 'risk') navigate('/risk-inbox');
+                          else if (act.action_type === 'generate_accountant_pack') navigate('/reports');
+                          else navigate('/transactions');
+                        }}
+                        className="flex-1 py-1.5 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-lg text-[10px] transition-all cursor-pointer text-center border border-border/40 flex items-center justify-center gap-1"
                       >
-                        Review
+                        <ExternalLink className="w-2.5 h-2.5" />
+                        Open manually
                       </button>
                     )}
                     <button
                       onClick={() => handleRejectAction(act.id)}
                       className="flex-1 py-1.5 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-lg text-[10px] transition-all cursor-pointer text-center border border-border/40"
                     >
-                      Reject
+                      Dismiss
                     </button>
-                    <button
-                      onClick={() => {
-                        if (act.entity_type === 'transaction') {
-                          navigate(`/transactions?search=${act.entity_id || ''}`);
-                        } else if (act.entity_type === 'risk') {
-                          navigate(`/risk-inbox?search=${act.entity_id || ''}`);
-                        } else {
-                          navigate(`/transactions`);
-                        }
-                      }}
-                      className="px-2 py-1.5 bg-white/5 hover:bg-white/10 text-foreground font-bold rounded-lg text-[10px] transition-all cursor-pointer border border-border/40"
-                      title="Open details"
-                    >
-                      Open
-                    </button>
+                    {isExecutable && (
+                      <button
+                        onClick={() => {
+                          if (act.entity_type === 'transaction') {
+                            navigate(`/transactions?search=${act.entity_id || ''}`);
+                          } else if (act.entity_type === 'risk') {
+                            navigate(`/risk-inbox?search=${act.entity_id || ''}`);
+                          } else {
+                            navigate(`/transactions`);
+                          }
+                        }}
+                        className="px-2 py-1.5 bg-white/5 hover:bg-white/10 text-foreground font-bold rounded-lg text-[10px] transition-all cursor-pointer border border-border/40"
+                        title="Open details"
+                      >
+                        Open
+                      </button>
+                    )}
                   </div>
                 </div>
               );
