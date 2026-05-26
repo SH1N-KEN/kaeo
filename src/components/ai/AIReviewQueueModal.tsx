@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   Check,
-  CheckCircle2,
   Sparkles,
   TrendingUp,
   Loader2,
@@ -16,6 +15,7 @@ import {
 } from '../../lib/reviewActions';
 import { generateMonthEndReviewPlan, syncReviewSuggestions } from '../../lib/aiReviewEngine';
 import { useToast } from '../../hooks/useToast';
+import { useNavigate } from 'react-router-dom';
 
 interface AIReviewQueueModalProps {
   isOpen: boolean;
@@ -30,6 +30,7 @@ export const AIReviewQueueModal: React.FC<AIReviewQueueModalProps> = ({
 }) => {
   const { activeClient, activeOrg } = useWorkspace();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -125,9 +126,17 @@ export const AIReviewQueueModal: React.FC<AIReviewQueueModalProps> = ({
           toast('No safe auto-categorization suggestions found', 'info');
           return;
         }
+        const confirmBulk = window.confirm(
+          `Are you sure you want to approve and apply all ${safeSugs.length} safe auto-categorization suggestions?\n\nThis will automatically update matching transaction categories. This action cannot be undone.`
+        );
+        if (!confirmBulk) return;
         await applyReviewSuggestionsBulk(safeSugs, 'approved', user?.id);
         toast(`Approved and applied ${safeSugs.length} safe suggestions`, 'success');
       } else if (mode === 'reject_all') {
+        const confirmBulk = window.confirm(
+          `Are you sure you want to reject and clear all ${suggestions.length} pending suggestions?\n\nThis will remove them from the AI review list. This action cannot be undone.`
+        );
+        if (!confirmBulk) return;
         await applyReviewSuggestionsBulk(suggestions, 'rejected', user?.id);
         toast('Rejected all pending suggestions', 'success');
       }
@@ -153,8 +162,8 @@ export const AIReviewQueueModal: React.FC<AIReviewQueueModalProps> = ({
               <Sparkles className="w-5 h-5 text-teal-400" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-foreground">AI Review Suggestions Queue</h2>
-              <p className="text-xs text-muted-foreground">Human-in-the-loop: inspect and approve Kaeo's suggestions</p>
+              <h2 className="text-lg font-bold text-foreground">AI Review Suggestions</h2>
+              <p className="text-xs text-muted-foreground">Kaeo can prepare suggested categories and review actions. You approve before anything changes.</p>
             </div>
           </div>
           <button
@@ -204,14 +213,22 @@ export const AIReviewQueueModal: React.FC<AIReviewQueueModalProps> = ({
             </div>
           ) : suggestions.length === 0 ? (
             <div className="h-64 flex flex-col items-center justify-center text-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center text-success">
-                <CheckCircle2 className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-400">
+                <Sparkles className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h3 className="text-base font-bold">No pending review suggestions</h3>
+                <h3 className="text-base font-bold">No AI suggestions yet</h3>
                 <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-                  Your ledger is clean! All transactions, risks, and vendor categories are fully reconciled.
+                  Kaeo can prepare suggested categories and review actions. You approve before anything changes.
                 </p>
+                <button
+                  onClick={loadData}
+                  disabled={loading}
+                  className="mt-4 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:opacity-90 transition-colors flex items-center gap-1.5 mx-auto cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Prepare suggestions
+                </button>
               </div>
             </div>
           ) : (
@@ -252,21 +269,39 @@ export const AIReviewQueueModal: React.FC<AIReviewQueueModalProps> = ({
                         )}
                       </div>
                       <div className="text-xs text-foreground font-semibold leading-relaxed">
-                        Proposed:{' '}
+                        <span className="text-muted-foreground mr-1">Kaeo Suggests:</span>
                         <code className="bg-white/5 border border-border/40 px-1.5 py-0.5 rounded font-mono font-bold text-teal-400">
-                          {JSON.stringify(sug.proposed_value)}
+                          {typeof sug.proposed_value === 'object' && sug.proposed_value !== null
+                            ? sug.proposed_value.category || JSON.stringify(sug.proposed_value)
+                            : String(sug.proposed_value)}
                         </code>
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed font-medium">
-                        {sug.reason}
+                        <span className="text-foreground/70 font-semibold">Why:</span> {sug.reason}
                       </p>
                     </div>
 
                     <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                       <button
+                        onClick={() => {
+                          onClose();
+                          if (sug.entity_type === 'transaction') {
+                            navigate(`/transactions?search=${sug.entity_id || ''}`);
+                          } else if (sug.entity_type === 'risk') {
+                            navigate(`/risk-inbox?search=${sug.entity_id || ''}`);
+                          } else {
+                            navigate(`/transactions`);
+                          }
+                        }}
+                        className="px-2.5 py-1.5 bg-muted hover:bg-muted/80 text-foreground font-bold rounded-xl text-[10px] transition-colors border border-border/40 shrink-0 cursor-pointer inline-flex items-center gap-1"
+                        title="Open item details"
+                      >
+                        Open item
+                      </button>
+                      <button
                         onClick={() => handleAction(sug, 'approved')}
                         disabled={processingId !== null}
-                        className="w-8 h-8 rounded-lg bg-success/15 hover:bg-success text-success hover:text-black flex items-center justify-center transition-all cursor-pointer border border-success/25 hover:border-transparent"
+                        className="w-8 h-8 rounded-lg bg-success/15 hover:bg-success text-success hover:text-black flex items-center justify-center transition-all cursor-pointer border border-success/25 hover:border-transparent shrink-0"
                         title="Approve suggestion"
                       >
                         <Check className="w-4 h-4" />
@@ -274,7 +309,7 @@ export const AIReviewQueueModal: React.FC<AIReviewQueueModalProps> = ({
                       <button
                         onClick={() => handleAction(sug, 'rejected')}
                         disabled={processingId !== null}
-                        className="w-8 h-8 rounded-lg bg-risk/15 hover:bg-risk text-risk hover:text-white flex items-center justify-center transition-all cursor-pointer border border-risk/25 hover:border-transparent"
+                        className="w-8 h-8 rounded-lg bg-risk/15 hover:bg-risk text-risk hover:text-white flex items-center justify-center transition-all cursor-pointer border border-risk/25 hover:border-transparent shrink-0"
                         title="Reject suggestion"
                       >
                         <X className="w-4 h-4" />

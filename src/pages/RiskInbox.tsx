@@ -30,6 +30,23 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { applyReviewSuggestion } from '../lib/reviewActions';
 import { useToast } from '../hooks/useToast';
 
+const getFriendlyRiskType = (type: string): string => {
+  const mapping: Record<string, string> = {
+    duplicate_payment: 'Duplicate payment',
+    duplicate: 'Duplicate payment',
+    high_value_payment: 'High-value payment',
+    high_value: 'High-value payment',
+    uncategorized_transaction: 'Uncategorized transaction',
+    missing_invoice: 'Missing invoice',
+    invoice_payment_mismatch: 'Invoice mismatch',
+    invoice_mismatch: 'Invoice mismatch',
+    unknown_vendor: 'Unknown vendor',
+    recurring_spend: 'Recurring spend',
+    recurring: 'Recurring spend'
+  };
+  return mapping[type.toLowerCase()] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
+
 const RiskInbox: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -303,7 +320,7 @@ const RiskInbox: React.FC = () => {
             <h1 className="text-3xl font-bold tracking-tight">Risk Inbox</h1>
             <div className="px-2 py-0.5 bg-risk/10 text-risk text-[10px] font-black rounded border border-risk/20 uppercase tracking-tighter">Monitoring Active</div>
           </div>
-          <p className="text-sm text-muted-foreground">Automated financial anomaly detection for <span className="text-foreground font-semibold">{activeClient.name}</span></p>
+          <p className="text-sm text-muted-foreground">Review duplicate payments, risky vendors, uncategorized rows, and month-end blockers for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
         </div>
         
         <div className="flex items-center gap-3">
@@ -363,9 +380,9 @@ const RiskInbox: React.FC = () => {
             <CheckCircle2 className="w-8 h-8" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-xl font-bold tracking-tight text-success/80">Clean Ledger</h3>
+            <h3 className="text-xl font-bold tracking-tight text-success/80">No open risks right now.</h3>
             <p className="text-sm text-muted-foreground max-w-sm">
-              No financial risks detected in the latest scan of {txCount} transactions.
+              New risks will appear here after uploads or rule checks.
             </p>
           </div>
         </div>
@@ -435,7 +452,7 @@ const RiskInbox: React.FC = () => {
                           </div>
                           <div className="text-right">
                             <p className="text-lg font-black text-risk">{formatCurrency(risk.amount_at_risk)}</p>
-                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{risk.risk_type.replace(/_/g, ' ')}</p>
+                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{getFriendlyRiskType(risk.risk_type)}</p>
                           </div>
                         </div>
 
@@ -552,7 +569,7 @@ const RiskInbox: React.FC = () => {
                     <div className="p-6 space-y-6">
                       <div className="space-y-3">
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Risk Status</h4>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           <button 
                             onClick={() => updateStatus(selectedRisk.id, 'resolved')}
                             className={`px-3 py-2 rounded-lg text-[10px] font-bold border transition-all ${selectedRisk.status === 'resolved' ? 'bg-primary/10 border-primary/40 text-primary' : 'bg-muted/50 border-border hover:border-primary/30 text-muted-foreground'}`}
@@ -571,19 +588,50 @@ const RiskInbox: React.FC = () => {
                           >
                             Ignore
                           </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 pt-4 border-t border-border/30">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Action Links</h4>
+                        <div className="flex flex-col gap-2">
                           <button 
                             onClick={() => {
-                              // If it has a related vendor name, go to vendors, else transactions
-                              if (selectedRisk.evidence_json?.vendor_name) {
-                                navigate('/vendors');
+                              const txId = selectedRisk.evidence_json?.transaction_id || selectedRisk.evidence_json?.tx_id;
+                              if (txId) {
+                                navigate(`/transactions?search=${txId}`);
                               } else {
-                                navigate('/transactions');
+                                navigate(`/transactions?search=${encodeURIComponent(selectedRisk.title || '')}`);
                               }
                             }}
-                            className={`px-3 py-2 rounded-lg text-[10px] font-bold border transition-all bg-muted/50 border-border hover:border-border text-muted-foreground`}
+                            className="px-3 py-2 rounded-lg text-[10px] font-bold border bg-white/5 border-border/40 hover:border-primary/40 text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
                           >
-                            View Details
+                            <span>Open Transaction</span>
+                            <ArrowRight className="w-3 h-3 text-muted-foreground" />
                           </button>
+
+                          {selectedRisk.evidence_json?.vendor_name && (
+                            <button 
+                              onClick={() => {
+                                navigate(`/vendors?search=${encodeURIComponent(selectedRisk.evidence_json.vendor_name)}`);
+                              }}
+                              className="px-3 py-2 rounded-lg text-[10px] font-bold border bg-white/5 border-border/40 hover:border-primary/40 text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
+                            >
+                              <span>Open Vendor</span>
+                              <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                            </button>
+                          )}
+
+                          {(selectedRisk.risk_type.includes('invoice') || selectedRisk.evidence_json?.invoice_id) && (
+                            <button 
+                              onClick={() => {
+                                navigate('/files?tab=invoices');
+                              }}
+                              className="px-3 py-2 rounded-lg text-[10px] font-bold border bg-white/5 border-border/40 hover:border-primary/40 text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
+                            >
+                              <span>Review Invoice</span>
+                              <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                            </button>
+                          )}
                         </div>
                       </div>
 

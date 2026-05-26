@@ -217,6 +217,37 @@ const FloatingAskKaeo: React.FC = () => {
                     Go to Files
                   </button>
                 </div>
+              ) : messages.length === 0 ? (
+                <div className="flex flex-col justify-center py-4 px-1 gap-3">
+                  <div className="text-center mb-1">
+                    <p className="text-xs font-bold text-foreground mb-0.5">
+                      Ask Kaeo CFO Advisor
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Choose a quick question below or type your own query.
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    {[
+                      "What should I fix first?",
+                      "Which vendors look risky?",
+                      "Are we ready for month-end?",
+                      "What changed after my latest upload?",
+                      "What should I send my accountant?"
+                    ].map((query, idx) => (
+                      <button
+                        key={idx}
+                        onClick={async () => {
+                          await sendMessage(query);
+                        }}
+                        className="w-full text-left px-3 py-2 bg-card hover:bg-white/5 text-foreground font-semibold rounded-xl border border-border/50 hover:border-teal-500/30 text-xs transition-all cursor-pointer flex items-center justify-between group"
+                      >
+                        <span className="truncate pr-2">{query}</span>
+                        <Sparkles className="w-3 h-3 text-muted-foreground group-hover:text-teal-400 transition-colors shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ) : (
                 messages.map((msg) => {
                   const isUser = msg.role === 'user';

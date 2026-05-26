@@ -571,15 +571,15 @@ const Billing: React.FC = () => {
                     <button 
                       onClick={() => handleUpgrade(plan.id)}
                       disabled={upgradingPlanId !== null}
-                      className="w-full text-center py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-xl text-xs uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2"
+                      className="w-full text-center py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-xl text-xs uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {upgradingPlanId === plan.id ? (
                         <>
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Processing...</span>
+                          <span>Continuing to payment...</span>
                         </>
                       ) : (
-                        <span>Upgrade to {plan.name}</span>
+                        <span>Continue to payment</span>
                       )}
                     </button>
                   )}

@@ -3,13 +3,20 @@ import { supabase } from '../lib/supabase';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { generateCFOReport, formatReportCurrency } from '../lib/reportEngine';
-import { FileText, Plus, AlertCircle, Eye, Calendar, ShieldAlert, Loader2, Zap, DownloadCloud } from 'lucide-react';
+import { FileText, Plus, AlertCircle, CheckCircle2, Eye, Calendar, ShieldAlert, Loader2, Zap, DownloadCloud } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import { trackUsageEvent } from '../lib/billing';
 import { checkUsageEventAllowed } from '../lib/billingGuards';
 import EmptyState from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
 import { generateMonthEndReviewPlan } from '../lib/aiReviewEngine';
+import StatusBadge from '../components/ui/StatusBadge';
+
+const getReportStatus = (rep: any) => {
+  if (rep.summary_json?.openRisksCount > 0) return 'needs_review';
+  if (rep.summary_json?.readinessScore >= 90 || !rep.summary_json?.openRisksCount) return 'ready';
+  return 'draft';
+};
 
 export default function Reports() {
   const { activeOrg, activeClient } = useWorkspace();
@@ -242,36 +249,96 @@ export default function Reports() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
-      {readinessPlan && readinessPlan.totalCount > 0 && (
-        <div className="bg-teal-500/10 border border-teal-500/20 rounded-2xl p-5 flex items-center justify-between gap-4 animate-in fade-in duration-300">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-center text-teal-400 shrink-0">
-              <Zap className="w-5 h-5 animate-pulse" />
-            </div>
+    <div className="space-y-6 max-w-5xl mx-auto pb-12 animate-in fade-in duration-500">
+      {/* Month-End Readiness Checklist and Optimizer */}
+      {readinessPlan && (
+        <div className="premium-glass rounded-2xl p-6 border border-border/20 shadow-xl space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/15">
             <div>
-              <h3 className="text-sm font-bold text-foreground">Month-End Readiness Optimizer</h3>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed font-medium">
-                Approve <strong className="text-teal-400">{readinessPlan.safeCount} safe suggestions</strong> to move readiness from{' '}
-                <strong className="text-risk">{readinessPlan.currentScore}%</strong> to approximately{' '}
-                <strong className="text-success">{readinessPlan.projectedScore}%</strong> (estimated projection).
-              </p>
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-teal-400" />
+                Month-End Readiness Checklist
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5 font-medium">Your current ledger readiness score is {readinessPlan.currentScore}%.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {readinessPlan.safeCount > 0 && (
+                <button
+                  onClick={() => navigate('/transactions?review_status=ai_suggested')}
+                  className="px-3.5 py-1.5 bg-teal-500 hover:bg-teal-400 text-black text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  Auto-optimize (+{readinessPlan.projectedScore - readinessPlan.currentScore}%)
+                </button>
+              )}
+              <span className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider ${
+                readinessPlan.currentScore >= 90 
+                  ? 'bg-success/10 text-success border border-success/20' 
+                  : 'bg-risk/10 text-risk border border-risk/20'
+              }`}>
+                {readinessPlan.currentScore >= 90 ? 'Ledger Ready' : 'Blockers Outstanding'}
+              </span>
             </div>
           </div>
-          <button
-            onClick={() => navigate('/transactions?review_status=ai_suggested')}
-            className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-xs font-bold rounded-xl transition-colors cursor-pointer shrink-0"
-          >
-            Optimize Readiness
-          </button>
+
+          {readinessPlan.currentScore < 90 && readinessPlan.checklist && readinessPlan.checklist.length > 0 ? (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground font-medium">
+                Resolve the following outstanding blockers to clean up your books and export a finalized Accountant Pack:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {readinessPlan.checklist.map((item: string, idx: number) => {
+                  let linkPath = '/transactions';
+                  let linkText = 'Go to Transactions';
+                  if (item.toLowerCase().includes('risk')) {
+                    linkPath = '/risk-inbox';
+                    linkText = 'Resolve Risks';
+                  } else if (item.toLowerCase().includes('unknown')) {
+                    linkPath = '/transactions?type=unknown';
+                    linkText = 'Identify Types';
+                  } else if (item.toLowerCase().includes('categorize')) {
+                    linkPath = '/transactions?category=uncategorized';
+                    linkText = 'Categorize';
+                  } else if (item.toLowerCase().includes('pending')) {
+                    linkPath = '/transactions?review_status=needs_review';
+                    linkText = 'Review Ledger';
+                  }
+
+                  return (
+                    <div key={idx} className="p-3 bg-risk/5 border border-risk/10 rounded-xl flex items-center justify-between gap-3">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <AlertCircle className="w-4 h-4 text-risk shrink-0 mt-0.5 animate-pulse" />
+                        <span className="text-xs font-semibold text-foreground/90 leading-tight truncate">{item}</span>
+                      </div>
+                      <button
+                        onClick={() => navigate(linkPath)}
+                        className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-foreground font-bold rounded-lg text-[10px] transition-colors border border-border/30 shrink-0 cursor-pointer"
+                      >
+                        {linkText}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 bg-success/5 border border-success/15 rounded-xl flex gap-3 items-center">
+              <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
+              <p className="text-xs text-success font-semibold">Your ledger has no unresolved issues or critical blockers. Generated Accountant Packs are ready for export.</p>
+            </div>
+          )}
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pt-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
-          <p className="text-muted-foreground mt-1">
-            Accountant-ready CFO outputs for {activeClient.name}
+          <p className="text-sm text-muted-foreground mt-1">
+            Export clean summaries for your accountant or finance review for {activeClient.name}.
+          </p>
+          <p className="text-xs text-muted-foreground/80 mt-1">
+            <strong>Accountant Pack:</strong> Includes cleaned transactions, vendor summary, risk summary, and month-end readiness.
           </p>
         </div>
         <div className="flex gap-2">
@@ -310,7 +377,7 @@ export default function Reports() {
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.setAttribute('href', url);
-                link.setAttribute('download', `kaeo_accountant_pack_${activeClient.name.replace(/\\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+                link.setAttribute('download', `kaeo_accountant_pack_${activeClient.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -333,7 +400,7 @@ export default function Reports() {
               }
             }}
             disabled={transactionCount === 0}
-            className="bg-muted text-foreground px-4 py-2 rounded-md font-medium flex items-center hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-border"
+            className="bg-muted text-foreground px-4 py-2.5 rounded-xl font-bold text-xs flex items-center hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-border cursor-pointer"
           >
             <DownloadCloud className="h-4 w-4 mr-2" />
             Accountant Pack (CSV)
@@ -341,14 +408,14 @@ export default function Reports() {
           <button
             onClick={handleGenerateReport}
             disabled={generating || transactionCount === 0}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium flex items-center hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="bg-primary text-primary-foreground px-4 py-2.5 rounded-xl font-bold text-xs flex items-center hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
             {generating ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Plus className="h-4 w-4 mr-2" />
             )}
-            {generating ? 'Generating...' : 'Generate Report'}
+            {generating ? 'Generating...' : 'Generate Accountant Pack'}
           </button>
         </div>
       </div>
@@ -410,9 +477,15 @@ export default function Reports() {
                 <div className="p-2 bg-primary/10 rounded-lg">
                   <FileText className="h-5 w-5 text-primary" />
                 </div>
-                <span className="text-xs font-medium bg-muted px-2 py-1 rounded-full text-muted-foreground">
-                  {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(report.created_at))}
-                </span>
+                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                  <span className="text-xs font-medium bg-muted px-2 py-1 rounded-full text-muted-foreground">
+                    {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(report.created_at))}
+                  </span>
+                  <StatusBadge 
+                    status={getReportStatus(report) === 'ready' ? 'success' : getReportStatus(report) === 'needs_review' ? 'medium' : 'low'} 
+                    label={getReportStatus(report) === 'ready' ? 'READY' : getReportStatus(report) === 'needs_review' ? 'NEEDS REVIEW' : 'DRAFT'} 
+                  />
+                </div>
               </div>
               
               <h3 className="font-semibold text-lg mb-1 truncate" title={report.title}>{report.title}</h3>

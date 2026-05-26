@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { IngestedParsedFile } from '../../lib/ingestion/ingestionTypes';
 import type { MappingSuggestion } from '../../lib/mappingEngine';
+import { normalizeIngestedRows } from '../../lib/ingestion/transactionNormalizer';
 
 interface FilePreviewProps {
   fileName: string;
@@ -32,6 +33,35 @@ const FilePreview: React.FC<FilePreviewProps> = ({
   const isHighConfidence = autoMapping && autoMapping.confidence >= 0.85 && result.confidence >= 0.5;
   const isMediumConfidence = autoMapping && (autoMapping.confidence < 0.85 || result.confidence < 0.5) && autoMapping.confidence >= 0.5;
   const isLowConfidence = result.confidence < 0.5 || (autoMapping && autoMapping.confidence < 0.5);
+
+  const previewStats = React.useMemo(() => {
+    if (!result || !result.allRows || !autoMapping || !autoMapping.mapping) {
+      return null;
+    }
+    try {
+      const normalizedResult = normalizeIngestedRows(result.allRows, autoMapping.mapping, {
+        provider: result.provider,
+        currency: 'INR'
+      });
+      const txs = normalizedResult.transactions;
+      const incomeRows = txs.filter(tx => tx.type === 'income').length;
+      const expenseRows = txs.filter(tx => tx.type === 'expense').length;
+      const refundRows = txs.filter(tx => tx.type === 'refund').length;
+      const unknownRows = txs.filter(tx => tx.type === 'unknown').length;
+      return {
+        totalDetected: result.rowCount,
+        incomeRows,
+        expenseRows,
+        refundRows,
+        unknownRows,
+        warningsCount: normalizedResult.warnings.length + (result.warnings ? result.warnings.length : 0),
+        recommendedAction: autoMapping.status === 'ready_to_import' ? 'Ready to Import' : 'Review column mappings'
+      };
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  }, [result, autoMapping]);
 
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
@@ -185,6 +215,46 @@ const FilePreview: React.FC<FilePreviewProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Itemized Upload Preview Summary */}
+        {previewStats && (
+          <div className="px-6 py-5 border-b border-border/30 bg-white/[0.01] space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-foreground">Import Preview Summary</h4>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Breakdown of detected rows based on the current column mapping.
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+              <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
+                <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Rows Detected</span>
+                <span className="text-base font-black text-foreground">{previewStats.totalDetected}</span>
+              </div>
+              <div className="bg-success/5 p-3 rounded-xl border border-success/15 text-center">
+                <span className="text-[9px] text-success/70 font-black uppercase tracking-wider block">Income Rows</span>
+                <span className="text-base font-black text-success">{previewStats.incomeRows}</span>
+              </div>
+              <div className="bg-risk/5 p-3 rounded-xl border border-risk/15 text-center">
+                <span className="text-[9px] text-risk/70 font-black uppercase tracking-wider block">Expense Rows</span>
+                <span className="text-base font-black text-risk">{previewStats.expenseRows}</span>
+              </div>
+              <div className="bg-teal-500/5 p-3 rounded-xl border border-teal-500/15 text-center">
+                <span className="text-[9px] text-teal-400 font-black uppercase tracking-wider block">Refund Rows</span>
+                <span className="text-base font-black text-teal-400">{previewStats.refundRows}</span>
+              </div>
+              <div className="bg-amber-500/5 p-3 rounded-xl border border-amber-500/15 text-center">
+                <span className="text-[9px] text-amber-500/70 font-black uppercase tracking-wider block">Unknown Rows</span>
+                <span className="text-base font-black text-amber-500">{previewStats.unknownRows}</span>
+              </div>
+              <div className="bg-primary/5 p-3 rounded-xl border border-primary/15 text-center flex flex-col justify-center">
+                <span className="text-[9px] text-primary/70 font-black uppercase tracking-wider block">Recommended</span>
+                <span className="text-[10px] font-black text-foreground truncate">{previewStats.recommendedAction}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Ingestion Warnings Panel */}
         {result.warnings && result.warnings.length > 0 && (

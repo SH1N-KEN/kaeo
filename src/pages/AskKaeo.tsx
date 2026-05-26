@@ -66,7 +66,39 @@ const AskKaeo = () => {
 
       {/* CHAT AREA */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-        {messages.map((msg, idx) => {
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center text-center h-full max-w-md mx-auto px-4 py-8">
+            <div className="w-16 h-16 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center mb-4 animate-pulse">
+              <Sparkles className="w-8 h-8 text-teal-400" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground mb-1">Your AI Finance Advisor</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-6">
+              Ask Kaeo anything about your financial data, transactions, vendor risks, or month-end preparation.
+            </p>
+            <div className="w-full space-y-2">
+              <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mb-2 text-left">Suggested Questions</p>
+              {[
+                "What should I fix first?",
+                "Which vendors look risky?",
+                "Are we ready for month-end?",
+                "What changed after my latest upload?",
+                "What should I send my accountant?"
+              ].map((query, idx) => (
+                <button
+                  key={idx}
+                  onClick={async () => {
+                    await sendMessage(query);
+                  }}
+                  className="w-full text-left px-4 py-3 bg-card hover:bg-white/5 text-foreground font-semibold rounded-xl border border-border/60 hover:border-teal-500/30 text-xs transition-all cursor-pointer flex items-center justify-between group"
+                >
+                  <span>{query}</span>
+                  <Sparkles className="w-3.5 h-3.5 text-muted-foreground group-hover:text-teal-400 transition-colors shrink-0" />
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          messages.map((msg, idx) => {
           const isUser = msg.role === 'user';
           const isLimitExceeded = msg.source_json?.mode === 'limit_exceeded';
           const isGreeting = msg.source_json?.mode === 'greeting';
@@ -140,7 +172,7 @@ const AskKaeo = () => {
               )}
             </div>
           );
-        })}
+        }))}
         
         {loading && (
           <div className="flex gap-4 justify-start">

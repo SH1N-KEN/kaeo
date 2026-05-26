@@ -46,6 +46,19 @@ interface ImportSummary {
   newRisksCount: number;
 }
 
+const getFriendlyInvoiceStatus = (status: string): string => {
+  const mapping: Record<string, string> = {
+    uploaded: 'Uploaded',
+    needs_review: 'Needs review',
+    matched: 'Matched',
+    paid: 'Paid',
+    overdue: 'Overdue',
+    mismatch: 'Mismatch',
+    unpaid: 'Unpaid'
+  };
+  return mapping[status.toLowerCase()] || status.toUpperCase();
+};
+
 const Files: React.FC = () => {
   const { activeClient, activeOrg } = useWorkspace();
   const { toast } = useToast();
@@ -60,7 +73,7 @@ const Files: React.FC = () => {
   
   // Statement uploads states
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<{ message: string; subtext?: string; showUpgrade?: boolean } | null>(null);
+  const [error, setError] = useState<{ message: string; subtext?: string; showUpgrade?: boolean; isParseFailure?: boolean } | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [parseResult, setParseResult] = useState<IngestedParsedFile | null>(null);
@@ -278,7 +291,7 @@ const Files: React.FC = () => {
       const result = await parseFinancialFile(file);
 
       if (result.errors && result.errors.length > 0) {
-        setError({ message: 'Parsing failed', subtext: result.errors[0] });
+        setError({ message: 'We couldn’t read this file clearly.', subtext: result.errors[0], isParseFailure: true });
         setLoading(false);
         return;
       }
@@ -367,7 +380,7 @@ const Files: React.FC = () => {
       fetchHistory();
     } catch (err: any) {
       console.error('[Files] Statement Ingestion error:', err);
-      setError({ message: 'Ingestion sync failed', subtext: err.message });
+      setError({ message: 'We couldn’t read this file clearly.', subtext: err.message, isParseFailure: true });
     } finally {
       setLoading(false);
     }
@@ -719,8 +732,22 @@ const Files: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2 tracking-tight">Finance Ingestion</h1>
-          <p className="text-sm text-muted-foreground">Reconcile transaction ledgers and vendor invoices for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
+          {activeTab === 'transactions' ? (
+            <>
+              <h1 className="text-3xl font-bold mb-2 tracking-tight">Upload Statements</h1>
+              <p className="text-sm text-muted-foreground">Import and verify transactional statement sheets for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
+            </>
+          ) : activeTab === 'invoices' ? (
+            <>
+              <h1 className="text-3xl font-bold mb-2 tracking-tight">Invoice Review</h1>
+              <p className="text-sm text-muted-foreground">Upload vendor invoices and match them against payments for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-3xl font-bold mb-2 tracking-tight">Upload History</h1>
+              <p className="text-sm text-muted-foreground">Audit logs of all files imported for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -735,7 +762,7 @@ const Files: React.FC = () => {
           }`}
         >
           <UploadCloud className="w-3.5 h-3.5" />
-          Transactions Ingestion
+          Upload Statements
         </button>
         <button
           onClick={() => handleTabChange('invoices')}
@@ -746,7 +773,7 @@ const Files: React.FC = () => {
           }`}
         >
           <FileText className="w-3.5 h-3.5" />
-          Invoices Scanning
+          Review Invoices
         </button>
         <button
           onClick={() => handleTabChange('history')}
@@ -762,23 +789,49 @@ const Files: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-risk/5 border border-risk/10 rounded-xl flex gap-3 items-start animate-in shake-in">
-          <AlertCircle className="w-5 h-5 text-risk/70 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <h4 className="text-sm text-risk/80 font-bold">{error.message}</h4>
-            {error.subtext && <p className="text-xs text-risk/60 mt-1">{error.subtext}</p>}
-            {error.showUpgrade && (
-              <button
-                onClick={() => navigate('/billing')}
-                className="mt-3 px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold rounded-lg transition-all shadow-md shadow-primary/10 inline-flex items-center gap-1.5"
+        error.isParseFailure ? (
+          <div className="p-6 bg-risk/5 border border-risk/20 rounded-2xl flex flex-col gap-4 animate-in shake-in">
+            <div className="flex gap-3 items-start">
+              <AlertCircle className="w-5 h-5 text-risk shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="text-sm text-risk font-black">We couldn’t read this file clearly.</h4>
+                <p className="text-xs text-risk/80 mt-1 font-medium">{error.subtext || "Please double check your file content."}</p>
+              </div>
+              <button 
+                onClick={() => setError(null)} 
+                className="text-[10px] font-black text-risk/60 hover:text-risk uppercase tracking-wider"
               >
-                <Zap className="w-3.5 h-3.5 text-warning fill-warning" />
-                Upgrade Subscription
+                Dismiss
               </button>
-            )}
+            </div>
+            <div className="pl-8 space-y-2 border-t border-risk/15 pt-4">
+              <span className="text-[10px] font-bold text-risk/70 uppercase tracking-widest block">Suggested Steps:</span>
+              <ul className="list-disc pl-4 text-xs text-muted-foreground space-y-1">
+                <li>Try another CSV/XLSX statement file.</li>
+                <li>Check if the headers are on the first row of your sheet.</li>
+                <li>Verify your file contains standard bank columns (Date, Description, Amount, Debit/Credit).</li>
+              </ul>
+            </div>
           </div>
-          <button onClick={() => setError(null)} className="text-[10px] font-black text-risk/60 hover:text-risk uppercase">Dismiss</button>
-        </div>
+        ) : (
+          <div className="p-4 bg-risk/5 border border-risk/10 rounded-xl flex gap-3 items-start animate-in shake-in">
+            <AlertCircle className="w-5 h-5 text-risk/70 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="text-sm text-risk/80 font-bold">{error.message}</h4>
+              {error.subtext && <p className="text-xs text-risk/60 mt-1">{error.subtext}</p>}
+              {error.showUpgrade && (
+                <button
+                  onClick={() => navigate('/billing')}
+                  className="mt-3 px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold rounded-lg transition-all shadow-md shadow-primary/10 inline-flex items-center gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5 text-warning fill-warning" />
+                  Upgrade Subscription
+                </button>
+              )}
+            </div>
+            <button onClick={() => setError(null)} className="text-[10px] font-black text-risk/60 hover:text-risk uppercase">Dismiss</button>
+          </div>
+        )
       )}
 
       {success && !importSummary && (
@@ -792,6 +845,36 @@ const Files: React.FC = () => {
       {/* ─── TAB: Transactions ─── */}
       {activeTab === 'transactions' && (
         <>
+          {/* 3-Step Guide */}
+          <div className="premium-glass p-4 rounded-xl border border-border/20 bg-white/[0.02] flex flex-col md:flex-row items-start md:items-center justify-between text-xs gap-3 mb-6">
+            <div className="flex items-center gap-2">
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                !parseResult && !importSummary ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20' : 'bg-success/20 text-success'
+              }`}>
+                {!parseResult && !importSummary ? '1' : '✓'}
+              </span>
+              <span className={`font-bold ${!parseResult && !importSummary ? 'text-foreground font-extrabold' : 'text-muted-foreground'}`}>1. Upload CSV/XLSX</span>
+            </div>
+            <div className="hidden md:block text-muted-foreground/30 font-bold">&rarr;</div>
+            <div className="flex items-center gap-2">
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                parseResult ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20' : importSummary ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'
+              }`}>
+                {importSummary ? '✓' : '2'}
+              </span>
+              <span className={`font-bold ${parseResult ? 'text-foreground font-extrabold' : 'text-muted-foreground'}`}>2. Review detected columns</span>
+            </div>
+            <div className="hidden md:block text-muted-foreground/30 font-bold">&rarr;</div>
+            <div className="flex items-center gap-2">
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                importSummary ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20' : 'bg-muted text-muted-foreground'
+              }`}>
+                3
+              </span>
+              <span className={`font-bold ${importSummary ? 'text-foreground font-extrabold' : 'text-muted-foreground'}`}>3. Import transactions</span>
+            </div>
+          </div>
+
           {loading && !parseResult && (
             <div className="h-64 bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl flex flex-col items-center justify-center space-y-4">
               <div className="relative">
@@ -814,9 +897,9 @@ const Files: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-2">
                 <div className="p-4 bg-white/5 border border-border/20 rounded-xl">
-                  <span className="text-[10px] text-muted-foreground font-black uppercase block">Imported</span>
+                  <span className="text-[10px] text-muted-foreground font-black uppercase block">Transactions Imported</span>
                   <span className="text-xl font-black text-foreground">{importSummary.importedCount} rows</span>
                 </div>
                 <div className="p-4 bg-white/5 border border-border/20 rounded-xl">
@@ -824,40 +907,39 @@ const Files: React.FC = () => {
                   <span className="text-xl font-black text-success">{importSummary.skippedCount} rows</span>
                 </div>
                 <div className="p-4 bg-white/5 border border-border/20 rounded-xl">
-                  <span className="text-[10px] text-muted-foreground font-black uppercase block">Unknown Rows</span>
+                  <span className="text-[10px] text-muted-foreground font-black uppercase block">Rows Needing Review</span>
                   <span className="text-xl font-black text-amber-500">{importSummary.unknownCount} rows</span>
-                </div>
-                <div className="p-4 bg-white/5 border border-border/20 rounded-xl">
-                  <span className="text-[10px] text-muted-foreground font-black uppercase block">Active Risks</span>
-                  <span className="text-xl font-black text-risk">{importSummary.newRisksCount} items</span>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3 pt-3 border-t border-border/25">
-                <button
-                  onClick={() => navigate('/risk-inbox')}
-                  className="px-4 py-2.5 bg-risk/10 hover:bg-risk/20 text-risk rounded-xl text-xs font-bold border border-risk/25 flex items-center gap-1.5 transition-colors"
-                >
-                  <Inbox className="w-4 h-4" /> Review Risks
-                </button>
-                <button
-                  onClick={() => navigate('/transactions?category=uncategorized')}
-                  className="px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold border border-primary/25 flex items-center gap-1.5 transition-colors"
-                >
-                  <Filter className="w-4 h-4" /> Categorize Transactions
-                </button>
-                <button
-                  onClick={() => navigate('/ask-kaeo')}
-                  className="px-4 py-2.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 rounded-xl text-xs font-bold border border-teal-500/25 flex items-center gap-1.5 transition-colors"
-                >
-                  <Sparkles className="w-4 h-4" /> Ask Kaeo advisor
-                </button>
-                <button
-                  onClick={() => setImportSummary(null)}
-                  className="px-4 py-2.5 bg-muted hover:bg-muted-foreground/10 text-foreground rounded-xl text-xs font-semibold border border-border/40 transition-colors ml-auto"
-                >
-                  Upload another statement
-                </button>
+              <div className="flex flex-col gap-3 pt-3 border-t border-border/25">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Next Steps:</span>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => navigate('/risk-inbox')}
+                    className="px-4 py-2.5 bg-risk/10 hover:bg-risk/20 text-risk rounded-xl text-xs font-bold border border-risk/25 flex items-center gap-1.5 transition-colors"
+                  >
+                    <Inbox className="w-4 h-4" /> Review Risks
+                  </button>
+                  <button
+                    onClick={() => navigate('/transactions')}
+                    className="px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold border border-primary/25 flex items-center gap-1.5 transition-colors"
+                  >
+                    <Filter className="w-4 h-4" /> Review Transactions
+                  </button>
+                  <button
+                    onClick={() => navigate('/ask-kaeo')}
+                    className="px-4 py-2.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 rounded-xl text-xs font-bold border border-teal-500/25 flex items-center gap-1.5 transition-colors"
+                  >
+                    <Sparkles className="w-4 h-4" /> Ask Kaeo what to fix
+                  </button>
+                  <button
+                    onClick={() => setImportSummary(null)}
+                    className="px-4 py-2.5 bg-muted hover:bg-muted-foreground/10 text-foreground rounded-xl text-xs font-semibold border border-border/40 transition-colors ml-auto"
+                  >
+                    Upload another statement
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -867,7 +949,7 @@ const Files: React.FC = () => {
               {/* Type selector */}
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select File Upload Intent</label>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   <button 
                     onClick={() => handleUploadTypeChange('detect')}
                     className={`px-3 py-2.5 rounded-xl border text-xs font-bold text-center transition-all ${
@@ -876,7 +958,7 @@ const Files: React.FC = () => {
                         : 'bg-muted/15 border-border/30 hover:border-border text-muted-foreground'
                     }`}
                   >
-                    Auto Detect
+                    Not sure — let Kaeo detect
                   </button>
                   <button 
                     onClick={() => handleUploadTypeChange('bank_statement')}
@@ -886,7 +968,7 @@ const Files: React.FC = () => {
                         : 'bg-muted/15 border-border/30 hover:border-border text-muted-foreground'
                     }`}
                   >
-                    Bank Statement
+                    Bank statement
                   </button>
                   <button 
                     onClick={() => handleUploadTypeChange('gateway_export')}
@@ -896,13 +978,7 @@ const Files: React.FC = () => {
                         : 'bg-muted/15 border-border/30 hover:border-border text-muted-foreground'
                     }`}
                   >
-                    Razorpay Export
-                  </button>
-                  <button 
-                    onClick={() => handleUploadTypeChange('vendor_invoice')}
-                    className={`px-3 py-2.5 rounded-xl border text-xs font-bold text-center transition-all bg-muted/15 border-border/30 hover:border-border text-muted-foreground`}
-                  >
-                    Vendor Invoice
+                    Razorpay/payment export
                   </button>
                   <button 
                     onClick={() => handleUploadTypeChange('mixed')}
@@ -912,7 +988,7 @@ const Files: React.FC = () => {
                         : 'bg-muted/15 border-border/30 hover:border-border text-muted-foreground'
                     }`}
                   >
-                    Mixed Ledger
+                    Mixed finance file
                   </button>
                 </div>
               </div>
@@ -929,19 +1005,19 @@ const Files: React.FC = () => {
               </div>
 
               {/* Quick Upload templates */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div 
                   onClick={() => handleUploadTypeChange('bank_statement')}
                   className="p-5 premium-glass premium-glass-hover border border-border/40 rounded-2xl cursor-pointer"
                 >
-                  <h4 className="font-bold text-xs text-foreground mb-1">Bank Statement</h4>
+                  <h4 className="font-bold text-xs text-foreground mb-1">Bank statement</h4>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">Import transactional ledger logs from HDFC, ICICI, etc.</p>
                 </div>
                 <div 
                   onClick={() => handleUploadTypeChange('gateway_export')}
                   className="p-5 premium-glass premium-glass-hover border border-border/40 rounded-2xl cursor-pointer"
                 >
-                  <h4 className="font-bold text-xs text-foreground mb-1">Razorpay Payouts</h4>
+                  <h4 className="font-bold text-xs text-foreground mb-1">Razorpay/payment export</h4>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">Import gateway exports directly to verify fees and charges.</p>
                 </div>
                 <div 
@@ -950,13 +1026,6 @@ const Files: React.FC = () => {
                 >
                   <h4 className="font-bold text-xs text-foreground mb-1">Invoices Folder</h4>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">Reconcile scans against ledger outflow events.</p>
-                </div>
-                <div 
-                  onClick={() => toast('Tally Prime XML integrations are planned for Phase 16', 'info')}
-                  className="p-5 premium-glass premium-glass-hover border border-border/40 rounded-2xl cursor-pointer opacity-70"
-                >
-                  <h4 className="font-bold text-xs text-muted-foreground mb-1">Accountant Pack</h4>
-                  <p className="text-[10px] text-muted-foreground leading-relaxed">Export XML sheets from Tally for offline ingestion.</p>
                 </div>
               </div>
             </div>
@@ -998,7 +1067,7 @@ const Files: React.FC = () => {
             <div>
               <h3 className="font-bold text-sm text-foreground">Upload Vendor Invoice</h3>
               <p className="text-xs text-muted-foreground max-w-sm mt-1 leading-relaxed">
-                Scan PDF or image invoices. Kaeo will extract fields and suggest transaction matching links.
+                Kaeo will try to read invoice details. You can review and edit before saving.
               </p>
             </div>
             <label
@@ -1032,8 +1101,8 @@ const Files: React.FC = () => {
             ) : invoices.length === 0 ? (
               <div className="p-12 text-center text-muted-foreground">
                 <EmptyState 
-                  title="No Invoices Uploaded"
-                  description="Upload vendor invoices to match them against payments and catch missing or duplicate invoices."
+                  title="Upload vendor invoices to check whether payments have matching bills."
+                  description="Select a file to extract vendor names, amounts, tax details, and match against payments."
                 />
               </div>
             ) : filteredInvoices.length === 0 ? (
@@ -1076,7 +1145,7 @@ const Files: React.FC = () => {
                           <td className="px-6 py-4">
                             <StatusBadge 
                               status={getStatusBadgeVariant(inv.status)} 
-                              label={inv.status.toUpperCase()} 
+                              label={getFriendlyInvoiceStatus(inv.status)} 
                             />
                           </td>
                           <td className="px-6 py-4 max-w-[200px] truncate">

@@ -74,6 +74,7 @@ const Transactions: React.FC = () => {
   const [filterDateRange, setFilterDateRange] = useState<DateRange>('all');
   const [filterAmountRange, setFilterAmountRange] = useState<AmountRange>('all');
   const [filterReview, setFilterReview] = useState<ReviewFilter>('all');
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   // ── Sort state ────────────────────────────────────────────────────────────
   const [sortKey, setSortKey] = useState<SortKey>('transaction_date');
@@ -457,9 +458,7 @@ const Transactions: React.FC = () => {
         <div>
           <h1 className="text-2xl font-black tracking-tight mb-1">Transactions</h1>
           <p className="text-sm text-muted-foreground">
-            Ledger for{' '}
-            <span className="text-foreground font-semibold">{activeClient.name}</span>
-            {' — '}{transactions.length.toLocaleString()} total rows imported
+            Review, categorize, and approve imported ledger rows for <span className="text-foreground font-semibold">{activeClient.name}</span>.
           </p>
         </div>
         <div className="flex gap-2">
@@ -515,58 +514,6 @@ const Transactions: React.FC = () => {
 
         {/* Row 2: secondary filters */}
         <div className="flex flex-wrap gap-2.5 items-center">
-          {/* Category */}
-          <div className="flex items-center gap-1.5">
-            <Tag className="w-3.5 h-3.5 text-muted-foreground" />
-            <select
-              className="bg-muted/30 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-            >
-              <option value="all">All Categories</option>
-              {availableCategories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Source */}
-          {availableSources.length > 1 && (
-            <select
-              className="bg-muted/30 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-              value={filterSource}
-              onChange={(e) => setFilterSource(e.target.value)}
-            >
-              <option value="all">All Sources</option>
-              {availableSources.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          )}
-
-          {/* Date range */}
-          <select
-            className="bg-muted/30 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-            value={filterDateRange}
-            onChange={(e) => setFilterDateRange(e.target.value as DateRange)}
-          >
-            <option value="all">All time</option>
-            <option value="this_month">This month</option>
-            <option value="last_30">Last 30 days</option>
-          </select>
-
-          {/* Amount range */}
-          <select
-            className="bg-muted/30 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-            value={filterAmountRange}
-            onChange={(e) => setFilterAmountRange(e.target.value as AmountRange)}
-          >
-            <option value="all">All amounts</option>
-            <option value="under_10k">Under ₹10k</option>
-            <option value="10k_50k">₹10k – ₹50k</option>
-            <option value="above_50k">Above ₹50k</option>
-          </select>
-
           {/* Review status */}
           <div className="flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-muted-foreground" />
@@ -575,7 +522,7 @@ const Transactions: React.FC = () => {
               value={filterReview}
               onChange={(e) => setFilterReview(e.target.value as ReviewFilter)}
             >
-              <option value="all">All</option>
+              <option value="all">All review statuses</option>
               <option value="pending">Pending Review</option>
               <option value="new">New</option>
               <option value="needs_review">Needs Review</option>
@@ -595,6 +542,72 @@ const Transactions: React.FC = () => {
             </select>
           </div>
 
+          {/* Category */}
+          <div className="flex items-center gap-1.5">
+            <Tag className="w-3.5 h-3.5 text-muted-foreground" />
+            <select
+              className="bg-muted/30 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+            >
+              <option value="all">All Categories</option>
+              {availableCategories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Date range */}
+          <select
+            className="bg-muted/30 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+            value={filterDateRange}
+            onChange={(e) => setFilterDateRange(e.target.value as DateRange)}
+          >
+            <option value="all">All time</option>
+            <option value="this_month">This month</option>
+            <option value="last_30">Last 30 days</option>
+          </select>
+
+          {/* Toggle More Filters */}
+          <button
+            onClick={() => setShowMoreFilters(prev => !prev)}
+            className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-border/40 hover:bg-muted text-muted-foreground flex items-center gap-1 transition-all cursor-pointer bg-muted/10"
+          >
+            {showMoreFilters ? 'Fewer filters' : 'More filters'}
+            {showMoreFilters ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+
+          {/* Collapsible Advanced Filters */}
+          {showMoreFilters && (
+            <div className="flex flex-wrap gap-2.5 items-center animate-in fade-in duration-200">
+              {/* Source */}
+              {availableSources.length > 1 && (
+                <select
+                  className="bg-muted/30 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                  value={filterSource}
+                  onChange={(e) => setFilterSource(e.target.value)}
+                >
+                  <option value="all">All Sources</option>
+                  {availableSources.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              )}
+
+              {/* Amount range */}
+              <select
+                className="bg-muted/30 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                value={filterAmountRange}
+                onChange={(e) => setFilterAmountRange(e.target.value as AmountRange)}
+              >
+                <option value="all">All amounts</option>
+                <option value="under_10k">Under ₹10k</option>
+                <option value="10k_50k">₹10k – ₹50k</option>
+                <option value="above_50k">Above ₹50k</option>
+              </select>
+            </div>
+          )}
+
           {/* Clear filters */}
           {hasActiveFilters && (
             <button
@@ -606,6 +619,16 @@ const Transactions: React.FC = () => {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Legend showing review status meanings */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 items-center text-[10px] text-muted-foreground px-1 mt-1">
+        <span className="font-semibold">Status meanings:</span>
+        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60"></span> New: imported but not checked</span>
+        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500/80"></span> Needs review: should be manually checked</span>
+        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-success"></span> Reviewed: checked and accepted</span>
+        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/45"></span> Ignored: not relevant</span>
+        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Resolved: issue handled</span>
       </div>
 
       {/* ── Summary strip ── */}
@@ -661,14 +684,14 @@ const Transactions: React.FC = () => {
             <UploadCloud className="w-8 h-8 text-muted-foreground/50" />
           </div>
           <div>
-            <h3 className="text-lg font-black mb-1">No transactions yet</h3>
+            <h3 className="text-lg font-black mb-1">Upload a CSV/XLSX statement to see transactions here.</h3>
             <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              Upload a CSV/XLSX statement to see transactions here.
+              Transactions will appear after you import a statement.
             </p>
           </div>
           <Link
             to="/files"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:opacity-95 transition-all"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:opacity-95 transition-all animate-pulse"
           >
             <UploadCloud className="w-4 h-4" />
             Go to Files
@@ -682,16 +705,10 @@ const Transactions: React.FC = () => {
           </div>
           <div>
             <h3 className="text-lg font-black mb-1">
-              {filterReview === 'pending'
-                ? "All transactions are reviewed."
-                : filterReview !== 'all'
-                ? "No transactions match this review filter."
-                : "No transactions match these filters."}
+              No transactions match these filters.
             </h3>
             <p className="text-sm text-muted-foreground">
-              {filterReview === 'pending'
-                ? "You're all caught up with your review checklist."
-                : "Try adjusting or clearing your filters."}
+              Try adjusting or clearing your filters.
             </p>
           </div>
           <button
@@ -1051,12 +1068,22 @@ const REVIEW_COLORS: Record<string, { bg: string; text: string }> = {
   resolved: { bg: 'bg-primary/10', text: 'text-primary' },
 };
 
+const REVIEW_HELPERS: Record<string, string> = {
+  new: 'New: imported but not checked',
+  needs_review: 'Needs review: should be manually checked',
+  reviewed: 'Reviewed: checked and accepted',
+  ignored: 'Ignored: not relevant',
+  resolved: 'Resolved: issue handled',
+};
+
 const ReviewBadge: React.FC<{ status: string }> = ({ status }) => {
   const colors = REVIEW_COLORS[status] ?? REVIEW_COLORS.new;
+  const helper = REVIEW_HELPERS[status] ?? '';
   const label = status.replace(/_/g, ' ');
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${colors.bg} ${colors.text}`}
+      title={helper}
+      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide cursor-help ${colors.bg} ${colors.text}`}
     >
       {label}
     </span>

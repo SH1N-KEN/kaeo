@@ -26,6 +26,17 @@ interface EnrichedVendor extends Vendor {
   duplicateCount: number;
 }
 
+const getFriendlyRecommendation = (rec: string): string => {
+  const mapping: Record<string, string> = {
+    keep: 'Keep',
+    review: 'Review',
+    watch: 'Watch',
+    replace: 'Cancel candidate',
+    cancel_candidate: 'Cancel candidate'
+  };
+  return mapping[rec.toLowerCase()] || rec.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
+
 const Vendors: React.FC = () => {
   const { activeClient, activeOrg } = useWorkspace();
   const [searchParams] = useSearchParams();
@@ -35,6 +46,12 @@ const Vendors: React.FC = () => {
   const [txCount, setTxCount] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Modal Details State
+  const [selectedVendor, setSelectedVendor] = useState<EnrichedVendor | null>(null);
+  const [vendorTransactions, setVendorTransactions] = useState<any[]>([]);
+  const [vendorRisks, setVendorRisks] = useState<any[]>([]);
+  const [modalLoading, setModalLoading] = useState(false);
 
   useEffect(() => {
     const searchVal = searchParams.get('search');
@@ -51,6 +68,38 @@ const Vendors: React.FC = () => {
       fetchVendors();
     }
   }, [activeClient]);
+
+  useEffect(() => {
+    if (selectedVendor && activeClient) {
+      fetchVendorDetails(selectedVendor);
+    }
+  }, [selectedVendor, activeClient]);
+
+  const fetchVendorDetails = async (vendor: EnrichedVendor) => {
+    if (!activeClient) return;
+    setModalLoading(true);
+    try {
+      const { data: txs } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('client_id', activeClient.id)
+        .or(`counterparty_name.ilike.%${vendor.name}%,description.ilike.%${vendor.name}%`)
+        .order('transaction_date', { ascending: false });
+
+      const { data: risksData } = await supabase
+        .from('risk_events')
+        .select('*')
+        .eq('client_id', activeClient.id)
+        .or(`vendor_id.eq.${vendor.id},evidence_json->>vendor_name.ilike.%${vendor.name}%`);
+
+      setVendorTransactions(txs || []);
+      setVendorRisks(risksData || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setModalLoading(false);
+    }
+  };
 
   const fetchTxCount = async () => {
     if (!activeClient) return;
@@ -162,10 +211,10 @@ const Vendors: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-3xl font-bold tracking-tight">Spend Advisor</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Vendors</h1>
             <div className="px-2 py-0.5 bg-muted text-foreground text-[10px] font-black rounded-md border border-border uppercase tracking-tighter">CFO Intelligence</div>
           </div>
-          <p className="text-sm text-muted-foreground">Strategic vendor portfolio analysis for <span className="text-foreground font-semibold">{activeClient.name}</span></p>
+          <p className="text-sm text-muted-foreground">See where money is going and which vendors need attention for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
         </div>
         
         <button 
@@ -190,27 +239,15 @@ const Vendors: React.FC = () => {
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           <p className="text-sm text-muted-foreground animate-pulse font-medium">Aggregating vendor intelligence...</p>
         </div>
-      ) : txCount === 0 ? (
+      ) : txCount === 0 || vendors.length === 0 ? (
         <div className="bg-card border border-dashed border-border rounded-xl p-20 flex flex-col items-center justify-center text-center space-y-5">
           <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center border border-border text-muted-foreground/30">
             <Building2 className="w-8 h-8" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-xl font-bold tracking-tight">No vendor data found</h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              Import transactions first to enable automated vendor portfolio analysis.
-            </p>
-          </div>
-        </div>
-      ) : vendors.length === 0 ? (
-        <div className="bg-card border border-dashed border-border rounded-xl p-20 flex flex-col items-center justify-center text-center space-y-5">
-          <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center border border-border text-muted-foreground/60">
-            <Zap className="w-8 h-8" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-xl font-bold tracking-tight">Ready for analysis</h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              We found {txCount} expense transactions. Click 'Analyze Spend' to generate your vendor portfolio.
+            <h3 className="text-xl font-bold tracking-tight">Upload transactions to build your vendor list.</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              Import a statement sheet to start categorizing spend across vendors automatically.
             </p>
           </div>
         </div>
@@ -278,7 +315,11 @@ const Vendors: React.FC = () => {
               }
 
               return (
-                <div key={vendor.id} className="bg-card border border-border rounded-xl p-6 hover:border-muted-foreground transition-all group flex flex-col h-full">
+                <div 
+                  key={vendor.id} 
+                  onClick={() => setSelectedVendor(vendor)}
+                  className="bg-card border border-border rounded-xl p-6 hover:border-muted-foreground transition-all group flex flex-col h-full cursor-pointer hover:shadow-md"
+                >
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center border border-border/50 transition-transform">
@@ -289,7 +330,13 @@ const Vendors: React.FC = () => {
                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{vendor.category || 'Uncategorized'}</p>
                       </div>
                     </div>
-                    <button className="p-2 hover:bg-muted rounded-md transition-colors text-muted-foreground cursor-pointer">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedVendor(vendor);
+                      }}
+                      className="p-2 hover:bg-muted rounded-md transition-colors text-muted-foreground cursor-pointer"
+                    >
                       <MoreVertical className="w-4 h-4" />
                     </button>
                   </div>
@@ -329,7 +376,7 @@ const Vendors: React.FC = () => {
                       <div className="flex items-center gap-2 mb-2">
                         <AlertCircle className={`w-3.5 h-3.5 ${badgeText}`} />
                         <p className={`text-[10px] font-black uppercase tracking-widest ${badgeText}`}>
-                          {vendor.recommendation === 'keep' ? 'Strategic Hold' : 'Action: ' + (vendor.recommendation ? vendor.recommendation.replace('_', ' ') : 'review')}
+                          Recommendation: {getFriendlyRecommendation(vendor.recommendation || 'review')}
                         </p>
                       </div>
                       <p className="text-xs text-muted-foreground font-medium leading-relaxed">
@@ -341,7 +388,13 @@ const Vendors: React.FC = () => {
                       <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                         <Calendar className="w-3 h-3" /> Since {new Date(vendor.first_seen).toLocaleDateString()}
                       </div>
-                      <button className="p-2 bg-muted rounded-md group-hover:bg-muted-foreground/15 transition-all cursor-pointer">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedVendor(vendor);
+                        }}
+                        className="p-2 bg-muted rounded-md group-hover:bg-muted-foreground/15 transition-all cursor-pointer"
+                      >
                         <ArrowUpRight className="w-4 h-4 text-foreground" />
                       </button>
                     </div>
@@ -351,6 +404,111 @@ const Vendors: React.FC = () => {
             })}
           </div>
         </>
+      )}
+
+      {/* Selected Vendor Details Drawer/Modal */}
+      {selectedVendor && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
+          onClick={() => setSelectedVendor(null)}
+        >
+          <div 
+            className="w-full max-w-3xl premium-glass rounded-3xl p-6 shadow-2xl relative my-8 animate-in zoom-in-95 duration-200 border border-border/40"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setSelectedVendor(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+
+            <div className="flex gap-4 items-center mb-6">
+              <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center border border-border/50">
+                <Building2 className="w-7 h-7 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-foreground leading-tight">{selectedVendor.name}</h3>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">{selectedVendor.category || 'Uncategorized'}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white/5 p-4 rounded-xl border border-border/20">
+                <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider block">Total Spend</span>
+                <span className="text-lg font-black text-risk">{formatCurrency(selectedVendor.total_spend)}</span>
+              </div>
+              <div className="bg-white/5 p-4 rounded-xl border border-border/20">
+                <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider block">Recurrence Pattern</span>
+                <span className="text-lg font-black text-foreground capitalize">{selectedVendor.recurrence_pattern}</span>
+              </div>
+              <div className="bg-white/5 p-4 rounded-xl border border-border/20">
+                <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider block">Recommendation</span>
+                <span className="text-sm font-black text-primary block mt-1">{getFriendlyRecommendation(selectedVendor.recommendation || 'review')}</span>
+              </div>
+            </div>
+
+            {/* Recommendation Reason */}
+            {selectedVendor.recommendation_reason && (
+              <div className="bg-white/5 p-4 rounded-xl border border-border/20 mb-6 space-y-1">
+                <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">CFO Recommendation Notes</span>
+                <p className="text-xs text-foreground/90 leading-relaxed">{selectedVendor.recommendation_reason}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Transactions list */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-foreground">Recent Payments ({vendorTransactions.length})</h4>
+                {modalLoading ? (
+                  <div className="py-8 text-center text-xs text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin inline mr-2" /> Loading...</div>
+                ) : vendorTransactions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">No payments found in ledger.</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {vendorTransactions.slice(0, 5).map(tx => (
+                      <div key={tx.id} className="p-2.5 bg-white/5 border border-border/20 rounded-xl flex items-center justify-between text-xs">
+                        <div>
+                          <p className="font-bold text-foreground truncate max-w-[150px]">{tx.description}</p>
+                          <p className="text-[9px] text-muted-foreground">{new Date(tx.transaction_date).toLocaleDateString()}</p>
+                        </div>
+                        <span className="font-black text-risk">{formatCurrency(Math.abs(tx.amount))}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Risks list */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-foreground">Open Risks & Issues ({vendorRisks.length})</h4>
+                {modalLoading ? (
+                  <div className="py-8 text-center text-xs text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin inline mr-2" /> Loading...</div>
+                ) : vendorRisks.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">No open risk flags detected.</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {vendorRisks.map(risk => (
+                      <div key={risk.id} className="p-2.5 bg-risk/5 border border-risk/15 rounded-xl text-xs space-y-1">
+                        <p className="font-bold text-foreground">{risk.title}</p>
+                        <p className="text-[9px] text-risk/80 font-semibold">{risk.severity.toUpperCase()} • {risk.status.toUpperCase()}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-5 border-t border-border/15 mt-6">
+              <button 
+                onClick={() => setSelectedVendor(null)}
+                className="w-full py-2 bg-muted hover:bg-muted-foreground/10 text-foreground font-semibold rounded-xl text-xs transition-colors border border-border/40"
+              >
+                Close View
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

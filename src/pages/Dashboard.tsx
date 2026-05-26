@@ -468,10 +468,10 @@ const Dashboard: React.FC = () => {
     return (
       <div className="h-[70vh] flex items-center justify-center">
         <EmptyState 
-          title="Finish setup to start reviewing your finances."
+          title="Set up your business to start reviewing finances."
           description="Add your business details or select a workspace to begin."
           action={{
-            label: "Complete setup",
+            label: "Set up business",
             onClick: () => navigate('/settings?tab=clients')
           }}
         />
@@ -729,11 +729,16 @@ const Dashboard: React.FC = () => {
         <>
           {/* What Needs Attention Panel */}
           <div className="premium-glass rounded-2xl p-6 border border-border/20 shadow-xl space-y-6">
-            <div className="flex items-center justify-between border-b border-border/25 pb-4">
-              <h3 className="text-sm font-bold text-foreground">What needs attention</h3>
-              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">
-                Priority Tasks
-              </span>
+            <div className="flex flex-col border-b border-border/25 pb-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-foreground">What needs attention</h3>
+                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">
+                  Priority Tasks
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Start here when you want to clean up this month’s books.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -829,20 +834,19 @@ const Dashboard: React.FC = () => {
                     >
                       Review Transactions
                     </button>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-4 pt-2.5 border-t border-border/20">
                     <button
                       onClick={() => {
                         const event = new CustomEvent('open-ask-kaeo', { detail: { query: 'What should I fix first?' } });
                         window.dispatchEvent(event);
                       }}
-                      className="text-xs font-semibold text-teal-400 hover:text-teal-300 hover:underline transition-all cursor-pointer bg-transparent border-0 p-0 flex items-center gap-1.5"
+                      className="px-4 py-2 bg-white/5 hover:bg-white/10 text-foreground font-semibold rounded-xl text-xs transition-colors border border-border/30 cursor-pointer flex items-center gap-1.5"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-teal-400" />
-                      Ask Kaeo what to fix first
+                      Ask Kaeo
                     </button>
-                    
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 pt-2.5 border-t border-border/20">
                     {sugMetrics.pending > 0 && (
                       <button
                         onClick={() => setIsAIQueueOpen(true)}
@@ -1383,7 +1387,7 @@ const Dashboard: React.FC = () => {
             <FileText className="w-8 h-8 text-teal-400/40" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-lg font-bold tracking-tight">No financial ledger uploaded</h3>
+            <h3 className="text-lg font-bold tracking-tight">Upload your first statement to see your spend-control dashboard.</h3>
             <p className="text-xs text-muted-foreground max-w-sm font-medium">
               Upload and import a transaction sheet to activate AI CFO insights.
             </p>
@@ -1392,7 +1396,7 @@ const Dashboard: React.FC = () => {
             onClick={() => navigate('/files')}
             className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 transition-all shadow-xl shadow-primary/20 cursor-pointer"
           >
-            Upload Finance File
+            Upload CSV/XLSX
           </button>
         </div>
       )}
