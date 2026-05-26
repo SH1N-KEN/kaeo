@@ -49,7 +49,7 @@ const FloatingAskKaeo: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen]);
 
-  // Listen to open-ask-kaeo event to open widget and send query
+  // Listen to open-ask-libby event to open widget and send query
   useEffect(() => {
     const handleOpenAsk = (e: Event) => {
       const customEvent = e as CustomEvent<{ query?: string }>;
@@ -58,8 +58,8 @@ const FloatingAskKaeo: React.FC = () => {
         sendMessage(customEvent.detail.query);
       }
     };
-    window.addEventListener('open-ask-kaeo', handleOpenAsk);
-    return () => window.removeEventListener('open-ask-kaeo', handleOpenAsk);
+    window.addEventListener('open-ask-libby', handleOpenAsk);
+    return () => window.removeEventListener('open-ask-libby', handleOpenAsk);
   }, [sendMessage]);
 
   const handleSend = async (e: React.FormEvent) => {
@@ -88,42 +88,42 @@ const FloatingAskKaeo: React.FC = () => {
               className="absolute bottom-full right-0 mb-2.5 px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200 pointer-events-none border"
               style={{
                 background: 'rgba(11, 15, 14, 0.95)',
-                borderColor: 'rgba(47, 184, 166, 0.25)',
-                color: '#2fb8a6',
+                borderColor: 'rgba(16, 185, 129, 0.25)',
+                color: '#10b981',
                 backdropFilter: 'blur(8px)',
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.6)',
               }}
             >
-              Ask what to review first
+              Ask Libby what to review
             </div>
 
             <button
               onClick={() => setIsOpen(true)}
-              aria-label="Open Ask Kaeo advisor"
+              aria-label="Open Libby advisor"
               className={`
                 flex items-center gap-2.5
                 h-11 px-4 rounded-full
                 bg-card/95 backdrop-blur-md
-                border border-primary/25
+                border border-emerald-500/30
                 shadow-lg shadow-black/20
                 text-foreground text-sm font-semibold
-                hover:border-primary/45 hover:bg-card hover:shadow-xl hover:shadow-black/25
+                hover:border-emerald-400/50 hover:bg-card hover:shadow-xl hover:shadow-black/25
                 transition-all duration-200
                 cursor-pointer
               `}
             >
-              {/* ae icon */}
-              <div className="w-6 h-6 rounded-md bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0 transition-colors">
-                <img src={aeLogo} alt="Kaeo" className="w-3.5 h-3.5 object-contain" />
+              {/* ae icon with mint border */}
+              <div className="w-6 h-6 rounded-md bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shrink-0 transition-colors">
+                <img src={aeLogo} alt="Libby" className="w-3.5 h-3.5 object-contain" />
               </div>
 
               {/* Label */}
-              <span className="leading-none text-foreground font-semibold">Ask Kaeo</span>
+              <span className="leading-none text-foreground font-semibold">Ask Libby</span>
 
-              {/* Status dot — subtle pulse only */}
+              {/* Status dot — mint pulse */}
               <span className="relative flex h-2 w-2 ml-0.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-40" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-400/70" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-40" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400/70" />
               </span>
             </button>
           </motion.div>
@@ -144,19 +144,19 @@ const FloatingAskKaeo: React.FC = () => {
             {/* ── Header ── */}
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40 bg-card/80 backdrop-blur-md shrink-0">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-center shrink-0">
-                  <img src={aeLogo} alt="Kaeo" className="w-4 h-4 object-contain" />
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shrink-0">
+                  <img src={aeLogo} alt="Libby" className="w-4 h-4 object-contain" />
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-sm font-bold tracking-tight text-foreground leading-tight">
-                    Ask Kaeo
+                    Libby
                   </h3>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="text-[10px] text-muted-foreground font-semibold">
-                      CFO Advisor
+                      AI CFO Operator
                     </span>
-                    <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20">
-                      Data-grounded
+                    <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      Grounded in Kaeo data
                     </span>
                   </div>
                 </div>
@@ -164,10 +164,10 @@ const FloatingAskKaeo: React.FC = () => {
 
               <div className="flex items-center gap-1">
                 <Link
-                  to="/ask-kaeo"
+                  to="/libby"
                   onClick={() => setIsOpen(false)}
                   className="p-2 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
-                  title="Open full advisor"
+                  title="Open Libby"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                 </Link>
@@ -194,15 +194,15 @@ const FloatingAskKaeo: React.FC = () => {
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
               {!hasContext ? (
                 <div className="flex flex-col items-center justify-center text-center py-12 px-4 gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
-                    <UploadCloud className="w-5 h-5 text-teal-400" />
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                    <UploadCloud className="w-5 h-5 text-emerald-400" />
                   </div>
                   <div>
                     <p className="text-sm font-bold text-foreground mb-1">
                       No workspace selected
                     </p>
                     <p className="text-xs text-muted-foreground leading-relaxed max-w-[280px]">
-                      Create a workspace and upload finance files first, then I
+                      Create a workspace and upload finance files first, then Libby
                       can analyze your numbers.
                     </p>
                   </div>
@@ -221,7 +221,7 @@ const FloatingAskKaeo: React.FC = () => {
                 <div className="flex flex-col justify-center py-4 px-1 gap-3">
                   <div className="text-center mb-1">
                     <p className="text-xs font-bold text-foreground mb-0.5">
-                      Ask Kaeo CFO Advisor
+                      Ask Libby CFO Advisor
                     </p>
                     <p className="text-[11px] text-muted-foreground">
                       Choose a quick question below or type your own query.
@@ -230,17 +230,17 @@ const FloatingAskKaeo: React.FC = () => {
                   <div className="space-y-1.5">
                     {[
                       "What should I fix first?",
-                      "Which vendors look risky?",
+                      "Review my transactions",
+                      "Which vendors need attention?",
                       "Are we ready for month-end?",
-                      "What changed after my latest upload?",
-                      "What should I send my accountant?"
+                      "Prepare my accountant pack"
                     ].map((query, idx) => (
                       <button
                         key={idx}
                         onClick={async () => {
                           await sendMessage(query);
                         }}
-                        className="w-full text-left px-3 py-2 bg-card hover:bg-white/5 text-foreground font-semibold rounded-xl border border-border/50 hover:border-teal-500/30 text-xs transition-all cursor-pointer flex items-center justify-between group"
+                        className="w-full text-left px-3 py-2 bg-card hover:bg-white/5 text-foreground font-semibold rounded-xl border border-border/50 hover:border-emerald-500/30 text-xs transition-all cursor-pointer flex items-center justify-between group"
                       >
                         <span className="truncate pr-2">{query}</span>
                         <Sparkles className="w-3 h-3 text-muted-foreground group-hover:text-teal-400 transition-colors shrink-0" />
@@ -260,12 +260,12 @@ const FloatingAskKaeo: React.FC = () => {
                       key={msg.id}
                       className={`flex gap-2.5 ${isUser ? 'justify-end' : 'justify-start'}`}
                     >
-                      {/* AI avatar */}
+                      {/* AI avatar with mint border */}
                       {!isUser && (
-                        <div className="w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/25 flex items-center justify-center shrink-0 mt-0.5">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shrink-0 mt-0.5">
                           <img
                             src={aeLogo}
-                            alt="Kaeo"
+                            alt="Libby"
                             className="w-3.5 h-3.5 object-contain"
                           />
                         </div>
@@ -315,7 +315,7 @@ const FloatingAskKaeo: React.FC = () => {
                               onClick={async () => {
                                 await sendMessage("Review my transactions");
                               }}
-                              className="w-full text-left px-3 py-2 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 font-semibold rounded-lg border border-teal-500/20 text-[10px] transition-all cursor-pointer flex items-center gap-1.5"
+                              className="w-full text-left px-3 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-semibold rounded-lg border border-emerald-500/20 text-[10px] transition-all cursor-pointer flex items-center gap-1.5"
                             >
                               <Sparkles className="w-3 h-3" />
                               "Review my transactions"
@@ -323,11 +323,11 @@ const FloatingAskKaeo: React.FC = () => {
                           </div>
                         )}
 
-                        {/* Grounded badge — not on greeting/limit/error */}
+                        {/* Grounded badge */}
                         {!isUser && !isGreeting && !isLimitExceeded && !isError && (
                           <p className="text-[9px] text-muted-foreground mt-2 pt-2 border-t border-border/30 flex items-center gap-1 font-medium">
-                            <Sparkles className="w-2.5 h-2.5 text-teal-400" />
-                            {msg.source_json?.mode === 'deterministic' ? 'Answered from verified Kaeo data.' : 'Grounded in verified Kaeo data.'}
+                            <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                            {msg.source_json?.mode === 'deterministic' ? 'Answered from verified Kaeo data.' : 'Grounded in Kaeo data.'}
                           </p>
                         )}
                       </div>
@@ -339,13 +339,13 @@ const FloatingAskKaeo: React.FC = () => {
               {/* Typing indicator */}
               {loading && (
                 <div className="flex gap-2.5 justify-start">
-                  <div className="w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/25 flex items-center justify-center shrink-0 mt-0.5">
-                    <img src={aeLogo} alt="Kaeo" className="w-3.5 h-3.5 object-contain" />
+                  <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shrink-0 mt-0.5">
+                    <img src={aeLogo} alt="Libby" className="w-3.5 h-3.5 object-contain" />
                   </div>
                   <div className="bg-muted/40 border border-border/40 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 bg-teal-400/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1.5 h-1.5 bg-teal-400/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1.5 h-1.5 bg-teal-400/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="w-1.5 h-1.5 bg-emerald-400/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 bg-emerald-400/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 bg-emerald-400/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     <span className="text-[10px] text-muted-foreground ml-1.5 font-semibold">
                       Thinking…
                     </span>
@@ -365,7 +365,7 @@ const FloatingAskKaeo: React.FC = () => {
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Ask Kaeo what to review…"
+                    placeholder="Ask Libby what to review…"
                     disabled={loading}
                     className="flex-1 bg-muted/30 border border-border/40 rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all disabled:opacity-50"
                   />
@@ -379,14 +379,14 @@ const FloatingAskKaeo: React.FC = () => {
                 </form>
                 <div className="flex items-center justify-between mt-2">
                   <p className="text-[9px] text-muted-foreground">
-                    Answers grounded in your imported financial data.
+                    Answers grounded in your financial data.
                   </p>
                   <Link
-                    to="/ask-kaeo"
+                    to="/libby"
                     onClick={() => setIsOpen(false)}
-                    className="text-[9px] font-bold text-teal-400 hover:text-teal-300 transition-colors flex items-center gap-1"
+                    className="text-[9px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1"
                   >
-                    Open full advisor
+                    Open Libby
                     <ExternalLink className="w-2.5 h-2.5" />
                   </Link>
                 </div>

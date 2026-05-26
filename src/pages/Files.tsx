@@ -928,10 +928,10 @@ const Files: React.FC = () => {
                     <Filter className="w-4 h-4" /> Review Transactions
                   </button>
                   <button
-                    onClick={() => navigate('/ask-kaeo')}
+                    onClick={() => navigate('/libby')}
                     className="px-4 py-2.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 rounded-xl text-xs font-bold border border-teal-500/25 flex items-center gap-1.5 transition-colors"
                   >
-                    <Sparkles className="w-4 h-4" /> Ask Kaeo what to fix
+                    <Sparkles className="w-4 h-4" /> Ask Libby what to fix
                   </button>
                   <button
                     onClick={() => setImportSummary(null)}

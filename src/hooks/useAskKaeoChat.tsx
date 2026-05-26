@@ -114,7 +114,7 @@ export const AskKaeoChatProvider: React.FC<{ children: React.ReactNode }> = ({
           .insert({
             organization_id: activeOrg.id,
             client_id: activeClient.id,
-            title: 'Ask Kaeo session',
+            title: 'Libby session',
           })
           .select('id')
           .single();
@@ -127,7 +127,7 @@ export const AskKaeoChatProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
     } catch (err) {
-      console.warn('[AskKaeoChat] DB unavailable, falling back to memory:', err);
+      console.warn('[LibbyChat] DB unavailable, falling back to memory:', err);
       setDbError(true);
       setMessages([GREETING]);
     }
@@ -222,7 +222,7 @@ export const AskKaeoChatProvider: React.FC<{ children: React.ReactNode }> = ({
           if (error) setDbError(true);
         }
       } catch (err) {
-        console.error('[AskKaeoChat] Engine error:', err);
+        console.error('[LibbyChat] Engine error:', err);
         setMessages((prev) => [
           ...prev,
           {

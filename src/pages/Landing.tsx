@@ -191,7 +191,7 @@ export const Landing: React.FC = () => {
                 </div>
                 <h3 className="text-base font-bold mb-2 flex items-center gap-1.5">
                   <MessageSquare className="w-4 h-4 text-primary dark:text-[#2fb8a6]" />
-                  Ask Kaeo AI
+                  Ask Libby
                 </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Query your numbers in natural language. Get immediate fiscal advice.
@@ -285,9 +285,9 @@ export const Landing: React.FC = () => {
                 <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
                   <MessageSquare className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold">Ask Kaeo AI Advisor</h3>
+                <h3 className="text-lg font-bold">Libby AI Advisor</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  A fully integrated semantic financial companion. Analyze top vendors, identify anomalies, and prompt questions for immediate answers.
+                  A fully integrated semantic financial companion. Analyze top vendors, identify anomalies, and prompt questions for Libby's immediate answers.
                 </p>
               </div>
             </div>
@@ -308,15 +308,15 @@ export const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* Ask Kaeo Preview Section */}
+      {/* Libby Preview Section */}
       <section className="py-24 border-t border-border/40 bg-muted/10 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Context Left */}
             <div className="lg:col-span-5 space-y-6">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#2fb8a6] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Ask Kaeo AI</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-[#2fb8a6] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Ask Libby</span>
               <h2 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">
-                An AI Advisor that actually knows your bank accounts
+                An AI CFO Operator that actually knows your bank accounts
               </h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Stop waiting for custom queries or pivot tables. Kaeo provides a semantic chatbot that analyzes your uploaded statement files in real time. Ask about recurring costs, SaaS licenses, vendor growths, and tax categories.
@@ -342,7 +342,7 @@ export const Landing: React.FC = () => {
               <div className="flex items-center justify-between pb-3 border-b border-border/30">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-[#2fb8a6]" />
-                  <span className="text-xs font-bold text-foreground">Ask Kaeo Advisor</span>
+                  <span className="text-xs font-bold text-foreground">Libby Advisor</span>
                 </div>
                 <span className="text-[10px] font-bold text-muted-foreground">Session Active</span>
               </div>
@@ -604,7 +604,7 @@ export const Landing: React.FC = () => {
             Stop losing money on hidden spend today.
           </h2>
           <p className="text-sm md:text-base text-muted-slate max-w-xl mx-auto leading-relaxed">
-            Get accountant-ready reports, verify SaaS bills, and query your transaction files with Kaeo AI advisor. Sign up in 2 minutes.
+            Get accountant-ready reports, verify SaaS bills, and query your transaction files with Libby, your AI CFO operator. Sign up in 2 minutes.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link 

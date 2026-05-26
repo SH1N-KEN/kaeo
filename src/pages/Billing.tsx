@@ -260,7 +260,7 @@ const Billing: React.FC = () => {
       title: 'AI Advisor Messages', 
       icon: Bot, 
       limitKey: 'max_ai_messages_per_month',
-      description: 'Ask Kaeo conversations and strategies run.' 
+      description: 'Libby conversations and strategies run.' 
     },
     { 
       type: 'report_generated', 

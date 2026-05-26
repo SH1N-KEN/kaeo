@@ -17,9 +17,14 @@ export type AuditAction =
   | 'ai_bulk_review_applied'
   | 'transaction_ai_categorized'
   | 'risk_ai_flagged'
-  | 'invoice_matched_by_ai';
+  | 'invoice_matched_by_ai'
+  | 'libby_action_prepared'
+  | 'libby_action_approved'
+  | 'libby_action_applied'
+  | 'libby_action_rejected'
+  | 'libby_bulk_action_applied';
 
-export type AuditEntityType = 'transaction' | 'risk' | 'rule' | 'report' | 'vendor' | 'ai_suggestion' | 'invoice';
+export type AuditEntityType = 'transaction' | 'risk' | 'rule' | 'report' | 'vendor' | 'ai_suggestion' | 'invoice' | 'libby_action';
 
 /**
  * Tracks an audit event in the database for compliance and review history.

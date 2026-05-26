@@ -319,7 +319,7 @@ export const KaeoHero: React.FC = () => {
 
               {/* Chart and Detail Panels */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Left Column: Timeline Chart + Ask Kaeo Advisor Bubble */}
+                {/* Left Column: Timeline Chart + Libby Advisor Bubble */}
                 <div className="lg:col-span-2 space-y-4">
                   {/* Custom Cash Flow Timeline Chart */}
                   <div className="p-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md flex flex-col justify-between min-h-[220px]">
@@ -373,12 +373,12 @@ export const KaeoHero: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Ask Kaeo Advisor Bubble */}
+                  {/* Libby Advisor Bubble */}
                   <div className="p-4.5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md space-y-3">
                     <div className="flex items-center justify-between border-b border-white/10 pb-2">
                       <div className="flex items-center gap-1.5">
                         <MessageSquare className="w-3.5 h-3.5 text-teal-400 animate-pulse" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-white">Ask Kaeo Advisor</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-white">Ask Libby</span>
                       </div>
                       <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20">AI Active</span>
                     </div>

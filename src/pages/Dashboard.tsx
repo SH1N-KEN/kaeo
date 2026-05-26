@@ -836,13 +836,13 @@ const Dashboard: React.FC = () => {
                     </button>
                     <button
                       onClick={() => {
-                        const event = new CustomEvent('open-ask-kaeo', { detail: { query: 'What should I fix first?' } });
+                        const event = new CustomEvent('open-ask-libby', { detail: { query: 'What should I fix first?' } });
                         window.dispatchEvent(event);
                       }}
                       className="px-4 py-2 bg-white/5 hover:bg-white/10 text-foreground font-semibold rounded-xl text-xs transition-colors border border-border/30 cursor-pointer flex items-center gap-1.5"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-teal-400" />
-                      Ask Kaeo
+                      Ask Libby
                     </button>
                   </div>
 
@@ -1191,10 +1191,10 @@ const Dashboard: React.FC = () => {
                           <span className="font-bold text-foreground group-hover/item:text-primary">{metrics.rulesActiveCount} rules active</span>
                         </div>
                         <div 
-                          onClick={() => navigate('/ask-kaeo')}
+                          onClick={() => navigate('/libby')}
                           className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
                         >
-                          <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Ask Kaeo Suggestions</span>
+                          <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Libby Suggestions</span>
                           <span className="font-bold text-foreground group-hover/item:text-primary">
                             {metrics.suggestionsCount > 0 ? `${metrics.suggestionsCount} tips ready` : "No issues"}
                           </span>
@@ -1331,12 +1331,12 @@ const Dashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* 6. Ask Kaeo for Next Action */}
+                      {/* 6. Ask Libby for Next Action */}
                       <div className="flex items-start gap-2.5 text-xs text-foreground/80">
                         <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
                         <div className="flex flex-col">
-                          <span className="font-bold text-foreground">Ask Kaeo for next action</span>
-                          <Link to="/ask-kaeo" className="text-[9px] text-teal-400 hover:underline">Consult Kaeo Advisor →</Link>
+                          <span className="font-bold text-foreground">Ask Libby for next action</span>
+                          <Link to="/libby" className="text-[9px] text-teal-400 hover:underline">Consult Libby Advisor →</Link>
                         </div>
                       </div>
                     </div>

@@ -402,7 +402,7 @@ const Settings: React.FC = () => {
             <div className="pt-4 border-t border-border/10 flex flex-col space-y-2 mt-auto">
               <span className="text-[9.5px] text-muted-foreground leading-snug">
                 {isBusinessOwner
-                  ? 'Kaeo uses this context to categorize transactions, detect risks, and make Ask Kaeo more specific.'
+                  ? 'Kaeo uses this context to categorize transactions, detect risks, and make Libby more specific.'
                   : 'Manage accounting practice name, defaults, and details.'
                 }
               </span>
@@ -658,9 +658,9 @@ const Settings: React.FC = () => {
                 )}
               </div>
 
-              {/* Custom Notes / Ask Kaeo Context */}
+              {/* Custom Notes / Libby Context */}
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Notes & custom context for Ask Kaeo</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Notes & custom context for Libby</label>
                 {isEditingFirm ? (
                   <textarea
                     placeholder="Enter context, special rules, or instructions for the AI advisor..."
@@ -670,7 +670,7 @@ const Settings: React.FC = () => {
                   />
                 ) : (
                   <div className="px-4 py-2.5 bg-muted/30 border border-border rounded-xl text-xs font-semibold text-muted-foreground leading-relaxed">
-                    {profile?.onboarding_answers?.notes || 'No special context or firm notes provided. Edit profile to supply workspace instructions for Ask Kaeo.'}
+                    {profile?.onboarding_answers?.notes || 'No special context or firm notes provided. Edit profile to supply workspace instructions for Libby.'}
                   </div>
                 )}
               </div>

@@ -408,7 +408,7 @@ const Onboarding: React.FC = () => {
           <span className="text-xs font-bold uppercase tracking-widest text-[#2fb8a6]">Step 3 of 3</span>
           <h1 className="text-3xl font-black tracking-tight text-white">Select your workflow</h1>
           <p className="text-sm text-muted-foreground">
-            We will calibrate the Ask Kaeo AI advisor to prioritize these pain points.
+            We will calibrate the Libby Advisor to prioritize these pain points.
           </p>
         </div>
 

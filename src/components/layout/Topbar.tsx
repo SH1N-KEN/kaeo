@@ -19,7 +19,8 @@ import {
 
 const pathTitleMap: Record<string, string> = {
   '/dashboard': 'Dashboard',
-  '/ask-kaeo': 'Ask Kaeo',
+  '/ask-kaeo': 'Libby',
+  '/libby': 'Libby',
   '/files': 'Files Ingestion',
   '/transactions': 'Transactions',
   '/vendors': 'Vendors',
@@ -493,12 +494,12 @@ const Topbar: React.FC = () => {
                     onClick={() => {
                       setIsSearchOpen(false);
                       setSearchQuery('');
-                      window.dispatchEvent(new CustomEvent('open-ask-kaeo'));
+                      window.dispatchEvent(new CustomEvent('open-ask-libby'));
                     }}
                     className="flex items-center gap-2.5 p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 text-left text-xs font-semibold cursor-pointer group transition-all"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400 group-hover:scale-125 transition-all" />
-                    <span>Ask Kaeo</span>
+                    <span>Ask Libby</span>
                   </button>
                 </div>
               </div>
@@ -511,6 +512,17 @@ const Topbar: React.FC = () => {
                 <div>
                   <h3 className="text-xs font-bold text-foreground">No matching workspace data found.</h3>
                   <p className="text-[10px] text-muted-foreground leading-normal">Try matching another keyword, description, or amount.</p>
+                  <button
+                    onClick={() => {
+                      setIsSearchOpen(false);
+                      const q = searchQuery;
+                      setSearchQuery('');
+                      window.dispatchEvent(new CustomEvent('open-ask-libby', { detail: { query: q } }));
+                    }}
+                    className="mt-3 px-3 py-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 text-[10px] font-bold rounded-lg border border-teal-500/25 transition-all cursor-pointer inline-flex items-center gap-1"
+                  >
+                    Ask Libby to help find it
+                  </button>
                 </div>
               </div>
             ) : (

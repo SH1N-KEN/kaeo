@@ -489,7 +489,7 @@ function sanitizeTextNumbers(text: string, context: {
         repairedCount++;
         resultText += replacementStr;
         if (isDev) {
-          console.debug(`[Ask Kaeo Sanitizer] Repaired conflicting number '${fullMatch}' with '${replacementStr}' in context '${contextSnippet.trim()}'`);
+          console.debug(`[Libby Sanitizer] Repaired conflicting number '${fullMatch}' with '${replacementStr}' in context '${contextSnippet.trim()}'`);
         }
       } else {
         if (val > 1000) {
@@ -505,7 +505,7 @@ function sanitizeTextNumbers(text: string, context: {
             repairedCount++;
             resultText += candidates[0].str;
             if (isDev) {
-              console.debug(`[Ask Kaeo Sanitizer] Repaired close financial number '${fullMatch}' with '${candidates[0].str}'`);
+              console.debug(`[Libby Sanitizer] Repaired close financial number '${fullMatch}' with '${candidates[0].str}'`);
             }
             continue;
           }
@@ -517,7 +517,7 @@ function sanitizeTextNumbers(text: string, context: {
     } else {
       resultText += fullMatch;
       if (isDev) {
-        console.debug(`[Ask Kaeo Sanitizer] Passed qualitative/advice number '${fullMatch}' without replacement in context: '${contextSnippet.trim()}'`);
+        console.debug(`[Libby Sanitizer] Passed qualitative/advice number '${fullMatch}' without replacement in context: '${contextSnippet.trim()}'`);
       }
     }
   }
@@ -875,7 +875,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       }
     } catch (err: any) {
       if (isDev) {
-        console.debug('[Ask Kaeo Engine] Real AI call failed, falling back to deterministic answer.', err);
+        console.debug('[Libby Engine] Real AI call failed, falling back to deterministic answer.', err);
       }
       fallbackReason = err.message || 'AI request threw error';
     }
@@ -885,7 +885,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
 
   // IF AI GENUINELY FAILS OR WAS SHUNTED, PRINT AN OPERATOR DEBUG LOG
   if (!aiResult && isDev) {
-    console.debug('[Ask Kaeo Engine Fallback Triggered]', {
+    console.debug('[Libby Engine Fallback Triggered]', {
       intent,
       fallback_reason: fallbackReason,
       raw_ai_response: rawAiResponse,
@@ -942,7 +942,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       try {
         currentSuggestions = await syncReviewSuggestions(_orgId, clientId);
       } catch (err) {
-        console.warn('Error syncing suggestions in Ask Kaeo:', err);
+        console.warn('Error syncing suggestions in Libby:', err);
         const { data } = await supabase
           .from('ai_review_suggestions')
           .select('*')

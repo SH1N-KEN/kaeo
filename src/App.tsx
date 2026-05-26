@@ -88,7 +88,8 @@ function App() {
               }
             >
               <Route path="dashboard" element={<Dashboard />} />
-              <Route path="ask-kaeo" element={<AskKaeo />} />
+              <Route path="ask-kaeo" element={<Navigate to="/libby" replace />} />
+              <Route path="libby" element={<AskKaeo />} />
               <Route path="files" element={<Files />} />
               <Route path="files/:importId/mapping" element={<Mapping />} />
               <Route path="transactions" element={<Transactions />} />
