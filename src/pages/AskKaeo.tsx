@@ -12,7 +12,8 @@ import {
   getAvailableLibbyActionsForContext,
   applyLibbyAction,
   rejectLibbyAction,
-  clearLibbyActionsForClient,
+  clearLibbyActions,
+  clearAllLibbyActions,
   EXECUTABLE_ACTION_TYPES,
   type LibbyAction
 } from '../lib/libbyActions';
@@ -27,8 +28,9 @@ const AskKaeo = () => {
   const [preparedActions, setPreparedActions] = useState<LibbyAction[]>([]);
   
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
-  // Track previous client to clear stale actions on scope switch
+  // Track previous client and organization to clear stale actions on scope switch
   const prevClientIdRef = useRef<string | null>(null);
+  const prevOrgIdRef = useRef<string | null>(null);
 
   const loadPreparedActions = useCallback(async () => {
     if (activeClient?.id && activeOrg?.id) {
@@ -41,27 +43,40 @@ const AskKaeo = () => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
+  // Wipes legacy keys once on app load
+  useEffect(() => {
+    clearAllLibbyActions();
+  }, []);
+
   // Clear stale actions when the active client/org changes, then reload for new scope
   useEffect(() => {
     const newClientId = activeClient?.id ?? null;
+    const newOrgId = activeOrg?.id ?? null;
     const prevClientId = prevClientIdRef.current;
+    const prevOrgId = prevOrgIdRef.current;
 
-    if (prevClientId && prevClientId !== newClientId) {
-      // Wipe stale actions that belonged to the old client
-      clearLibbyActionsForClient(prevClientId);
+    if ((prevClientId && prevClientId !== newClientId) || (prevOrgId && prevOrgId !== newOrgId)) {
+      if (prevClientId && prevOrgId) {
+        clearLibbyActions(prevOrgId, prevClientId);
+      }
       setPreparedActions([]);
     }
 
     prevClientIdRef.current = newClientId;
+    prevOrgIdRef.current = newOrgId;
 
-    if (newClientId && activeOrg?.id) {
+    if (newClientId && newOrgId) {
       loadPreparedActions();
     }
-  }, [activeClient?.id, activeOrg?.id]);
+  }, [activeClient?.id, activeOrg?.id, loadPreparedActions]);
 
   useEffect(() => {
-    loadPreparedActions();
-  }, [loadPreparedActions, messages]);
+    if (activeClient?.id && activeOrg?.id) {
+      loadPreparedActions();
+    } else {
+      setPreparedActions([]);
+    }
+  }, [loadPreparedActions, messages, activeClient?.id, activeOrg?.id]);
 
   // Refresh prepared actions when a workspace-wide refresh is triggered
   useWorkspaceRefresh(useCallback(() => {
@@ -80,8 +95,8 @@ const AskKaeo = () => {
   const [activeModalAction, setActiveModalAction] = useState<LibbyAction | null>(null);
 
   const handleExecuteAction = async (action: LibbyAction) => {
-    if (!activeClient?.id) return;
-    const result = await applyLibbyAction(activeClient.id, action.id, user?.id || undefined);
+    if (!activeClient?.id || !activeOrg?.id) return;
+    const result = await applyLibbyAction(activeOrg.id, activeClient.id, action.id, user?.id || undefined);
     if (result.success) {
       toast(result.message, 'success');
       triggerWorkspaceRefresh('libby_action_applied');
@@ -90,16 +105,17 @@ const AskKaeo = () => {
       // Show the real error
       toast(result.message, 'error');
       // If it's a scope mismatch, auto-refresh actions to clear stale suggestions
-      const isScopeMismatch = result.message.includes('another business') || result.message.includes('different business') || result.message.includes('out of date');
+      const isScopeMismatch = result.message.includes('another business') || result.message.includes('different business') || result.message.includes('out of date') || result.message.includes('no longer exist');
       if (isScopeMismatch) {
+        clearLibbyActions(activeOrg.id, activeClient.id);
         loadPreparedActions();
       }
     }
   };
 
   const handleRejectAction = async (actionId: string) => {
-    if (!activeClient?.id) return;
-    const success = await rejectLibbyAction(activeClient.id, actionId, user?.id || undefined);
+    if (!activeClient?.id || !activeOrg?.id) return;
+    const success = await rejectLibbyAction(activeOrg.id, activeClient.id, actionId, user?.id || undefined);
     if (success) {
       toast('Suggestion dismissed.', 'success');
       loadPreparedActions();
@@ -308,9 +324,24 @@ const AskKaeo = () => {
 
       {/* Right Column: Actions Sidebar */}
       <div className="lg:col-span-1 bg-card border border-border/80 rounded-2xl p-5 shadow-sm space-y-4 max-h-[calc(100vh-10rem)] overflow-y-auto animate-in fade-in duration-300">
-        <div className="flex items-center gap-2 pb-2 border-b border-border/40">
-          <Sparkles className="w-4 h-4 text-teal-400" />
-          <h3 className="font-bold text-xs uppercase tracking-wider text-foreground">Actions Prepared by Libby</h3>
+        <div className="flex items-center justify-between pb-2 border-b border-border/40">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-teal-400" />
+            <h3 className="font-bold text-xs uppercase tracking-wider text-foreground">Actions Prepared by Libby</h3>
+          </div>
+          {activeClient?.id && activeOrg?.id && (
+            <button
+              onClick={async () => {
+                clearLibbyActions(activeOrg.id, activeClient.id);
+                setPreparedActions([]);
+                await loadPreparedActions();
+                toast('Libby refreshed suggestions for this business.', 'success');
+              }}
+              className="text-[10px] text-teal-400 hover:text-teal-300 font-bold transition-colors cursor-pointer px-2 py-1 bg-teal-500/10 rounded-md border border-teal-500/20"
+            >
+              Refresh Libby
+            </button>
+          )}
         </div>
         
         {preparedActions.length === 0 ? (

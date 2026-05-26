@@ -40,9 +40,9 @@ export const EXECUTABLE_ACTION_TYPES = new Set([
 
 const STORAGE_KEY = 'kaeo_libby_actions';
 
-export function getStoredLibbyActions(clientId: string): LibbyAction[] {
+export function loadLibbyActions(organizationId: string, clientId: string): LibbyAction[] {
   try {
-    const data = localStorage.getItem(`${STORAGE_KEY}_${clientId}`);
+    const data = localStorage.getItem(`${STORAGE_KEY}_${organizationId}_${clientId}`);
     return data ? JSON.parse(data) : [];
   } catch (err) {
     console.error('Failed to get Libby actions from storage:', err);
@@ -50,9 +50,9 @@ export function getStoredLibbyActions(clientId: string): LibbyAction[] {
   }
 }
 
-export function saveStoredLibbyActions(clientId: string, actions: LibbyAction[]) {
+export function saveLibbyActions(organizationId: string, clientId: string, actions: LibbyAction[]): void {
   try {
-    localStorage.setItem(`${STORAGE_KEY}_${clientId}`, JSON.stringify(actions));
+    localStorage.setItem(`${STORAGE_KEY}_${organizationId}_${clientId}`, JSON.stringify(actions));
   } catch (err) {
     console.error('Failed to save Libby actions to storage:', err);
   }
@@ -62,19 +62,82 @@ export function saveStoredLibbyActions(clientId: string, actions: LibbyAction[])
  * Clears all prepared Libby actions for a given client scope.
  * Call this when the active client or org changes to avoid stale-scope rejections.
  */
-export function clearLibbyActionsForClient(clientId: string): void {
+export function clearLibbyActions(organizationId: string, clientId: string): void {
   try {
-    localStorage.removeItem(`${STORAGE_KEY}_${clientId}`);
+    localStorage.removeItem(`${STORAGE_KEY}_${organizationId}_${clientId}`);
   } catch (err) {
     console.error('Failed to clear Libby actions from storage:', err);
   }
 }
 
+/**
+ * Clears all legacy Libby actions keys from localStorage.
+ */
+export function clearAllLibbyActions(): void {
+  try {
+    localStorage.removeItem('libbyActions');
+    localStorage.removeItem('kaeo_libby_actions');
+    localStorage.removeItem('askKaeoActions');
+    
+    // Clear legacy keys from localStorage
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        if (key.startsWith('kaeo_libby_actions')) {
+          const parts = key.split('_');
+          // New scoped key is kaeo_libby_actions_${orgId}_${clientId} which has 5 parts
+          if (parts.length < 5) {
+            keysToRemove.push(key);
+          }
+        }
+      }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+  } catch (err) {
+    console.error('Failed to clear legacy Libby actions:', err);
+  }
+}
+
+/**
+ * Safely extracts target transaction/entity IDs from a Libby action.
+ */
+export function getTransactionTargetIds(action: LibbyAction): string[] {
+  if (!action) return [];
+  
+  if (action.proposed_changes?.affected_transaction_ids && Array.isArray(action.proposed_changes.affected_transaction_ids)) {
+    return action.proposed_changes.affected_transaction_ids;
+  }
+  if (action.proposed_changes?.entity_ids && Array.isArray(action.proposed_changes.entity_ids)) {
+    return action.proposed_changes.entity_ids;
+  }
+  if (action.proposed_changes?.ids && Array.isArray(action.proposed_changes.ids)) {
+    return action.proposed_changes.ids;
+  }
+  if (action.proposed_changes?.transactionIds && Array.isArray(action.proposed_changes.transactionIds)) {
+    return action.proposed_changes.transactionIds;
+  }
+  if (action.proposed_changes?.targetIds && Array.isArray(action.proposed_changes.targetIds)) {
+    return action.proposed_changes.targetIds;
+  }
+  if (action.proposed_changes?.affectedIds && Array.isArray(action.proposed_changes.affectedIds)) {
+    return action.proposed_changes.affectedIds;
+  }
+  if (action.entity_id) {
+    return [action.entity_id];
+  }
+  if (action.proposed_changes?.risk_id) {
+    return [action.proposed_changes.risk_id];
+  }
+  return [];
+}
+
 export function prepareLibbyAction(
+  organizationId: string,
   clientId: string,
   action: Omit<LibbyAction, 'id' | 'status' | 'created_at'>
 ): LibbyAction {
-  const actions = getStoredLibbyActions(clientId);
+  const actions = loadLibbyActions(organizationId, clientId);
   const newAction: LibbyAction = {
     ...action,
     id: Math.random().toString(36).substring(2, 9),
@@ -92,16 +155,17 @@ export function prepareLibbyAction(
     actions.push(newAction);
   }
   
-  saveStoredLibbyActions(clientId, actions);
+  saveLibbyActions(organizationId, clientId, actions);
   return newAction;
 }
 
 export async function applyLibbyAction(
+  organizationId: string,
   clientId: string,
   actionId: string,
   userId?: string
 ): Promise<LibbyActionResult> {
-  const actions = getStoredLibbyActions(clientId);
+  const actions = loadLibbyActions(organizationId, clientId);
   const actionIdx = actions.findIndex(a => a.id === actionId);
   if (actionIdx === -1) {
     return { success: false, message: 'Action not found. It may have already been applied or dismissed.' };
@@ -117,12 +181,20 @@ export async function applyLibbyAction(
     };
   }
 
-  // Guard: scope mismatch check — stale action belongs to a different business
+  // Guard: scope mismatch check — stale action belongs to a different business/workspace
   if (action.client_id && action.client_id !== clientId) {
-    // Mark as rejected so it doesn't accumulate
     action.status = 'rejected';
     actions[actionIdx] = action;
-    saveStoredLibbyActions(clientId, actions);
+    saveLibbyActions(organizationId, clientId, actions);
+    return {
+      success: false,
+      message: 'This suggestion belongs to a different business. Refresh Libby to get fresh suggestions.'
+    };
+  }
+  if (action.organization_id && organizationId && action.organization_id !== organizationId) {
+    action.status = 'rejected';
+    actions[actionIdx] = action;
+    saveLibbyActions(organizationId, clientId, actions);
     return {
       success: false,
       message: 'This suggestion belongs to a different business. Refresh Libby to get fresh suggestions.'
@@ -130,26 +202,59 @@ export async function applyLibbyAction(
   }
 
   try {
-    const orgId = action.proposed_changes?.organization_id;
+    const orgId = action.proposed_changes?.organization_id || organizationId;
     let affectedCount = 0;
 
     // 1. Database execution based on action_type
     if (action.action_type === 'categorize_bulk') {
-      const { ids, category } = action.proposed_changes;
+      const ids = getTransactionTargetIds(action);
       if (!ids || ids.length === 0) {
         return { success: false, message: 'No transaction IDs found in this action. It may be stale.' };
       }
-      // Validate records still belong to this client
+      
+      // Validate records belong to active client and org
       const { data: check, error: checkErr } = await supabase
         .from('transactions')
-        .select('id')
-        .eq('client_id', clientId)
+        .select('id, client_id, organization_id')
         .in('id', ids);
       if (checkErr) throw checkErr;
-      const validIds = (check || []).map((r: any) => r.id);
-      if (validIds.length === 0) {
-        return { success: false, message: 'None of the target transactions belong to this workspace.' };
+
+      // Dev diagnostic log
+      if (import.meta.env.DEV) {
+        console.debug('[Libby Dev Diagnostics] applyLibbyAction validation for categorize_bulk:', {
+          actionId: action.id,
+          actionType: action.action_type,
+          actionClientId: action.client_id,
+          actionOrgId: action.organization_id,
+          callerClientId: clientId,
+          callerOrgId: organizationId,
+          targetIds: ids,
+          targetCount: ids.length,
+          dbRows: check || []
+        });
       }
+
+      if (!check || check.length === 0) {
+        return { success: false, message: 'These transactions no longer exist. Refresh Libby.' };
+      }
+
+      const matchingRows = check.filter(row => {
+        if (row.client_id !== clientId) return false;
+        if (row.organization_id && organizationId && row.organization_id !== organizationId) return false;
+        return true;
+      });
+
+      if (matchingRows.length === 0) {
+        return { success: false, message: 'This suggestion is out of date. Refresh Libby.' };
+      }
+
+      if (matchingRows.length < check.length) {
+        return { success: false, message: 'Some target transactions do not belong to this business or workspace. Please refresh Libby.' };
+      }
+
+      const validIds = matchingRows.map(r => r.id);
+      const { category } = action.proposed_changes;
+      
       const { error } = await supabase
         .from('transactions')
         .update({ category })
@@ -165,20 +270,53 @@ export async function applyLibbyAction(
       }
     }
     else if (action.action_type === 'mark_reviewed_bulk') {
-      const { ids } = action.proposed_changes;
+      const ids = getTransactionTargetIds(action);
       if (!ids || ids.length === 0) {
         return { success: false, message: 'No transaction IDs found in this action. It may be stale.' };
       }
+
+      // Validate records belong to active client and org
       const { data: check, error: checkErr } = await supabase
         .from('transactions')
-        .select('id')
-        .eq('client_id', clientId)
+        .select('id, client_id, organization_id')
         .in('id', ids);
       if (checkErr) throw checkErr;
-      const validIds = (check || []).map((r: any) => r.id);
-      if (validIds.length === 0) {
-        return { success: false, message: 'This suggestion is out of date or belongs to another business. Refresh Libby and try again.' };
+
+      // Dev diagnostic log
+      if (import.meta.env.DEV) {
+        console.debug('[Libby Dev Diagnostics] applyLibbyAction validation for mark_reviewed_bulk:', {
+          actionId: action.id,
+          actionType: action.action_type,
+          actionClientId: action.client_id,
+          actionOrgId: action.organization_id,
+          callerClientId: clientId,
+          callerOrgId: organizationId,
+          targetIds: ids,
+          targetCount: ids.length,
+          dbRows: check || []
+        });
       }
+
+      if (!check || check.length === 0) {
+        return { success: false, message: 'These transactions no longer exist. Refresh Libby.' };
+      }
+
+      const matchingRows = check.filter(row => {
+        if (row.client_id !== clientId) return false;
+        if (row.organization_id && organizationId && row.organization_id !== organizationId) return false;
+        return true;
+      });
+
+      if (matchingRows.length === 0) {
+        return { success: false, message: 'This suggestion is out of date. Refresh Libby.' };
+      }
+
+      if (matchingRows.length < check.length) {
+        return { success: false, message: 'Some target transactions do not belong to this business or workspace. Please refresh Libby.' };
+      }
+
+      const validIds = matchingRows.map(r => r.id);
+
       const { error } = await supabase
         .from('transactions')
         .update({
@@ -202,6 +340,17 @@ export async function applyLibbyAction(
       if (!orgId) {
         return { success: false, message: 'No organization context found for this action.' };
       }
+
+      // Dev diagnostic log
+      if (import.meta.env.DEV) {
+        console.debug('[Libby Dev Diagnostics] applyLibbyAction execution for update_spend_rule:', {
+          actionId: action.id,
+          actionType: action.action_type,
+          callerOrgId: organizationId,
+          ruleType: rule_type
+        });
+      }
+
       const { data: existingRules } = await supabase
         .from('spend_rules')
         .select('*')
@@ -246,16 +395,41 @@ export async function applyLibbyAction(
       if (!risk_id) {
         return { success: false, message: 'No risk ID found in this action.' };
       }
-      // Validate risk belongs to this client
+      // Validate risk belongs to this client and org
       const { data: check, error: checkErr } = await supabase
         .from('risk_events')
-        .select('id')
-        .eq('id', risk_id)
-        .eq('client_id', clientId);
+        .select('id, client_id, organization_id')
+        .eq('id', risk_id);
       if (checkErr) throw checkErr;
-      if (!check || check.length === 0) {
-        return { success: false, message: 'Risk event not found in this workspace.' };
+
+      // Dev diagnostic log
+      if (import.meta.env.DEV) {
+        console.debug('[Libby Dev Diagnostics] applyLibbyAction validation for resolve_risk:', {
+          actionId: action.id,
+          actionType: action.action_type,
+          actionClientId: action.client_id,
+          actionOrgId: action.organization_id,
+          callerClientId: clientId,
+          callerOrgId: organizationId,
+          riskId: risk_id,
+          dbRows: check || []
+        });
       }
+
+      if (!check || check.length === 0) {
+        return { success: false, message: 'Risk event not found.' };
+      }
+
+      const matchingRows = check.filter(row => {
+        if (row.client_id !== clientId) return false;
+        if (row.organization_id && organizationId && row.organization_id !== organizationId) return false;
+        return true;
+      });
+
+      if (matchingRows.length === 0) {
+        return { success: false, message: 'Risk event belongs to a different business context.' };
+      }
+
       const { error } = await supabase
         .from('risk_events')
         .update({
@@ -279,7 +453,7 @@ export async function applyLibbyAction(
     // 2. Update local state status
     action.status = 'applied';
     actions[actionIdx] = action;
-    saveStoredLibbyActions(clientId, actions);
+    saveLibbyActions(organizationId, clientId, actions);
 
     // 3. Shared audit trail
     if (orgId) {
@@ -299,27 +473,28 @@ export async function applyLibbyAction(
     console.error('[Libby] Action failed:', err);
     action.status = 'failed';
     actions[actionIdx] = action;
-    saveStoredLibbyActions(clientId, actions);
+    saveLibbyActions(organizationId, clientId, actions);
     const msg = err?.message || 'Something went wrong applying this action.';
     return { success: false, message: msg };
   }
 }
 
 export async function rejectLibbyAction(
+  organizationId: string,
   clientId: string,
   actionId: string,
   userId?: string
 ): Promise<boolean> {
-  const actions = getStoredLibbyActions(clientId);
+  const actions = loadLibbyActions(organizationId, clientId);
   const actionIdx = actions.findIndex(a => a.id === actionId);
   if (actionIdx === -1) return false;
 
   const action = actions[actionIdx];
   action.status = 'rejected';
   actions[actionIdx] = action;
-  saveStoredLibbyActions(clientId, actions);
+  saveLibbyActions(organizationId, clientId, actions);
 
-  const orgId = action.proposed_changes?.organization_id;
+  const orgId = action.proposed_changes?.organization_id || organizationId;
   if (orgId && userId) {
     await trackAuditEvent(orgId, 'libby_action_rejected', 'libby_action' as any, action.id, {
       action_type: action.action_type,
@@ -333,18 +508,28 @@ export async function getAvailableLibbyActionsForContext(
   clientId: string,
   orgId: string
 ): Promise<LibbyAction[]> {
-  const actions = getStoredLibbyActions(clientId);
+  const actions = loadLibbyActions(orgId, clientId);
   
   // Retain non-prepared actions (applied, rejected, etc.) and filter out duplicate prepared actions
   const activeActions = actions.filter(a => a.status !== 'prepared');
   
   const prepared: LibbyAction[] = [];
 
-  // Fetch transactions, spend rules, risks
+  // Fetch transactions, spend rules, risks with proper organization scoping if orgId is provided
+  let txQuery = supabase.from('transactions').select('*').eq('client_id', clientId);
+  if (orgId) {
+    txQuery = txQuery.eq('organization_id', orgId);
+  }
+
+  let riskQuery = supabase.from('risk_events').select('*').eq('client_id', clientId).eq('status', 'open');
+  if (orgId) {
+    riskQuery = riskQuery.eq('organization_id', orgId);
+  }
+
   const [txRes, rulesRes, riskRes] = await Promise.all([
-    supabase.from('transactions').select('*').eq('client_id', clientId),
+    txQuery,
     supabase.from('spend_rules').select('*').eq('organization_id', orgId),
-    supabase.from('risk_events').select('*').eq('client_id', clientId).eq('status', 'open')
+    riskQuery
   ]);
 
   const transactions = getCleanTransactions(txRes.data || []);
@@ -372,7 +557,7 @@ export async function getAvailableLibbyActionsForContext(
           : `Map ${softwareList.length} uncategorized SaaS transactions to Software / SaaS.`,
         proposed_changes: {
           organization_id: orgId,
-          ids: softwareList.map(t => t.id),
+          affected_transaction_ids: softwareList.map(t => t.id),
           category: 'Software / SaaS'
         },
         risk_level: softwareList.length > 5 ? 'medium' : 'low',
@@ -396,7 +581,7 @@ export async function getAvailableLibbyActionsForContext(
           : `Define categories for ${uncategorized.length} uncategorized transactions.`,
         proposed_changes: {
           organization_id: orgId,
-          ids: uncategorized.map(t => t.id),
+          affected_transaction_ids: uncategorized.map(t => t.id),
           category: 'Office Expenses'
         },
         risk_level: uncategorized.length > 5 ? 'medium' : 'low',
@@ -429,7 +614,7 @@ export async function getAvailableLibbyActionsForContext(
         : `Approve and validate ${unreviewedLowRisk.length} fully-categorized transactions under ₹15,000.`,
       proposed_changes: {
         organization_id: orgId,
-        ids: unreviewedLowRisk.map(t => t.id)
+        affected_transaction_ids: unreviewedLowRisk.map(t => t.id)
       },
       risk_level: unreviewedLowRisk.length > 5 ? 'medium' : 'safe',
       requires_confirmation: true,
@@ -493,7 +678,7 @@ export async function getAvailableLibbyActionsForContext(
 
   // Combine and save
   const finalActions = [...activeActions, ...prepared];
-  saveStoredLibbyActions(clientId, finalActions);
+  saveLibbyActions(orgId, clientId, finalActions);
   
   // Return only prepared items for this run
   return prepared;
