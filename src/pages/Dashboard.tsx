@@ -27,6 +27,7 @@ import { supabase } from '../lib/supabase';
 import aeLogo from '../assets/kaeo-ae-logo.png';
 import { calculateMonthEndReadiness, type ReadinessResult } from '../lib/readinessEngine';
 import { getDisplayCategory, inferTransactionCategory, ALL_CATEGORIES } from '../lib/categoryEngine';
+import { getCleanTransactions } from '../lib/transactionFilters';
 import { analyzeRisksForClient } from '../lib/riskEngine';
 import { getSpendRules } from '../lib/spendRulesEngine';
 import { getTimeBasedGreeting } from '../lib/greeting';
@@ -198,18 +199,7 @@ const Dashboard: React.FC = () => {
 
       if (metricsErr) throw metricsErr;
 
-      const isMetadataTransaction = (description: string): boolean => {
-        const desc = (description || '').toLowerCase().trim();
-        if (!desc) return true;
-        if (['posting date', 'value date', 'particulars', 'debit amount', 'credit amount', 'running balance', 'instrument', 'category hint'].includes(desc)) {
-          return true;
-        }
-        return ['opening balance', 'closing balance', 'total', 'totals', 'subtotal', 'carried forward', 'brought forward'].some(
-          k => desc === k || desc.startsWith(k)
-        );
-      };
-
-      const cleanTransactions = (allTransactions || []).filter(tx => !isMetadataTransaction(tx.description));
+      const cleanTransactions = getCleanTransactions(allTransactions || []);
       
       // Fetch open risks
       const { data: openRisksData } = await supabase
@@ -218,7 +208,7 @@ const Dashboard: React.FC = () => {
         .eq('client_id', activeClient.id)
         .eq('status', 'open');
         
-      const readinessResult = calculateMonthEndReadiness(allTransactions || [], openRisksData || []);
+      const readinessResult = calculateMonthEndReadiness(cleanTransactions, openRisksData || []);
       setReadiness(readinessResult);
 
       const vendors: Record<string, number> = {};
@@ -229,9 +219,6 @@ const Dashboard: React.FC = () => {
           ? Number(tx.amount_in_base_currency)
           : Number(tx.amount);
         const amt = Math.abs(txAmountVal);
-        
-        const cat = getDisplayCategory(tx);
-        if (cat === 'Uncategorized') acc.uncategorizedCount++;
         
         if (!tx.review_status || tx.review_status === 'new' || tx.review_status === 'needs_review') {
           acc.unreviewedCount++;
@@ -278,9 +265,6 @@ const Dashboard: React.FC = () => {
           acc.refunds += amt;
           acc.refundCount++;
         }
-        else if (tx.type === 'unknown') {
-          acc.unknownCount++;
-        }
         else if (tx.type === 'failed' || tx.type === 'failed_payment') {
           acc.failedCount++;
         }
@@ -302,15 +286,23 @@ const Dashboard: React.FC = () => {
         unreviewedCount: 0
       });
 
-      // Override uncategorized and unknown counts from allTransactions to include metadata rows
+      // Filter and count uncategorized & unknown problem rows across cleanTransactions
       let totalUncategorizedCount = 0;
       let totalUnknownCount = 0;
-      (allTransactions || []).forEach(tx => {
+      cleanTransactions.forEach(tx => {
         const cat = getDisplayCategory(tx);
-        if (cat === 'Uncategorized') {
-          totalUncategorizedCount++;
-        } else if (cat === 'Unknown') {
-          totalUnknownCount++;
+        const isCatMissingOrInvalid = !tx.category || tx.category.trim() === '' || tx.category.toLowerCase() === 'null' || tx.category.toLowerCase() === 'generic';
+        if (
+          cat === 'Uncategorized' ||
+          cat === 'Unknown' ||
+          tx.type === 'unknown' ||
+          isCatMissingOrInvalid
+        ) {
+          if (tx.type === 'unknown') {
+            totalUnknownCount++;
+          } else {
+            totalUncategorizedCount++;
+          }
         }
       });
       stats.uncategorizedCount = totalUncategorizedCount;
@@ -449,7 +441,7 @@ const Dashboard: React.FC = () => {
         .limit(20);
 
       if (recentErr) throw recentErr;
-      const cleanRecent = (recent || []).filter(tx => !isMetadataTransaction(tx.description)).slice(0, 5);
+      const cleanRecent = getCleanTransactions(recent || []).slice(0, 5);
       setRecentTransactions(cleanRecent);
 
     } catch (err: any) {

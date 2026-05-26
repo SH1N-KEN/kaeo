@@ -1,6 +1,7 @@
 
 import type { RiskEvent } from './riskEngine';
 import { getDisplayCategory } from './categoryEngine';
+import { getCleanTransactions } from './transactionFilters';
 
 export interface ReadinessResult {
   score: number;
@@ -13,18 +14,7 @@ export const calculateMonthEndReadiness = (
   rawTransactions: any[],
   risks: RiskEvent[]
 ): ReadinessResult => {
-  const isMetadataTransaction = (description: string): boolean => {
-    const desc = (description || '').toLowerCase().trim();
-    if (!desc) return true;
-    if (['posting date', 'value date', 'particulars', 'debit amount', 'credit amount', 'running balance', 'instrument', 'category hint'].includes(desc)) {
-      return true;
-    }
-    return ['opening balance', 'closing balance', 'total', 'totals', 'subtotal', 'carried forward', 'brought forward'].some(
-      k => desc === k || desc.startsWith(k)
-    );
-  };
-
-  const transactions = (rawTransactions || []).filter(tx => !isMetadataTransaction(tx.description));
+  const transactions = getCleanTransactions(rawTransactions);
 
   let score = 100;
   const deductions: { reason: string; amount: number }[] = [];

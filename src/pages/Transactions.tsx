@@ -31,6 +31,7 @@ import {
   getCategoryBadgeStyle,
   type TransactionCategory,
 } from '../lib/categoryEngine';
+import { getCleanTransactions } from '../lib/transactionFilters';
 import { useToast } from '../hooks/useToast';
 import { trackAuditEvent } from '../lib/auditEngine';
 import { AIReviewQueueModal } from '../components/ai/AIReviewQueueModal';
@@ -231,28 +232,19 @@ const Transactions: React.FC = () => {
 
   // ── Derive display transactions (category inference) ─────────────────────
   const displayTransactions = useMemo(() => {
-    const isMetadataTransaction = (description: string): boolean => {
-      const desc = (description || '').toLowerCase().trim();
-      if (!desc) return true;
-      if (['posting date', 'value date', 'particulars', 'debit amount', 'credit amount', 'running balance', 'instrument', 'category hint'].includes(desc)) {
-        return true;
-      }
-      return ['opening balance', 'closing balance', 'total', 'totals', 'subtotal', 'carried forward', 'brought forward'].some(
-        k => desc === k || desc.startsWith(k)
-      );
-    };
+    const cleanTxs = getCleanTransactions(transactions);
+    const metadataCount = transactions.length - cleanTxs.length;
+    console.log('metadataRowsFiltered =', metadataCount);
 
-    return transactions
-      .filter((tx) => !isMetadataTransaction(tx.description))
-      .map((tx) => ({
-        ...tx,
-        _displayCategory: getDisplayCategory({
-          category: tx.category,
-          description: tx.description,
-          counterparty_name: tx.counterparty_name,
-          type: tx.type,
-        }),
-      }));
+    return cleanTxs.map((tx) => ({
+      ...tx,
+      _displayCategory: getDisplayCategory({
+        category: tx.category,
+        description: tx.description,
+        counterparty_name: tx.counterparty_name,
+        type: tx.type,
+      }),
+    }));
   }, [transactions]);
 
   // ── Derive filter options ─────────────────────────────────────────────────

@@ -21,6 +21,7 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
 import { formatINR } from '../lib/formatters';
 import { analyzeRisksForClient } from '../lib/riskEngine';
+import { getCleanTransactions } from '../lib/transactionFilters';
 import EmptyState from '../components/ui/EmptyState';
 import MetricCard from '../components/ui/MetricCard';
 import type { RiskEvent, Note } from '../types/finance';
@@ -89,21 +90,10 @@ const RiskInbox: React.FC = () => {
     if (!activeClient) return;
     const { data } = await supabase
       .from('transactions')
-      .select('description')
+      .select('*')
       .eq('client_id', activeClient.id);
     
-    const isMetadataTransaction = (description: string): boolean => {
-      const desc = (description || '').toLowerCase().trim();
-      if (!desc) return true;
-      if (['posting date', 'value date', 'particulars', 'debit amount', 'credit amount', 'running balance', 'instrument', 'category hint'].includes(desc)) {
-        return true;
-      }
-      return ['opening balance', 'closing balance', 'total', 'totals', 'subtotal', 'carried forward', 'brought forward'].some(
-        k => desc === k || desc.startsWith(k)
-      );
-    };
-
-    const cleanTxs = (data || []).filter(tx => !isMetadataTransaction(tx.description));
+    const cleanTxs = getCleanTransactions(data || []);
     setTxCount(cleanTxs.length);
   };
 
