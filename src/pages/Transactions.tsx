@@ -47,7 +47,7 @@ function formatCurrency(amount: number, _currencyCode: string = 'INR', forceSign
 }
 
 // ── Sort types ────────────────────────────────────────────────────────────────
-type SortKey = 'transaction_date' | 'description' | 'category' | 'amount' | 'type' | 'source_provider' | 'review_status';
+type SortKey = 'transaction_date' | 'description' | 'category' | 'amount' | 'type' | 'source_provider' | 'review_status' | 'counterparty_name';
 type SortDir = 'asc' | 'desc';
 
 // ── Date range presets ────────────────────────────────────────────────────────
@@ -782,6 +782,15 @@ const Transactions: React.FC = () => {
                   </th>
                   <th
                     className={thClass}
+                    onClick={() => handleSort('counterparty_name')}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      Counterparty
+                      <SortIcon col="counterparty_name" />
+                    </span>
+                  </th>
+                  <th
+                    className={thClass}
                     onClick={() => handleSort('description')}
                   >
                     <span className="flex items-center gap-1.5">
@@ -819,20 +828,20 @@ const Transactions: React.FC = () => {
                   </th>
                   <th
                     className={thClass}
-                    onClick={() => handleSort('source_provider')}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      Source
-                      <SortIcon col="source_provider" />
-                    </span>
-                  </th>
-                  <th
-                    className={thClass}
                     onClick={() => handleSort('review_status')}
                   >
                     <span className="flex items-center gap-1.5">
                       Status
                       <SortIcon col="review_status" />
+                    </span>
+                  </th>
+                  <th
+                    className={thClass}
+                    onClick={() => handleSort('source_provider')}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      Source
+                      <SortIcon col="source_provider" />
                     </span>
                   </th>
                   <th className="px-4 py-3 border-b border-border/50 w-10" />
@@ -860,18 +869,18 @@ const Transactions: React.FC = () => {
                         </span>
                       </td>
 
+                      {/* Counterparty */}
+                      <td className="px-4 py-3 max-w-[150px] truncate">
+                        <span className="text-xs font-bold text-foreground">
+                          {tx.counterparty_name && tx.counterparty_name !== 'No counterparty' ? tx.counterparty_name : '-'}
+                        </span>
+                      </td>
+
                       {/* Description */}
-                      <td className="px-4 py-3 max-w-[220px]">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-foreground truncate">
-                            {tx.description}
-                          </span>
-                          {tx.counterparty_name && (
-                            <span className="text-[10px] text-muted-foreground truncate mt-0.5">
-                              {tx.counterparty_name}
-                            </span>
-                          )}
-                        </div>
+                      <td className="px-4 py-3 max-w-[220px] truncate">
+                        <span className="text-xs text-muted-foreground">
+                          {tx.description}
+                        </span>
                       </td>
 
                       {/* Category badge */}
@@ -956,16 +965,16 @@ const Transactions: React.FC = () => {
                         <TypeBadge type={tx.type} />
                       </td>
 
+                      {/* Review Status */}
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                        <ReviewBadge status={tx.review_status || 'new'} />
+                      </td>
+
                       {/* Source */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className="text-[10px] font-bold text-muted-foreground bg-muted/40 px-2 py-1 rounded border border-border/30">
                           {tx.source_provider || 'Manual'}
                         </span>
-                      </td>
-
-                      {/* Review Status */}
-                      <td className="px-4 py-3 text-center whitespace-nowrap">
-                        <ReviewBadge status={tx.review_status || 'new'} />
                       </td>
 
                       {/* Row actions */}

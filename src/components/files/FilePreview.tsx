@@ -48,6 +48,11 @@ const FilePreview: React.FC<FilePreviewProps> = ({
       const expenseRows = txs.filter(tx => tx.type === 'expense').length;
       const refundRows = txs.filter(tx => tx.type === 'refund').length;
       const unknownRows = txs.filter(tx => tx.type === 'unknown').length;
+
+      const highConfidenceCount = txs.filter(tx => tx.raw_row_json?.intelligence?.intelligence_confidence === 'high').length;
+      const mediumConfidenceCount = txs.filter(tx => tx.raw_row_json?.intelligence?.intelligence_confidence === 'medium').length;
+      const needsReviewCount = txs.filter(tx => tx.review_status === 'needs_review').length;
+
       return {
         totalDetected: result.rowCount,
         incomeRows,
@@ -55,7 +60,10 @@ const FilePreview: React.FC<FilePreviewProps> = ({
         refundRows,
         unknownRows,
         warningsCount: normalizedResult.warnings.length + (result.warnings ? result.warnings.length : 0),
-        recommendedAction: autoMapping.status === 'ready_to_import' ? 'Ready to Import' : 'Review column mappings'
+        recommendedAction: autoMapping.status === 'ready_to_import' ? 'Ready to Import' : 'Review column mappings',
+        highConfidenceCount,
+        mediumConfidenceCount,
+        needsReviewCount
       };
     } catch (e) {
       console.error(e);
@@ -231,44 +239,70 @@ const FilePreview: React.FC<FilePreviewProps> = ({
               </div>
             </div>
             {result.metadata?.isHDFC && result.metadata?.hdfcStats ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
-                  <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Transactions Detected</span>
-                  <span className="text-base font-black text-foreground">{result.metadata.hdfcStats.transactionsCount}</span>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                  <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
+                    <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Transactions Detected</span>
+                    <span className="text-base font-black text-foreground">{result.metadata.hdfcStats.transactionsCount}</span>
+                  </div>
+                  <div className="bg-primary/5 p-3 rounded-xl border border-primary/15 text-center">
+                    <span className="text-[9px] text-primary/70 font-black uppercase tracking-wider block">Continuation Rows Merged</span>
+                    <span className="text-base font-black text-primary">{result.metadata.hdfcStats.continuationRowsMerged}</span>
+                  </div>
+                  <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
+                    <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Skipped Orphan Rows</span>
+                    <span className="text-base font-black text-foreground">{result.metadata.hdfcStats.orphanRowsSkipped}</span>
+                  </div>
+                  <div className={`p-3 rounded-xl text-center ${
+                    result.metadata.hdfcStats.balanceWarnings > 0
+                      ? 'bg-warning/10 border border-warning/20 text-warning'
+                      : 'bg-success/5 border border-success/15 text-success'
+                  }`}>
+                    <span className="text-[9px] font-black uppercase tracking-wider block">Balance Warnings</span>
+                    <span className="text-base font-black">{result.metadata.hdfcStats.balanceWarnings}</span>
+                  </div>
+                  <div className="bg-success/5 p-3 rounded-xl border border-success/15 text-center">
+                    <span className="text-[9px] text-success/70 font-black uppercase tracking-wider block">Deposits</span>
+                    <span className="text-sm font-black text-success truncate block">
+                      {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(result.metadata.hdfcStats.totalDeposits)}
+                    </span>
+                  </div>
+                  <div className="bg-risk/5 p-3 rounded-xl border border-risk/15 text-center">
+                    <span className="text-[9px] text-risk/70 font-black uppercase tracking-wider block">Withdrawals</span>
+                    <span className="text-sm font-black text-risk truncate block">
+                      {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(result.metadata.hdfcStats.totalWithdrawals)}
+                    </span>
+                  </div>
+                  <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
+                    <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Net Cash</span>
+                    <span className={`text-sm font-black truncate block ${result.metadata.hdfcStats.netCashMovement >= 0 ? 'text-success' : 'text-risk'}`}>
+                      {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(result.metadata.hdfcStats.netCashMovement)}
+                    </span>
+                  </div>
                 </div>
-                <div className="bg-primary/5 p-3 rounded-xl border border-primary/15 text-center">
-                  <span className="text-[9px] text-primary/70 font-black uppercase tracking-wider block">Continuation Rows Merged</span>
-                  <span className="text-base font-black text-primary">{result.metadata.hdfcStats.continuationRowsMerged}</span>
-                </div>
-                <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
-                  <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Skipped Orphan Rows</span>
-                  <span className="text-base font-black text-foreground">{result.metadata.hdfcStats.orphanRowsSkipped}</span>
-                </div>
-                <div className={`p-3 rounded-xl text-center ${
-                  result.metadata.hdfcStats.balanceWarnings > 0
-                    ? 'bg-warning/10 border border-warning/20 text-warning'
-                    : 'bg-success/5 border border-success/15 text-success'
-                }`}>
-                  <span className="text-[9px] font-black uppercase tracking-wider block">Balance Warnings</span>
-                  <span className="text-base font-black">{result.metadata.hdfcStats.balanceWarnings}</span>
-                </div>
-                <div className="bg-success/5 p-3 rounded-xl border border-success/15 text-center">
-                  <span className="text-[9px] text-success/70 font-black uppercase tracking-wider block">Deposits</span>
-                  <span className="text-sm font-black text-success truncate block">
-                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(result.metadata.hdfcStats.totalDeposits)}
-                  </span>
-                </div>
-                <div className="bg-risk/5 p-3 rounded-xl border border-risk/15 text-center">
-                  <span className="text-[9px] text-risk/70 font-black uppercase tracking-wider block">Withdrawals</span>
-                  <span className="text-sm font-black text-risk truncate block">
-                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(result.metadata.hdfcStats.totalWithdrawals)}
-                  </span>
-                </div>
-                <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
-                  <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Net Cash</span>
-                  <span className={`text-sm font-black truncate block ${result.metadata.hdfcStats.netCashMovement >= 0 ? 'text-success' : 'text-risk'}`}>
-                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(result.metadata.hdfcStats.netCashMovement)}
-                  </span>
+                
+                <div className="pt-3 border-t border-border/15 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/20 p-4 rounded-xl border border-border/20">
+                  <div>
+                    <h5 className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Categorization Intelligence</h5>
+                    <p className="text-[9px] text-muted-foreground mt-0.5">Automated classification confidence for HDFC statements.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-success shadow-[0_0_6px_rgba(34,197,94,0.4)]" />
+                      <span className="text-[10px] font-bold text-success/80">High Confidence:</span>
+                      <span className="text-[10px] font-black text-foreground">{previewStats.highConfidenceCount} rows</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_rgba(59,130,246,0.4)]" />
+                      <span className="text-[10px] font-bold text-primary/80">Medium Confidence:</span>
+                      <span className="text-[10px] font-black text-foreground">{previewStats.mediumConfidenceCount} rows</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-warning shadow-[0_0_6px_rgba(245,158,11,0.4)]" />
+                      <span className="text-[10px] font-bold text-warning/80">Needs Review:</span>
+                      <span className="text-[10px] font-black text-foreground">{previewStats.needsReviewCount} rows</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (

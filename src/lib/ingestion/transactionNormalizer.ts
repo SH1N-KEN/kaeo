@@ -6,6 +6,7 @@ import {
   convertToBaseCurrency, 
   needsConversion 
 } from '../currency';
+import { parseIndianNarration } from '../transactionIntelligence';
 
 /**
  * Detects currency from row mappings, cell values, and row headers/keys.
@@ -303,8 +304,8 @@ export const normalizeIngestedRows = (
       storedCat.toLowerCase() === 'unknown' ||
       storedCat.toLowerCase() === 'generic' ||
       storedCat.toLowerCase() === 'null';
-    const counterparty = mapping['counterparty_name'] ? row[mapping['counterparty_name']] : null;
-    const inferredCategory = isCatMissing
+    let counterparty = mapping['counterparty_name'] ? row[mapping['counterparty_name']] : null;
+    let inferredCategory = isCatMissing
       ? inferTransactionCategory(rawDesc, counterparty, type)
       : storedCat;
 
@@ -317,7 +318,35 @@ export const normalizeIngestedRows = (
 
     // Map reference field if mapped
     const refCol = mapping['reference'];
-    const reference = refCol && row[refCol] !== undefined && row[refCol] !== null ? String(row[refCol]).trim() : null;
+    let reference = refCol && row[refCol] !== undefined && row[refCol] !== null ? String(row[refCol]).trim() : null;
+
+    // Run transaction intelligence layer for bank statements
+    let extractedCounterparty = counterparty ? String(counterparty).trim() : null;
+    let intelligenceMetadata: any = {};
+    let confidenceLevel: 'high' | 'medium' | 'low' = 'high';
+
+    if (context.provider === 'Bank Statement' || context.provider === 'Generic Finance File') {
+      const intel = parseIndianNarration(rawDesc, amount);
+      if (intel.counterparty_name && intel.counterparty_name !== 'No counterparty') {
+        extractedCounterparty = intel.counterparty_name;
+      }
+      if (isCatMissing) {
+        inferredCategory = intel.likely_category;
+      }
+      if (intel.reference_number) {
+        reference = intel.reference_number;
+      }
+      confidenceLevel = intel.confidence;
+      intelligenceMetadata = {
+        payment_rail: intel.payment_rail,
+        counterparty_type: intel.counterparty_type,
+        reference_number: intel.reference_number || reference,
+        upi_id: intel.upi_id,
+        bank_ifsc_or_code: intel.bank_ifsc_or_code,
+        intelligence_confidence: intel.confidence,
+        intelligence_reason: intel.reason
+      };
+    }
 
     // Resolve balance and check reconciliation
     let balanceMismatch = false;
@@ -358,16 +387,28 @@ export const normalizeIngestedRows = (
         : {},
       type: type,
       category: inferredCategory,
-      counterparty_name: counterparty,
+      counterparty_name: extractedCounterparty,
       source_provider: context.provider,
       reference: reference,
-      raw_row_json: row
+      raw_row_json: {
+        ...row,
+        intelligence: intelligenceMetadata
+      }
     };
 
+    let reviewStatus = 'new';
+    if (confidenceLevel === 'low') {
+      reviewStatus = 'needs_review';
+    }
     if (balanceMismatch) {
-      txObj.review_status = 'needs_review';
+      reviewStatus = 'needs_review';
+    }
+
+    txObj.review_status = reviewStatus;
+
+    if (balanceMismatch) {
       txObj.raw_row_json = {
-        ...row,
+        ...txObj.raw_row_json,
         metadata: {
           ...(row && row.metadata),
           balance_mismatch: true

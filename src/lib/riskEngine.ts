@@ -345,6 +345,63 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
     }
   }
 
+  // --- Balance Mismatch Detection ---
+  const balanceMismatchTxs = txs.filter(tx => tx.raw_row_json?.metadata?.balance_mismatch === true);
+  balanceMismatchTxs.forEach(tx => {
+    const amt = Math.abs(getTxAmount(tx));
+    risks.push({
+      organization_id: orgId,
+      client_id: clientId,
+      title: `Balance Mismatch: ${tx.description.split(' ')[0]}`,
+      severity: 'high',
+      risk_type: 'balance_mismatch',
+      amount_at_risk: amt,
+      description: `Balance movement does not match debit/credit amount for transaction on ${tx.transaction_date}.`,
+      evidence_json: {
+        transaction_id: tx.id,
+        amount: getTxAmount(tx),
+        description: tx.description,
+        date: tx.transaction_date,
+        original_currency: tx.original_currency || tx.currency || baseCurrency,
+        exchange_rate: tx.exchange_rate || 1
+      },
+      suggested_action: 'Verify transaction amounts and reconcile against physical bank statement.',
+      status: 'open',
+      related_transaction_ids: [tx.id]
+    });
+  });
+
+  // --- Unknown Counterparty High-Value Payments ---
+  const unknownCpHighValueTxs = txs.filter(tx => {
+    const amt = Math.abs(getTxAmount(tx));
+    const isHighValue = amt >= (highValueRule?.threshold_amount || 50000);
+    const hasNoCp = !tx.counterparty_name || tx.counterparty_name === 'No counterparty' || tx.counterparty_name.trim() === '';
+    return tx.amount < 0 && hasNoCp && isHighValue;
+  });
+  unknownCpHighValueTxs.forEach(tx => {
+    const amt = Math.abs(getTxAmount(tx));
+    risks.push({
+      organization_id: orgId,
+      client_id: clientId,
+      title: `Unknown Counterparty High-Value Payment`,
+      severity: 'high',
+      risk_type: 'unknown_counterparty_high_value',
+      amount_at_risk: amt,
+      description: `A large outflow of ${fmtCurrency(amt)} was made to an unidentified counterparty.`,
+      evidence_json: {
+        transaction_id: tx.id,
+        amount: amt,
+        description: tx.description,
+        date: tx.transaction_date,
+        original_currency: tx.original_currency || tx.currency || baseCurrency,
+        exchange_rate: tx.exchange_rate || 1
+      },
+      suggested_action: 'Identify the payee and document the transaction details.',
+      status: 'open',
+      related_transaction_ids: [tx.id]
+    });
+  });
+
   // --- 5. Uncategorized Transactions Rule ---
   if (uncategorizedRule) {
     const uncategorizedTxs = txs.filter(tx => {
