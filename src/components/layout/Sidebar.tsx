@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { useToast } from '../../hooks/useToast';
+import { useWorkspace } from '../../hooks/useWorkspace';
 import aeLogo from '../../assets/kaeo-ae-logo.png';
 
 const navItems = [
@@ -31,6 +32,7 @@ const navItems = [
 
 const Sidebar: React.FC = () => {
   const { user, signOut } = useAuth();
+  const { accountMode } = useWorkspace();
   const { toast } = useToast();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -284,7 +286,7 @@ const Sidebar: React.FC = () => {
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span>Workspace Settings</span>
+                <span>{accountMode === 'business_owner' ? 'Business Settings' : 'Workspace Settings'}</span>
               </NavLink>
 
               {/* Theme Toggle option */}

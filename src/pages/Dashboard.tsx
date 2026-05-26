@@ -468,8 +468,12 @@ const Dashboard: React.FC = () => {
     return (
       <div className="h-[70vh] flex items-center justify-center">
         <EmptyState 
-          title="No client workspace selected"
-          description="Create or select a client workspace to view financial insights."
+          title="Finish setup to start reviewing your finances."
+          description="Add your business details or select a workspace to begin."
+          action={{
+            label: "Complete setup",
+            onClick: () => navigate('/settings?tab=clients')
+          }}
         />
       </div>
     );

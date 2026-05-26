@@ -703,8 +703,12 @@ const Files: React.FC = () => {
     return (
       <div className="h-[70vh] flex items-center justify-center">
         <EmptyState 
-          title="No client workspace selected"
-          description="Select a client workspace before uploading finance files."
+          title="Set up your business before uploading files."
+          description="Add your business profile details or select a workspace to start importing files."
+          action={{
+            label: "Set up business",
+            onClick: () => navigate('/settings?tab=clients')
+          }}
         />
       </div>
     );

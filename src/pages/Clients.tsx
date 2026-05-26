@@ -492,7 +492,7 @@ const Clients: React.FC<ClientsProps> = ({ embedMode = false }) => {
         {!embedMode && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Client Businesses</h1>
               <p className="text-sm text-muted-foreground mt-1">Manage the business accounts you review in Kaeo for <span className="text-foreground font-semibold">{activeOrgName}</span>.</p>
             </div>
             
@@ -500,19 +500,19 @@ const Clients: React.FC<ClientsProps> = ({ embedMode = false }) => {
               onClick={() => setIsCreateModalOpen(true)}
               className="px-4 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-xs flex items-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-primary/10 self-start sm:self-auto"
             >
-              <Plus className="w-4 h-4" /> Add Client
+              <Plus className="w-4 h-4" /> Add Client Business
             </button>
           </div>
         )}
 
         {embedMode && clients.length > 0 && (
           <div className="flex justify-between items-center border-b border-border/15 pb-4">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Client Directory</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Client Business Directory</h3>
             <button
               onClick={() => setIsCreateModalOpen(true)}
               className="px-4 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-xs flex items-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-primary/10"
             >
-              <Plus className="w-3.5 h-3.5" /> Add Client
+              <Plus className="w-3.5 h-3.5" /> Add Client Business
             </button>
           </div>
         )}
@@ -523,16 +523,16 @@ const Clients: React.FC<ClientsProps> = ({ embedMode = false }) => {
               <Users className="w-8 h-8 text-teal-400/40" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-bold tracking-tight">Add your first client</h3>
+              <h3 className="text-lg font-bold tracking-tight">Add your first client business</h3>
               <p className="text-xs text-muted-foreground max-w-sm font-medium">
-                Clients are the businesses you review inside this workspace.
+                Client businesses are the workspaces you review inside Kaeo.
               </p>
             </div>
             <button 
               onClick={() => setIsCreateModalOpen(true)}
               className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 transition-all shadow-xl shadow-primary/20 cursor-pointer"
             >
-              Add Client
+              Add Client Business
             </button>
           </div>
         ) : (
@@ -630,7 +630,7 @@ const Clients: React.FC<ClientsProps> = ({ embedMode = false }) => {
                           : 'bg-white/5 border border-border/40 hover:border-border text-foreground'
                       }`}
                     >
-                      Open Client
+                      Open Client Business
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -647,7 +647,7 @@ const Clients: React.FC<ClientsProps> = ({ embedMode = false }) => {
             if (!activeOrg) return null;
             const res = await createClient(name, activeOrg.id, industry, currency, metadata);
             if (res) {
-              toast(`Client ${name} created successfully`, 'success');
+              toast(`Client business "${name}" created successfully`, 'success');
               fetchAllClientsStats();
             }
             return res;

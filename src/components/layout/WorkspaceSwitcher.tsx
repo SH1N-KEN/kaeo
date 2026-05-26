@@ -62,7 +62,7 @@ const WorkspaceSwitcher: React.FC = () => {
         {accountMode === 'business_owner' ? (
           <div className="flex flex-col items-start min-w-0 flex-1 justify-center">
             <span className="truncate text-xs font-bold text-foreground">
-              {activeOrg.name}
+              {activeClient?.name || activeOrg.name}
             </span>
           </div>
         ) : (
@@ -71,7 +71,7 @@ const WorkspaceSwitcher: React.FC = () => {
               {activeOrg.name}
             </span>
             <span className="truncate text-xs">
-              {activeClient?.name || 'No client selected'}
+              {activeClient?.name || 'No client business selected'}
             </span>
           </div>
         )}
@@ -84,97 +84,121 @@ const WorkspaceSwitcher: React.FC = () => {
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full left-0 mt-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200">
-            {/* Organizations Section */}
-            <div className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-between">
-              Workspaces
-              {accountMode !== 'business_owner' && (
+          {accountMode === 'business_owner' ? (
+            <div className="absolute top-full left-0 mt-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200">
+              <div className="px-3 py-1.5 border-b border-border/10 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">My Business</span>
+                <p className="text-xs font-bold text-foreground truncate mt-0.5">{activeClient?.name || activeOrg.name}</p>
+              </div>
+              
+              <div className="px-1 py-1 space-y-0.5">
                 <button 
-                  onClick={(e) => { e.stopPropagation(); setIsOrgModalOpen(true); setIsOpen(false); }} 
-                  className="p-1 hover:bg-white/5 rounded transition-colors"
+                  onClick={() => { navigate('/settings?tab=clients'); setIsOpen(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-left text-foreground"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Briefcase className="w-3 h-3 text-muted-foreground" />
+                  Manage Business Profile
                 </button>
+                <button 
+                  onClick={() => { navigate('/settings'); setIsOpen(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-left text-foreground"
+                >
+                  <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+                  Business Settings
+                </button>
+              </div>
+
+              {organizations.length > 1 && (
+                <>
+                  <div className="h-px bg-border/20 mx-2 my-1" />
+                  <div className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    Switch Workspace
+                  </div>
+                  <div className="space-y-0.5 px-1 max-h-48 overflow-y-auto">
+                    {organizations.map(org => (
+                      <button
+                        key={org.id}
+                        onClick={() => { setActiveOrg(org); setIsOpen(false); }}
+                        className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeOrg.id === org.id ? 'bg-primary/10 text-primary' : 'hover:bg-white/5'}`}
+                      >
+                        <Building className="w-3 h-3" />
+                        <span className="truncate flex-1 text-left">{org.name}</span>
+                        {activeOrg.id === org.id && <Check className="w-3 h-3" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
-            <div className="space-y-0.5 px-1 mb-2">
-              {organizations.map(org => (
-                <button
-                  key={org.id}
-                  onClick={() => { setActiveOrg(org); setIsOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeOrg.id === org.id ? 'bg-primary/10 text-primary' : 'hover:bg-white/5'}`}
+          ) : (
+            <div className="absolute top-full left-0 mt-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200">
+              {/* Accounting Workspace Section */}
+              <div className="px-3 py-1.5 border-b border-border/10 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Accounting Workspace</span>
+                <p className="text-xs font-bold text-foreground truncate mt-0.5">{activeOrg.name}</p>
+              </div>
+              
+              <div className="px-1 py-1 space-y-0.5">
+                <button 
+                  onClick={() => { navigate('/settings'); setIsOpen(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-left text-foreground"
                 >
-                  <Building className="w-3 h-3" />
-                  <span className="truncate flex-1 text-left">{org.name}</span>
-                  {activeOrg.id === org.id && <Check className="w-3 h-3" />}
+                  <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+                  Workspace Settings
                 </button>
-              ))}
-            </div>
+              </div>
 
-            {accountMode !== 'business_owner' && (
-              <>
-                <div className="h-px bg-border/20 mx-2 my-1" />
+              <div className="h-px bg-border/20 mx-2 my-1" />
 
-                {/* Clients Section */}
-                <div className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-between">
-                  Clients
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setIsClientModalOpen(true); setIsOpen(false); }} 
-                    className="p-1 hover:bg-white/5 rounded transition-colors"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
-                </div>
-                <div className="space-y-0.5 px-1 max-h-48 overflow-y-auto">
-                  {clients.length === 0 ? (
-                    <div className="px-3 py-4 text-center">
-                      <p className="text-[10px] text-muted-foreground mb-2">No clients found</p>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setIsClientModalOpen(true); setIsOpen(false); }} 
-                        className="text-[10px] text-primary hover:underline"
-                      >
-                        Add Client
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      {clients.map(client => (
-                        <button
-                          key={client.id}
-                          onClick={() => { setActiveClient(client); setIsOpen(false); }}
-                          className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary' : 'hover:bg-white/5'}`}
-                        >
-                          <Briefcase className="w-3 h-3" />
-                          <span className="truncate flex-1 text-left">{client.name}</span>
-                          {activeClient?.id === client.id && <Check className="w-3 h-3" />}
-                        </button>
-                      ))}
-                      <div className="h-px bg-border/10 my-1 mx-2" />
+              {/* Client Businesses Section */}
+              <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-between">
+                Client Businesses
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setIsClientModalOpen(true); setIsOpen(false); }} 
+                  className="p-1 hover:bg-white/5 rounded transition-colors text-primary"
+                  title="Add Client Business"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="space-y-0.5 px-1 max-h-48 overflow-y-auto">
+                {clients.length === 0 ? (
+                  <div className="px-3 py-4 text-center">
+                    <p className="text-[10px] text-muted-foreground mb-2">No client businesses found</p>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setIsClientModalOpen(true); setIsOpen(false); }} 
+                      className="text-[11px] text-primary hover:underline font-bold"
+                    >
+                      Add Client Business
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {clients.map(client => (
                       <button
-                        onClick={() => { navigate('/settings?tab=clients'); setIsOpen(false); }}
-                        className="w-full flex items-center justify-between px-3 py-1 rounded-lg text-[11px] font-bold text-teal-400 hover:bg-white/5 transition-colors text-left"
+                        key={client.id}
+                        onClick={() => { setActiveClient(client); setIsOpen(false); }}
+                        className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary' : 'hover:bg-white/5'}`}
                       >
-                        <span>Manage clients</span>
-                        <span>→</span>
+                        <Briefcase className="w-3 h-3" />
+                        <span className="truncate flex-1 text-left">{client.name}</span>
+                        {activeClient?.id === client.id && <Check className="w-3 h-3" />}
                       </button>
-                    </>
-                  )}
-                </div>
-              </>
-            )}
-
-            <div className="h-px bg-border/20 mx-2 my-1" />
-            
-            <div className="px-1">
-              <button 
-                onClick={() => { navigate('/settings'); setIsOpen(false); }}
-                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-muted-foreground text-left"
-              >
-                <Settings className="w-3 h-3" />
-                Workspace Settings
-              </button>
+                    ))}
+                    <div className="h-px bg-border/10 my-1 mx-2" />
+                    <button
+                      onClick={() => { navigate('/settings?tab=clients'); setIsOpen(false); }}
+                      className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[11px] font-bold text-teal-400 hover:bg-white/5 transition-colors text-left"
+                    >
+                      <span>Manage client businesses</span>
+                      <span>→</span>
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
 

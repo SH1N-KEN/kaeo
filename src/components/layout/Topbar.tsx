@@ -61,9 +61,21 @@ const Topbar: React.FC = () => {
   
   // Dynamic page title mapping helper
   const getPageTitle = (path: string): string => {
+    if (path === '/settings') {
+      return accountMode === 'business_owner' ? 'Business Settings' : 'Workspace Settings';
+    }
+    if (path === '/clients') {
+      return accountMode === 'business_owner' ? 'Business Profile' : 'Client Businesses';
+    }
     if (path === '/settings' && tabParam === 'spend-rules') return 'Spend Rules';
     if (path === '/settings' && tabParam === 'data') return 'Data & Reset';
     if (pathTitleMap[path]) {
+      if (path === '/settings') {
+        return accountMode === 'business_owner' ? 'Business Settings' : 'Workspace Settings';
+      }
+      if (path === '/clients') {
+        return accountMode === 'business_owner' ? 'Business Profile' : 'Client Businesses';
+      }
       return pathTitleMap[path];
     }
     
@@ -303,14 +315,14 @@ const Topbar: React.FC = () => {
                 <>
                   <BreadcrumbItem className="hidden sm:inline-flex">
                     <BreadcrumbLink asChild>
-                      <Link to="/settings">Settings</Link>
+                      <Link to="/settings">{accountMode === 'business_owner' ? 'Business Settings' : 'Workspace Settings'}</Link>
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator className="hidden sm:inline-flex" />
                   <BreadcrumbItem>
                     <BreadcrumbPage>
                       {tabParam === 'clients'
-                        ? (accountMode === 'business_owner' ? 'Business Profile' : 'Clients')
+                        ? (accountMode === 'business_owner' ? 'Business Profile' : 'Client Businesses')
                         : tabParam === 'spend-rules'
                         ? 'Spend Rules'
                         : tabParam === 'data'

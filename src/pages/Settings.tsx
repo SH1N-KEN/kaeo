@@ -22,15 +22,15 @@ import { Link as LinkIcon } from 'lucide-react';
 type Tab = 'workspace' | 'clients' | 'spend-rules' | 'data' | 'integrations';
 
 const Settings: React.FC = () => {
-  const { activeClient, activeOrg, accountMode } = useWorkspace();
+  const { activeClient, activeOrg, accountMode, clients } = useWorkspace();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tabParam = searchParams.get('tab') as Tab | null;
-  const [activeTab, setActiveTab] = useState<Tab>(
+  const [activeTab, setActiveTab] = useState<Tab | 'overview'>(
     tabParam && ['workspace', 'clients', 'spend-rules', 'data', 'integrations'].includes(tabParam)
       ? (tabParam as Tab)
-      : 'workspace'
+      : 'overview'
   );
 
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -41,9 +41,13 @@ const Settings: React.FC = () => {
   const [rules, setRules] = useState<SpendRule[]>([]);
 
   // Sync tab to URL param
-  const switchTab = (tab: Tab) => {
+  const switchTab = (tab: Tab | 'overview') => {
     setActiveTab(tab);
-    setSearchParams({ tab }, { replace: true });
+    if (tab === 'overview') {
+      setSearchParams({}, { replace: true });
+    } else {
+      setSearchParams({ tab }, { replace: true });
+    }
   };
 
   // Load rules when switching to that tab
@@ -91,10 +95,10 @@ const Settings: React.FC = () => {
   };
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: 'workspace', label: 'Workspace', icon: Building2 },
+    ...(accountMode === 'accountant' ? [{ id: 'workspace' as Tab, label: 'Workspace', icon: Building2 }] : []),
     { 
       id: 'clients', 
-      label: accountMode === 'business_owner' ? 'Business Profile' : 'Clients', 
+      label: accountMode === 'business_owner' ? 'Business Profile' : 'Client Businesses', 
       icon: Users 
     },
     { id: 'spend-rules', label: 'Spend Rules', icon: ShieldCheck },
@@ -119,14 +123,57 @@ const Settings: React.FC = () => {
     }
   };
 
+  const getSpendDisplay = (range: string) => {
+    switch (range) {
+      case 'under_10k': return 'Under ₹10k';
+      case '10k_50k': return '₹10k - ₹50k';
+      case '50k_2l': return '₹50k - ₹2L';
+      case 'above_2l': return 'Above ₹2L';
+      default: return 'Not specified';
+    }
+  };
+
+  const getPainLabel = (id: string) => {
+    switch (id) {
+      case 'duplicate_payments': return 'Duplicate Payments & Overdrafts';
+      case 'messy_statements': return 'Messy Bank Statements';
+      case 'vendor_overspend': return 'Software / Vendor Overspend';
+      case 'month_end_reports': return 'Month-End Readiness Reports';
+      case 'cashflow_visibility': return 'Real-time Cashflow Visibility';
+      case 'accountant_handoff': return 'Accountant Collaboration';
+      default: return id;
+    }
+  };
+
+  const isBusinessOwner = accountMode === 'business_owner';
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700 pb-20">
+    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700 pb-20">
+      {/* Back button if inside a tab */}
+      {activeTab !== 'overview' && (
+        <button
+          onClick={() => switchTab('overview')}
+          className="flex items-center gap-2 text-xs font-bold text-teal-400 hover:text-teal-300 hover:underline transition-all cursor-pointer bg-transparent border-0 p-0"
+        >
+          &larr; Back to Settings Overview
+        </button>
+      )}
+
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Workspace Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {activeTab === 'overview' 
+            ? (isBusinessOwner ? 'Business Settings' : 'Workspace Settings')
+            : tabs.find(t => t.id === activeTab)?.label
+          }
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Configure settings for <span className="text-foreground font-semibold">{activeOrg?.name ?? 'your workspace'}</span>.
-          These settings apply to the selected workspace.
+          {activeTab === 'overview'
+            ? (isBusinessOwner 
+                ? 'Configure settings for your business, spend compliance, and book-keeping integrations.' 
+                : 'Configure settings for your firm, client workspaces, spend rules, and data integrations.')
+            : `Configure settings details for ${activeOrg?.name ?? 'your workspace'}.`
+          }
         </p>
       </div>
 
@@ -139,55 +186,230 @@ const Settings: React.FC = () => {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-muted/30 rounded-xl border border-border/50 w-fit">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => switchTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 ${
-              activeTab === tab.id
-                ? 'bg-card text-foreground shadow-sm border border-border/60'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <tab.icon className="w-3.5 h-3.5" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Tabs list (hidden in Overview page, displayed inside tab views for secondary navigation) */}
+      {activeTab !== 'overview' && (
+        <div className="flex gap-1 p-1 bg-muted/30 rounded-xl border border-border/50 w-fit">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => switchTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 ${
+                activeTab === tab.id
+                  ? 'bg-card text-foreground shadow-sm border border-border/60'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <tab.icon className="w-3.5 h-3.5" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* ─── TAB: Workspace ─── */}
+      {/* ─── TAB: Overview ─── */}
+      {activeTab === 'overview' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Card 1: Business Profile / Firm Profile */}
+          <div className="premium-glass rounded-2xl border border-border/40 p-6 flex flex-col justify-between h-[300px] shadow-md hover:border-border/60 transition-all duration-300">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-border/10 pb-2">
+                <Building2 className="w-4 h-4 text-teal-400" />
+                <h3 className="text-sm font-bold text-foreground">
+                  {isBusinessOwner ? 'Business Profile' : 'Firm Profile'}
+                </h3>
+              </div>
+              
+              {isBusinessOwner ? (
+                activeClient ? (
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Business Name:</span> <span className="font-bold text-foreground truncate max-w-[180px]">{activeClient.name}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Industry:</span> <span className="font-semibold text-foreground">{activeClient.industry || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Accounting Tool:</span> <span className="font-semibold text-foreground">{activeClient.metadata?.accounting_tools?.[0] || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Monthly Spend Range:</span> <span className="font-semibold text-foreground">{getSpendDisplay(activeClient.metadata?.monthly_spend_range)}</span></div>
+                    {activeClient.metadata?.pain_points && activeClient.metadata.pain_points.length > 0 && (
+                      <div className="flex justify-between"><span className="text-muted-foreground">Main Pain:</span> <span className="font-semibold text-foreground truncate max-w-[180px]">{getPainLabel(activeClient.metadata.pain_points[0])}</span></div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">Complete your business details profile.</p>
+                )
+              ) : (
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Firm Name:</span> <span className="font-bold text-foreground">{activeOrg?.name}</span></div>
+                  <p className="text-[11px] text-muted-foreground leading-normal mt-2">
+                    Manage workspace configuration, default currencies, and metadata tags for your bookkeeping firm.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-border/10 flex flex-col space-y-2 mt-auto">
+              <span className="text-[9.5px] text-muted-foreground leading-snug">
+                {isBusinessOwner
+                  ? 'Kaeo uses this context to categorize transactions, detect risks, and make Ask Kaeo more specific.'
+                  : 'Manage accounting practice name, defaults, and details.'
+                }
+              </span>
+              <button
+                onClick={() => switchTab(isBusinessOwner ? 'clients' : 'workspace')}
+                className="px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all w-full cursor-pointer mt-2"
+              >
+                {isBusinessOwner ? 'Edit Business Profile' : 'Edit Firm Profile'}
+              </button>
+            </div>
+          </div>
+
+          {/* Card 2: Client Businesses (Only for Accountant) */}
+          {!isBusinessOwner && (
+            <div className="premium-glass rounded-2xl border border-border/40 p-6 flex flex-col justify-between h-[300px] shadow-md hover:border-border/60 transition-all duration-300">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-border/10 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-teal-400" />
+                    <h3 className="text-sm font-bold text-foreground">Client Businesses</h3>
+                  </div>
+                  <span className="text-[10px] bg-teal-500/10 text-teal-400 px-2 py-0.5 rounded border border-teal-500/20 font-bold">
+                    {clients.length} Active
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1 custom-scrollbar">
+                  {clients.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic py-2">No client businesses added yet.</p>
+                  ) : (
+                    clients.slice(0, 3).map((c: any) => (
+                      <div key={c.id} className="flex justify-between items-center text-xs p-1.5 bg-white/5 rounded-lg border border-border/10">
+                        <span className="font-semibold text-foreground truncate max-w-[150px]">{c.name}</span>
+                        <span className="text-[10px] text-muted-foreground">{c.industry || 'General'}</span>
+                      </div>
+                    ))
+                  )}
+                  {clients.length > 3 && (
+                    <div className="text-[10px] text-muted-foreground font-semibold text-right">+ {clients.length - 3} more</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-border/10 flex flex-col space-y-2 mt-auto">
+                <span className="text-[9.5px] text-muted-foreground leading-snug">
+                  Each client has separate uploads, transactions, risks, and reports.
+                </span>
+                <button
+                  onClick={() => switchTab('clients')}
+                  className="px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all w-full cursor-pointer mt-2"
+                >
+                  Manage Client Businesses
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Card 3: Spend Rules */}
+          <div className="premium-glass rounded-2xl border border-border/40 p-6 flex flex-col justify-between h-[300px] shadow-md hover:border-border/60 transition-all duration-300">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-border/10 pb-2">
+                <ShieldCheck className="w-4 h-4 text-teal-400" />
+                <h3 className="text-sm font-bold text-foreground">Spend Rules</h3>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                Configure evaluation parameters for compliance risk detection. Toggle duplicate checks, high-value alerts, subscription limits, and required mapping categories.
+              </p>
+            </div>
+
+            <div className="pt-4 border-t border-border/10 flex flex-col space-y-2 mt-auto">
+              <span className="text-[9.5px] text-muted-foreground leading-snug">
+                These rules decide what Kaeo flags as risky or review-worthy.
+              </span>
+              <button
+                onClick={() => switchTab('spend-rules')}
+                className="px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all w-full cursor-pointer mt-2"
+              >
+                Configure Compliance Rules
+              </button>
+            </div>
+          </div>
+
+          {/* Card 4: Integrations */}
+          <div className="premium-glass rounded-2xl border border-border/40 p-6 flex flex-col justify-between h-[300px] shadow-md hover:border-border/60 transition-all duration-300">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-border/10 pb-2">
+                <LinkIcon className="w-4 h-4 text-teal-400" />
+                <h3 className="text-sm font-bold text-foreground">Integrations</h3>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                Sync with book-keeping applications (Tally, Zoho Books) or connect payout systems (Razorpay Webhooks) to automate invoice matching and flow imports.
+              </p>
+            </div>
+
+            <div className="pt-4 border-t border-border/10 flex flex-col space-y-2 mt-auto">
+              <span className="text-[9.5px] text-muted-foreground leading-snug">
+                Connect external accounts to streamline monthly file synchronization.
+              </span>
+              <button
+                onClick={() => switchTab('integrations')}
+                className="px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all w-full cursor-pointer mt-2"
+              >
+                Manage Integrations
+              </button>
+            </div>
+          </div>
+
+          {/* Card 5: Data & Reset */}
+          <div className="premium-glass rounded-2xl border border-border/40 p-6 flex flex-col justify-between h-[300px] shadow-md hover:border-border/60 transition-all duration-300">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-border/10 pb-2">
+                <Database className="w-4 h-4 text-teal-400" />
+                <h3 className="text-sm font-bold text-foreground">Data & Reset</h3>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                Reset database tables and delete parsed transactions or uploaded sheets. Start clean with fresh CSV, Excel, or PDF imports.
+              </p>
+            </div>
+
+            <div className="pt-4 border-t border-border/10 flex flex-col space-y-2 mt-auto">
+              <span className="text-[9.5px] text-muted-foreground leading-snug">
+                Clear transaction records and delete statement sheets.
+              </span>
+              <button
+                onClick={() => switchTab('data')}
+                className="px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all w-full cursor-pointer mt-2"
+              >
+                Reset Data Options
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── TAB: Workspace (Firm Settings) ─── */}
       {activeTab === 'workspace' && (
         <div className="space-y-6">
           <div className="premium-glass rounded-2xl border border-border/50 p-6 space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <Building2 className="w-4 h-4 text-muted-foreground" />
-              <h2 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Organisation</h2>
+              <h2 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Workspace Profile</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Workspace Name</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Firm / Workspace Name</label>
                 <div className="px-4 py-2.5 bg-muted/30 border border-border rounded-xl text-sm font-semibold text-foreground">
                   {activeOrg?.name ?? '—'}
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Client</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Selected Client Business</label>
                 <div className="px-4 py-2.5 bg-muted/30 border border-border rounded-xl text-sm font-semibold text-foreground">
                   {activeClient?.name ?? 'None selected'}
                 </div>
               </div>
             </div>
 
-
-
             <div className="flex items-start gap-3 mt-2 p-3 bg-muted/20 rounded-xl border border-border/40">
               <Info className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Workspace name and client management can be configured from the <strong className="text-foreground">{accountMode === 'business_owner' ? 'Business Profile' : 'Clients'}</strong> tab.
-                Switch between clients using the workspace switcher in the topbar.
+                Workspace name and client management can be configured from the <strong className="text-foreground">Client Businesses</strong> tab.
+                Switch between client businesses using the dropdown switcher in the topbar.
               </p>
             </div>
           </div>
@@ -196,20 +418,18 @@ const Settings: React.FC = () => {
             <div className="flex items-center gap-2 mb-4">
               <Users className="w-4 h-4 text-muted-foreground" />
               <h2 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">
-                {accountMode === 'business_owner' ? 'Business Profile' : 'Client Workspaces'}
+                Client Workspaces
               </h2>
             </div>
             <p className="text-sm text-muted-foreground">
-              {accountMode === 'business_owner'
-                ? 'Manage your business details and default workspace settings.'
-                : 'Manage clients and client workspaces from the Clients tab.'}
+              Manage client businesses and client workspaces from the Client Businesses tab.
             </p>
             <button
               onClick={() => switchTab('clients')}
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg text-xs font-bold border border-primary/20 hover:bg-primary/20 transition-colors"
             >
               <Users className="w-3.5 h-3.5" />
-              {accountMode === 'business_owner' ? 'Edit Business Profile' : 'Go to Clients'}
+              Go to Client Businesses
             </button>
           </div>
         </div>
@@ -233,7 +453,7 @@ const Settings: React.FC = () => {
           </div>
 
           {!activeOrg ? (
-            <p className="text-sm text-muted-foreground italic">Select a workspace to configure spend rules.</p>
+            <p className="text-sm text-muted-foreground italic">Select a business/workspace to configure spend rules.</p>
           ) : rulesLoading ? (
             <div className="flex items-center gap-2 text-muted-foreground py-8 justify-center">
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -332,9 +552,9 @@ const Settings: React.FC = () => {
           <div className="premium-glass rounded-2xl border border-border/50 overflow-hidden">
             <div className="p-6 flex items-start justify-between gap-6">
               <div className="space-y-1">
-                <h4 className="font-bold text-foreground">Reset Client Data</h4>
+                <h4 className="font-bold text-foreground">Reset Data</h4>
                 <p className="text-xs text-muted-foreground max-w-md leading-relaxed">
-                  Permanently clear all uploaded files, imports, and transactions for the active client.
+                  Permanently clear all uploaded files, imports, and transactions for the current business.
                   Useful for starting fresh or re-testing imports. <strong className="text-risk">This cannot be undone.</strong>
                 </p>
               </div>
@@ -347,7 +567,7 @@ const Settings: React.FC = () => {
                   Reset {activeClient.name}
                 </button>
               ) : (
-                <p className="text-xs text-muted-foreground italic">Select a client to manage data.</p>
+                <p className="text-xs text-muted-foreground italic">Select a business to manage data.</p>
               )}
             </div>
           </div>

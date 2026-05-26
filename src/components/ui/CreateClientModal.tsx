@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, AlertCircle, Briefcase, Check } from 'lucide-react';
 import ModalPortal from './ModalPortal';
+import { useWorkspace } from '../../hooks/useWorkspace';
 
 interface CreateClientModalProps {
   isOpen: boolean;
@@ -13,6 +14,9 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
   onClose, 
   onCreate 
 }) => {
+  const { accountMode } = useWorkspace();
+  const isBusiness = accountMode === 'business_owner';
+
   const [name, setName] = useState('');
   const [industry, setIndustry] = useState('');
   const currency = 'INR';
@@ -51,7 +55,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !industry.trim()) return;
     
     setLoading(true);
     setError(null);
@@ -72,7 +76,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
         onClose();
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to create client');
+      setError(err.message || 'Failed to create business profile');
     } finally {
       setLoading(false);
     }
@@ -93,7 +97,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
           <div className="flex items-center justify-between p-6 border-b shrink-0 bg-card/80 backdrop-blur-md sticky top-0 z-20">
             <div className="flex items-center gap-2">
               <Briefcase className="w-5 h-5 text-primary" />
-              <h2 className="text-xl font-bold">Add New Client</h2>
+              <h2 className="text-xl font-bold">{isBusiness ? 'Set up business profile' : 'Add Client Business'}</h2>
             </div>
             <button 
               onClick={onClose} 
@@ -113,11 +117,13 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             )}
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Client Name</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">
+                {isBusiness ? 'Business Name' : 'Client Business Name'}
+              </label>
               <input
                 autoFocus
                 type="text"
-                placeholder="e.g. Acme Innovations"
+                placeholder={isBusiness ? 'e.g. Acme Software Pvt Ltd' : 'e.g. Acme Innovations'}
                 className="w-full px-4 py-3 rounded-xl border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted-foreground/50"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -126,35 +132,15 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Industry (Optional)</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Industry</label>
               <input
                 type="text"
-                placeholder="e.g. Technology, Healthcare"
+                placeholder="e.g. Technology, Healthcare, E-commerce"
                 className="w-full px-4 py-3 rounded-xl border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted-foreground/50"
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
+                required
               />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Monthly Spend</label>
-                <div className="relative">
-                  <select
-                    className="w-full px-4 py-3 rounded-xl border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-primary outline-none transition-all appearance-none"
-                    value={spendRange}
-                    onChange={(e) => setSpendRange(e.target.value)}
-                  >
-                    <option value="under_10k">Under ₹10k</option>
-                    <option value="10k_50k">₹10k - ₹50k</option>
-                    <option value="50k_2l">₹50k - ₹2L</option>
-                    <option value="above_2l">Above ₹2L</option>
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
-                    <X className="w-4 h-4 rotate-45" />
-                  </div>
-                </div>
-              </div>
             </div>
 
             <div className="space-y-2">
@@ -177,6 +163,30 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
               </div>
             </div>
 
+            <div className="h-px bg-border/20 my-2" />
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Optional Details</h4>
+
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Monthly Spend (Optional)</label>
+                <div className="relative">
+                  <select
+                    className="w-full px-4 py-3 rounded-xl border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-primary outline-none transition-all appearance-none"
+                    value={spendRange}
+                    onChange={(e) => setSpendRange(e.target.value)}
+                  >
+                    <option value="under_10k">Under ₹10k</option>
+                    <option value="10k_50k">₹10k - ₹50k</option>
+                    <option value="50k_2l">₹50k - ₹2L</option>
+                    <option value="above_2l">Above ₹2L</option>
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
+                    <X className="w-4 h-4 rotate-45" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Notes / Context (Optional)</label>
               <textarea
@@ -193,16 +203,23 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 bg-card border rounded-xl font-medium hover:bg-muted transition-colors"
+              className="flex-1 py-3 px-4 bg-card border rounded-xl font-medium hover:bg-muted transition-colors text-xs"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
-              disabled={loading || !name.trim()}
-              className="flex-1 py-3 px-4 bg-primary text-primary-foreground rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+              disabled={loading || !name.trim() || !industry.trim()}
+              className="flex-1 py-3 px-4 bg-primary text-primary-foreground rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 disabled:opacity-50 text-xs"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Check className="w-5 h-5" /> Add Client</>}
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  <Check className="w-4 h-4" /> 
+                  {isBusiness ? 'Save Business Profile' : 'Add Client Business'}
+                </>
+              )}
             </button>
           </div>
         </div>

@@ -207,8 +207,12 @@ export default function Reports() {
     return (
       <div className="h-[70vh] flex items-center justify-center animate-in fade-in duration-500">
         <EmptyState 
-          title="No client workspace selected"
-          description="Select a client workspace to view or compile professional CFO-ready reporting packages."
+          title="Finish setup to start reviewing your finances." 
+          description="Complete your business profile or select a workspace to generate professional cfo reports." 
+          action={{
+            label: "Complete setup",
+            onClick: () => navigate('/settings?tab=clients')
+          }}
         />
       </div>
     );

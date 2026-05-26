@@ -178,7 +178,7 @@ const Onboarding: React.FC = () => {
           <div>
             <h3 className="text-sm font-bold text-white mb-1">For my business</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              I want to manage spend, risks, reports, and month-end readiness for one company.
+              I manage one company and want Kaeo to review our spend, risks, and reports.
             </p>
           </div>
         </button>
@@ -202,9 +202,9 @@ const Onboarding: React.FC = () => {
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white mb-1">For my clients</h3>
+            <h3 className="text-sm font-bold text-white mb-1">For client businesses</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              I’m an accountant, consultant, or finance operator managing multiple businesses.
+              I manage finance for multiple businesses as an accountant, consultant, or operator.
             </p>
           </div>
         </button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Search,
   ArrowUpRight,
@@ -58,6 +58,7 @@ type AmountRange = 'all' | 'under_10k' | '10k_50k' | 'above_50k';
 type ReviewFilter = 'all' | 'pending' | 'new' | 'needs_review' | 'reviewed' | 'ignored' | 'resolved' | 'uncategorized' | 'unknown' | 'high_value' | 'ai_suggested';
 
 const Transactions: React.FC = () => {
+  const navigate = useNavigate();
   const { activeClient, activeOrg } = useWorkspace();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -434,13 +435,16 @@ const Transactions: React.FC = () => {
   const thClass =
     'px-4 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b border-border/50 select-none cursor-pointer hover:text-foreground transition-colors';
 
-  // ── No workspace ──────────────────────────────────────────────────────────
   if (!activeClient || !activeOrg) {
     return (
       <div className="h-[70vh] flex items-center justify-center">
         <EmptyState
-          title="No client workspace selected"
-          description="Select a client workspace to view transaction history."
+          title="Finish setup to start reviewing your finances."
+          description="Complete your business profile or select a workspace to view transactions ledger."
+          action={{
+            label: "Complete setup",
+            onClick: () => navigate('/settings?tab=clients')
+          }}
         />
       </div>
     );
