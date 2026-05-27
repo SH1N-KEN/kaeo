@@ -264,21 +264,27 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
   });
 
   // --- 3. Missing Data / Unknown Transaction Type ---
+  // Only create this risk if there are materially significant unknowns
+  // (count > 5 AND total value > ₹25,000) — prevents one-risk-per-row spam
   const unknownTxs = txs.filter(tx => tx.type === 'unknown');
-  if (unknownTxs.length > 0) {
+  const unknownTotal = unknownTxs.reduce((acc, tx) => acc + Math.abs(getTxAmount(tx)), 0);
+  const UNKNOWN_COUNT_THRESHOLD = 5;
+  const UNKNOWN_VALUE_THRESHOLD = 25000;
+  if (unknownTxs.length > UNKNOWN_COUNT_THRESHOLD && unknownTotal > UNKNOWN_VALUE_THRESHOLD) {
     risks.push({
       organization_id: orgId,
       client_id: clientId,
-      title: 'Missing Data: Unknown Transactions',
+      title: `Missing Data: ${unknownTxs.length} Unclassified Transactions`,
       severity: 'medium',
       risk_type: 'missing_data',
-      amount_at_risk: unknownTxs.reduce((acc, tx) => acc + Math.abs(getTxAmount(tx)), 0),
-      description: `${unknownTxs.length} transactions could not be automatically classified into types.`,
+      amount_at_risk: unknownTotal,
+      description: `${unknownTxs.length} transactions (totalling ${fmtCurrency(unknownTotal)}) could not be automatically classified. Review and categorize to improve accuracy.`,
       evidence_json: {
         count: unknownTxs.length,
-        samples: unknownTxs.slice(0, 3).map(tx => tx.description)
+        total_value: unknownTotal,
+        samples: unknownTxs.slice(0, 5).map(tx => tx.description)
       },
-      suggested_action: 'Perform manual classification to refine financial intelligence and reports.',
+      suggested_action: 'Review these transactions and assign categories to refine financial intelligence.',
       status: 'open',
       related_transaction_ids: unknownTxs.map(tx => tx.id)
     });
@@ -372,22 +378,27 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
   });
 
   // --- Unknown Counterparty High-Value Payments ---
+  // Use absolute amount + outflow direction (not just amount < 0, which can fail on wrongly-signed rows)
+  const cpHighValueThreshold = highValueRule?.threshold_amount || 50000;
   const unknownCpHighValueTxs = txs.filter(tx => {
     const amt = Math.abs(getTxAmount(tx));
-    const isHighValue = amt >= (highValueRule?.threshold_amount || 50000);
+    const isHighValue = amt >= cpHighValueThreshold;
     const hasNoCp = !tx.counterparty_name || tx.counterparty_name === 'No counterparty' || tx.counterparty_name.trim() === '';
-    return tx.amount < 0 && hasNoCp && isHighValue;
+    // Use direction_derived if available, fall back to amount sign
+    const isOutflow = tx.raw_row_json?.direction_derived === 'outflow' || getTxAmount(tx) < 0;
+    const isNotTransfer = tx.type !== 'transfer';
+    return isOutflow && hasNoCp && isHighValue && isNotTransfer;
   });
   unknownCpHighValueTxs.forEach(tx => {
     const amt = Math.abs(getTxAmount(tx));
     risks.push({
       organization_id: orgId,
       client_id: clientId,
-      title: `Unknown Counterparty High-Value Payment`,
+      title: `Unknown Counterparty: High-Value Outflow`,
       severity: 'high',
       risk_type: 'unknown_counterparty_high_value',
       amount_at_risk: amt,
-      description: `A large outflow of ${fmtCurrency(amt)} was made to an unidentified counterparty.`,
+      description: `A large outflow of ${fmtCurrency(amt)} was made to an unidentified counterparty. Verify the recipient.`,
       evidence_json: {
         transaction_id: tx.id,
         amount: amt,
@@ -403,24 +414,30 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
   });
 
   // --- 5. Uncategorized Transactions Rule ---
+  // Only create this risk if there are at least 3 uncategorized expense transactions
+  // (prevents one risk per row for new imports)
+  const MIN_UNCATEGORIZED_COUNT = 3;
   if (uncategorizedRule) {
     const uncategorizedTxs = txs.filter(tx => {
       const cat = getDisplayCategory(tx);
-      return cat === 'Uncategorized' && tx.amount < 0; // Only care about expenses
+      const isOutflow = tx.raw_row_json?.direction_derived === 'outflow' || getTxAmount(tx) < 0;
+      return (cat === 'Uncategorized' || cat === 'Uncategorized Expense') && isOutflow;
     });
 
-    if (uncategorizedTxs.length > 0) {
+    if (uncategorizedTxs.length >= MIN_UNCATEGORIZED_COUNT) {
+      const totalUncategorizedAmt = uncategorizedTxs.reduce((acc, tx) => acc + Math.abs(getTxAmount(tx)), 0);
       risks.push({
         organization_id: orgId,
         client_id: clientId,
-        title: 'Uncategorized Spend',
+        title: `Uncategorized Spend: ${uncategorizedTxs.length} Transactions`,
         severity: 'low',
         risk_type: 'uncategorized_transaction',
-        amount_at_risk: uncategorizedTxs.reduce((acc, tx) => acc + Math.abs(getTxAmount(tx)), 0),
-        description: `${uncategorizedTxs.length} expense transactions have no category assigned.`,
+        amount_at_risk: totalUncategorizedAmt,
+        description: `${uncategorizedTxs.length} outflow transactions (${fmtCurrency(totalUncategorizedAmt)} total) have no category assigned.`,
         evidence_json: {
           count: uncategorizedTxs.length,
-          samples: uncategorizedTxs.slice(0, 3).map(tx => tx.description)
+          total_amount: totalUncategorizedAmt,
+          samples: uncategorizedTxs.slice(0, 5).map(tx => tx.description)
         },
         suggested_action: 'Review and categorize these transactions for accurate reporting.',
         status: 'open',

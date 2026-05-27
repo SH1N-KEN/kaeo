@@ -42,13 +42,11 @@ export const detectCurrency = (
     const keyLower = key.toLowerCase();
     const valStr = String(row[key]);
     
-    // Check key headers first
     if (keyLower.includes('currency')) {
       const normalized = normalizeCurrencyCode(valStr);
       if (normalized) return normalized;
     }
     
-    // Check if key names contain currency symbols/codes
     if (keyLower.includes('₹') || keyLower.includes('inr')) return 'INR';
     if (keyLower.includes('$') || keyLower.includes('usd')) return 'USD';
     if (keyLower.includes('€') || keyLower.includes('eur')) return 'EUR';
@@ -149,13 +147,11 @@ export const parseIngestedDate = (val: any): { date: Date; ambiguous: boolean; e
     const p2 = parseInt(delimiterMatch[3], 10);
     const year = parseInt(delimiterMatch[4], 10);
 
-    // If part 1 is greater than 12, it is definitely DD/MM/YYYY
     if (p1 > 12) {
       const d = new Date(year, p2 - 1, p1);
       return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
     }
     
-    // If part 2 is greater than 12, it is definitely MM/DD/YYYY
     if (p2 > 12) {
       const d = new Date(year, p1 - 1, p2);
       return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
@@ -188,7 +184,13 @@ export const parseIngestedDate = (val: any): { date: Date; ambiguous: boolean; e
 };
 
 /**
- * Core Normalizer Function for Phase 12A
+ * Core Normalizer Function — v2 (Direction-First)
+ *
+ * KEY INVARIANT:
+ *   1. Derive direction from debit/credit columns FIRST.
+ *   2. Pass direction to type inference and intelligence layer.
+ *   3. Post-process: if type says income but direction says outflow → reclassify.
+ *   4. No transaction should ever have type=income + negative amount (unless it's an adjustment).
  */
 export const normalizeIngestedRows = (
   rows: any[],
@@ -215,28 +217,26 @@ export const normalizeIngestedRows = (
     }
 
     // 2. Resolve amount & direction
+    //    DIRECTION IS DETERMINED HERE — NOT BY KEYWORDS
     let amount = 0;
-    let explicitExpense = false;
-    let explicitIncome = false;
+    let rawDebit = 0;
+    let rawCredit = 0;
+    let direction: 'inflow' | 'outflow' | 'unknown' = 'unknown';
 
-    // Check if separate debit/credit columns are mapped
     const debitCol = mapping['debit'];
     const creditCol = mapping['credit'];
 
     if (debitCol || creditCol) {
-      let parsedDebit = 0;
-      let parsedCredit = 0;
       let hasDebit = false;
       let hasCredit = false;
 
       if (debitCol && row[debitCol] !== undefined && row[debitCol] !== null) {
         const valStr = row[debitCol].toString().trim();
-        // Ignore standard placeholders like '-', '0', '0.00'
         if (valStr !== '' && valStr !== '-' && valStr !== '0' && valStr !== '0.00') {
           const { amount: rawAmt } = cleanAmount(row[debitCol]);
           const absAmt = Math.abs(rawAmt);
           if (absAmt > 0) {
-            parsedDebit = absAmt;
+            rawDebit = absAmt;
             hasDebit = true;
           }
         }
@@ -244,58 +244,63 @@ export const normalizeIngestedRows = (
 
       if (creditCol && row[creditCol] !== undefined && row[creditCol] !== null) {
         const valStr = row[creditCol].toString().trim();
-        // Ignore standard placeholders like '-', '0', '0.00'
         if (valStr !== '' && valStr !== '-' && valStr !== '0' && valStr !== '0.00') {
           const { amount: rawAmt } = cleanAmount(row[creditCol]);
           const absAmt = Math.abs(rawAmt);
           if (absAmt > 0) {
-            parsedCredit = absAmt;
+            rawCredit = absAmt;
             hasCredit = true;
           }
         }
       }
 
       if (hasDebit && hasCredit) {
-        // If both are non-zero, net them.
-        amount = parsedCredit - parsedDebit;
-        if (amount < 0) {
-          explicitExpense = true;
-          amount = -Math.abs(amount);
-        } else if (amount > 0) {
-          explicitIncome = true;
-          amount = Math.abs(amount);
-        }
+        // Both populated: net them and derive direction from net
+        const net = rawCredit - rawDebit;
+        amount = net;
+        direction = net > 0 ? 'inflow' : net < 0 ? 'outflow' : 'neutral' as any;
       } else if (hasDebit) {
-        amount = -parsedDebit; // Negative represents expense
-        explicitExpense = true;
+        amount = -rawDebit;   // Debit = money leaving = negative
+        direction = 'outflow';
       } else if (hasCredit) {
-        amount = parsedCredit; // Positive represents income
-        explicitIncome = true;
+        amount = rawCredit;   // Credit = money coming = positive
+        direction = 'inflow';
       } else {
-        // Both columns are empty or resolved to 0 (ignored placeholders like '-' or '0')
         amount = 0;
+        direction = 'unknown';
       }
     } else {
-      // Single amount column mapping
+      // Single amount column
       const amountCol = mapping['amount'];
       const rawAmtVal = row[amountCol];
       const { amount: parsedAmt, isExpense, isIncome } = cleanAmount(rawAmtVal);
       amount = parsedAmt;
-      explicitExpense = isExpense;
-      explicitIncome = isIncome;
+
+      // Derive direction from parsed amount and DR/CR hints
+      if (isExpense) direction = 'outflow';
+      else if (isIncome) direction = 'inflow';
+      else if (parsedAmt < 0) direction = 'outflow';
+      else if (parsedAmt > 0) direction = 'inflow';
+      else direction = 'unknown';
+
+      // Store debit/credit breakdown
+      if (direction === 'outflow') rawDebit = Math.abs(parsedAmt);
+      else if (direction === 'inflow') rawCredit = parsedAmt;
     }
 
     // 3. Resolve description
     const rawDesc = row[mapping['description']] || '';
 
-    // 4. Infer transaction type
-    let rawType = mapping['type'] ? row[mapping['type']] : undefined;
-    if (explicitExpense) rawType = 'debit';
-    if (explicitIncome) rawType = 'credit';
+    // 4. Infer transaction type — DIRECTION FIRST
+    //    Pass direction explicitly so keywords cannot override debit/credit column truth
+    const type = inferTransactionType(rawDesc, amount, undefined, direction);
 
-    const type = inferTransactionType(rawDesc, amount, rawType);
+    // 5. Run Indian narration intelligence (with explicit direction)
+    let extractedCounterparty: string | null = mapping['counterparty_name'] ? (row[mapping['counterparty_name']] ? String(row[mapping['counterparty_name']]).trim() : null) : null;
+    let intelligenceMetadata: any = {};
+    let confidenceLevel: 'high' | 'medium' | 'low' = 'high';
+    let inferredCategory = '';
 
-    // 5. Resolve or infer category
     const rawCategory = mapping['category'] ? row[mapping['category']] : null;
     const storedCat = rawCategory ? String(rawCategory).trim() : '';
     const isCatMissing =
@@ -304,10 +309,106 @@ export const normalizeIngestedRows = (
       storedCat.toLowerCase() === 'unknown' ||
       storedCat.toLowerCase() === 'generic' ||
       storedCat.toLowerCase() === 'null';
-    let counterparty = mapping['counterparty_name'] ? row[mapping['counterparty_name']] : null;
-    let inferredCategory = isCatMissing
-      ? inferTransactionCategory(rawDesc, counterparty, type)
-      : storedCat;
+
+    if (context.provider === 'Bank Statement' || context.provider === 'Generic Finance File') {
+      const intel = parseIndianNarration(rawDesc, direction);
+
+      if (intel.counterparty_name && intel.counterparty_name !== 'No counterparty') {
+        extractedCounterparty = intel.counterparty_name;
+      }
+
+      if (isCatMissing) {
+        inferredCategory = intel.likely_category;
+      } else {
+        inferredCategory = storedCat;
+      }
+
+      confidenceLevel = intel.confidence;
+      intelligenceMetadata = {
+        payment_rail: intel.payment_rail,
+        counterparty_type: intel.counterparty_type,
+        reference_number: intel.reference_number,
+        upi_id: intel.upi_id,
+        bank_ifsc_or_code: intel.bank_ifsc_or_code,
+        intelligence_confidence: intel.confidence,
+        intelligence_reason: intel.reason,
+        is_internal_transfer: intel.is_internal_transfer,
+        direction_hint: intel.direction_hint
+      };
+
+      // Override type to 'transfer' if intelligence says internal transfer
+      // but only if type wasn't already something stronger (failed_payment)
+      if (intel.is_internal_transfer && type !== 'failed_payment') {
+        // Use transfer type — but keep direction for display
+        // (will be set below in txObj)
+      }
+    } else {
+      if (isCatMissing) {
+        inferredCategory = inferTransactionCategory(rawDesc, extractedCounterparty, type, direction);
+      } else {
+        inferredCategory = storedCat;
+      }
+    }
+
+    // Map reference field if mapped
+    const refCol = mapping['reference'];
+    let reference = refCol && row[refCol] !== undefined && row[refCol] !== null ? String(row[refCol]).trim() : null;
+
+    // If intel extracted a reference, use it
+    if (intelligenceMetadata.reference_number && !reference) {
+      reference = intelligenceMetadata.reference_number;
+    }
+
+    // 6. Post-processing: direction/type conflict resolution
+    //    CRITICAL: Prevent "income" type on outflow direction (negative revenue bug)
+    let finalType = type;
+    let finalCategory = inferredCategory;
+    let reviewStatus = 'new';
+
+    const isInternalTransfer = intelligenceMetadata.is_internal_transfer === true;
+
+    if (isInternalTransfer && finalType !== 'failed_payment') {
+      finalType = 'transfer';
+      finalCategory = direction === 'inflow' ? 'Transfer In' : 'Transfer Out';
+      confidenceLevel = 'high';
+    } else if (direction === 'outflow' && finalType === 'income') {
+      // CONFLICT: debit row classified as income — reclassify
+      const narrationLower = rawDesc.toLowerCase();
+      const hasRefundKw = ['refund', 'reversal', 'cashback', 'reimburs', 'recovery', 'chargeback'].some(k => narrationLower.includes(k));
+
+      if (hasRefundKw) {
+        // Paying back a customer refund — still an outflow expense
+        finalType = 'expense';
+        finalCategory = 'Vendor Payment'; // or could be Refund Paid Out
+      } else {
+        // Truly ambiguous — mark for review
+        finalType = 'expense';
+        finalCategory = finalCategory && !['Customer Payment / Revenue', 'Revenue / Sales', 'Unknown Income'].includes(finalCategory)
+          ? finalCategory
+          : 'Uncategorized Expense';
+        reviewStatus = 'needs_review';
+        warnings.push(`Row ${index + 1}: Debit row classified as income — reclassified to expense (needs review).`);
+      }
+    } else if (direction === 'inflow' && ['expense', 'vendor_payment', 'bank_charge'].includes(finalType)) {
+      // CONFLICT: credit row classified as expense — check if it's a refund/recovery
+      const narrationLower = rawDesc.toLowerCase();
+      const hasRefundKw = ['refund', 'reversal', 'cashback', 'reimburs', 'recovery', 'chargeback', 'upiret'].some(k => narrationLower.includes(k));
+
+      if (hasRefundKw) {
+        finalType = 'refund';
+        finalCategory = 'Refunds / Recoveries';
+      } else {
+        // Credit amount classified as expense — reclassify as income
+        finalType = 'income';
+        finalCategory = 'Customer Payment / Revenue';
+        reviewStatus = 'needs_review';
+      }
+    }
+
+    // If confidence is low, mark for review (but not if already needs_review)
+    if (confidenceLevel === 'low' && reviewStatus === 'new') {
+      reviewStatus = 'needs_review';
+    }
 
     // Detect currency for this row
     const originalCurrency = detectCurrency(row, mapping, context.currency);
@@ -315,38 +416,6 @@ export const normalizeIngestedRows = (
       ? getFallbackRate(originalCurrency, context.currency)
       : 1;
     const amountInBaseCurrency = convertToBaseCurrency(amount, originalCurrency, context.currency, exchangeRate);
-
-    // Map reference field if mapped
-    const refCol = mapping['reference'];
-    let reference = refCol && row[refCol] !== undefined && row[refCol] !== null ? String(row[refCol]).trim() : null;
-
-    // Run transaction intelligence layer for bank statements
-    let extractedCounterparty = counterparty ? String(counterparty).trim() : null;
-    let intelligenceMetadata: any = {};
-    let confidenceLevel: 'high' | 'medium' | 'low' = 'high';
-
-    if (context.provider === 'Bank Statement' || context.provider === 'Generic Finance File') {
-      const intel = parseIndianNarration(rawDesc, amount);
-      if (intel.counterparty_name && intel.counterparty_name !== 'No counterparty') {
-        extractedCounterparty = intel.counterparty_name;
-      }
-      if (isCatMissing) {
-        inferredCategory = intel.likely_category;
-      }
-      if (intel.reference_number) {
-        reference = intel.reference_number;
-      }
-      confidenceLevel = intel.confidence;
-      intelligenceMetadata = {
-        payment_rail: intel.payment_rail,
-        counterparty_type: intel.counterparty_type,
-        reference_number: intel.reference_number || reference,
-        upi_id: intel.upi_id,
-        bank_ifsc_or_code: intel.bank_ifsc_or_code,
-        intelligence_confidence: intel.confidence,
-        intelligence_reason: intel.reason
-      };
-    }
 
     // Resolve balance and check reconciliation
     let balanceMismatch = false;
@@ -370,7 +439,11 @@ export const normalizeIngestedRows = (
       }
     }
 
-    // 6. Build standardized transaction schema
+    if (balanceMismatch && reviewStatus === 'new') {
+      reviewStatus = 'needs_review';
+    }
+
+    // 7. Build standardized transaction schema
     const txObj: any = {
       transaction_date: date.toISOString(),
       description: rawDesc,
@@ -385,38 +458,26 @@ export const normalizeIngestedRows = (
       fx_metadata: needsConversion(originalCurrency, context.currency)
         ? { conversion_type: 'static', fallback_rate: true }
         : {},
-      type: type,
-      category: inferredCategory,
+      type: finalType,
+      category: finalCategory,
       counterparty_name: extractedCounterparty,
       source_provider: context.provider,
       reference: reference,
+      review_status: reviewStatus,
       raw_row_json: {
         ...row,
-        intelligence: intelligenceMetadata
+        intelligence: intelligenceMetadata,
+        direction_derived: direction,
+        raw_debit: rawDebit,
+        raw_credit: rawCredit
       }
     };
 
-    let reviewStatus = 'new';
-    if (confidenceLevel === 'low') {
-      reviewStatus = 'needs_review';
-    }
     if (balanceMismatch) {
-      reviewStatus = 'needs_review';
-    }
-
-    txObj.review_status = reviewStatus;
-
-    if (balanceMismatch) {
-      txObj.raw_row_json = {
-        ...txObj.raw_row_json,
-        metadata: {
-          ...(row && row.metadata),
-          balance_mismatch: true
-        }
+      txObj.raw_row_json.metadata = {
+        ...(row && row.metadata),
+        balance_mismatch: true
       };
-      if ('metadata' in txObj) {
-        txObj.metadata = { ...txObj.metadata, balance_mismatch: true };
-      }
     }
 
     transactions.push(txObj);

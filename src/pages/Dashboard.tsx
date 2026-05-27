@@ -248,12 +248,16 @@ const Dashboard: React.FC = () => {
           ? Number(tx.amount_in_base_currency)
           : Number(tx.amount);
         const amt = Math.abs(txAmountVal);
+        // Use stored direction if available, fall back to amount sign
+        const directionDerived = tx.raw_row_json?.direction_derived as string | undefined;
+        const isInflowTx = directionDerived === 'inflow' || (!directionDerived && txAmountVal > 0);
+        const isOutflowTx = directionDerived === 'outflow' || (!directionDerived && txAmountVal < 0);
         
         if (!tx.review_status || tx.review_status === 'new' || tx.review_status === 'needs_review') {
           acc.unreviewedCount++;
         }
         
-        // Date-series aggregation for Cash Flow chart
+        // Date-series aggregation for Cash Flow chart (use direction, not type)
         if (tx.transaction_date) {
           const rawDateStr = tx.transaction_date.split('T')[0];
           const displayDate = new Date(tx.transaction_date).toLocaleDateString(undefined, { 
@@ -265,24 +269,31 @@ const Dashboard: React.FC = () => {
             dailyMap[displayDate] = { inflow: 0, outflow: 0, rawDate: rawDateStr };
           }
           
-          if (tx.type === 'income' || tx.type === 'refund') {
-            dailyMap[displayDate].inflow += amt;
-          } else if (['expense', 'vendor_payment', 'subscription'].includes(tx.type)) {
-            dailyMap[displayDate].outflow += amt;
+          // Transfers excluded from chart (they don't represent operating cash flow)
+          if (tx.type !== 'transfer') {
+            if (isInflowTx) {
+              dailyMap[displayDate].inflow += amt;
+            } else if (isOutflowTx) {
+              dailyMap[displayDate].outflow += amt;
+            }
           }
         }
         
-        if (tx.type === 'income') {
+        // Revenue: only positive inflows with type=income
+        // GUARD: never add negative amount to income (prevents negative revenue card)
+        if (tx.type === 'income' && isInflowTx && amt > 0) {
           acc.income += amt;
           acc.incomeCount++;
-        } 
-        else if (['expense', 'vendor_payment', 'subscription'].includes(tx.type)) {
+        }
+        // Expenses: outflows (expense + vendor_payment + subscription + bank_charge)
+        // Transfers excluded from expense totals
+        else if (['expense', 'vendor_payment', 'subscription', 'bank_charge'].includes(tx.type) && tx.type !== 'transfer') {
           acc.expenses += amt;
           acc.expenseCount++;
           if (tx.type === 'vendor_payment') acc.vendorPaymentCount++;
           
           // Track vendor - prioritized heuristic for expenses only
-          const name = tx.description
+          const name = tx.counterparty_name?.trim() || tx.description
             .replace(/vendor payment|payment to|paid to|google ads|meta ads|facebook ads/gi, '')
             .trim()
             .split(' ')
@@ -297,6 +308,7 @@ const Dashboard: React.FC = () => {
         else if (tx.type === 'failed' || tx.type === 'failed_payment') {
           acc.failedCount++;
         }
+        // transfer type: not counted in income or expenses (neutral for operating metrics)
         
         acc.count++;
         return acc;
@@ -314,6 +326,8 @@ const Dashboard: React.FC = () => {
         uncategorizedCount: 0,
         unreviewedCount: 0
       });
+
+
 
       // Filter and count uncategorized & unknown problem rows across cleanTransactions
       let totalUncategorizedCount = 0;

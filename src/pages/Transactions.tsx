@@ -541,7 +541,7 @@ const Transactions: React.FC = () => {
 
           {/* Type tabs */}
           <div className="flex gap-1.5 flex-wrap">
-            {(['all', 'income', 'expense', 'refund', 'unknown'] as const).map((t) => (
+            {(['all', 'income', 'expense', 'refund', 'transfer', 'unknown'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setFilterType(t)}
@@ -851,7 +851,6 @@ const Transactions: React.FC = () => {
                 {sortedTransactions.map((tx) => {
                   const cat = tx._displayCategory as TransactionCategory;
                   const badge = getCategoryBadgeStyle(cat);
-                  const isExpense = tx.amount < 0;
                   const isMenuOpen = openMenuId === tx.id;
 
                   return (
@@ -940,23 +939,32 @@ const Transactions: React.FC = () => {
                       {/* Amount */}
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <div className="flex flex-col items-end">
-                          <span
-                            className={`text-sm font-black flex items-center gap-1 ${
-                              isExpense ? 'text-risk' : 'text-success'
-                            }`}
-                          >
-                            {isExpense ? (
-                              <ArrowUpRight className="w-3.5 h-3.5" />
-                            ) : (
-                              <ArrowDownLeft className="w-3.5 h-3.5" />
-                            )}
-                            {(() => {
-                              const displayAmt = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
-                                ? tx.amount_in_base_currency
-                                : tx.amount;
-                              return formatCurrency(displayAmt, 'INR', true);
-                            })()}
-                          </span>
+                          {(() => {
+                            const displayAmt = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+                              ? tx.amount_in_base_currency
+                              : tx.amount;
+                            // Use direction_derived (from normalizer) if available; fall back to amount sign
+                            const dirDerived = tx.raw_row_json?.direction_derived;
+                            const isOutflow = dirDerived === 'outflow' || (!dirDerived && Number(displayAmt) < 0);
+                            const isTransfer = tx.type === 'transfer';
+                            const isRefund = tx.type === 'refund';
+                            const colorClass = isTransfer
+                              ? 'text-blue-400'
+                              : isRefund
+                              ? 'text-teal-400'
+                              : isOutflow
+                              ? 'text-risk'
+                              : 'text-success';
+                            const Icon = isOutflow && !isRefund && !isTransfer
+                              ? ArrowUpRight
+                              : ArrowDownLeft;
+                            return (
+                              <span className={`text-sm font-black flex items-center gap-1 ${colorClass}`}>
+                                <Icon className="w-3.5 h-3.5" />
+                                {formatCurrency(displayAmt, 'INR', true)}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </td>
 
@@ -1093,18 +1101,32 @@ const Transactions: React.FC = () => {
 
 // ── Type badge sub-component ─────────────────────────────────────────────────
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  income: { bg: 'bg-success/10', text: 'text-success' },
-  refund: { bg: 'bg-success/10', text: 'text-success' },
-  expense: { bg: 'bg-risk/10', text: 'text-risk' },
-  vendor_payment: { bg: 'bg-risk/10', text: 'text-risk' },
-  subscription: { bg: 'bg-amber-500/10', text: 'text-amber-400' },
-  unknown: { bg: 'bg-muted/60', text: 'text-muted-foreground' },
-  failed_payment: { bg: 'bg-muted/60', text: 'text-muted-foreground' },
+  income:         { bg: 'bg-success/10',     text: 'text-success' },
+  refund:         { bg: 'bg-teal-500/10',    text: 'text-teal-400' },
+  expense:        { bg: 'bg-risk/10',        text: 'text-risk' },
+  vendor_payment: { bg: 'bg-risk/10',        text: 'text-risk' },
+  bank_charge:    { bg: 'bg-risk/10',        text: 'text-risk' },
+  subscription:   { bg: 'bg-amber-500/10',   text: 'text-amber-400' },
+  transfer:       { bg: 'bg-blue-500/10',    text: 'text-blue-400' },
+  unknown:        { bg: 'bg-muted/60',       text: 'text-muted-foreground' },
+  failed_payment: { bg: 'bg-muted/60',       text: 'text-muted-foreground' },
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  income:         'Income',
+  refund:         'Refund',
+  expense:        'Expense',
+  vendor_payment: 'Vendor Pay',
+  bank_charge:    'Bank Charge',
+  subscription:   'Subscription',
+  transfer:       'Transfer',
+  unknown:        'Unknown',
+  failed_payment: 'Failed',
 };
 
 const TypeBadge: React.FC<{ type: string }> = ({ type }) => {
   const colors = TYPE_COLORS[type] ?? { bg: 'bg-muted/40', text: 'text-muted-foreground' };
-  const label = type.replace(/_/g, ' ');
+  const label = TYPE_LABELS[type] ?? type.replace(/_/g, ' ');
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${colors.bg} ${colors.text}`}

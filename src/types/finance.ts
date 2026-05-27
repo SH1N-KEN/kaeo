@@ -8,7 +8,8 @@ export interface NormalizedTransaction {
   description: string;
   amount: number;
   currency: string;
-  type: 'income' | 'expense' | 'vendor_payment' | 'subscription' | 'transfer' | 'refund' | 'failed' | 'failed_payment' | 'unknown';
+  type: 'income' | 'expense' | 'vendor_payment' | 'subscription' | 'transfer' | 'refund' | 'bank_charge' | 'failed' | 'failed_payment' | 'unknown';
+  direction?: 'inflow' | 'outflow' | 'neutral' | 'unknown';
   category: string | null;
   counterparty_name: string | null;
   source_provider: string | null;
