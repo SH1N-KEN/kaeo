@@ -33,6 +33,7 @@ import { checkUsageEventAllowed } from '../lib/billingGuards';
 import { normalizeIngestedRows } from '../lib/ingestion/transactionNormalizer';
 import { checkDuplicateTransactions } from '../lib/ingestion/duplicateEngine';
 import { formatMoney } from '../lib/currency';
+import { getCleanClientName } from '../lib/formatters';
 
 // Invoice imports
 import { extractInvoiceFields, type InvoiceExtractedFields } from '../lib/invoice/invoiceExtractor';
@@ -1236,7 +1237,7 @@ const Files: React.FC = () => {
 
       {/* ─── TAB: History ─── */}
       {activeTab === 'history' && (
-        <FileHistory history={filteredHistory} />
+        <FileHistory history={filteredHistory} activeClientName={getCleanClientName(activeClient.name)} />
       )}
 
       {/* Invoice Details Edit/Verification Modal */}

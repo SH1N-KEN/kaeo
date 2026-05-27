@@ -16,9 +16,10 @@ interface HistoryItem {
 
 interface FileHistoryProps {
   history: HistoryItem[];
+  activeClientName?: string;
 }
 
-const FileHistory: React.FC<FileHistoryProps> = ({ history }) => {
+const FileHistory: React.FC<FileHistoryProps> = ({ history, activeClientName }) => {
   const { toast } = useToast();
 
   if (history.length === 0) return null;
@@ -52,6 +53,7 @@ const FileHistory: React.FC<FileHistoryProps> = ({ history }) => {
                 <h4 className="font-semibold text-sm group-hover:text-primary transition-colors">{item.file_name}</h4>
                 <p className="text-xs text-muted-foreground flex items-center gap-2">
                   {new Date(item.created_at).toLocaleDateString()} • {item.metadata?.row_count || 0} rows
+                  {activeClientName && ` • Client: ${activeClientName}`}
                 </p>
               </div>
             </div>

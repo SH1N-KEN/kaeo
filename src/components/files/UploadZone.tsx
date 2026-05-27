@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Upload, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { Upload, Loader2, CheckCircle2 } from 'lucide-react';
 
 interface UploadZoneProps {
   onFileSelect: (file: File) => void;
@@ -88,9 +88,9 @@ const UploadZone: React.FC<UploadZoneProps> = ({ onFileSelect, loading }) => {
             <CheckCircle2 className="w-3 h-3 text-teal-400" />
             <span>XLSX Support</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-muted/40 text-muted-foreground rounded-full border border-border/20 opacity-70">
-            <AlertCircle className="w-3 h-3 text-muted-foreground" />
-            <span>PDF Coming Soon</span>
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-teal-500/10 text-teal-400 rounded-full border border-teal-500/20">
+            <CheckCircle2 className="w-3 h-3 text-teal-400" />
+            <span>PDF Support</span>
           </div>
         </div>
       </div>
