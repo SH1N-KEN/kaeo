@@ -443,8 +443,11 @@ const FloatingAskKaeo: React.FC = () => {
                             <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
                             {(() => {
                               const status = msg.source_json?.grounding_status;
-                              if (status === 'verified') return 'Verified from Kaeo data';
                               if (status === 'general') return 'General recommendation';
+                              if (status === 'general_vendor_knowledge') return 'General vendor knowledge';
+                              if (status === 'inferred_not_confirmed') return 'Inferred, not confirmed';
+                              if (status === 'needs_clarification') return 'Needs clarification';
+                              if (status === 'app_guidance') return 'App guidance';
                               return 'Based on Kaeo data';
                             })()}
                           </p>

@@ -15,18 +15,20 @@ import {
   FileText,
   UploadCloud,
   User,
+  Upload,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { useToast } from '../../hooks/useToast';
 import { useWorkspace } from '../../hooks/useWorkspace';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
 import aeLogo from '../../assets/kaeo-ae-logo.png';
 
 const primaryNavItems = [
-  { icon: LayoutDashboard, label: 'Dashboard',   path: '/dashboard' },
+  { icon: LayoutDashboard, label: 'Dashboard',    path: '/dashboard' },
   { icon: UploadCloud,     label: 'Files',        path: '/files' },
   { icon: ArrowRightLeft,  label: 'Transactions', path: '/transactions' },
-  { icon: Building2,       label: 'Vendors',      path: '/vendors' },
   { icon: Inbox,           label: 'Risk Inbox',   path: '/risk-inbox' },
+  { icon: Building2,       label: 'Vendors',      path: '/vendors' },
   { icon: FileText,        label: 'Reports',      path: '/reports' },
 ];
 
@@ -38,7 +40,13 @@ const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const [collapsed, setCollapsed] = useState<boolean>(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('kaeo-sidebar-collapsed');
+      return saved === 'true';
+    }
+    return false;
+  });
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
@@ -106,10 +114,10 @@ const Sidebar: React.FC = () => {
       {/* ── Logo ── */}
       <div
         className="flex items-center relative"
-        style={{ height: 64, padding: collapsed ? '0 20px' : '0 20px' }}
+        style={{ height: 64, padding: collapsed ? '0 16px' : '0 20px' }}
       >
         {collapsed ? (
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto"
             style={{ background: 'rgba(15,118,110,0.10)', border: '1px solid rgba(15,118,110,0.20)' }}>
             <img src={aeLogo} alt="Kaeo" className="w-4 h-4 object-contain" />
           </div>
@@ -119,7 +127,7 @@ const Sidebar: React.FC = () => {
               style={{ background: 'rgba(15,118,110,0.10)', border: '1px solid rgba(15,118,110,0.20)' }}>
               <img src={aeLogo} alt="Kaeo" className="w-4 h-4 object-contain" />
             </div>
-            <span className="text-[22px] font-bold tracking-tight leading-none"
+            <span className="text-[20px] font-bold tracking-tight leading-none"
               style={{ color: 'var(--primary)', letterSpacing: '-0.03em' }}>
               Kaeo
             </span>
@@ -139,24 +147,58 @@ const Sidebar: React.FC = () => {
         </button>
       </div>
 
-      {/* ── Navigation ── */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar py-4 px-3 flex flex-col gap-0.5">
+      {/* WorkspaceSwitcher Area */}
+      <div className="px-3 mb-2 flex-shrink-0">
+        <WorkspaceSwitcher collapsed={collapsed} />
+      </div>
 
-        {/* Primary nav */}
-        <div className="space-y-0.5">
-          {primaryNavItems.map((item) => (
-            <NavItem key={item.path} item={item} collapsed={collapsed} />
-          ))}
+      {/* ── Navigation ── */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar py-2 px-3 flex flex-col gap-5">
+        
+        {/* Main Group */}
+        <div className="flex flex-col gap-0.5">
+          {!collapsed && (
+            <div className="px-3 mb-1.5 text-[10px] font-bold tracking-wider text-muted-foreground uppercase opacity-50">
+              Overview
+            </div>
+          )}
+          <div className="space-y-0.5">
+            {primaryNavItems.map((item) => (
+              <NavItem key={item.path} item={item} collapsed={collapsed} />
+            ))}
+          </div>
         </div>
+
+        {/* Secondary / Quick Actions Group */}
+        <div className="flex flex-col gap-0.5">
+          {!collapsed && (
+            <div className="px-3 mb-1.5 text-[10px] font-bold tracking-wider text-muted-foreground uppercase opacity-50">
+              Actions
+            </div>
+          )}
+          <div className="space-y-0.5">
+            <NavItem 
+              item={{ icon: Upload, label: 'Import Data', path: '/files' }} 
+              collapsed={collapsed} 
+              isSecondary 
+            />
+            <NavItem 
+              item={{ icon: FileText, label: 'Generate Report', path: '/reports' }} 
+              collapsed={collapsed} 
+              isSecondary 
+            />
+          </div>
+        </div>
+
       </div>
 
       {/* ── Profile ── */}
-      <div className="p-3 relative" ref={menuRef}>
+      <div className="p-3 relative border-t border-teal-500/5 mt-auto" ref={menuRef}>
         <button
           onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-          className="w-full flex items-center gap-2.5 p-2 rounded-xl transition-all cursor-pointer text-left group"
+          className={`w-full flex items-center gap-2.5 p-2 rounded-xl transition-all cursor-pointer text-left group ${collapsed ? 'justify-center' : ''}`}
           style={{ borderRadius: 10 }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--muted)')}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(22, 38, 35, 0.4)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
           {/* Avatar */}

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { Search, Bell, X, Upload } from 'lucide-react';
-import WorkspaceSwitcher from './WorkspaceSwitcher';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { supabase } from '../../lib/supabase';
 import { calculateMonthEndReadiness } from '../../lib/readinessEngine';
@@ -211,9 +210,8 @@ const Topbar: React.FC = () => {
   return (
     <>
       <header className="topbar-base">
-        {/* Left: workspace switcher + breadcrumb */}
+        {/* Left: breadcrumb */}
         <div className="flex items-center gap-3 min-w-0">
-          <WorkspaceSwitcher />
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden sm:inline-flex">

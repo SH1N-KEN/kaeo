@@ -13,7 +13,11 @@ import { useWorkspace } from '../../hooks/useWorkspace';
 import { getCleanClientName } from '../../lib/formatters';
 
 
-const WorkspaceSwitcher: React.FC = () => {
+interface WorkspaceSwitcherProps {
+  collapsed?: boolean;
+}
+
+const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false }) => {
   const navigate = useNavigate();
   const { 
     clients, 
@@ -36,10 +40,10 @@ const WorkspaceSwitcher: React.FC = () => {
           setClientToEdit(null);
           setIsCreateModalOpen(true);
         }}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dashed hover:border-primary hover:text-primary transition-all text-xs font-medium w-full justify-center"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dashed border-teal-500/25 hover:border-primary hover:text-primary transition-all text-xs font-medium w-full justify-center text-muted-foreground"
       >
         <Plus className="w-3 h-3" />
-        Add Business
+        {!collapsed && <span>Add Business</span>}
       </button>
     );
   }
@@ -58,33 +62,49 @@ const WorkspaceSwitcher: React.FC = () => {
     setIsOpen(false);
   };
 
+  const displayName = accountMode === 'business_owner' 
+    ? getCleanClientName(activeClient?.name || activeOrg.name)
+    : (activeClient ? getCleanClientName(activeClient.name) : 'No client business selected');
+
   return (
     <div className="relative">
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all text-xs font-semibold w-full premium-topbar-card"
-      >
-        <div className="w-5 h-5 bg-teal-500/10 rounded flex items-center justify-center border border-teal-500/20 shrink-0">
-          <Briefcase className="w-3.5 h-3.5 text-primary" />
-        </div>
-        {accountMode === 'business_owner' ? (
-          <div className="flex flex-col items-start min-w-0 flex-1 justify-center">
-            <span className="truncate text-xs font-bold text-foreground">
-              {getCleanClientName(activeClient?.name || activeOrg.name)}
-            </span>
+      {collapsed ? (
+        <button 
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center justify-center w-10 h-10 rounded-xl transition-all hover:bg-teal-500/5 border border-teal-500/10 shrink-0 mx-auto"
+          title={displayName}
+        >
+          <div className="w-5 h-5 rounded flex items-center justify-center shrink-0">
+            <Briefcase className="w-4 h-4 text-[var(--primary)]" />
           </div>
-        ) : (
-          <div className="flex flex-col items-start min-w-0 flex-1">
-            <span className="truncate text-[11px] text-muted-foreground uppercase tracking-wider font-bold">
-              {getCleanClientName(activeOrg.name)}
-            </span>
-            <span className="truncate text-xs">
-              {activeClient ? getCleanClientName(activeClient.name) : 'No client business selected'}
-            </span>
+        </button>
+      ) : (
+        <button 
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all text-xs font-semibold w-full bg-teal-500/5 hover:bg-teal-500/10 border border-teal-500/10"
+        >
+          <div className="w-5 h-5 bg-teal-500/10 rounded flex items-center justify-center border border-teal-500/20 shrink-0">
+            <Briefcase className="w-3.5 h-3.5 text-primary" />
           </div>
-        )}
-        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform chevron-icon ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+          {accountMode === 'business_owner' ? (
+            <div className="flex flex-col items-start min-w-0 flex-1 justify-center">
+              <span className="truncate text-xs font-bold text-foreground">
+                {displayName}
+              </span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-start min-w-0 flex-1 text-left">
+              <span className="truncate text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
+                {getCleanClientName(activeOrg.name)}
+              </span>
+              <span className="truncate text-xs">
+                {displayName}
+              </span>
+            </div>
+          )}
+          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform chevron-icon ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+      )}
  
       {isOpen && (
         <>
@@ -93,7 +113,7 @@ const WorkspaceSwitcher: React.FC = () => {
             onClick={() => setIsOpen(false)}
           />
           {accountMode === 'business_owner' ? (
-            <div className="absolute top-full left-0 mt-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200">
+            <div className={collapsed ? "absolute left-full top-0 ml-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200" : "absolute top-full left-0 mt-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200"}>
               {/* Current Business Section */}
               <div className="px-3 py-1.5 border-b border-border/10 mb-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current Business</span>
@@ -155,7 +175,7 @@ const WorkspaceSwitcher: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="absolute top-full left-0 mt-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200">
+            <div className={collapsed ? "absolute left-full top-0 ml-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200" : "absolute top-full left-0 mt-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200"}>
               {/* Workspace Section */}
               <div className="px-3 py-1.5 border-b border-border/10 mb-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Workspace</span>
