@@ -10,12 +10,10 @@ import {
   ChevronRight,
   Sun,
   Moon,
-  Users,
   Building2,
   Inbox,
   FileText,
   UploadCloud,
-  MessageSquare,
   User,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
@@ -25,7 +23,6 @@ import aeLogo from '../../assets/kaeo-ae-logo.png';
 
 const primaryNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard',   path: '/dashboard' },
-  { icon: MessageSquare,   label: 'Ask Kaeo',    path: '/libby' },
   { icon: UploadCloud,     label: 'Files',        path: '/files' },
   { icon: ArrowRightLeft,  label: 'Transactions', path: '/transactions' },
   { icon: Building2,       label: 'Vendors',      path: '/vendors' },
@@ -33,11 +30,6 @@ const primaryNavItems = [
   { icon: FileText,        label: 'Reports',      path: '/reports' },
 ];
 
-const secondaryNavItems = [
-  { icon: Users,     label: 'Clients',  path: '/settings?tab=clients' },
-  { icon: Settings,  label: 'Settings', path: '/settings' },
-  { icon: CreditCard,label: 'Billing',  path: '/billing' },
-];
 
 const Sidebar: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -46,12 +38,7 @@ const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('kaeo-sidebar-collapsed') === 'true';
-    }
-    return false;
-  });
+  const [collapsed, setCollapsed] = useState<boolean>(false);
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
@@ -118,7 +105,7 @@ const Sidebar: React.FC = () => {
     >
       {/* ── Logo ── */}
       <div
-        className="flex items-center border-b border-[var(--border)] relative"
+        className="flex items-center relative"
         style={{ height: 64, padding: collapsed ? '0 20px' : '0 20px' }}
       >
         {collapsed ? (
@@ -142,17 +129,12 @@ const Sidebar: React.FC = () => {
         {/* Collapse toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center transition-all z-10 cursor-pointer"
-          style={{
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-            boxShadow: '0 1px 4px rgba(16,22,21,0.10)',
-          }}
+          className="sidebar-toggle-btn"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed
-            ? <ChevronRight className="w-3 h-3" style={{ color: 'var(--muted-foreground)' }} />
-            : <ChevronLeft  className="w-3 h-3" style={{ color: 'var(--muted-foreground)' }} />
+            ? <ChevronRight className="w-3.5 h-3.5" />
+            : <ChevronLeft  className="w-3.5 h-3.5" />
           }
         </button>
       </div>
@@ -166,20 +148,10 @@ const Sidebar: React.FC = () => {
             <NavItem key={item.path} item={item} collapsed={collapsed} />
           ))}
         </div>
-
-        {/* Divider */}
-        <div className="my-3 mx-1" style={{ height: 1, background: 'var(--border)' }} />
-
-        {/* Secondary nav */}
-        <div className="space-y-0.5">
-          {secondaryNavItems.map((item) => (
-            <NavItem key={item.path} item={item} collapsed={collapsed} isSecondary />
-          ))}
-        </div>
       </div>
 
       {/* ── Profile ── */}
-      <div className="p-3 border-t border-[var(--border)] relative" ref={menuRef}>
+      <div className="p-3 relative" ref={menuRef}>
         <button
           onClick={() => setProfileMenuOpen(!profileMenuOpen)}
           className="w-full flex items-center gap-2.5 p-2 rounded-xl transition-all cursor-pointer text-left group"

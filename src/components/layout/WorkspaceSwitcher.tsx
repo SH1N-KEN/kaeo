@@ -10,7 +10,8 @@ import {
   Upload
 } from 'lucide-react';
 import { useWorkspace } from '../../hooks/useWorkspace';
-import aeLogo from '../../assets/kaeo-ae-logo.png';
+import { getCleanClientName } from '../../lib/formatters';
+
 
 const WorkspaceSwitcher: React.FC = () => {
   const navigate = useNavigate();
@@ -64,27 +65,27 @@ const WorkspaceSwitcher: React.FC = () => {
         className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all text-xs font-semibold w-full premium-topbar-card"
       >
         <div className="w-5 h-5 bg-teal-500/10 rounded flex items-center justify-center border border-teal-500/20 shrink-0">
-          <img src={aeLogo} alt="Workspace Badge" className="w-3.5 h-3.5 object-contain" />
+          <Briefcase className="w-3.5 h-3.5 text-primary" />
         </div>
         {accountMode === 'business_owner' ? (
           <div className="flex flex-col items-start min-w-0 flex-1 justify-center">
             <span className="truncate text-xs font-bold text-foreground">
-              {activeClient?.name || activeOrg.name}
+              {getCleanClientName(activeClient?.name || activeOrg.name)}
             </span>
           </div>
         ) : (
           <div className="flex flex-col items-start min-w-0 flex-1">
             <span className="truncate text-[11px] text-muted-foreground uppercase tracking-wider font-bold">
-              {activeOrg.name}
+              {getCleanClientName(activeOrg.name)}
             </span>
             <span className="truncate text-xs">
-              {activeClient?.name || 'No client business selected'}
+              {activeClient ? getCleanClientName(activeClient.name) : 'No client business selected'}
             </span>
           </div>
         )}
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform chevron-icon ${isOpen ? 'rotate-180' : ''}`} />
       </button>
-
+ 
       {isOpen && (
         <>
           <div 
@@ -96,8 +97,9 @@ const WorkspaceSwitcher: React.FC = () => {
               {/* Current Business Section */}
               <div className="px-3 py-1.5 border-b border-border/10 mb-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current Business</span>
-                <p className="text-xs font-bold text-foreground truncate mt-0.5">{activeClient?.name || activeOrg.name}</p>
+                <p className="text-xs font-bold text-foreground truncate mt-0.5">{getCleanClientName(activeClient?.name || activeOrg.name)}</p>
               </div>
+
               
               <div className="px-1 py-1 space-y-0.5">
                 <button 
@@ -144,7 +146,7 @@ const WorkspaceSwitcher: React.FC = () => {
                         className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-white/5 text-muted-foreground'}`}
                       >
                         <Briefcase className="w-3 h-3" />
-                        <span className="truncate flex-1 text-left">{client.name}</span>
+                        <span className="truncate flex-1 text-left">{getCleanClientName(client.name)}</span>
                         {activeClient?.id === client.id && <Check className="w-3 h-3" />}
                       </button>
                     ))}
@@ -157,7 +159,7 @@ const WorkspaceSwitcher: React.FC = () => {
               {/* Workspace Section */}
               <div className="px-3 py-1.5 border-b border-border/10 mb-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Workspace</span>
-                <p className="text-xs font-bold text-foreground truncate mt-0.5">{activeOrg.name}</p>
+                <p className="text-xs font-bold text-foreground truncate mt-0.5">{getCleanClientName(activeOrg.name)}</p>
               </div>
               
               <div className="px-1 py-1 space-y-0.5">
@@ -169,17 +171,17 @@ const WorkspaceSwitcher: React.FC = () => {
                   Workspace settings
                 </button>
               </div>
-
+ 
               <div className="h-px bg-border/20 mx-2 my-1" />
-
+ 
               {/* Client Businesses Section */}
               <div className="px-3 py-1.5 border-b border-border/10 mb-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Client Businesses</span>
                 {activeClient && (
-                  <p className="text-xs font-bold text-foreground truncate mt-0.5">{activeClient.name}</p>
+                  <p className="text-xs font-bold text-foreground truncate mt-0.5">{getCleanClientName(activeClient.name)}</p>
                 )}
               </div>
-
+ 
               <div className="px-1 py-1 space-y-0.5">
                 <button 
                   onClick={handleAddBusinessClick}
@@ -205,7 +207,7 @@ const WorkspaceSwitcher: React.FC = () => {
                   </button>
                 )}
               </div>
-
+ 
               {clients.length > 0 && (
                 <>
                   <div className="h-px bg-border/20 mx-2 my-1" />
@@ -220,13 +222,14 @@ const WorkspaceSwitcher: React.FC = () => {
                         className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-white/5 text-muted-foreground'}`}
                       >
                         <Briefcase className="w-3 h-3" />
-                        <span className="truncate flex-1 text-left">{client.name}</span>
+                        <span className="truncate flex-1 text-left">{getCleanClientName(client.name)}</span>
                         {activeClient?.id === client.id && <Check className="w-3 h-3" />}
                       </button>
                     ))}
                   </div>
                 </>
               )}
+
             </div>
           )}
         </>

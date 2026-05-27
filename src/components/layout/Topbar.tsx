@@ -19,8 +19,8 @@ import {
 
 const pathTitleMap: Record<string, string> = {
   '/dashboard':    'Dashboard',
-  '/ask-kaeo':     'Ask Kaeo',
-  '/libby':        'Ask Kaeo',
+  '/ask-kaeo':     'Ask Libby',
+  '/libby':        'Ask Libby',
   '/files':        'Files',
   '/transactions': 'Transactions',
   '/vendors':      'Vendors',
@@ -214,7 +214,6 @@ const Topbar: React.FC = () => {
         {/* Left: workspace switcher + breadcrumb */}
         <div className="flex items-center gap-3 min-w-0">
           <WorkspaceSwitcher />
-          <div className="w-px h-4 flex-shrink-0" style={{ background: 'var(--border)' }} />
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden sm:inline-flex">
@@ -255,10 +254,14 @@ const Topbar: React.FC = () => {
           {/* Search trigger */}
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border)] text-[13px] text-[var(--muted-foreground)] w-48 md:w-56 cursor-pointer transition-all"
-            style={{ background: 'var(--card)' }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(15,118,110,0.25)')}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] text-[var(--muted-foreground)] w-48 md:w-56 cursor-pointer transition-all"
+            style={{ background: 'var(--surface)' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'var(--muted)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'var(--surface)';
+            }}
           >
             <Search className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="flex-1 text-left truncate">Search…</span>
@@ -281,15 +284,13 @@ const Topbar: React.FC = () => {
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => setIsNotifOpen(!isNotifOpen)}
-              className="relative p-2 rounded-lg border border-[var(--border)] cursor-pointer transition-all"
-              style={{ background: 'var(--card)' }}
+              className="relative p-2 rounded-lg cursor-pointer transition-all"
+              style={{ background: 'var(--surface)' }}
               onMouseEnter={e => {
                 e.currentTarget.style.background = 'var(--muted)';
-                e.currentTarget.style.borderColor = 'rgba(15,118,110,0.20)';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background = 'var(--card)';
-                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.background = 'var(--surface)';
               }}
             >
               <Bell className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
@@ -418,7 +419,7 @@ const Topbar: React.FC = () => {
                       { label: 'Open Risk Inbox',     route: '/risk-inbox',                dotColor: '#C2413A' },
                       { label: 'Review Transactions',  route: '/transactions?review=pending', dotColor: '#0F766E' },
                       { label: 'Upload Files',         route: '/files',                      dotColor: '#2563EB' },
-                      { label: 'Ask Kaeo',             route: '/libby',                      dotColor: '#2FB8A6' },
+                      { label: 'Ask Libby',             route: '/libby',                      dotColor: '#2FB8A6' },
                     ].map(q => (
                       <button
                         key={q.route}
@@ -451,8 +452,9 @@ const Topbar: React.FC = () => {
                     }}
                     className="mt-2 btn-secondary btn-sm mx-auto"
                   >
-                    Ask Kaeo to help find it
+                    Ask Libby to help find it
                   </button>
+
                 </div>
               ) : (
                 <div className="py-2 space-y-1">
