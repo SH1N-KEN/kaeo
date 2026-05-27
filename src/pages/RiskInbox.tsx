@@ -4,10 +4,8 @@ import {
   AlertCircle, 
   Zap, 
   Loader2,
-  Clock,
   MessageSquare,
   ArrowRight,
-  MoreHorizontal,
   X,
   Plus,
   Terminal,
@@ -308,10 +306,10 @@ const RiskInbox: React.FC = () => {
 
   const getSeverityColor = (sev: string) => {
     switch (sev) {
-      case 'critical': return 'bg-risk text-white';
-      case 'high': return 'bg-risk/10 text-risk border-risk/20';
-      case 'medium': return 'bg-warning/10 text-warning border-warning/20';
-      default: return 'bg-muted text-muted-foreground border-border';
+      case 'critical': return 'bg-[rgba(224,84,80,0.15)] text-[#E05450] border-[rgba(224,84,80,0.25)]';
+      case 'high': return 'bg-[rgba(224,84,80,0.10)] text-[#E05450] border-[rgba(224,84,80,0.20)]';
+      case 'medium': return 'bg-[rgba(214,146,42,0.10)] text-[#D4922A] border-[rgba(214,146,42,0.20)]';
+      default: return 'bg-[rgba(93,107,102,0.08)] text-[#7E9C98] border-[rgba(93,107,102,0.16)]';
     }
   };
 
@@ -493,41 +491,81 @@ const RiskInbox: React.FC = () => {
                     )}
 
                     <div className="flex gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${risk.severity === 'critical' ? '' : ''}`}
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                         style={{
-                          background: risk.severity === 'critical' ? 'rgba(194,65,58,0.12)' : risk.severity === 'high' ? 'rgba(183,121,31,0.10)' : 'var(--muted)',
-                          color: risk.severity === 'critical' ? '#C2413A' : risk.severity === 'high' ? '#B7791F' : 'var(--muted-foreground)'
+                          background: risk.severity === 'critical' || risk.severity === 'high' ? 'rgba(224,84,80,0.12)' : 'var(--muted)',
+                          color: risk.severity === 'critical' || risk.severity === 'high' ? '#E05450' : 'var(--muted-foreground)'
                         }}>
-                        {risk.risk_type.includes('duplicate') ? <MoreHorizontal className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+                        <ShieldAlert className="w-5 h-5" />
                       </div>
                       
                       <div className="flex-1 space-y-3">
                         <div className="flex items-start justify-between gap-4">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <h3 className="font-bold text-foreground">{risk.title}</h3>
+                              <h3 className="font-bold text-foreground text-[14px]">{risk.title}</h3>
                               <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${getSeverityColor(risk.severity)}`}>
                                 {risk.severity}
                               </span>
                             </div>
-                            <p className="text-xs text-muted-foreground line-clamp-1">{risk.description || risk.suggested_action}</p>
+                            <p className="text-[12px] text-[var(--foreground-muted)] leading-normal mt-1">{risk.description}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-lg font-black text-risk">{formatCurrency(risk.amount_at_risk)}</p>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-lg font-black text-[var(--danger)]">{formatCurrency(risk.amount_at_risk)}</p>
                             <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{getFriendlyRiskType(risk.risk_type)}</p>
                           </div>
                         </div>
 
+                        {/* Affected transactions & Recommended action details */}
+                        <div className="bg-[var(--muted)] p-2.5 rounded-lg text-[11px] space-y-1">
+                          <p className="text-[var(--muted-foreground)]">
+                            <span className="font-semibold text-[var(--foreground)]">Recommended Action:</span> {risk.suggested_action}
+                          </p>
+                          {(risk.evidence_json?.transaction_id || risk.evidence_json?.tx_id) && (
+                            <p className="text-[10px] text-[var(--muted-foreground)]">
+                              <span className="font-semibold">Affected Tx ID:</span> <code className="bg-[var(--card)] px-1 py-0.5 rounded text-[var(--foreground)]">{risk.evidence_json.transaction_id || risk.evidence_json.tx_id}</code>
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Card actions */}
                         <div className="flex items-center justify-between pt-2 border-t border-border/30">
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                              <Clock className="w-3 h-3" /> {new Date(risk.created_at).toLocaleDateString()}
-                            </div>
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                              <MessageSquare className="w-3 h-3" /> {risk.notes_count || 0} Notes
-                            </div>
+                          <div className="flex gap-2 flex-wrap">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); updateStatus(risk.id, 'reviewed'); }}
+                              className="px-2.5 py-1 text-[10px] font-semibold rounded bg-[rgba(15,118,110,0.08)] text-[var(--primary)] hover:bg-[rgba(15,118,110,0.15)] transition-colors"
+                            >
+                              Review
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); updateStatus(risk.id, 'resolved'); }}
+                              className="px-2.5 py-1 text-[10px] font-semibold rounded bg-[rgba(22,138,91,0.08)] text-[var(--success)] hover:bg-[rgba(22,138,91,0.15)] transition-colors"
+                            >
+                              Mark resolved
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); updateStatus(risk.id, 'ignored'); }}
+                              className="px-2.5 py-1 text-[10px] font-semibold rounded bg-[rgba(93,107,102,0.06)] text-[var(--muted-foreground)] hover:bg-[rgba(93,107,102,0.12)] transition-colors"
+                            >
+                              Ignore
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedRisk(risk);
+                                fetchNotes(risk.id);
+                                setTimeout(() => {
+                                  document.getElementById('strategic-note-input')?.focus();
+                                }, 100);
+                              }}
+                              className="px-2.5 py-1 text-[10px] font-semibold rounded bg-transparent border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors animate-pulse"
+                            >
+                              Create report note
+                            </button>
                           </div>
-                          <ArrowRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
+                          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
+                            <MessageSquare className="w-3.5 h-3.5" /> {risk.notes_count || 0}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -720,6 +758,7 @@ const RiskInbox: React.FC = () => {
 
                         <div className="flex gap-2">
                           <input 
+                            id="strategic-note-input"
                             type="text" 
                             value={newNote}
                             onChange={(e) => setNewNote(e.target.value)}

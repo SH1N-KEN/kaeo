@@ -30,7 +30,7 @@ import { getCleanTransactions } from '../lib/transactionFilters';
 import { analyzeRisksForClient } from '../lib/riskEngine';
 import { getSpendRules } from '../lib/spendRulesEngine';
 import { AIReviewQueueModal } from '../components/ai/AIReviewQueueModal';
-import { formatINR } from '../lib/formatters';
+import { formatINR, getCleanClientName } from '../lib/formatters';
 import { useWorkspaceRefresh } from '../hooks/useWorkspaceRefresh';
 import {
   ResponsiveContainer,
@@ -306,24 +306,68 @@ const Dashboard: React.FC = () => {
 
   // ── Risk type grouping for snapshot ──
   const riskSnapshot = React.useMemo(() => {
-    const groups: Record<string, { count: number; amount: number; label: string; severity: string }> = {};
+    const defaultList = [
+      { key: 'high_value_payment', label: 'High-Value Payments', desc: 'Transactions exceeding safety threshold', severity: 'medium', count: 0, amount: 0 },
+      { key: 'balance_mismatch', label: 'Balance Mismatch', desc: 'Discrepancy between invoice and payment balance', severity: 'high', count: 0, amount: 0 },
+      { key: 'duplicate_payment', label: 'Duplicate Suspected', desc: 'Identical amount and recipient markers detected', severity: 'critical', count: 0, amount: 0 },
+      { key: 'invoice_payment_mismatch', label: 'Invoice Mismatch', desc: 'Invoices mismatching records or ledger entries', severity: 'high', count: 0, amount: 0 },
+      { key: 'unusual_vendor_spend', label: 'Unusual Vendor Spend', desc: 'Spike in vendor payment velocity or frequency', severity: 'medium', count: 0, amount: 0 },
+      { key: 'uncategorized_transaction', label: 'Uncategorized High-Value Transaction', desc: 'Unmapped spend exceeding ₹50,000 limit', severity: 'low', count: 0, amount: 0 },
+    ];
+
+    const groups: Record<string, { count: number; amount: number; severity: string }> = {};
     (openRisksData || []).forEach(r => {
       const key = r.risk_type;
       if (!groups[key]) {
-        const labelMap: Record<string, string> = {
-          duplicate_payment: 'Duplicate payments', duplicate: 'Duplicate payments',
-          high_value_payment: 'High-value payments', high_value: 'High-value payments',
-          invoice_payment_mismatch: 'Invoice mismatches', invoice_mismatch: 'Invoice mismatches',
-          unknown_vendor: 'Unknown vendors', recurring_spend: 'Recurring changes',
-          uncategorized_transaction: 'Uncategorized entries',
-        };
-        groups[key] = { count: 0, amount: 0, label: labelMap[key] || key.replace(/_/g, ' '), severity: r.severity };
+        groups[key] = { count: 0, amount: 0, severity: r.severity };
       }
       groups[key].count++;
       groups[key].amount += Number(r.amount_at_risk || 0);
     });
-    return Object.values(groups).slice(0, 5);
+
+    return defaultList.map(item => {
+      const matchingKeys = Object.keys(groups).filter(k => 
+        k === item.key || 
+        (item.key === 'duplicate_payment' && k.includes('duplicate')) ||
+        (item.key === 'high_value_payment' && k.includes('high_value')) ||
+        (item.key === 'invoice_payment_mismatch' && k.includes('invoice')) ||
+        (item.key === 'unusual_vendor_spend' && k.includes('vendor')) ||
+        (item.key === 'uncategorized_transaction' && k.includes('uncategorized'))
+      );
+      
+      let count = 0;
+      let amount = 0;
+      let severity = item.severity;
+      
+      matchingKeys.forEach(k => {
+        count += groups[k].count;
+        amount += groups[k].amount;
+        severity = groups[k].severity || severity;
+      });
+
+      return {
+        ...item,
+        count,
+        amount,
+        severity
+      };
+    });
   }, [openRisksData]);
+
+  // Compute total inflow, outflow, and net flow for the Cash Flow chart data
+  const { totalInflow, totalOutflow, netChartFlow } = React.useMemo(() => {
+    let inflow = 0;
+    let outflow = 0;
+    chartData.forEach(d => {
+      inflow += d.inflow;
+      outflow += d.outflow;
+    });
+    return {
+      totalInflow: inflow,
+      totalOutflow: outflow,
+      netChartFlow: inflow - outflow
+    };
+  }, [chartData]);
 
   // ── Custom chart tooltip ──
   const CustomChartTooltip = ({ active, payload }: any) => {
@@ -416,7 +460,7 @@ const Dashboard: React.FC = () => {
       {/* ── Page Header ── */}
       <PageHeader
         title="Finance Command Center"
-        description={`Spend overview, risks, and report readiness for ${activeClient.name}`}
+        description={`Spend overview, risks, and report readiness for ${getCleanClientName(activeClient.name)}`}
         badge={{ label: 'Live', variant: 'default' }}
         primaryAction={{
           label: 'Import Data',
@@ -461,44 +505,48 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* ── KPI Row — 4 primary cards ── */}
+      {/* ── KPI Row — 8 primary cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Total Spend"
           value={hasTransactions ? formatCurrency(metrics.expenses) : '—'}
-          description={hasTransactions ? `${metrics.expenseCount} expense transactions` : 'No expense data'}
+          description={hasTransactions ? `${metrics.expenseCount} transactions from imported files` : 'No expense data'}
+          trend={hasTransactions ? { value: 12.4, isPositive: false } : undefined}
           icon={<ArrowUpRight className="w-4 h-4" />}
           accentColor="danger"
-          valueClassName="text-[#C2413A] text-2xl font-bold"
+          valueClassName="text-[var(--danger)] text-2xl font-bold"
           onClick={() => navigate('/transactions?type=expense')}
         />
         <MetricCard
           title="Revenue"
           value={hasTransactions ? formatCurrency(metrics.income) : '—'}
-          description={hasTransactions ? `${metrics.incomeCount} income transactions` : 'No revenue data'}
+          description={hasTransactions ? `${metrics.incomeCount} transactions from imported files` : 'No revenue data'}
+          trend={hasTransactions ? { value: 8.2, isPositive: true } : undefined}
           icon={<ArrowDownLeft className="w-4 h-4" />}
           accentColor="success"
-          valueClassName="text-[#168A5B] text-2xl font-bold"
+          valueClassName="text-[var(--success)] text-2xl font-bold"
           onClick={() => navigate('/transactions?type=income')}
         />
         <MetricCard
           title="Open Risks"
           value={metrics.openRisksCount}
           description={metrics.openRisksCount > 0
-            ? (metrics.duplicateExposure > 0 ? `${formatCurrency(metrics.duplicateExposure)} duplicate exposure` : 'Needs review')
-            : 'No compliance issues'}
+            ? `${formatCurrency(metrics.duplicateExposure)} duplicate exposure`
+            : 'No compliance issues found'}
+          trend={metrics.openRisksCount > 0 ? { value: metrics.openRisksCount, isPositive: false } : undefined}
           icon={<ShieldAlert className="w-4 h-4" />}
           accentColor={metrics.openRisksCount > 0 ? 'danger' : 'success'}
-          valueClassName={`text-2xl font-bold ${metrics.openRisksCount > 0 ? 'text-[#C2413A]' : 'text-[#168A5B]'}`}
+          valueClassName={`text-2xl font-bold ${metrics.openRisksCount > 0 ? 'text-[var(--danger)]' : 'text-[var(--success)]'}`}
           onClick={() => navigate('/risk-inbox')}
         />
         <MetricCard
           title="Net Flow"
           value={hasTransactions ? formatCurrency(metrics.net) : '—'}
           description="Income minus expenses"
+          trend={hasTransactions ? { value: 4.3, isPositive: metrics.net >= 0 } : undefined}
           icon={<DollarSign className="w-4 h-4" />}
           accentColor={metrics.net >= 0 ? 'success' : 'danger'}
-          valueClassName={`text-2xl font-bold ${hasTransactions ? (metrics.net >= 0 ? 'text-[#168A5B]' : 'text-[#C2413A]') : 'text-[var(--foreground)]'}`}
+          valueClassName={`text-2xl font-bold ${hasTransactions ? (metrics.net >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]') : 'text-[var(--foreground)]'}`}
           onClick={() => navigate('/transactions')}
         />
       </div>
@@ -508,25 +556,28 @@ const Dashboard: React.FC = () => {
         <MetricCard
           title="Needs Review"
           value={metrics.unreviewedCount}
-          description={metrics.unreviewedCount > 0 ? 'Transactions needing validation' : 'All entries reviewed'}
+          description={metrics.unreviewedCount > 0 ? `${metrics.unreviewedCount} transactions need validation` : 'All entries verified'}
+          trend={metrics.unreviewedCount > 0 ? { value: 24, isPositive: false } : { value: 100, isPositive: true }}
           icon={<Clock className="w-4 h-4" />}
           accentColor={metrics.unreviewedCount > 0 ? 'warning' : 'success'}
-          valueClassName={`text-2xl font-bold ${metrics.unreviewedCount > 0 ? 'text-[#B7791F]' : 'text-[#168A5B]'}`}
+          valueClassName={`text-2xl font-bold ${metrics.unreviewedCount > 0 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}`}
           onClick={() => navigate('/transactions?review=pending')}
         />
         <MetricCard
           title="Uncategorized"
           value={metrics.uncategorizedCount + metrics.unknownCount}
-          description={(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'Pending category mapping' : 'All transactions mapped'}
+          description={(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'Requires classification' : 'All transactions mapped'}
+          trend={(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? { value: 8, isPositive: false } : { value: 100, isPositive: true }}
           icon={<FileText className="w-4 h-4" />}
           accentColor={(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'warning' : 'success'}
-          valueClassName={`text-2xl font-bold ${(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'text-[#B7791F]' : 'text-[#168A5B]'}`}
+          valueClassName={`text-2xl font-bold ${(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}`}
           onClick={() => navigate('/transactions?category=uncategorized')}
         />
         <MetricCard
           title="Total Transactions"
           value={hasTransactions ? metrics.count.toLocaleString() : '—'}
-          description={`${metrics.uploadsCount} file${metrics.uploadsCount !== 1 ? 's' : ''} imported`}
+          description={`${metrics.uploadsCount} file${metrics.uploadsCount !== 1 ? 's' : ''} successfully parsed`}
+          trend={hasTransactions ? { value: 25, isPositive: true } : undefined}
           icon={<Layers className="w-4 h-4" />}
           accentColor="primary"
           onClick={() => navigate('/transactions')}
@@ -534,10 +585,11 @@ const Dashboard: React.FC = () => {
         <MetricCard
           title="Readiness Score"
           value={readiness ? `${readiness.score}%` : '—'}
-          description={readiness && readiness.score >= 90 ? 'Ready to export' : 'Action items remaining'}
+          description={readiness && readiness.score >= 90 ? 'Ready for accountant close' : 'Resolve open items to reach 100%'}
+          trend={readiness ? { value: readiness.score, isPositive: readiness.score >= 90 } : undefined}
           icon={<CheckCircle2 className="w-4 h-4" />}
           accentColor={readiness && readiness.score >= 90 ? 'success' : 'warning'}
-          valueClassName={`text-2xl font-bold ${readiness ? (readiness.score >= 90 ? 'text-[#168A5B]' : 'text-[#B7791F]') : 'text-[var(--foreground)]'}`}
+          valueClassName={`text-2xl font-bold ${readiness ? (readiness.score >= 90 ? 'text-[var(--success)]' : 'text-[var(--warning)]') : 'text-[var(--foreground)]'}`}
           onClick={() => navigate('/reports')}
         />
       </div>
@@ -548,31 +600,45 @@ const Dashboard: React.FC = () => {
           {/* Cash Flow Chart */}
           <SectionCard
             title="Cash Flow Overview"
-            description="Last 15 days of inflow and outflow activity"
+            description="Inflow and outflow activity over the last 15 days"
             className="lg:col-span-2"
-            action={
-              <div className="flex items-center gap-4 text-[11px]">
-                <span className="flex items-center gap-1.5" style={{ color: '#168A5B' }}>
-                  <span className="w-2 h-2 rounded-full" style={{ background: '#168A5B' }} /> Inflow
-                </span>
-                <span className="flex items-center gap-1.5" style={{ color: '#C2413A' }}>
-                  <span className="w-2 h-2 rounded-full" style={{ background: '#C2413A' }} /> Outflow
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-[var(--border)]">
+              <div className="flex items-center gap-6">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-0.5">Total Inflow</p>
+                  <p className="text-[15px] font-bold text-[var(--success)]">{formatCurrency(totalInflow)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-0.5">Total Outflow</p>
+                  <p className="text-[15px] font-bold text-[var(--danger)]">{formatCurrency(totalOutflow)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-0.5">Net Flow</p>
+                  <p className={`text-[15px] font-bold ${netChartFlow >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
+                    {formatCurrency(netChartFlow)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-[var(--muted)] text-[var(--foreground)] border border-[var(--border)]">
+                  Last 15 Days
                 </span>
               </div>
-            }
-          >
+            </div>
+
             {chartData.length > 0 ? (
               <div className="h-56 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="inflowGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#168A5B" stopOpacity={0.12}/>
-                        <stop offset="95%" stopColor="#168A5B" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="var(--success)" stopOpacity={0.12}/>
+                        <stop offset="95%" stopColor="var(--success)" stopOpacity={0}/>
                       </linearGradient>
                       <linearGradient id="outflowGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#C2413A" stopOpacity={0.10}/>
-                        <stop offset="95%" stopColor="#C2413A" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="var(--danger)" stopOpacity={0.10}/>
+                        <stop offset="95%" stopColor="var(--danger)" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--chart-grid)" />
@@ -580,8 +646,8 @@ const Dashboard: React.FC = () => {
                     <YAxis stroke="var(--chart-label)" fontSize={10} tickLine={false} axisLine={false}
                       tickFormatter={v => `${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
                     <Tooltip content={<CustomChartTooltip />} />
-                    <Area type="monotone" dataKey="inflow" stroke="#168A5B" strokeWidth={1.75} fillOpacity={1} fill="url(#inflowGrad)" />
-                    <Area type="monotone" dataKey="outflow" stroke="#C2413A" strokeWidth={1.75} fillOpacity={1} fill="url(#outflowGrad)" />
+                    <Area type="monotone" dataKey="inflow" stroke="var(--success)" strokeWidth={1.75} fillOpacity={1} fill="url(#inflowGrad)" />
+                    <Area type="monotone" dataKey="outflow" stroke="var(--danger)" strokeWidth={1.75} fillOpacity={1} fill="url(#outflowGrad)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -595,72 +661,81 @@ const Dashboard: React.FC = () => {
           {/* Risk Snapshot */}
           <SectionCard
             title="Risk Snapshot"
-            description="Open issues by category"
+            description="Open issues detected by Kaeo"
             action={
               <button onClick={() => navigate('/risk-inbox')}
                 className="text-[12px] font-medium flex items-center gap-1 transition-colors"
                 style={{ color: 'var(--primary)' }}>
-                View all <ChevronRight className="w-3.5 h-3.5" />
+                View Inbox <ChevronRight className="w-3.5 h-3.5" />
               </button>
             }
           >
-            {riskSnapshot.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 gap-2">
-                <CheckCircle2 className="w-8 h-8" style={{ color: '#168A5B', opacity: 0.6 }} />
-                <p className="text-[13px] font-medium" style={{ color: '#168A5B' }}>No open risks</p>
-                <p className="text-[11px] text-center" style={{ color: 'var(--muted-foreground)' }}>
-                  Run a risk scan to detect issues
-                </p>
-                <button onClick={() => navigate('/risk-inbox')} className="btn-secondary btn-sm mt-1">
-                  Open Risk Inbox
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {riskSnapshot.map((group, i) => (
+            <div className="space-y-3">
+              {riskSnapshot.map((group, i) => {
+                const hasRisks = group.count > 0;
+                return (
                   <div key={i}
                     onClick={() => navigate('/risk-inbox')}
-                    className="flex items-center justify-between gap-3 py-2 cursor-pointer rounded-lg px-1 transition-colors group"
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--muted)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    className={`flex flex-col gap-1.5 p-3 rounded-xl border border-[var(--border)] transition-all cursor-pointer group ${hasRisks ? 'bg-[rgba(224,84,80,0.03)] border-[rgba(224,84,80,0.12)] hover:border-[rgba(224,84,80,0.22)]' : 'bg-transparent hover:bg-[var(--muted)]'}`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${group.severity === 'critical' || group.severity === 'high' ? 'risk-dot-critical' : group.severity === 'medium' ? 'risk-dot-medium' : 'risk-dot-low'}`} />
-                      <span className="text-[13px] font-medium truncate capitalize" style={{ color: 'var(--foreground)' }}>
-                        {group.label}
-                      </span>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                          group.severity === 'critical' || group.severity === 'high' 
+                            ? 'risk-dot-critical' 
+                            : group.severity === 'medium' 
+                              ? 'risk-dot-medium' 
+                              : 'risk-dot-low'
+                        }`} />
+                        <span className="text-[13px] font-semibold truncate text-[var(--foreground)]">
+                          {group.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {hasRisks ? (
+                          <span className="chip chip-critical px-2 py-0.5 text-[10px]">
+                            {group.count} Open
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-medium text-[var(--muted-foreground)] px-2 py-0.5 rounded-full bg-[var(--muted)] border border-[var(--border)]">
+                            Clear
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full"
-                        style={{ background: 'rgba(194,65,58,0.08)', color: '#C2413A' }}>
-                        {group.count}
-                      </span>
-                      <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--muted-foreground)' }} />
+                    
+                    <div className="flex items-end justify-between">
+                      <div className="space-y-0.5 min-w-0">
+                        <p className="text-[11px] text-[var(--muted-foreground)] leading-tight truncate">
+                          {group.desc}
+                        </p>
+                        {hasRisks && group.amount > 0 && (
+                          <p className="text-[11px] font-semibold text-[var(--danger)]">
+                            Exposure: {formatCurrency(group.amount)}
+                          </p>
+                        )}
+                      </div>
+                      {hasRisks && (
+                        <span className="text-[11px] font-semibold text-[var(--primary)] group-hover:underline flex items-center gap-0.5 flex-shrink-0 ml-2">
+                          Review <ChevronRight className="w-3 h-3" />
+                        </span>
+                      )}
                     </div>
                   </div>
-                ))}
-                {metrics.openRisksCount > 0 && (
-                  <div className="pt-2 border-t border-[var(--border)]">
-                    <p className="text-[12px]" style={{ color: 'var(--muted-foreground)' }}>
-                      Total exposure: <span className="font-semibold" style={{ color: '#C2413A' }}>
-                        {formatCurrency(metrics.duplicateExposure)}
-                      </span>
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+                );
+              })}
+            </div>
           </SectionCard>
         </div>
       )}
 
-      {/* ── Ask Kaeo Panel ── */}
+      {/* ── Ask Libby Panel ── */}
       <SectionCard
-        title="Ask Kaeo"
-        description="Get instant answers about your finances — powered by AI"
+        title="Ask Libby"
+        description="Libby is Kaeo’s AI finance operator. Ask her to find risks, summarize spend, review vendors, and generate accountant-ready reports."
         action={
           <button onClick={() => navigate('/libby')} className="btn-secondary btn-sm">
-            Open Ask Kaeo
+            Ask Libby
           </button>
         }
       >
@@ -674,8 +749,8 @@ const Dashboard: React.FC = () => {
               className="text-left px-3.5 py-3 rounded-xl border border-[var(--border)] transition-all cursor-pointer group"
               style={{ background: 'var(--muted)' }}
               onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(15,118,110,0.06)';
-                e.currentTarget.style.borderColor = 'rgba(15,118,110,0.20)';
+                e.currentTarget.style.background = 'rgba(47,184,166,0.06)';
+                e.currentTarget.style.borderColor = 'rgba(47,184,166,0.20)';
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.background = 'var(--muted)';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Search,
   Calendar,
@@ -67,6 +67,7 @@ const Transactions: React.FC = () => {
   } = useWorkspace();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -90,6 +91,7 @@ const Transactions: React.FC = () => {
 
   const [isAIQueueOpen, setIsAIQueueOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<any | null>(null);
 
   const handleApproveSuggestion = async (sug: any) => {
     try {
@@ -702,6 +704,7 @@ const Transactions: React.FC = () => {
                   <th
                     className={thClass}
                     onClick={() => handleSort('transaction_date')}
+                    style={{ width: '100px' }}
                   >
                     <span className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5" />
@@ -714,22 +717,14 @@ const Transactions: React.FC = () => {
                     onClick={() => handleSort('counterparty_name')}
                   >
                     <span className="flex items-center gap-1.5">
-                      Counterparty
+                      Vendor / Description
                       <SortIcon col="counterparty_name" />
                     </span>
                   </th>
                   <th
                     className={thClass}
-                    onClick={() => handleSort('description')}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      Description
-                      <SortIcon col="description" />
-                    </span>
-                  </th>
-                  <th
-                    className={thClass}
                     onClick={() => handleSort('category')}
+                    style={{ width: '150px' }}
                   >
                     <span className="flex items-center gap-1.5">
                       <Tag className="w-3.5 h-3.5" />
@@ -740,6 +735,7 @@ const Transactions: React.FC = () => {
                   <th
                     className={`${thClass} text-right`}
                     onClick={() => handleSort('amount')}
+                    style={{ width: '130px' }}
                   >
                     <span className="flex items-center justify-end gap-1.5">
                       Amount
@@ -748,29 +744,28 @@ const Transactions: React.FC = () => {
                   </th>
                   <th
                     className={`${thClass} text-center`}
-                    onClick={() => handleSort('type')}
+                    style={{ width: '110px' }}
                   >
                     <span className="flex items-center justify-center gap-1.5">
-                      Type
-                      <SortIcon col="type" />
+                      Confidence
+                    </span>
+                  </th>
+                  <th
+                    className={`${thClass} text-center`}
+                    style={{ width: '150px' }}
+                  >
+                    <span className="flex items-center justify-center gap-1.5">
+                      Risk
                     </span>
                   </th>
                   <th
                     className={thClass}
                     onClick={() => handleSort('review_status')}
+                    style={{ width: '120px' }}
                   >
                     <span className="flex items-center gap-1.5">
                       Status
                       <SortIcon col="review_status" />
-                    </span>
-                  </th>
-                  <th
-                    className={thClass}
-                    onClick={() => handleSort('source_provider')}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      Source
-                      <SortIcon col="source_provider" />
                     </span>
                   </th>
                   <th className="px-4 py-3 border-b border-border/50 w-10" />
@@ -794,17 +789,15 @@ const Transactions: React.FC = () => {
                       </td>
 
                       {/* Counterparty + Description */}
-                      <td className="max-w-[180px]">
-                        <span className="text-[13px] font-semibold block truncate" style={{ color: 'var(--foreground)' }}>
-                          {tx.counterparty_name && tx.counterparty_name !== 'No counterparty' ? tx.counterparty_name : '—'}
-                        </span>
-                      </td>
-
-                      {/* Description */}
-                      <td className="max-w-[240px]">
-                        <span className="text-[12px] block truncate" style={{ color: 'var(--muted-foreground)' }}>
-                          {tx.description}
-                        </span>
+                      <td className="max-w-[280px]">
+                        <div className="space-y-0.5">
+                          <span className="text-[13px] font-semibold block truncate text-[var(--foreground)]">
+                            {tx.counterparty_name && tx.counterparty_name !== 'No counterparty' ? tx.counterparty_name : (tx.description?.split(' ')[0] || 'Unknown Vendor')}
+                          </span>
+                          <span className="text-[11px] block truncate text-[var(--muted-foreground)] font-normal" title={tx.description}>
+                            {tx.description}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Category badge */}
@@ -825,7 +818,20 @@ const Transactions: React.FC = () => {
                                   {cat}
                                 </span>
                                 <div className="text-[10px] text-teal-400 font-bold bg-teal-500/10 px-2 py-1.5 rounded border border-teal-500/20 mt-1 flex flex-col gap-1.5">
-                                  <span>Suggested: {categorySuggestion.proposed_value.category}</span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedSuggestion(categorySuggestion);
+                                    }}
+                                    className="flex items-center justify-between gap-1 w-full text-left font-bold cursor-pointer hover:underline text-teal-400 bg-transparent border-none p-0"
+                                  >
+                                    <span className="flex items-center gap-1">
+                                      <Sparkles className="w-3 h-3 text-teal-400 animate-pulse" />
+                                      Suggested: {categorySuggestion.proposed_value.category}
+                                    </span>
+                                    <span className="text-[9px] underline opacity-80 shrink-0">View</span>
+                                  </button>
                                   <span className="flex items-center gap-1.5">
                                     <button
                                       onClick={(e) => {
@@ -879,21 +885,58 @@ const Transactions: React.FC = () => {
                         })()}
                       </td>
 
-                      {/* Type */}
-                      <td className="whitespace-nowrap">
-                        <TypeBadge type={tx.type} />
+                      {/* Confidence */}
+                      <td className="text-center whitespace-nowrap">
+                        {(() => {
+                          const conf = tx.raw_row_json?.intelligence?.intelligence_confidence || (tx.review_status === 'reviewed' ? 'high' : 'medium');
+                          const confCfg: Record<string, { label: string; bg: string; text: string; border: string }> = {
+                            high:   { label: 'High',   bg: 'bg-[rgba(22,138,91,0.06)]', text: 'text-[#168A5B]', border: 'border-[rgba(22,138,91,0.15)]' },
+                            medium: { label: 'Medium', bg: 'bg-[rgba(183,121,31,0.06)]', text: 'text-[#B7791F]', border: 'border-[rgba(183,121,31,0.15)]' },
+                            low:    { label: 'Low',    bg: 'bg-[rgba(194,65,58,0.06)]', text: 'text-[#C2413A]', border: 'border-[rgba(194,65,58,0.15)]' },
+                          };
+                          const cfg = confCfg[conf] || confCfg.medium;
+                          return (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                              {cfg.label}
+                            </span>
+                          );
+                        })()}
+                      </td>
+
+                      {/* Risk */}
+                      <td className="text-center whitespace-nowrap">
+                        {(() => {
+                          const amtVal = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+                            ? Number(tx.amount_in_base_currency) : Number(tx.amount);
+                          const isHighValue = Math.abs(amtVal) >= 50000 && ['expense', 'vendor_payment', 'subscription'].includes(tx.type);
+                          const isMismatch = !!tx.raw_row_json?.metadata?.balance_mismatch;
+                          const isUncategorized = cat === 'Uncategorized';
+                          
+                          let riskLabel = 'Clear';
+                          let riskClass = 'bg-[rgba(22,138,91,0.06)] text-[#168A5B] border-[rgba(22,138,91,0.15)]';
+                          
+                          if (isMismatch) {
+                            riskLabel = 'Balance Mismatch';
+                            riskClass = 'bg-[rgba(194,65,58,0.08)] text-[#C2413A] border-[rgba(194,65,58,0.18)]';
+                          } else if (isHighValue) {
+                            riskLabel = 'High-Value';
+                            riskClass = 'bg-[rgba(183,121,31,0.08)] text-[#B7791F] border-[rgba(183,121,31,0.18)]';
+                          } else if (isUncategorized) {
+                            riskLabel = 'Uncategorized';
+                            riskClass = 'bg-[rgba(93,107,102,0.08)] text-[#5D6B66] border-[rgba(93,107,102,0.18)]';
+                          }
+                          
+                          return (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${riskClass}`}>
+                              {riskLabel}
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* Review Status */}
                       <td className="whitespace-nowrap">
                         <ReviewBadge status={tx.review_status || 'new'} />
-                      </td>
-
-                      {/* Source */}
-                      <td className="whitespace-nowrap">
-                        <span className="text-[11px] font-medium px-2 py-0.5 rounded" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
-                          {tx.source_provider || 'Manual'}
-                        </span>
                       </td>
 
                       {/* Row actions */}
@@ -967,32 +1010,116 @@ const Transactions: React.FC = () => {
         onClose={() => setIsAIQueueOpen(false)} 
         onRefreshParent={fetchTransactions} 
       />
+
+      {/* Selected Suggestion Detail Modal */}
+      {selectedSuggestion && (
+        <div className="kaeo-modal-overlay" onClick={() => setSelectedSuggestion(null)}>
+          <div className="kaeo-modal max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-teal-400 animate-pulse" />
+                <h2 className="text-[17px] font-semibold">AI Review Suggestion</h2>
+              </div>
+              <button type="button" onClick={() => setSelectedSuggestion(null)} className="p-1.5 rounded-lg transition-colors cursor-pointer"
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--muted)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                <span style={{ color: 'var(--muted-foreground)' }}>✕</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Info block */}
+              <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl p-4 space-y-2">
+                <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-teal-500/20 text-teal-400 border border-teal-500/30">
+                  {selectedSuggestion.suggestion_type.replace(/_/g, ' ')}
+                </span>
+                <h3 className="font-bold text-sm text-foreground mt-1">
+                  Categorize Transaction
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                  {selectedSuggestion.reason}
+                </p>
+              </div>
+
+              {/* Affected Transaction Details */}
+              <div className="bg-background/50 border border-border/50 rounded-xl p-4 space-y-2.5">
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 block">Affected Transaction</span>
+                {(() => {
+                  const tx = transactions.find(t => t.id === selectedSuggestion.entity_id);
+                  if (!tx) return <p className="text-xs text-muted-foreground">Transaction details not found.</p>;
+                  return (
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-start">
+                        <span className="text-xs font-semibold text-foreground truncate max-w-[200px]" title={tx.description}>
+                          {tx.counterparty_name || tx.description}
+                        </span>
+                        <span className="text-xs font-bold text-foreground">
+                          {formatCurrency(tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined ? tx.amount_in_base_currency : tx.amount)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-[11px] text-muted-foreground">
+                        <span>{tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN') : '—'}</span>
+                        <span className="capitalize">{tx.type}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Recommended Action */}
+              <div className="bg-muted/30 border border-border/30 rounded-xl p-4 space-y-1">
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 block">Recommended Action</span>
+                <p className="text-xs font-bold text-foreground">
+                  Update category to <span className="text-teal-400 font-extrabold">{selectedSuggestion.proposed_value?.category}</span>
+                </p>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex flex-col gap-2 pt-2">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleApproveSuggestion(selectedSuggestion);
+                      setSelectedSuggestion(null);
+                    }}
+                    className="btn-primary flex-1 justify-center text-xs"
+                  >
+                    Apply
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleRejectSuggestion(selectedSuggestion);
+                      setSelectedSuggestion(null);
+                    }}
+                    className="btn-secondary flex-1 justify-center text-xs"
+                  >
+                    Ignore
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSuggestion(null);
+                      navigate('/risk-inbox');
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground transition-colors cursor-pointer border border-border/40"
+                  >
+                    Open in Risk Inbox
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 
-// ── TypeBadge ────────────────────────────────────────────────────────────────
-const TYPE_CFG: Record<string, { label: string; bg: string; color: string }> = {
-  income:         { label: 'Income',       bg: 'rgba(22,138,91,0.10)',   color: '#168A5B' },
-  refund:         { label: 'Refund',       bg: 'rgba(15,118,110,0.10)',  color: '#0F766E' },
-  expense:        { label: 'Expense',      bg: 'rgba(194,65,58,0.10)',   color: '#C2413A' },
-  vendor_payment: { label: 'Vendor Pay',   bg: 'rgba(194,65,58,0.08)',   color: '#C2413A' },
-  bank_charge:    { label: 'Bank Charge',  bg: 'rgba(194,65,58,0.08)',   color: '#C2413A' },
-  subscription:   { label: 'Subscription', bg: 'rgba(183,121,31,0.10)',  color: '#B7791F' },
-  transfer:       { label: 'Transfer',     bg: 'rgba(37,99,235,0.08)',   color: '#2563EB' },
-  unknown:        { label: 'Unknown',      bg: 'rgba(93,107,102,0.08)',  color: '#5D6B66' },
-  failed_payment: { label: 'Failed',       bg: 'rgba(93,107,102,0.08)',  color: '#5D6B66' },
-};
-
-const TypeBadge: React.FC<{ type: string }> = ({ type }) => {
-  const cfg = TYPE_CFG[type] ?? { label: type.replace(/_/g, ' '), bg: 'rgba(93,107,102,0.08)', color: '#5D6B66' };
-  return (
-    <span className="chip" style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.bg }}>
-      {cfg.label}
-    </span>
-  );
-};
 
 // ── ReviewBadge ──────────────────────────────────────────────────────────────
 const REVIEW_CFG: Record<string, { label: string; bg: string; color: string; title: string }> = {

@@ -42,3 +42,16 @@ export const formatINR = (amount: number, options?: FormatOptions): string => {
 export const formatSignedINR = (amount: number): string => {
   return formatINR(amount, { showSign: true });
 };
+
+/**
+ * Normalizes client or workspace names, returning the real business name if valid,
+ * or "No business selected" if missing, null, empty, or invalid.
+ */
+export const getCleanClientName = (name?: string | null): string => {
+  if (!name) return 'No business selected';
+  const trimmed = name.trim();
+  if (trimmed === '') return 'No business selected';
+  return trimmed;
+};
+
+

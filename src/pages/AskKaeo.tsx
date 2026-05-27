@@ -18,6 +18,156 @@ import {
   type LibbyAction
 } from '../lib/libbyActions';
 
+const renderStructuredContent = (content: string) => {
+  if (!content) return null;
+  // If the content is simple text, just render standard paragraph
+  if (!content.includes('\n') && content.length < 150) {
+    return <p className="text-sm leading-relaxed">{content}</p>;
+  }
+
+  const lines = content.split('\n');
+  const sections: { title: string; items: string[]; type: 'summary' | 'numbers' | 'risks' | 'actions' | 'sources' | 'general' }[] = [];
+  
+  let currentSection: { title: string; items: string[]; type: 'summary' | 'numbers' | 'risks' | 'actions' | 'sources' | 'general' } = { title: '', items: [], type: 'general' };
+  
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    
+    const headerMatch = trimmed.match(/^(?:###|\*\*|### \*\*)\s*(Summary|Key [nN]umbers|Risks? [fF]ound|Risks?|Recommended [nN]ext [aA]ctions|Recommended [aA]ctions|Next [aA]ctions|Sources?|Source [tT]ransactions)\s*(?::|\*\*|: \*\*|$)/i);
+    
+    if (headerMatch) {
+      if (currentSection.title || currentSection.items.length > 0) {
+        sections.push(currentSection);
+      }
+      
+      const title = headerMatch[1];
+      let type: 'summary' | 'numbers' | 'risks' | 'actions' | 'sources' | 'general' = 'general';
+      const lowerTitle = title.toLowerCase();
+      if (lowerTitle.includes('summary')) type = 'summary';
+      else if (lowerTitle.includes('number')) type = 'numbers';
+      else if (lowerTitle.includes('risk')) type = 'risks';
+      else if (lowerTitle.includes('action')) type = 'actions';
+      else if (lowerTitle.includes('source')) type = 'sources';
+      
+      currentSection = { title, items: [], type };
+    } else {
+      const cleanedLine = trimmed.replace(/^[-*+]\s+/, '').replace(/^###\s+/, '');
+      currentSection.items.push(cleanedLine);
+    }
+  });
+  
+  if (currentSection.title || currentSection.items.length > 0) {
+    sections.push(currentSection);
+  }
+
+  if (sections.length <= 1) {
+    return <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {sections.map((sec, idx) => {
+        if (sec.type === 'summary') {
+          return (
+            <div key={idx} className="pb-3 border-b border-border/30">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-1">Summary</h4>
+              <p className="text-sm font-medium leading-relaxed text-foreground">{sec.items.join(' ')}</p>
+            </div>
+          );
+        }
+        
+        if (sec.type === 'numbers') {
+          return (
+            <div key={idx} className="bg-[var(--muted)] p-3.5 rounded-xl border border-[var(--border)]">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)]" />
+                Key Metrics & Numbers
+              </h4>
+              <ul className="space-y-1.5">
+                {sec.items.map((item, i) => (
+                  <li key={i} className="text-xs text-[var(--foreground)] font-medium leading-normal flex items-start gap-2">
+                    <span className="text-[var(--primary)] mt-0.5">•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        }
+
+        if (sec.type === 'risks') {
+          return (
+            <div key={idx} className="bg-[rgba(224,84,80,0.03)] p-3.5 rounded-xl border border-[rgba(224,84,80,0.12)]">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--danger)] mb-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)]" />
+                Anomalies & Risks Found
+              </h4>
+              <ul className="space-y-1.5">
+                {sec.items.map((item, i) => (
+                  <li key={i} className="text-xs text-[var(--danger)] font-medium leading-normal flex items-start gap-2">
+                    <span className="text-[var(--danger)] mt-0.5">•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        }
+
+        if (sec.type === 'actions') {
+          return (
+            <div key={idx} className="bg-[rgba(15,118,110,0.03)] p-3.5 rounded-xl border border-[rgba(15,118,110,0.12)]">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--primary)] mb-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
+                Recommended Next Actions
+              </h4>
+              <ul className="space-y-1.5">
+                {sec.items.map((item, i) => (
+                  <li key={i} className="text-xs text-[var(--foreground)] font-medium leading-normal flex items-start gap-2">
+                    <span className="text-[var(--primary)] mt-0.5">&rarr;</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        }
+
+        if (sec.type === 'sources') {
+          return (
+            <div key={idx} className="bg-[rgba(93,107,102,0.04)] p-3.5 rounded-xl border border-[var(--border)]">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--muted-foreground)]" />
+                Grounding Sources & Files
+              </h4>
+              <ul className="space-y-1.5">
+                {sec.items.map((item, i) => (
+                  <li key={i} className="text-[11px] text-[var(--muted-foreground)] leading-normal flex items-start gap-2">
+                    <span className="text-[var(--muted-foreground)] mt-0.5">•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        }
+
+        return (
+          <div key={idx} className="space-y-1">
+            {sec.title && <h5 className="text-xs font-semibold text-foreground mt-2">{sec.title}</h5>}
+            <ul className="space-y-1">
+              {sec.items.map((item, i) => (
+                <li key={i} className="text-xs text-[var(--muted-foreground)] leading-normal">{item}</li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const AskKaeo = () => {
   const { activeClient, activeOrg } = useWorkspace();
   const { user } = useAuth();
@@ -127,7 +277,7 @@ const AskKaeo = () => {
       <div className="h-[70vh] flex items-center justify-center animate-in fade-in duration-500">
         <EmptyState 
           title="No client workspace selected"
-          description="Create or select a client workspace to consult with Libby, your intelligent CFO operator."
+          description="Create or select a client workspace to consult with Libby, Kaeo's AI finance assistant."
         />
       </div>
     );
@@ -142,12 +292,12 @@ const AskKaeo = () => {
         <div className="p-4 border-b bg-card/50 backdrop-blur-sm flex justify-between items-center z-10">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-center shrink-0">
-              <img src={aeLogo} alt="Ask Kaeo" className="w-4.5 h-4.5 object-contain" />
+              <img src={aeLogo} alt="Ask Libby" className="w-4.5 h-4.5 object-contain" />
             </div>
             <div>
-              <h2 className="font-semibold tracking-tight">Ask Kaeo</h2>
+              <h2 className="font-semibold tracking-tight">Ask Libby</h2>
               <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
-                AI Spend Operator
+                AI Spend Assistant
               </p>
             </div>
           </div>
@@ -169,12 +319,13 @@ const AskKaeo = () => {
               <div className="w-16 h-16 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center mb-4 animate-pulse">
                 <Sparkles className="w-8 h-8 text-teal-400" />
               </div>
-              <h3 className="text-lg font-bold text-foreground mb-1">Your AI CFO Operator</h3>
+              <h3 className="text-lg font-bold text-foreground mb-1">Ask Libby</h3>
               <p className="text-xs text-muted-foreground leading-relaxed mb-6">
-                Ask Libby anything about your financial data, transactions, vendor risks, or month-end preparation.
+                Libby is Kaeo’s AI finance operator. Ask her to find risks, summarize spend, review vendors, and generate accountant-ready reports.
               </p>
               <div className="w-full space-y-2">
                 <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mb-2 text-left">Suggested Questions</p>
+
                 {[
                   "What should I fix first?",
                   "Review my transactions",
@@ -214,8 +365,8 @@ const AskKaeo = () => {
                   
                   <div className="flex flex-col gap-1.5 max-w-[85%] md:max-w-[75%]">
                     <div className={`rounded-2xl px-5 py-4 ${isUser ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-card border rounded-tl-sm shadow-sm'}`}>
-                      <div className="text-sm whitespace-pre-wrap leading-relaxed opacity-95">
-                        {msg.content}
+                      <div className="text-sm leading-relaxed opacity-95">
+                        {renderStructuredContent(msg.content)}
                       </div>
                       {isLimitExceeded && (
                         <div className="mt-3 pt-3 border-t border-border/50">
