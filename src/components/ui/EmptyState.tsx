@@ -9,31 +9,66 @@ interface EmptyStateProps {
     label: string;
     onClick: () => void;
   };
+  secondaryAction?: {
+    label: string;
+    onClick: () => void;
+  };
+  size?: 'sm' | 'md' | 'lg';
 }
 
-const EmptyState: React.FC<EmptyStateProps> = ({ 
-  title, 
-  description, 
-  icon = <FileText className="w-10 h-10 text-muted-foreground/40" />, 
-  action 
+const EmptyState: React.FC<EmptyStateProps> = ({
+  title,
+  description,
+  icon = <FileText className="w-7 h-7 text-[var(--muted-foreground)]" style={{ opacity: 0.5 }} />,
+  action,
+  secondaryAction,
+  size = 'md',
 }) => {
+  const sizeClasses = {
+    sm: { container: 'py-10 px-6', iconBox: 'w-12 h-12', title: 'text-base', body: 'text-xs' },
+    md: { container: 'py-16 px-8', iconBox: 'w-16 h-16', title: 'text-lg', body: 'text-sm' },
+    lg: { container: 'py-24 px-12', iconBox: 'w-20 h-20', title: 'text-xl', body: 'text-sm' },
+  }[size];
+
   return (
-    <div className="flex flex-col items-center justify-center p-12 text-center animate-in fade-in zoom-in duration-500">
-      <div className="w-20 h-20 bg-muted/30 rounded-3xl flex items-center justify-center mb-6 border border-border/50 shadow-inner">
+    <div className={`flex flex-col items-center justify-center ${sizeClasses.container} text-center`}>
+      {/* Icon */}
+      <div
+        className={`${sizeClasses.iconBox} rounded-2xl flex items-center justify-center mb-5 border border-dashed border-[var(--border)]`}
+        style={{ background: 'var(--muted)' }}
+      >
         {icon}
       </div>
-      <h3 className="text-xl font-bold tracking-tight mb-2 text-foreground">{title}</h3>
-      <p className="text-sm text-muted-foreground max-w-sm mb-8 leading-relaxed">
+
+      {/* Text */}
+      <h3 className={`${sizeClasses.title} font-semibold tracking-tight text-[var(--foreground)] mb-2`}>
+        {title}
+      </h3>
+      <p className={`${sizeClasses.body} text-[var(--muted-foreground)] max-w-sm leading-relaxed mb-6`}>
         {description}
       </p>
-      {action && (
-        <button
-          onClick={action.onClick}
-          className="px-8 py-3 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-xl shadow-foreground/10"
-        >
-          <Plus className="w-4 h-4" />
-          {action.label}
-        </button>
+
+      {/* Actions */}
+      {(action || secondaryAction) && (
+        <div className="flex items-center gap-3 flex-wrap justify-center">
+          {action && (
+            <button
+              onClick={action.onClick}
+              className="btn-primary"
+            >
+              <Plus className="w-4 h-4" />
+              {action.label}
+            </button>
+          )}
+          {secondaryAction && (
+            <button
+              onClick={secondaryAction.onClick}
+              className="btn-secondary"
+            >
+              {secondaryAction.label}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

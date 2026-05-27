@@ -22,6 +22,7 @@ import FilePreview from '../components/files/FilePreview';
 import FileHistory from '../components/files/FileHistory';
 import EmptyState from '../components/ui/EmptyState';
 import StatusBadge from '../components/ui/StatusBadge';
+import PageHeader from '../components/ui/PageHeader';
 import { parseFinancialFile } from '../lib/fileParser';
 import type { IngestedParsedFile } from '../lib/ingestion/ingestionTypes';
 import { generateBestMapping } from '../lib/mappingEngine';
@@ -773,26 +774,23 @@ const Files: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700 pb-20">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          {activeTab === 'transactions' ? (
-            <>
-              <h1 className="text-3xl font-bold mb-2 tracking-tight">Upload Statements</h1>
-              <p className="text-sm text-muted-foreground">Import and verify transactional statement sheets for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
-            </>
-          ) : activeTab === 'invoices' ? (
-            <>
-              <h1 className="text-3xl font-bold mb-2 tracking-tight">Invoice Review</h1>
-              <p className="text-sm text-muted-foreground">Upload vendor invoices and match them against payments for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
-            </>
-          ) : (
-            <>
-              <h1 className="text-3xl font-bold mb-2 tracking-tight">Upload History</h1>
-              <p className="text-sm text-muted-foreground">Audit logs of all files imported for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
-            </>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title={
+          activeTab === 'transactions'
+            ? 'Upload Statements'
+            : activeTab === 'invoices'
+            ? 'Invoice Review'
+            : 'Upload History'
+        }
+        description={
+          activeTab === 'transactions'
+            ? `Import and verify transactional statement sheets for ${activeClient.name}.`
+            : activeTab === 'invoices'
+            ? `Upload vendor invoices and match them against payments for ${activeClient.name}.`
+            : `Audit logs of all files imported for ${activeClient.name}.`
+        }
+      />
+
 
       {/* Tabs list selector */}
       <div className="flex gap-1 p-1 bg-muted/30 rounded-xl border border-border/50 w-fit">

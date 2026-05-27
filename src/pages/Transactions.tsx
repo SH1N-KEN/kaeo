@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search,
-  ArrowUpRight,
-  ArrowDownLeft,
   Calendar,
   Tag,
   Loader2,
@@ -13,9 +11,6 @@ import {
   ChevronDown,
   ChevronsUpDown,
   X,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   UploadCloud,
   Copy,
   Filter,
@@ -497,43 +492,43 @@ const Transactions: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-24">
+    <div className="space-y-6 animate-kaeo-fade pb-24">
       {/* ── Page header ── */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-1">
         <div>
-          <h1 className="text-2xl font-black tracking-tight mb-1">Transactions</h1>
-          <p className="text-sm text-muted-foreground">
-            Review, categorize, and approve imported ledger rows for <span className="text-foreground font-semibold">{activeClient.name}</span>.
+          <h1 className="page-title">Transactions</h1>
+          <p className="page-subtitle mt-1">
+            Review, categorize, and approve imported ledger rows for <span style={{ color: 'var(--foreground)', fontWeight: 600 }}>{activeClient.name}</span>.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2.5 flex-shrink-0">
           <button
             onClick={() => setIsAIQueueOpen(true)}
-            className="px-4 py-2.5 bg-teal-500 hover:bg-teal-400 text-black font-bold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-teal-500/10 cursor-pointer"
+            className="btn-secondary flex items-center gap-1.5"
           >
-            <Sparkles className="w-3.5 h-3.5" /> AI Review Suggestions Queue
+            <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--primary)' }} /> AI Suggestions
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-risk/5 border border-risk/20 rounded-xl flex gap-3 items-center text-risk">
-          <AlertCircle className="w-5 h-5 shrink-0" />
-          <p className="text-sm font-bold">{error}</p>
+        <div className="p-4 rounded-xl flex gap-3 items-center" style={{ background: 'rgba(194,65,58,0.06)', border: '1px solid rgba(194,65,58,0.20)', color: '#C2413A' }}>
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <p className="text-[13px] font-medium">{error}</p>
         </div>
       )}
 
       {/* ── Filter bar ── */}
-      <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-4">
+      <div className="kaeo-card p-4 space-y-3">
         {/* Row 1: search + type tabs */}
         <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
           {/* Search */}
           <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--muted-foreground)' }} />
             <input
               type="text"
-              placeholder="Search description, counterparty, category, source…"
-              className="w-full bg-muted/30 border border-border/40 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/40 focus:border-primary/40 outline-none transition-all"
+              placeholder="Search description, counterparty, category…"
+              className="kaeo-input pl-9"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -545,29 +540,28 @@ const Transactions: React.FC = () => {
               <button
                 key={t}
                 onClick={() => setFilterType(t)}
-                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold capitalize transition-all border cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold capitalize transition-all border cursor-pointer ${
                   filterType === t
-                    ? 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/15'
-                    : 'bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted'
+                    ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
+                    : 'border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]'
                 }`}
+                style={filterType !== t ? { background: 'var(--card)' } : {}}
               >
-                {t === 'all' ? 'All types' : t}
+                {t === 'all' ? 'All' : t}
               </button>
             ))}
           </div>
         </div>
 
         {/* Row 2: secondary filters */}
-        <div className="flex flex-wrap gap-2.5 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           {/* Review status */}
-          <div className="flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-            <select
-              className="bg-muted/30 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-              value={filterReview}
-              onChange={(e) => setFilterReview(e.target.value as ReviewFilter)}
-            >
-              <option value="all">All review statuses</option>
+          <select
+            className="kaeo-input" style={{ width: 'auto', fontSize: '12px', padding: '6px 10px' }}
+            value={filterReview}
+            onChange={(e) => setFilterReview(e.target.value as ReviewFilter)}
+          >
+            <option value="all">All review statuses</option>
               <option value="pending">Pending Review</option>
               <option value="new">New</option>
               <option value="needs_review">Needs Review</option>
@@ -584,27 +578,23 @@ const Transactions: React.FC = () => {
               {filterReview === 'high_value' && (
                 <option value="high_value">High-value expenses</option>
               )}
-            </select>
-          </div>
+          </select>
 
           {/* Category */}
-          <div className="flex items-center gap-1.5">
-            <Tag className="w-3.5 h-3.5 text-muted-foreground" />
-            <select
-              className="bg-muted/30 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-            >
-              <option value="all">All Categories</option>
-              {availableCategories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
+          <select
+            className="kaeo-input" style={{ width: 'auto', fontSize: '12px', padding: '6px 10px' }}
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+          >
+            <option value="all">All Categories</option>
+            {availableCategories.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
 
           {/* Date range */}
           <select
-            className="bg-muted/30 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+            className="kaeo-input" style={{ width: 'auto', fontSize: '12px', padding: '6px 10px' }}
             value={filterDateRange}
             onChange={(e) => setFilterDateRange(e.target.value as DateRange)}
           >
@@ -616,19 +606,19 @@ const Transactions: React.FC = () => {
           {/* Toggle More Filters */}
           <button
             onClick={() => setShowMoreFilters(prev => !prev)}
-            className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-border/40 hover:bg-muted text-muted-foreground flex items-center gap-1 transition-all cursor-pointer bg-muted/10"
+            className="btn-secondary btn-sm flex items-center gap-1"
           >
-            {showMoreFilters ? 'Fewer filters' : 'More filters'}
+            <Filter className="w-3 h-3" />
+            {showMoreFilters ? 'Fewer' : 'More'}
             {showMoreFilters ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
 
           {/* Collapsible Advanced Filters */}
           {showMoreFilters && (
-            <div className="flex flex-wrap gap-2.5 items-center animate-in fade-in duration-200">
-              {/* Source */}
+            <div className="flex flex-wrap gap-2 items-center animate-kaeo-fade">
               {availableSources.length > 1 && (
                 <select
-                  className="bg-muted/30 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                  className="kaeo-input" style={{ width: 'auto', fontSize: '12px', padding: '6px 10px' }}
                   value={filterSource}
                   onChange={(e) => setFilterSource(e.target.value)}
                 >
@@ -638,10 +628,8 @@ const Transactions: React.FC = () => {
                   ))}
                 </select>
               )}
-
-              {/* Amount range */}
               <select
-                className="bg-muted/30 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                className="kaeo-input" style={{ width: 'auto', fontSize: '12px', padding: '6px 10px' }}
                 value={filterAmountRange}
                 onChange={(e) => setFilterAmountRange(e.target.value as AmountRange)}
               >
@@ -653,123 +641,64 @@ const Transactions: React.FC = () => {
             </div>
           )}
 
-          {/* Clear filters */}
           {hasActiveFilters && (
-            <button
-              onClick={clearFilters}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold text-muted-foreground hover:text-foreground border border-border/40 hover:border-border bg-muted/20 hover:bg-muted/40 transition-all cursor-pointer"
+            <button onClick={clearFilters}
+              className="flex items-center gap-1.5 text-[12px] font-medium cursor-pointer transition-colors"
+              style={{ color: 'var(--muted-foreground)' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--foreground)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted-foreground)')}
             >
-              <X className="w-3 h-3" />
-              Clear filters
+              <X className="w-3 h-3" /> Clear filters
             </button>
           )}
         </div>
       </div>
 
-      {/* Legend showing review status meanings */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 items-center text-[10px] text-muted-foreground px-1 mt-1">
-        <span className="font-semibold">Status meanings:</span>
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60"></span> New: imported but not checked</span>
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500/80"></span> Needs review: should be manually checked</span>
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-success"></span> Reviewed: checked and accepted</span>
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/45"></span> Ignored: not relevant</span>
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Resolved: issue handled</span>
-      </div>
-
       {/* ── Summary strip ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-card border border-border/50 rounded-xl p-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">
-            Showing
-          </p>
-          <p className="text-lg font-black text-foreground">
-            {filteredTransactions.length.toLocaleString()}
-            <span className="text-xs font-semibold text-muted-foreground ml-1">/ {transactions.length}</span>
-          </p>
-        </div>
-        <div className="bg-card border border-border/50 rounded-xl p-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">
-            Inflow
-          </p>
-          <p className="text-lg font-black text-success flex items-center justify-center gap-1">
-            <TrendingUp className="w-4 h-4" />
-            {formatCurrency(summary.inflow, activeClient.base_currency || 'INR')}
-          </p>
-        </div>
-        <div className="bg-card border border-border/50 rounded-xl p-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">
-            Outflow
-          </p>
-          <p className="text-lg font-black text-risk flex items-center justify-center gap-1">
-            <TrendingDown className="w-4 h-4" />
-            {formatCurrency(summary.outflow, activeClient.base_currency || 'INR')}
-          </p>
-        </div>
-        <div className="bg-card border border-border/50 rounded-xl p-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">
-            Net
-          </p>
-          <p className={`text-lg font-black flex items-center justify-center gap-1 ${summary.net >= 0 ? 'text-success' : 'text-risk'}`}>
-            <Minus className="w-4 h-4" />
-            {formatCurrency(summary.net, activeClient.base_currency || 'INR', true)}
-          </p>
-        </div>
+        {[
+          { label: 'Showing', value: `${filteredTransactions.length.toLocaleString()} / ${transactions.length}`, color: 'var(--foreground)' },
+          { label: 'Inflow', value: formatCurrency(summary.inflow, activeClient.base_currency || 'INR'), color: '#168A5B' },
+          { label: 'Outflow', value: formatCurrency(summary.outflow, activeClient.base_currency || 'INR'), color: '#C2413A' },
+          { label: 'Net', value: formatCurrency(summary.net, activeClient.base_currency || 'INR', true), color: summary.net >= 0 ? '#168A5B' : '#C2413A' },
+        ].map(s => (
+          <div key={s.label} className="kaeo-card p-4 text-center">
+            <p className="section-label mb-1.5">{s.label}</p>
+            <p className="text-[17px] font-bold tracking-tight" style={{ color: s.color }}>{s.value}</p>
+          </div>
+        ))}
       </div>
 
       {/* ── Table ── */}
       {loading && transactions.length === 0 ? (
-        <div className="h-[40vh] flex flex-col items-center justify-center space-y-4 bg-card border rounded-2xl">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground animate-pulse font-medium">Loading ledger…</p>
+        <div className="kaeo-card h-[40vh] flex flex-col items-center justify-center gap-4">
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--primary)' }} />
+          <p className="text-[13px] font-medium" style={{ color: 'var(--muted-foreground)' }}>Loading ledger…</p>
         </div>
       ) : transactions.length === 0 ? (
-        /* No data at all */
-        <div className="bg-card border rounded-2xl p-16 text-center space-y-5 animate-in fade-in">
-          <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto">
-            <UploadCloud className="w-8 h-8 text-muted-foreground/50" />
-          </div>
-          <div>
-            <h3 className="text-lg font-black mb-1">Transactions appear after you upload statements.</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              Please upload financial statements or invoices to get started.
-            </p>
-          </div>
-          <Link
-            to="/files"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:opacity-95 transition-all"
-          >
-            <UploadCloud className="w-4 h-4" />
-            Upload Files
-          </Link>
+        <div className="kaeo-card">
+          <EmptyState
+            icon={<UploadCloud className="w-7 h-7" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />}
+            title="No transactions yet"
+            description="Upload a bank statement or CSV to start reviewing your ledger."
+            action={{ label: 'Upload Files', onClick: () => {} }}
+          />
         </div>
       ) : sortedTransactions.length === 0 ? (
-        /* Filters returned nothing */
-        <div className="bg-card border rounded-2xl p-16 text-center space-y-5">
-          <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto">
-            <FileText className="w-8 h-8 text-muted-foreground/50" />
-          </div>
-          <div>
-            <h3 className="text-lg font-black mb-1">
-              No transactions match these filters.
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Try adjusting or clearing your filters.
-            </p>
-          </div>
-          <button
-            onClick={clearFilters}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-muted text-foreground border border-border rounded-xl text-sm font-bold hover:bg-muted/80 transition-all cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-            Clear filters
-          </button>
+        <div className="kaeo-card">
+          <EmptyState
+            icon={<FileText className="w-7 h-7" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />}
+            title="No transactions match"
+            description="Try adjusting or clearing your filters."
+            action={{ label: 'Clear filters', onClick: clearFilters }}
+          />
         </div>
       ) : (
-        <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-sm">
+        <div className="kaeo-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[860px]">
+            <table className="kaeo-table min-w-[860px]">
               <thead>
-                <tr className="bg-muted/40">
+                <tr>
                   <th
                     className={thClass}
                     onClick={() => handleSort('transaction_date')}
@@ -856,28 +785,24 @@ const Transactions: React.FC = () => {
                   return (
                     <tr
                       key={tx.id}
-                      className="hover:bg-muted/20 transition-colors group relative"
+                      className="group relative"
                       onClick={() => { if (isMenuOpen) setOpenMenuId(null); }}
                     >
                       {/* Date */}
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="text-xs font-semibold text-muted-foreground">
-                          {new Date(tx.transaction_date).toLocaleDateString('en-IN', {
-                            day: '2-digit', month: 'short', year: '2-digit',
-                          })}
-                        </span>
+                      <td className="whitespace-nowrap td-muted">
+                        {tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
                       </td>
 
-                      {/* Counterparty */}
-                      <td className="px-4 py-3 max-w-[150px] truncate">
-                        <span className="text-xs font-bold text-foreground">
-                          {tx.counterparty_name && tx.counterparty_name !== 'No counterparty' ? tx.counterparty_name : '-'}
+                      {/* Counterparty + Description */}
+                      <td className="max-w-[180px]">
+                        <span className="text-[13px] font-semibold block truncate" style={{ color: 'var(--foreground)' }}>
+                          {tx.counterparty_name && tx.counterparty_name !== 'No counterparty' ? tx.counterparty_name : '—'}
                         </span>
                       </td>
 
                       {/* Description */}
-                      <td className="px-4 py-3 max-w-[220px] truncate">
-                        <span className="text-xs text-muted-foreground">
+                      <td className="max-w-[240px]">
+                        <span className="text-[12px] block truncate" style={{ color: 'var(--muted-foreground)' }}>
                           {tx.description}
                         </span>
                       </td>
@@ -937,58 +862,47 @@ const Transactions: React.FC = () => {
                       </td>
 
                       {/* Amount */}
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <div className="flex flex-col items-end">
-                          {(() => {
-                            const displayAmt = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
-                              ? tx.amount_in_base_currency
-                              : tx.amount;
-                            // Use direction_derived (from normalizer) if available; fall back to amount sign
-                            const dirDerived = tx.raw_row_json?.direction_derived;
-                            const isOutflow = dirDerived === 'outflow' || (!dirDerived && Number(displayAmt) < 0);
-                            const isTransfer = tx.type === 'transfer';
-                            const isRefund = tx.type === 'refund';
-                            const colorClass = isTransfer
-                              ? 'text-blue-400'
-                              : isRefund
-                              ? 'text-teal-400'
-                              : isOutflow
-                              ? 'text-risk'
-                              : 'text-success';
-                            const Icon = isOutflow && !isRefund && !isTransfer
-                              ? ArrowUpRight
-                              : ArrowDownLeft;
-                            return (
-                              <span className={`text-sm font-black flex items-center gap-1 ${colorClass}`}>
-                                <Icon className="w-3.5 h-3.5" />
-                                {formatCurrency(displayAmt, 'INR', true)}
-                              </span>
-                            );
-                          })()}
-                        </div>
+                      <td className="td-amount whitespace-nowrap">
+                        {(() => {
+                          const displayAmt = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+                            ? tx.amount_in_base_currency : tx.amount;
+                          const dirDerived = tx.raw_row_json?.direction_derived;
+                          const isOutflow = dirDerived === 'outflow' || (!dirDerived && Number(displayAmt) < 0);
+                          const isTransfer = tx.type === 'transfer';
+                          const isRefund = tx.type === 'refund';
+                          const amtColor = isTransfer ? '#2563EB' : isRefund ? '#0F766E' : isOutflow ? '#C2413A' : '#168A5B';
+                          return (
+                            <span className="text-[13px] font-semibold" style={{ color: amtColor }}>
+                              {isOutflow && !isRefund && !isTransfer ? '' : '+'}{formatCurrency(displayAmt, 'INR', true)}
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* Type */}
-                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                      <td className="whitespace-nowrap">
                         <TypeBadge type={tx.type} />
                       </td>
 
                       {/* Review Status */}
-                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                      <td className="whitespace-nowrap">
                         <ReviewBadge status={tx.review_status || 'new'} />
                       </td>
 
                       {/* Source */}
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="text-[10px] font-bold text-muted-foreground bg-muted/40 px-2 py-1 rounded border border-border/30">
+                      <td className="whitespace-nowrap">
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
                           {tx.source_provider || 'Manual'}
                         </span>
                       </td>
 
                       {/* Row actions */}
-                      <td className="px-3 py-3 text-right relative">
+                      <td className="text-right relative" style={{ padding: '12px 12px' }}>
                         <button
-                          className="p-1.5 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground cursor-pointer"
+                          className="p-1.5 rounded-lg transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+                          style={{ color: 'var(--muted-foreground)' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--muted)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                           onClick={(e) => {
                             e.stopPropagation();
                             setOpenMenuId(isMenuOpen ? null : tx.id);
@@ -1003,81 +917,40 @@ const Transactions: React.FC = () => {
 
                         {isMenuOpen && (
                           <div
-                            className="absolute right-4 top-full mt-1 w-48 bg-card border border-border rounded-xl shadow-xl z-50 py-1 animate-in fade-in slide-in-from-top-1 duration-150"
+                            className="absolute right-4 top-full mt-1 w-48 kaeo-popover z-50 animate-kaeo-scale"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <button
-                              className="w-full text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer flex items-center gap-2"
-                              onClick={() => {
-                                navigator.clipboard.writeText(tx.description);
-                                toast('Description copied', 'success');
-                                setOpenMenuId(null);
-                              }}
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                              Copy description
-                            </button>
-                            <button
-                              className="w-full text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer flex items-center gap-2"
-                              onClick={() => {
-                                setFilterCategory(tx._displayCategory);
-                                setOpenMenuId(null);
-                              }}
-                            >
-                              <Tag className="w-3.5 h-3.5" />
-                              Filter by category
-                            </button>
-                            <button
-                              className="w-full text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer flex items-center gap-2"
-                              onClick={() => {
-                                if (tx.source_provider) setFilterSource(tx.source_provider);
-                                setOpenMenuId(null);
-                              }}
-                            >
-                              <FileText className="w-3.5 h-3.5" />
-                              Filter by source
-                            </button>
-                            <div className="h-px bg-border my-1 mx-2" />
-                            <button
-                              className="w-full text-left px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-success hover:bg-success/10 transition-colors cursor-pointer flex items-center gap-2"
-                              onClick={() => {
-                                updateReviewStatus(tx.id, 'reviewed');
-                                setOpenMenuId(null);
-                              }}
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              Mark Reviewed
-                            </button>
-                            <button
-                              className="w-full text-left px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer flex items-center gap-2"
-                              onClick={() => {
-                                updateReviewStatus(tx.id, 'needs_review');
-                                setOpenMenuId(null);
-                              }}
-                            >
-                              <CircleDashed className="w-3.5 h-3.5" />
-                              Mark Needs Review
-                            </button>
-                            <button
-                              className="w-full text-left px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer flex items-center gap-2"
-                              onClick={() => {
-                                updateReviewStatus(tx.id, 'resolved');
-                                setOpenMenuId(null);
-                              }}
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                              Resolve
-                            </button>
-                            <button
-                              className="w-full text-left px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-muted-foreground hover:bg-muted transition-colors cursor-pointer flex items-center gap-2"
-                              onClick={() => {
-                                updateReviewStatus(tx.id, 'ignored');
-                                setOpenMenuId(null);
-                              }}
-                            >
-                              <EyeOff className="w-3.5 h-3.5" />
-                              Ignore
-                            </button>
+                            {[
+                              { icon: <Copy className="w-3.5 h-3.5" />, label: 'Copy description', onClick: () => { navigator.clipboard.writeText(tx.description); toast('Copied', 'success'); setOpenMenuId(null); } },
+                              { icon: <Tag className="w-3.5 h-3.5" />, label: 'Filter by category', onClick: () => { setFilterCategory(tx._displayCategory); setOpenMenuId(null); } },
+                            ].map(action => (
+                              <button key={action.label}
+                                className="w-full text-left px-3 py-2 rounded-lg text-[12px] font-medium flex items-center gap-2 cursor-pointer transition-all"
+                                style={{ color: 'var(--muted-foreground)' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--muted)'; e.currentTarget.style.color = 'var(--foreground)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; }}
+                                onClick={action.onClick}
+                              >
+                                {action.icon} {action.label}
+                              </button>
+                            ))}
+                            <div className="h-px mx-1 my-1" style={{ background: 'var(--border)' }} />
+                            {[
+                              { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: 'Mark Reviewed', status: 'reviewed', hoverColor: '#168A5B' },
+                              { icon: <CircleDashed className="w-3.5 h-3.5" />, label: 'Needs Review', status: 'needs_review', hoverColor: '#B7791F' },
+                              { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: 'Resolve', status: 'resolved', hoverColor: '#0F766E' },
+                              { icon: <EyeOff className="w-3.5 h-3.5" />, label: 'Ignore', status: 'ignored', hoverColor: '#5D6B66' },
+                            ].map(action => (
+                              <button key={action.status}
+                                className="w-full text-left px-3 py-2 rounded-lg text-[12px] font-medium flex items-center gap-2 cursor-pointer transition-all"
+                                style={{ color: 'var(--muted-foreground)' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--muted)'; e.currentTarget.style.color = action.hoverColor; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; }}
+                                onClick={() => { updateReviewStatus(tx.id, action.status); setOpenMenuId(null); }}
+                              >
+                                {action.icon} {action.label}
+                              </button>
+                            ))}
                           </div>
                         )}
                       </td>
@@ -1099,69 +972,43 @@ const Transactions: React.FC = () => {
 };
 
 
-// ── Type badge sub-component ─────────────────────────────────────────────────
-const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  income:         { bg: 'bg-success/10',     text: 'text-success' },
-  refund:         { bg: 'bg-teal-500/10',    text: 'text-teal-400' },
-  expense:        { bg: 'bg-risk/10',        text: 'text-risk' },
-  vendor_payment: { bg: 'bg-risk/10',        text: 'text-risk' },
-  bank_charge:    { bg: 'bg-risk/10',        text: 'text-risk' },
-  subscription:   { bg: 'bg-amber-500/10',   text: 'text-amber-400' },
-  transfer:       { bg: 'bg-blue-500/10',    text: 'text-blue-400' },
-  unknown:        { bg: 'bg-muted/60',       text: 'text-muted-foreground' },
-  failed_payment: { bg: 'bg-muted/60',       text: 'text-muted-foreground' },
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  income:         'Income',
-  refund:         'Refund',
-  expense:        'Expense',
-  vendor_payment: 'Vendor Pay',
-  bank_charge:    'Bank Charge',
-  subscription:   'Subscription',
-  transfer:       'Transfer',
-  unknown:        'Unknown',
-  failed_payment: 'Failed',
+// ── TypeBadge ────────────────────────────────────────────────────────────────
+const TYPE_CFG: Record<string, { label: string; bg: string; color: string }> = {
+  income:         { label: 'Income',       bg: 'rgba(22,138,91,0.10)',   color: '#168A5B' },
+  refund:         { label: 'Refund',       bg: 'rgba(15,118,110,0.10)',  color: '#0F766E' },
+  expense:        { label: 'Expense',      bg: 'rgba(194,65,58,0.10)',   color: '#C2413A' },
+  vendor_payment: { label: 'Vendor Pay',   bg: 'rgba(194,65,58,0.08)',   color: '#C2413A' },
+  bank_charge:    { label: 'Bank Charge',  bg: 'rgba(194,65,58,0.08)',   color: '#C2413A' },
+  subscription:   { label: 'Subscription', bg: 'rgba(183,121,31,0.10)',  color: '#B7791F' },
+  transfer:       { label: 'Transfer',     bg: 'rgba(37,99,235,0.08)',   color: '#2563EB' },
+  unknown:        { label: 'Unknown',      bg: 'rgba(93,107,102,0.08)',  color: '#5D6B66' },
+  failed_payment: { label: 'Failed',       bg: 'rgba(93,107,102,0.08)',  color: '#5D6B66' },
 };
 
 const TypeBadge: React.FC<{ type: string }> = ({ type }) => {
-  const colors = TYPE_COLORS[type] ?? { bg: 'bg-muted/40', text: 'text-muted-foreground' };
-  const label = TYPE_LABELS[type] ?? type.replace(/_/g, ' ');
+  const cfg = TYPE_CFG[type] ?? { label: type.replace(/_/g, ' '), bg: 'rgba(93,107,102,0.08)', color: '#5D6B66' };
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${colors.bg} ${colors.text}`}
-    >
-      {label}
+    <span className="chip" style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.bg }}>
+      {cfg.label}
     </span>
   );
 };
 
-const REVIEW_COLORS: Record<string, { bg: string; text: string }> = {
-  new: { bg: 'bg-muted/40', text: 'text-muted-foreground' },
-  needs_review: { bg: 'bg-amber-500/10', text: 'text-amber-500' },
-  reviewed: { bg: 'bg-success/10', text: 'text-success' },
-  ignored: { bg: 'bg-muted/30', text: 'text-muted-foreground/50' },
-  resolved: { bg: 'bg-primary/10', text: 'text-primary' },
-};
-
-const REVIEW_HELPERS: Record<string, string> = {
-  new: 'New: imported but not checked',
-  needs_review: 'Needs review: should be manually checked',
-  reviewed: 'Reviewed: checked and accepted',
-  ignored: 'Ignored: not relevant',
-  resolved: 'Resolved: issue handled',
+// ── ReviewBadge ──────────────────────────────────────────────────────────────
+const REVIEW_CFG: Record<string, { label: string; bg: string; color: string; title: string }> = {
+  new:          { label: 'New',          bg: 'rgba(93,107,102,0.08)',  color: '#5D6B66', title: 'Imported but not checked' },
+  needs_review: { label: 'Needs Review', bg: 'rgba(183,121,31,0.10)', color: '#B7791F', title: 'Should be manually checked' },
+  reviewed:     { label: 'Reviewed',     bg: 'rgba(22,138,91,0.10)',  color: '#168A5B', title: 'Checked and accepted' },
+  ignored:      { label: 'Ignored',      bg: 'rgba(93,107,102,0.06)', color: '#8A9C97', title: 'Not relevant' },
+  resolved:     { label: 'Resolved',     bg: 'rgba(15,118,110,0.10)', color: '#0F766E', title: 'Issue handled' },
 };
 
 const ReviewBadge: React.FC<{ status: string }> = ({ status }) => {
-  const colors = REVIEW_COLORS[status] ?? REVIEW_COLORS.new;
-  const helper = REVIEW_HELPERS[status] ?? '';
-  const label = status.replace(/_/g, ' ');
+  const cfg = REVIEW_CFG[status] ?? REVIEW_CFG.new;
   return (
-    <span
-      title={helper}
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide cursor-help ${colors.bg} ${colors.text}`}
-    >
-      {label}
+    <span className="chip" title={cfg.title}
+      style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.bg, cursor: 'help' }}>
+      {cfg.label}
     </span>
   );
 };

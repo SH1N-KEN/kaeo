@@ -14,9 +14,18 @@ const AppShell: React.FC = () => {
 
   if (workspaceLoading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
-        <div className="w-8 h-8 border-4 border-teal-500/20 border-t-teal-500 rounded-full animate-spin"></div>
-        <p className="text-sm text-muted-foreground animate-pulse font-medium">Loading workspace...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4"
+        style={{ background: 'var(--background)' }}>
+        <div
+          className="w-9 h-9 rounded-lg flex items-center justify-center"
+          style={{ background: 'rgba(15,118,110,0.10)', border: '1px solid rgba(15,118,110,0.20)' }}
+        >
+          <div className="w-4 h-4 border-2 rounded-full animate-spin"
+            style={{ borderColor: 'rgba(15,118,110,0.2)', borderTopColor: '#0F766E' }} />
+        </div>
+        <p className="text-[13px] font-medium" style={{ color: 'var(--muted-foreground)' }}>
+          Loading workspace…
+        </p>
       </div>
     );
   }
@@ -27,12 +36,18 @@ const AppShell: React.FC = () => {
 
   return (
     <AskKaeoChatProvider>
-      <div className="flex min-h-screen bg-background transition-colors duration-300 print:block print:min-h-0">
+      <div
+        className="flex min-h-screen transition-colors duration-300 print:block print:min-h-0"
+        style={{ background: 'var(--background)' }}
+      >
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0 print:block">
           <Topbar />
-          <main className="flex-1 p-8 overflow-y-auto print:overflow-visible print:p-0 print:block">
-            <div className="max-w-7xl mx-auto print:max-w-none print:mx-0">
+          <main className="flex-1 overflow-y-auto print:overflow-visible print:block">
+            <div
+              className="mx-auto px-7 py-7 print:max-w-none print:mx-0 print:p-0"
+              style={{ maxWidth: 1320 }}
+            >
               <Outlet />
             </div>
           </main>
@@ -45,4 +60,3 @@ const AppShell: React.FC = () => {
 };
 
 export default AppShell;
-

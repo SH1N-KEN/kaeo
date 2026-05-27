@@ -142,12 +142,12 @@ const AskKaeo = () => {
         <div className="p-4 border-b bg-card/50 backdrop-blur-sm flex justify-between items-center z-10">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-center shrink-0">
-              <img src={aeLogo} alt="Libby" className="w-4.5 h-4.5 object-contain" />
+              <img src={aeLogo} alt="Ask Kaeo" className="w-4.5 h-4.5 object-contain" />
             </div>
             <div>
-              <h2 className="font-semibold tracking-tight">Libby</h2>
+              <h2 className="font-semibold tracking-tight">Ask Kaeo</h2>
               <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
-                AI CFO Operator
+                AI Spend Operator
               </p>
             </div>
           </div>
@@ -160,6 +160,7 @@ const AskKaeo = () => {
             )}
           </div>
         </div>
+
 
         {/* CHAT AREA */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">

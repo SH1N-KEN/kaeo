@@ -361,136 +361,144 @@ const RiskInbox: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="space-y-7 animate-kaeo-fade pb-20">
+      {/* Page header */}
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-3xl font-bold tracking-tight">Risk Inbox</h1>
-            <div className="px-2 py-0.5 bg-risk/10 text-risk text-[10px] font-black rounded border border-risk/20 uppercase tracking-tighter">Monitoring Active</div>
+          <div className="flex items-center gap-2.5 mb-1">
+            <h1 className="page-title">Risk Inbox</h1>
+            <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full" style={{ background: 'rgba(194,65,58,0.10)', color: '#C2413A', border: '1px solid rgba(194,65,58,0.20)' }}>Live Monitoring</span>
           </div>
-          <p className="text-sm text-muted-foreground">Review duplicate payments, risky vendors, uncategorized rows, and month-end blockers for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
+          <p className="page-subtitle">Duplicate payments, risky vendors, uncategorized rows, and month-end blockers for <span style={{ color: 'var(--foreground)', fontWeight: 600 }}>{activeClient.name}</span>.</p>
         </div>
-        
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center gap-3 flex-shrink-0">
           {diagnostics.lastScan && (
-            <div className="hidden md:flex items-center gap-4 px-4 py-2 bg-muted/30 border border-border/50 rounded-xl text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              <span className="flex items-center gap-1.5"><Database className="w-3 h-3" /> {diagnostics.txLoaded} Txns</span>
-              <span className="w-1 h-1 bg-border rounded-full" />
-              <span className="flex items-center gap-1.5 text-risk"><ShieldAlert className="w-3 h-3" /> {diagnostics.risksGenerated} Risks</span>
-              <span className="w-1 h-1 bg-border rounded-full" />
+            <div className="hidden md:flex items-center gap-3 px-3.5 py-2 rounded-xl text-[11px] font-medium" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+              <span className="flex items-center gap-1.5"><Database className="w-3 h-3" /> {diagnostics.txLoaded} txns</span>
+              <span className="w-px h-3" style={{ background: 'var(--border)' }} />
+              <span className="flex items-center gap-1.5" style={{ color: '#C2413A' }}><ShieldAlert className="w-3 h-3" /> {diagnostics.risksGenerated} risks</span>
+              <span className="w-px h-3" style={{ background: 'var(--border)' }} />
               <span>Last: {diagnostics.lastScan}</span>
             </div>
           )}
-          <button 
+          <button
             onClick={handleAnalyze}
             disabled={analyzing}
-            className="px-6 py-3 bg-risk text-white rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-risk/20 disabled:opacity-50"
+            className="btn-danger flex items-center gap-2"
           >
             {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
-            Identify Risks
+            {analyzing ? 'Scanning…' : 'Identify Risks'}
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-risk/5 border border-risk/20 rounded-2xl flex gap-3 items-center animate-in slide-in-from-top-2">
-          <AlertCircle className="w-5 h-5 text-risk shrink-0" />
+        <div className="p-4 rounded-xl flex gap-3 items-start" style={{ background: 'rgba(194,65,58,0.06)', border: '1px solid rgba(194,65,58,0.20)' }}>
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#C2413A' }} />
           <div className="flex-1">
-            <p className="text-xs font-black text-risk uppercase tracking-widest mb-0.5">Scan Error</p>
-            <p className="text-xs text-risk/80 font-medium">{error}</p>
+            <p className="text-[12px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: '#C2413A' }}>Scan Error</p>
+            <p className="text-[12px]" style={{ color: '#C2413A', opacity: 0.8 }}>{error}</p>
           </div>
-          <button onClick={() => setError(null)} className="p-1 hover:bg-risk/10 rounded-lg transition-colors">
-            <X className="w-4 h-4 text-risk" />
+          <button onClick={() => setError(null)} className="p-1 rounded-lg cursor-pointer transition-colors" style={{ color: '#C2413A' }}>
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {loading && risks.length === 0 ? (
-        <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-risk" />
-          <p className="text-sm text-muted-foreground animate-pulse font-medium">Scanning ledger for anomalies...</p>
+        <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#C2413A' }} />
+          <p className="text-[13px] font-medium" style={{ color: 'var(--muted-foreground)' }}>Scanning ledger for anomalies…</p>
         </div>
       ) : txCount === 0 ? (
-        <div className="bg-card/30 border border-dashed border-border/60 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5 animate-in fade-in">
-          <div className="w-16 h-16 bg-muted/30 rounded-2xl flex items-center justify-center border border-border/50 text-muted-foreground/30">
-            <Search className="w-8 h-8" />
+        <div className="kaeo-card py-20 flex flex-col items-center justify-center text-center gap-5 animate-kaeo-fade">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'var(--muted)' }}>
+            <Search className="w-7 h-7" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />
           </div>
-          <div className="space-y-1">
-            <h3 className="text-xl font-bold tracking-tight">Risks appear after you upload data for a business.</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              Please upload financial statements or invoices to run risk evaluation.
+          <div>
+            <h3 className="text-[17px] font-semibold mb-1">Upload data to begin risk evaluation</h3>
+            <p className="text-[13px] max-w-xs mx-auto" style={{ color: 'var(--muted-foreground)' }}>
+              Upload financial statements or invoices to run anomaly detection.
             </p>
           </div>
-          <button
-            onClick={() => navigate('/files')}
-            className="px-6 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-xs flex items-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-primary/10"
-          >
+          <button onClick={() => navigate('/files')} className="btn-primary">
             Upload files
           </button>
         </div>
       ) : risks.length === 0 ? (
-        <div className="bg-card/30 border border-dashed border-border/60 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5">
-          <div className="w-16 h-16 bg-success/10 rounded-2xl flex items-center justify-center border border-success/20 text-success/50">
-            <CheckCircle2 className="w-8 h-8" />
+        <div className="kaeo-card py-20 flex flex-col items-center justify-center text-center gap-5">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(22,138,91,0.10)', border: '1px solid rgba(22,138,91,0.20)' }}>
+            <CheckCircle2 className="w-7 h-7" style={{ color: '#168A5B' }} />
           </div>
-          <div className="space-y-1">
-            <h3 className="text-xl font-bold tracking-tight text-success/80">No open risks right now.</h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              New risks will appear here after uploads or rule checks.
-            </p>
+          <div>
+            <h3 className="text-[17px] font-semibold mb-1" style={{ color: '#168A5B' }}>No open risks right now</h3>
+            <p className="text-[13px]" style={{ color: 'var(--muted-foreground)' }}>New risks will appear after uploads or rule checks.</p>
           </div>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <MetricCard 
-              title="Open Risks" 
-              value={stats.open.toString()} 
-              valueClassName="text-risk"
-              description="Awaiting CFO review"
-              icon={<ShieldAlert className="w-4 h-4 text-risk" />} 
+          {/* KPI row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <MetricCard
+              title="Open Risks"
+              value={stats.open.toString()}
+              valueClassName="text-2xl font-bold text-[#C2413A]"
+              description="Awaiting review"
+              icon={<ShieldAlert className="w-4 h-4" />}
+              accentColor="danger"
             />
-            <MetricCard 
-              title="Review Exposure" 
-              value={formatCurrency(stats.amount)} 
-              valueClassName="text-warning"
-              description="Potential leakage/loss"
-              icon={<Zap className="w-4 h-4 text-warning" />} 
+            <MetricCard
+              title="Exposure"
+              value={formatCurrency(stats.amount)}
+              valueClassName="text-2xl font-bold text-[#B7791F]"
+              description="Potential leakage"
+              icon={<Zap className="w-4 h-4" />}
+              accentColor="warning"
             />
-            <MetricCard 
-              title="Critical Issues" 
-              value={stats.critical.toString()} 
-              valueClassName="text-risk"
-              description="Immediate action required"
-              icon={<AlertCircle className="w-4 h-4 text-risk" />} 
+            <MetricCard
+              title="Critical Issues"
+              value={stats.critical.toString()}
+              valueClassName={`text-2xl font-bold ${stats.critical > 0 ? 'text-[#C2413A]' : 'text-[#168A5B]'}`}
+              description="High / critical severity"
+              icon={<AlertCircle className="w-4 h-4" />}
+              accentColor={stats.critical > 0 ? 'danger' : 'success'}
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-8 space-y-4">
+          {/* Risk list + detail panel */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8 space-y-3">
               {filteredRisks.length === 0 ? (
-                <div className="bg-card border border-dashed border-border rounded-2xl p-12 text-center text-muted-foreground text-xs font-semibold">
-                  No risks matching "{searchVal}" found.
+                <div className="kaeo-card py-12 text-center">
+                  <p className="text-[13px]" style={{ color: 'var(--muted-foreground)' }}>No risks matching &ldquo;{searchVal}&rdquo; found.</p>
                 </div>
               ) : (
                 filteredRisks.map((risk) => (
-                  <div 
-                    key={risk.id} 
+                  <div
+                    key={risk.id}
                     onClick={() => {
                       setSelectedRisk(risk);
                       fetchNotes(risk.id);
                     }}
-                    className={`bg-card border rounded-2xl p-6 transition-all cursor-pointer group hover:border-primary/40 shadow-sm relative overflow-hidden ${selectedRisk?.id === risk.id ? 'border-primary ring-1 ring-primary/20' : 'border-border'}`}
+                    className="kaeo-card p-5 cursor-pointer relative overflow-hidden transition-all"
+                    style={selectedRisk?.id === risk.id ? { borderColor: 'var(--primary)', boxShadow: '0 0 0 1px rgba(15,118,110,0.20)' } : {}}
+                    onMouseEnter={e => { if (selectedRisk?.id !== risk.id) e.currentTarget.style.borderColor = 'rgba(15,118,110,0.30)'; }}
+                    onMouseLeave={e => { if (selectedRisk?.id !== risk.id) e.currentTarget.style.borderColor = 'var(--border)'; }}
                   >
                     {risk.status !== 'open' && (
-                      <div className="absolute top-0 right-0 px-3 py-1 bg-success/10 text-success text-[8px] font-black uppercase tracking-tighter rounded-bl-lg border-l border-b border-success/20">
+                      <div className="absolute top-0 right-0 px-2.5 py-1 text-[10px] font-semibold rounded-bl-lg" style={{ background: 'rgba(22,138,91,0.10)', color: '#168A5B', borderLeft: '1px solid rgba(22,138,91,0.20)', borderBottom: '1px solid rgba(22,138,91,0.20)' }}>
                         {risk.status.replace(/_/g, ' ')}
                       </div>
                     )}
-                    
-                    <div className="flex gap-6">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${risk.severity === 'critical' ? 'bg-risk text-white' : 'bg-muted text-muted-foreground'}`}>
-                        {risk.risk_type.includes('duplicate') ? <MoreHorizontal className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
+
+                    <div className="flex gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${risk.severity === 'critical' ? '' : ''}`}
+                        style={{
+                          background: risk.severity === 'critical' ? 'rgba(194,65,58,0.12)' : risk.severity === 'high' ? 'rgba(183,121,31,0.10)' : 'var(--muted)',
+                          color: risk.severity === 'critical' ? '#C2413A' : risk.severity === 'high' ? '#B7791F' : 'var(--muted-foreground)'
+                        }}>
+                        {risk.risk_type.includes('duplicate') ? <MoreHorizontal className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
                       </div>
                       
                       <div className="flex-1 space-y-3">

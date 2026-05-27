@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { 
-  DollarSign, 
+import { useNavigate } from 'react-router-dom';
+import {
+  DollarSign,
   FileText,
   Plus,
   ArrowUpRight,
@@ -9,39 +9,37 @@ import {
   Loader2,
   Clock,
   Download,
-  Info,
-  Calendar,
-  X,
-  ShieldAlert, 
-  CheckCircle2, 
+  ShieldAlert,
+  CheckCircle2,
   Layers,
   Sparkles,
-  ChevronDown,
-  ChevronUp
+  Upload,
+  ChevronRight,
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
-import { useAuth } from '../components/auth/AuthProvider';
 import { useToast } from '../hooks/useToast';
 import EmptyState from '../components/ui/EmptyState';
+import MetricCard from '../components/ui/MetricCard';
+import PageHeader from '../components/ui/PageHeader';
+import SectionCard from '../components/ui/SectionCard';
+import { StatusChip, reviewStatusToVariant } from '../components/ui/StatusChip';
 import { supabase } from '../lib/supabase';
-import aeLogo from '../assets/kaeo-ae-logo.png';
 import { calculateMonthEndReadiness, type ReadinessResult } from '../lib/readinessEngine';
 import { getDisplayCategory, inferTransactionCategory, ALL_CATEGORIES } from '../lib/categoryEngine';
 import { getCleanTransactions } from '../lib/transactionFilters';
 import { analyzeRisksForClient } from '../lib/riskEngine';
 import { getSpendRules } from '../lib/spendRulesEngine';
-import { getTimeBasedGreeting } from '../lib/greeting';
 import { AIReviewQueueModal } from '../components/ai/AIReviewQueueModal';
 import { formatINR } from '../lib/formatters';
 import { useWorkspaceRefresh } from '../hooks/useWorkspaceRefresh';
-import { 
-  ResponsiveContainer, 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  CartesianGrid 
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid
 } from 'recharts';
 
 interface ChartDataPoint {
@@ -52,7 +50,7 @@ interface ChartDataPoint {
 }
 
 const Dashboard: React.FC = () => {
-  const { 
+  const {
     activeClient,
     accountMode,
     setModalMode,
@@ -61,10 +59,9 @@ const Dashboard: React.FC = () => {
     clients,
     setActiveClient
   } = useWorkspace();
-  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  
+
   const [loading, setLoading] = useState(true);
   const [isAddTxOpen, setIsAddTxOpen] = useState(false);
   const [manualTxDate, setManualTxDate] = useState(new Date().toISOString().split('T')[0]);
@@ -76,23 +73,13 @@ const Dashboard: React.FC = () => {
   const [manualTxNote, setManualTxNote] = useState('');
   const [manualTxSaving, setManualTxSaving] = useState(false);
   const [isAIQueueOpen, setIsAIQueueOpen] = useState(false);
-  const [sugMetrics, setSugMetrics] = useState({
-    pending: 0,
-    safe: 0,
-    high: 0
-  });
-  const [showRecentActivity, setShowRecentActivity] = useState(true);
-  const [showWorkspaceDetails, setShowWorkspaceDetails] = useState(false);
-  const [showChecklist, setShowChecklist] = useState(false);
+  // Track AI suggestion counts but don't display in current layout
+  const [, setSugMetrics] = useState({ pending: 0, safe: 0, high: 0 });
 
-
-  // Smart category suggestion hook
   useEffect(() => {
     if (manualTxDesc) {
       const suggested = inferTransactionCategory(manualTxDesc, manualTxVendor, manualTxType);
-      if (suggested && suggested !== 'Uncategorized') {
-        setManualTxCat(suggested);
-      }
+      if (suggested && suggested !== 'Uncategorized') setManualTxCat(suggested);
     }
   }, [manualTxDesc, manualTxVendor, manualTxType]);
 
@@ -103,55 +90,37 @@ const Dashboard: React.FC = () => {
     try {
       const { data: userResponse } = await supabase.auth.getUser();
       const user = userResponse?.user;
-
       const amt = parseFloat(manualTxAmt);
-      if (isNaN(amt) || amt <= 0) {
-        throw new Error('Please enter a valid positive number for the amount.');
-      }
-      
+      if (isNaN(amt) || amt <= 0) throw new Error('Please enter a valid positive number for the amount.');
       const finalAmt = (manualTxType === 'expense' || manualTxType === 'unknown') ? -Math.abs(amt) : Math.abs(amt);
-
-      const { error } = await supabase
-        .from('transactions')
-        .insert({
-          organization_id: activeClient.organization_id,
-          client_id: activeClient.id,
-          transaction_date: manualTxDate || new Date().toISOString().split('T')[0],
-          description: manualTxDesc,
-          amount: finalAmt,
-          original_amount: finalAmt,
-          original_currency: 'INR',
-          currency: 'INR',
-          exchange_rate: 1,
-          amount_in_base_currency: finalAmt,
-          fx_date: null,
-          fx_source: null,
-          fx_metadata: {},
-          type: manualTxType,
-          category: manualTxCat,
-          counterparty_name: manualTxVendor || null,
-          source: 'manual',
-          review_status: 'reviewed',
-          review_note: manualTxNote || null,
-          reviewed_by: user?.id || null,
-          reviewed_at: new Date().toISOString()
-        });
-
+      const { error } = await supabase.from('transactions').insert({
+        organization_id: activeClient.organization_id,
+        client_id: activeClient.id,
+        transaction_date: manualTxDate || new Date().toISOString().split('T')[0],
+        description: manualTxDesc,
+        amount: finalAmt,
+        original_amount: finalAmt,
+        original_currency: 'INR',
+        currency: 'INR',
+        exchange_rate: 1,
+        amount_in_base_currency: finalAmt,
+        fx_date: null, fx_source: null, fx_metadata: {},
+        type: manualTxType,
+        category: manualTxCat,
+        counterparty_name: manualTxVendor || null,
+        source: 'manual',
+        review_status: 'reviewed',
+        review_note: manualTxNote || null,
+        reviewed_by: user?.id || null,
+        reviewed_at: new Date().toISOString()
+      });
       if (error) throw error;
-
       toast('Manual transaction added successfully', 'success');
       setIsAddTxOpen(false);
-      
       setManualTxDate(new Date().toISOString().split('T')[0]);
-      setManualTxDesc('');
-      setManualTxAmt('');
-      setManualTxType('expense');
-      setManualTxCat('Uncategorized');
-      setManualTxVendor('');
-      setManualTxNote('');
-
+      setManualTxDesc(''); setManualTxAmt(''); setManualTxType('expense');
+      setManualTxCat('Uncategorized'); setManualTxVendor(''); setManualTxNote('');
       fetchDashboardData();
-
       await analyzeRisksForClient(activeClient.organization_id, activeClient.id);
     } catch (err: any) {
       toast(err.message || 'Failed to add transaction', 'error');
@@ -159,57 +128,37 @@ const Dashboard: React.FC = () => {
       setManualTxSaving(false);
     }
   };
+
   const [metrics, setMetrics] = useState({
-    income: 0,
-    expenses: 0,
-    refunds: 0,
-    net: 0,
-    count: 0,
-    incomeCount: 0,
-    expenseCount: 0,
-    unknownCount: 0,
-    vendorPaymentCount: 0,
-    refundCount: 0,
-    failedCount: 0,
+    income: 0, expenses: 0, refunds: 0, net: 0, count: 0,
+    incomeCount: 0, expenseCount: 0, unknownCount: 0,
+    vendorPaymentCount: 0, refundCount: 0, failedCount: 0,
     topVendor: { name: '', amount: 0 },
-    uncategorizedCount: 0,
-    unreviewedCount: 0,
-    openRisksCount: 0,
-    duplicateExposure: 0,
-    uniqueVendorsCount: 0,
-    matchedInvoicesCount: 0,
-    totalInvoicesCount: 0,
-    overdueInvoicesCount: 0,
-    highValueCount: 0,
-    recurringCount: 0,
-    rulesActiveCount: 0,
-    uploadsCount: 0,
-    suggestionsCount: 0
+    uncategorizedCount: 0, unreviewedCount: 0, openRisksCount: 0,
+    duplicateExposure: 0, uniqueVendorsCount: 0,
+    matchedInvoicesCount: 0, totalInvoicesCount: 0, overdueInvoicesCount: 0,
+    highValueCount: 0, recurringCount: 0, rulesActiveCount: 0,
+    uploadsCount: 0, suggestionsCount: 0
   });
   const [readiness, setReadiness] = useState<ReadinessResult | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [openRisksData, setOpenRisksData] = useState<any[]>([]);
 
   useEffect(() => {
-    if (activeClient) {
-      fetchDashboardData();
-    }
+    if (activeClient) fetchDashboardData();
   }, [activeClient]);
 
-  // Re-fetch when Libby applies an action workspace-wide
   useWorkspaceRefresh(useCallback(() => {
     if (activeClient) fetchDashboardData();
   }, [activeClient]));
 
-  // Profile completion card checks
   const needsProfileCompletion = !!activeClient && (
-    !activeClient.industry || 
-    !activeClient.metadata?.accounting_tools?.[0] || 
+    !activeClient.industry ||
+    !activeClient.metadata?.accounting_tools?.[0] ||
     !activeClient.metadata?.monthly_spend_range
   );
-  
   const [isProfileCardDismissed, setIsProfileCardDismissed] = useState(true);
-  
   useEffect(() => {
     if (activeClient) {
       setIsProfileCardDismissed(localStorage.getItem(`kaeo_profile_dismiss_${activeClient.id}`) === 'true');
@@ -220,24 +169,16 @@ const Dashboard: React.FC = () => {
     if (!activeClient) return;
     setLoading(true);
     try {
-      // Fetch transactions
       const { data: allTransactions, error: metricsErr } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('client_id', activeClient.id);
-
+        .from('transactions').select('*').eq('client_id', activeClient.id);
       if (metricsErr) throw metricsErr;
 
       const cleanTransactions = getCleanTransactions(allTransactions || []);
-      
-      // Fetch open risks
-      const { data: openRisksData } = await supabase
-        .from('risk_events')
-        .select('*')
-        .eq('client_id', activeClient.id)
-        .eq('status', 'open');
-        
-      const readinessResult = calculateMonthEndReadiness(cleanTransactions, openRisksData || []);
+      const { data: risksData } = await supabase
+        .from('risk_events').select('*').eq('client_id', activeClient.id).eq('status', 'open');
+
+      setOpenRisksData(risksData || []);
+      const readinessResult = calculateMonthEndReadiness(cleanTransactions, risksData || []);
       setReadiness(readinessResult);
 
       const vendors: Record<string, number> = {};
@@ -245,307 +186,203 @@ const Dashboard: React.FC = () => {
 
       const stats = cleanTransactions.reduce((acc, tx) => {
         const txAmountVal = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
-          ? Number(tx.amount_in_base_currency)
-          : Number(tx.amount);
+          ? Number(tx.amount_in_base_currency) : Number(tx.amount);
         const amt = Math.abs(txAmountVal);
-        // Use stored direction if available, fall back to amount sign
         const directionDerived = tx.raw_row_json?.direction_derived as string | undefined;
         const isInflowTx = directionDerived === 'inflow' || (!directionDerived && txAmountVal > 0);
         const isOutflowTx = directionDerived === 'outflow' || (!directionDerived && txAmountVal < 0);
-        
-        if (!tx.review_status || tx.review_status === 'new' || tx.review_status === 'needs_review') {
-          acc.unreviewedCount++;
-        }
-        
-        // Date-series aggregation for Cash Flow chart (use direction, not type)
+
+        if (!tx.review_status || tx.review_status === 'new' || tx.review_status === 'needs_review') acc.unreviewedCount++;
+
         if (tx.transaction_date) {
           const rawDateStr = tx.transaction_date.split('T')[0];
-          const displayDate = new Date(tx.transaction_date).toLocaleDateString(undefined, { 
-            month: 'short', 
-            day: 'numeric' 
-          });
-          
-          if (!dailyMap[displayDate]) {
-            dailyMap[displayDate] = { inflow: 0, outflow: 0, rawDate: rawDateStr };
-          }
-          
-          // Transfers excluded from chart (they don't represent operating cash flow)
+          const displayDate = new Date(tx.transaction_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+          if (!dailyMap[displayDate]) dailyMap[displayDate] = { inflow: 0, outflow: 0, rawDate: rawDateStr };
           if (tx.type !== 'transfer') {
-            if (isInflowTx) {
-              dailyMap[displayDate].inflow += amt;
-            } else if (isOutflowTx) {
-              dailyMap[displayDate].outflow += amt;
-            }
+            if (isInflowTx) dailyMap[displayDate].inflow += amt;
+            else if (isOutflowTx) dailyMap[displayDate].outflow += amt;
           }
         }
-        
-        // Revenue: only positive inflows with type=income
-        // GUARD: never add negative amount to income (prevents negative revenue card)
-        if (tx.type === 'income' && isInflowTx && amt > 0) {
-          acc.income += amt;
-          acc.incomeCount++;
-        }
-        // Expenses: outflows (expense + vendor_payment + subscription + bank_charge)
-        // Transfers excluded from expense totals
+
+        if (tx.type === 'income' && isInflowTx && amt > 0) { acc.income += amt; acc.incomeCount++; }
         else if (['expense', 'vendor_payment', 'subscription', 'bank_charge'].includes(tx.type) && tx.type !== 'transfer') {
-          acc.expenses += amt;
-          acc.expenseCount++;
+          acc.expenses += amt; acc.expenseCount++;
           if (tx.type === 'vendor_payment') acc.vendorPaymentCount++;
-          
-          // Track vendor - prioritized heuristic for expenses only
-          const name = tx.counterparty_name?.trim() || tx.description
-            .replace(/vendor payment|payment to|paid to|google ads|meta ads|facebook ads/gi, '')
-            .trim()
-            .split(' ')
-            .filter((w: string) => w.length > 2 && !/\d/.test(w))[0] || tx.description.split(' ')[0];
-          
+          const name = tx.counterparty_name?.trim() || tx.description.replace(/vendor payment|payment to|paid to/gi, '').trim().split(' ').filter((w: string) => w.length > 2 && !/\d/.test(w))[0] || tx.description.split(' ')[0];
           vendors[name] = (vendors[name] || 0) + amt;
         }
-        else if (tx.type === 'refund') {
-          acc.refunds += amt;
-          acc.refundCount++;
-        }
-        else if (tx.type === 'failed' || tx.type === 'failed_payment') {
-          acc.failedCount++;
-        }
-        // transfer type: not counted in income or expenses (neutral for operating metrics)
-        
+        else if (tx.type === 'refund') { acc.refunds += amt; acc.refundCount++; }
+        else if (tx.type === 'failed' || tx.type === 'failed_payment') { acc.failedCount++; }
         acc.count++;
         return acc;
-      }, { 
-        income: 0, 
-        expenses: 0, 
-        refunds: 0, 
-        count: 0, 
-        incomeCount: 0, 
-        expenseCount: 0, 
-        unknownCount: 0,
-        vendorPaymentCount: 0,
-        refundCount: 0,
-        failedCount: 0,
-        uncategorizedCount: 0,
-        unreviewedCount: 0
-      });
+      }, { income: 0, expenses: 0, refunds: 0, count: 0, incomeCount: 0, expenseCount: 0, unknownCount: 0, vendorPaymentCount: 0, refundCount: 0, failedCount: 0, uncategorizedCount: 0, unreviewedCount: 0 });
 
-
-
-      // Filter and count uncategorized & unknown problem rows across cleanTransactions
-      let totalUncategorizedCount = 0;
-      let totalUnknownCount = 0;
+      let totalUncategorizedCount = 0; let totalUnknownCount = 0;
       cleanTransactions.forEach(tx => {
         const cat = getDisplayCategory(tx);
         const isCatMissingOrInvalid = !tx.category || tx.category.trim() === '' || tx.category.toLowerCase() === 'null' || tx.category.toLowerCase() === 'generic';
-        if (
-          cat === 'Uncategorized' ||
-          cat === 'Unknown' ||
-          tx.type === 'unknown' ||
-          isCatMissingOrInvalid
-        ) {
-          if (tx.type === 'unknown') {
-            totalUnknownCount++;
-          } else {
-            totalUncategorizedCount++;
-          }
+        if (cat === 'Uncategorized' || cat === 'Unknown' || tx.type === 'unknown' || isCatMissingOrInvalid) {
+          if (tx.type === 'unknown') totalUnknownCount++;
+          else totalUncategorizedCount++;
         }
       });
       stats.uncategorizedCount = totalUncategorizedCount;
       stats.unknownCount = totalUnknownCount;
 
       let duplicateExposure = 0;
-      (openRisksData || []).forEach(r => {
-        if (r.risk_type.includes('duplicate')) {
-          duplicateExposure += Number(r.amount_at_risk);
-        }
-      });
+      (risksData || []).forEach(r => { if (r.risk_type.includes('duplicate')) duplicateExposure += Number(r.amount_at_risk); });
 
-      // Compute Top Vendor
       let topVendor = { name: '', amount: 0 };
-      Object.entries(vendors).forEach(([name, amount]) => {
-        if (amount > topVendor.amount) topVendor = { name, amount };
-      });
+      Object.entries(vendors).forEach(([name, amount]) => { if (amount > topVendor.amount) topVendor = { name, amount }; });
 
-      // Extra data for secondary grid
-      let totalInvoicesCount = 0;
-      let matchedInvoicesCount = 0;
-      let overdueInvoicesCount = 0;
+      let totalInvoicesCount = 0; let matchedInvoicesCount = 0; let overdueInvoicesCount = 0;
       try {
-        const { data: invoicesData } = await supabase
-          .from('invoices')
-          .select('id, status, due_date')
-          .eq('client_id', activeClient.id);
+        const { data: invoicesData } = await supabase.from('invoices').select('id, status, due_date').eq('client_id', activeClient.id);
         if (invoicesData) {
           totalInvoicesCount = invoicesData.length;
           matchedInvoicesCount = invoicesData.filter(inv => inv.status === 'paid').length;
-          
           const today = new Date();
-          overdueInvoicesCount = invoicesData.filter(inv => {
-            if (inv.status === 'overdue') return true;
-            if (inv.status === 'unpaid' && inv.due_date && new Date(inv.due_date) < today) return true;
-            return false;
-          }).length;
+          overdueInvoicesCount = invoicesData.filter(inv => inv.status === 'overdue' || (inv.status === 'unpaid' && inv.due_date && new Date(inv.due_date) < today)).length;
         }
-      } catch (e) {
-        console.error('Error fetching invoices for dashboard:', e);
-      }
+      } catch (e) { console.error('Error fetching invoices:', e); }
 
       let uploadsCount = 0;
       try {
-        const { data: uploadsData } = await supabase
-          .from('uploaded_files')
-          .select('id')
-          .eq('client_id', activeClient.id);
-        if (uploadsData) {
-          uploadsCount = uploadsData.length;
-        }
-      } catch (e) {
-        console.error('Error fetching uploaded files count:', e);
-      }
+        const { data: uploadsData } = await supabase.from('uploaded_files').select('id').eq('client_id', activeClient.id);
+        if (uploadsData) uploadsCount = uploadsData.length;
+      } catch (e) { console.error('Error fetching uploads:', e); }
 
       let rulesActiveCount = 0;
       try {
         const activeRules = await getSpendRules(activeClient.organization_id);
         rulesActiveCount = activeRules.filter(r => r.enabled).length;
-      } catch (e) {
-        console.error('Error fetching active rules count:', e);
-      }
+      } catch (e) { console.error('Error fetching rules:', e); }
 
       const highValueCount = cleanTransactions.filter(tx => {
-        const val = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
-          ? Number(tx.amount_in_base_currency)
-          : Number(tx.amount);
+        const val = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined ? Number(tx.amount_in_base_currency) : Number(tx.amount);
         return ['expense', 'vendor_payment', 'subscription'].includes(tx.type) && Math.abs(val) >= 50000;
       }).length;
-
       const recurringCount = cleanTransactions.filter(tx => tx.type === 'subscription').length;
 
-      let pendingSugsCount = 0;
-      let safeSugsCount = 0;
-      let highSugsCount = 0;
+      let pendingSugsCount = 0; let safeSugsCount = 0; let highSugsCount = 0;
       try {
-        const { data: sugs } = await supabase
-          .from('ai_review_suggestions')
-          .select('priority, requires_approval')
-          .eq('client_id', activeClient.id)
-          .eq('status', 'pending');
-        
-        if (sugs) {
-          pendingSugsCount = sugs.length;
-          safeSugsCount = sugs.filter(s => !s.requires_approval).length;
-          highSugsCount = sugs.filter(s => s.priority === 'high').length;
-        }
-      } catch (e) {
-        console.error('Error fetching suggestions for dashboard:', e);
-      }
+        const { data: sugs } = await supabase.from('ai_review_suggestions').select('priority, requires_approval').eq('client_id', activeClient.id).eq('status', 'pending');
+        if (sugs) { pendingSugsCount = sugs.length; safeSugsCount = sugs.filter(s => !s.requires_approval).length; highSugsCount = sugs.filter(s => s.priority === 'high').length; }
+      } catch (e) { console.error('Error fetching suggestions:', e); }
 
-      setSugMetrics({
-        pending: pendingSugsCount,
-        safe: safeSugsCount,
-        high: highSugsCount
-      });
-
-      const suggestionsCount = pendingSugsCount;
+      setSugMetrics({ pending: pendingSugsCount, safe: safeSugsCount, high: highSugsCount });
 
       setMetrics({
-        ...stats,
-        net: stats.income + stats.refunds - stats.expenses,
-        topVendor,
-        openRisksCount: openRisksData?.length || 0,
-        duplicateExposure,
+        ...stats, net: stats.income + stats.refunds - stats.expenses,
+        topVendor, openRisksCount: risksData?.length || 0, duplicateExposure,
         uniqueVendorsCount: Object.keys(vendors).length,
-        matchedInvoicesCount,
-        totalInvoicesCount,
-        overdueInvoicesCount,
-        highValueCount,
-        recurringCount,
-        rulesActiveCount,
-        uploadsCount,
-        suggestionsCount
+        matchedInvoicesCount, totalInvoicesCount, overdueInvoicesCount,
+        highValueCount, recurringCount, rulesActiveCount, uploadsCount,
+        suggestionsCount: pendingSugsCount
       });
 
-      // Prepare Recharts sorted daily series data
       const sortedDailySeries = Object.entries(dailyMap)
-        .map(([date, data]) => ({
-          date,
-          inflow: data.inflow,
-          outflow: data.outflow,
-          rawDate: data.rawDate
-        }))
+        .map(([date, data]) => ({ date, inflow: data.inflow, outflow: data.outflow, rawDate: data.rawDate }))
         .sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime())
-        .slice(-15); // Show last 15 days of activity
-
+        .slice(-15);
       setChartData(sortedDailySeries);
 
-      // Fetch recent entries and filter out metadata rows
-      const { data: recent, error: recentErr } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('client_id', activeClient.id)
-        .order('transaction_date', { ascending: false })
-        .limit(20);
-
-      if (recentErr) throw recentErr;
-      const cleanRecent = getCleanTransactions(recent || []).slice(0, 5);
+      const { data: recent } = await supabase
+        .from('transactions').select('*').eq('client_id', activeClient.id)
+        .order('transaction_date', { ascending: false }).limit(20);
+      const cleanRecent = getCleanTransactions(recent || []).slice(0, 6);
       setRecentTransactions(cleanRecent);
 
     } catch (err: any) {
       console.error('[Dashboard] Fetch error:', err);
-      toast(err.message || 'Failed to load dashboard metrics', 'error');
+      toast(err.message || 'Failed to load dashboard', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatCurrency = (val: number) => {
-    return formatINR(val);
+  const formatCurrency = (val: number) => formatINR(val);
+  const handleDownloadReport = () => navigate('/reports');
+
+  // ── Risk type grouping for snapshot ──
+  const riskSnapshot = React.useMemo(() => {
+    const groups: Record<string, { count: number; amount: number; label: string; severity: string }> = {};
+    (openRisksData || []).forEach(r => {
+      const key = r.risk_type;
+      if (!groups[key]) {
+        const labelMap: Record<string, string> = {
+          duplicate_payment: 'Duplicate payments', duplicate: 'Duplicate payments',
+          high_value_payment: 'High-value payments', high_value: 'High-value payments',
+          invoice_payment_mismatch: 'Invoice mismatches', invoice_mismatch: 'Invoice mismatches',
+          unknown_vendor: 'Unknown vendors', recurring_spend: 'Recurring changes',
+          uncategorized_transaction: 'Uncategorized entries',
+        };
+        groups[key] = { count: 0, amount: 0, label: labelMap[key] || key.replace(/_/g, ' '), severity: r.severity };
+      }
+      groups[key].count++;
+      groups[key].amount += Number(r.amount_at_risk || 0);
+    });
+    return Object.values(groups).slice(0, 5);
+  }, [openRisksData]);
+
+  // ── Custom chart tooltip ──
+  const CustomChartTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="kaeo-card px-3 py-2.5 text-[12px]" style={{ minWidth: 140 }}>
+          <p className="font-semibold text-[var(--muted-foreground)] mb-1.5">{payload[0].payload.date}</p>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-4">
+              <span className="flex items-center gap-1.5" style={{ color: '#168A5B' }}>
+                <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#168A5B' }} />
+                Inflow
+              </span>
+              <span className="font-semibold" style={{ color: '#168A5B' }}>{formatCurrency(payload[0].value)}</span>
+            </div>
+            {payload[1] && (
+              <div className="flex items-center justify-between gap-4">
+                <span className="flex items-center gap-1.5" style={{ color: '#C2413A' }}>
+                  <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#C2413A' }} />
+                  Outflow
+                </span>
+                <span className="font-semibold" style={{ color: '#C2413A' }}>{formatCurrency(payload[1].value)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
-  const handleDownloadReport = () => {
-    navigate('/reports');
-  };
-
-  const handleAddTransactionClick = () => {
-    setIsAddTxOpen(true);
-  };
-
+  // ── No client state ──
   if (!activeClient) {
     if (clients && clients.length > 0) {
       return (
-        <div className="h-[70vh] flex items-center justify-center animate-in fade-in">
-          <div className="premium-glass border border-border/40 rounded-3xl p-10 flex flex-col items-center justify-center text-center space-y-5 max-w-md shadow-xl animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-teal-500/10 rounded-2xl flex items-center justify-center border border-teal-500/20 shadow-inner">
-              <Plus className="w-8 h-8 text-teal-400" />
+        <div className="h-[70vh] flex items-center justify-center animate-kaeo-fade">
+          <div className="kaeo-card p-10 flex flex-col items-center text-center gap-5 max-w-sm">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(15,118,110,0.08)', border: '1px solid rgba(15,118,110,0.18)' }}>
+              <Plus className="w-7 h-7" style={{ color: 'var(--primary)' }} />
             </div>
-            <div className="space-y-1">
-              <h3 className="text-lg font-bold tracking-tight">We found your business but it was not selected.</h3>
-              <p className="text-xs text-muted-foreground font-medium">
-                Click below to start using your business workspace.
-              </p>
+            <div>
+              <h3 className="text-[17px] font-semibold mb-1">Business not selected</h3>
+              <p className="text-[13px]" style={{ color: 'var(--muted-foreground)' }}>Click below to activate your business workspace.</p>
             </div>
-            <button 
-              onClick={() => {
-                setActiveClient(clients[0]);
-              }}
-              className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 transition-all shadow-xl shadow-primary/20 cursor-pointer text-xs"
-            >
+            <button onClick={() => setActiveClient(clients[0])} className="btn-primary">
               Use this business
             </button>
           </div>
         </div>
       );
     }
-
     return (
-      <div className="h-[70vh] flex items-center justify-center animate-in fade-in">
-        <EmptyState 
-          title="Add a business to start reviewing finances."
-          description="Add your business details or select a workspace to begin."
+      <div className="h-[70vh] flex items-center justify-center animate-kaeo-fade">
+        <EmptyState
+          title="Add a business to start reviewing finances"
+          description="Add your business details or select a workspace to begin tracking spend."
           action={{
-            label: accountMode === 'business_owner' ? "Add business" : "Add client business",
-            onClick: () => {
-              setModalMode(accountMode === 'business_owner' ? 'create_business' : 'create_client_business');
-              setClientToEdit(null);
-              setIsCreateModalOpen(true);
-            }
+            label: accountMode === 'business_owner' ? 'Add business' : 'Add client business',
+            onClick: () => { setModalMode(accountMode === 'business_owner' ? 'create_business' : 'create_client_business'); setClientToEdit(null); setIsCreateModalOpen(true); }
           }}
         />
       </div>
@@ -554,1128 +391,452 @@ const Dashboard: React.FC = () => {
 
   if (loading && metrics.count === 0) {
     return (
-      <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="w-8 h-8 animate-spin text-primary animate-pulse" />
-        <p className="text-sm text-muted-foreground animate-pulse font-medium">Aggregating ledger data...</p>
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-7 h-7 animate-spin" style={{ color: 'var(--primary)' }} />
+        <p className="text-[13px] font-medium" style={{ color: 'var(--muted-foreground)' }}>
+          Loading finance overview…
+        </p>
       </div>
     );
   }
 
   const hasTransactions = metrics.count > 0;
-  const isExpenseOnly = hasTransactions && metrics.incomeCount === 0;
-  const isMixed = hasTransactions && metrics.incomeCount > 0 && metrics.expenseCount > 0;
 
-  // Compute decorative ring percentage
-  const totalReportedRows = metrics.incomeCount + metrics.expenseCount + metrics.unknownCount + metrics.refundCount;
-  const incomePercentage = totalReportedRows > 0 ? Math.round((metrics.incomeCount / totalReportedRows) * 100) : 0;
-
-  // Custom tooltips for Recharts
-  const CustomChartTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="premium-glass p-3 rounded-xl border border-border/30 text-xs shadow-2xl">
-          <p className="font-bold text-muted-foreground mb-1">{payload[0].payload.date}</p>
-          <p className="text-success font-semibold">Inflow: {formatCurrency(payload[0].value)}</p>
-          {payload[1] && <p className="text-risk font-semibold">Outflow: {formatCurrency(payload[1].value)}</p>}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const firstName = user?.user_metadata?.full_name 
-    ? user.user_metadata.full_name.split(' ')[0] 
-    : user?.email?.split('@')[0] || 'Guest';
+  const suggestedPrompts = [
+    { label: 'What changed this month?',        query: 'What changed this month?' },
+    { label: 'Show duplicate payments',          query: 'Show duplicate payments' },
+    { label: 'Which vendors need review?',       query: 'Which vendors need review?' },
+    { label: 'Generate an expense report',       query: 'Generate a monthly expense report' },
+    { label: 'Summarize risky spend',            query: 'Summarize risky spend' },
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 pb-32">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              {getTimeBasedGreeting(firstName)}
-            </h1>
-            <div className="px-2 py-0.5 bg-teal-500/10 text-teal-400 text-[10px] font-black rounded border border-teal-500/20 uppercase tracking-widest shadow-sm shadow-teal-500/5">
-              Live OS
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Spend-control summary for <span className="text-foreground font-semibold">{activeClient.name}</span>
-          </p>
-        </div>
-        
-        <div className="flex gap-2">
-          <button 
-            onClick={handleDownloadReport}
-            className="px-4 py-2.5 bg-muted/40 text-foreground hover:bg-muted/80 rounded-xl text-xs font-semibold flex items-center gap-2 border border-border/50 transition-all cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" /> Download Report
-          </button>
-          <button 
-            onClick={handleAddTransactionClick}
-            className="px-4 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-xs flex items-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-primary/10"
-          >
-            <Plus className="w-3.5 h-3.5" /> Add Transaction
-          </button>
-        </div>
-      </div>
+    <div className="space-y-7 animate-kaeo-fade pb-16">
 
+      {/* ── Page Header ── */}
+      <PageHeader
+        title="Finance Command Center"
+        description={`Spend overview, risks, and report readiness for ${activeClient.name}`}
+        badge={{ label: 'Live', variant: 'default' }}
+        primaryAction={{
+          label: 'Import Data',
+          onClick: () => navigate('/files'),
+          icon: <Upload className="w-4 h-4" />
+        }}
+        secondaryAction={{
+          label: 'Generate Report',
+          onClick: handleDownloadReport,
+          icon: <Download className="w-4 h-4" />
+        }}
+      />
+
+      {/* ── Profile completion prompt ── */}
       {needsProfileCompletion && !isProfileCardDismissed && (
-        <div className="p-4 bg-teal-500/5 border border-teal-500/20 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-top-2">
+        <div className="kaeo-card p-4 flex items-start justify-between gap-4"
+          style={{ borderLeft: '3px solid var(--primary)' }}>
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5 animate-pulse">
-              <Sparkles className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(15,118,110,0.10)' }}>
+              <Sparkles className="w-4 h-4" style={{ color: 'var(--primary)' }} />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-foreground">Complete business profile</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Kaeo and Libby can give better suggestions if you add industry, accounting tool, and spend range.
+              <h4 className="text-[13px] font-semibold mb-0.5">Complete your business profile</h4>
+              <p className="text-[12px]" style={{ color: 'var(--muted-foreground)' }}>
+                Add industry, accounting tool, and spend range for better AI suggestions.
               </p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
-            <button
-              onClick={() => {
-                localStorage.setItem(`kaeo_profile_dismiss_${activeClient.id}`, 'true');
-                setIsProfileCardDismissed(true);
-              }}
-              className="text-xs text-muted-foreground hover:text-foreground font-semibold px-2 py-1 transition-colors"
-            >
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button onClick={() => { localStorage.setItem(`kaeo_profile_dismiss_${activeClient.id}`, 'true'); setIsProfileCardDismissed(true); }}
+              className="text-[12px] font-medium cursor-pointer transition-colors"
+              style={{ color: 'var(--muted-foreground)' }}>
               Dismiss
             </button>
             <button
-              onClick={() => {
-                setModalMode(accountMode === 'business_owner' ? 'edit_business' : 'edit_client_business');
-                setClientToEdit(activeClient);
-                setIsCreateModalOpen(true);
-              }}
-              className="px-3.5 py-1.5 bg-primary text-primary-foreground font-bold rounded-xl text-xs hover:opacity-90 transition-all shadow-md shadow-primary/10 cursor-pointer"
-            >
+              onClick={() => { setModalMode(accountMode === 'business_owner' ? 'edit_business' : 'edit_client_business'); setClientToEdit(activeClient); setIsCreateModalOpen(true); }}
+              className="btn-primary btn-sm">
               Complete profile
             </button>
           </div>
         </div>
       )}
 
-      {/* Top Financial KPI Row — 5 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
-        {/* Revenue */}
-        <div 
-          onClick={() => navigate('/transactions?type=income')}
-          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Revenue</span>
-            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
-              <ArrowDownLeft className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl font-black text-success">
-              {hasTransactions ? formatCurrency(metrics.income) : '—'}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none">
-              {hasTransactions ? `${metrics.incomeCount} transactions` : 'No revenue data'}
-            </p>
-          </div>
-        </div>
-
-        {/* Refunds */}
-        <div 
-          onClick={() => navigate('/transactions?type=refund')}
-          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Refunds</span>
-            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
-              <Clock className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl font-black text-success">
-              {hasTransactions ? formatCurrency(metrics.refunds) : '—'}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none">
-              {hasTransactions ? `${metrics.refundCount} transactions` : 'No refund data'}
-            </p>
-          </div>
-        </div>
-
-        {/* Expenses */}
-        <div 
+      {/* ── KPI Row — 4 primary cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard
+          title="Total Spend"
+          value={hasTransactions ? formatCurrency(metrics.expenses) : '—'}
+          description={hasTransactions ? `${metrics.expenseCount} expense transactions` : 'No expense data'}
+          icon={<ArrowUpRight className="w-4 h-4" />}
+          accentColor="danger"
+          valueClassName="text-[#C2413A] text-2xl font-bold"
           onClick={() => navigate('/transactions?type=expense')}
-          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Expenses</span>
-            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl font-black text-risk">
-              {hasTransactions ? formatCurrency(metrics.expenses) : '—'}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none">
-              {hasTransactions ? `${metrics.expenseCount} transactions` : 'No expense data'}
-            </p>
-          </div>
-        </div>
-
-        {/* Net Cash Movement */}
-        <div 
-          onClick={() => navigate('/transactions')}
-          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Net Cash Movement</span>
-            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
-              <DollarSign className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div>
-            <div className={`text-2xl font-black ${hasTransactions ? (metrics.net >= 0 ? 'text-success' : 'text-risk') : 'text-foreground'}`}>
-              {hasTransactions ? formatCurrency(metrics.net) : '—'}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none">
-              Net flow for this period
-            </p>
-          </div>
-        </div>
-
-        {/* Transactions count */}
-        <div 
-          onClick={() => navigate('/transactions')}
-          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Transactions</span>
-            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
-              <Layers className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl font-black text-foreground">
-              {hasTransactions ? metrics.count : '—'}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none">
-              Total ingested entries
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Control Metric Row — 3 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        {/* Open Risks */}
-        <div 
+        />
+        <MetricCard
+          title="Revenue"
+          value={hasTransactions ? formatCurrency(metrics.income) : '—'}
+          description={hasTransactions ? `${metrics.incomeCount} income transactions` : 'No revenue data'}
+          icon={<ArrowDownLeft className="w-4 h-4" />}
+          accentColor="success"
+          valueClassName="text-[#168A5B] text-2xl font-bold"
+          onClick={() => navigate('/transactions?type=income')}
+        />
+        <MetricCard
+          title="Open Risks"
+          value={metrics.openRisksCount}
+          description={metrics.openRisksCount > 0
+            ? (metrics.duplicateExposure > 0 ? `${formatCurrency(metrics.duplicateExposure)} duplicate exposure` : 'Needs review')
+            : 'No compliance issues'}
+          icon={<ShieldAlert className="w-4 h-4" />}
+          accentColor={metrics.openRisksCount > 0 ? 'danger' : 'success'}
+          valueClassName={`text-2xl font-bold ${metrics.openRisksCount > 0 ? 'text-[#C2413A]' : 'text-[#168A5B]'}`}
           onClick={() => navigate('/risk-inbox')}
-          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Open Risks</span>
-            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
-              <ShieldAlert className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div>
-            <div className={`text-2xl font-black ${metrics.openRisksCount > 0 ? 'text-risk' : 'text-success'}`}>
-              {metrics.openRisksCount}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none truncate">
-              {metrics.openRisksCount > 0 
-                ? (metrics.duplicateExposure > 0 ? `${formatCurrency(metrics.duplicateExposure)} duplicate exposure` : 'Risks need review') 
-                : 'No compliance issues'}
-            </p>
-          </div>
-        </div>
-
-        {/* Needs Review */}
-        <div 
-          onClick={() => navigate('/transactions?review=pending')}
-          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Needs Review</span>
-            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
-              <Clock className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div>
-            <div className={`text-2xl font-black ${metrics.unreviewedCount > 0 ? 'text-amber-500' : 'text-success'}`}>
-              {metrics.unreviewedCount}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none truncate">
-              {metrics.unreviewedCount > 0 ? 'Transactions needing validation' : 'All entries reviewed'}
-            </p>
-          </div>
-        </div>
-
-        {/* Uncategorized & Unknown */}
-        <div 
-          onClick={() => navigate('/transactions?category=uncategorized')}
-          className="premium-glass p-5 rounded-2xl border border-border/20 hover:border-border/35 flex flex-col justify-between cursor-pointer group transition-all duration-200 h-[130px]"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Uncategorized & Unknown</span>
-            <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground">
-              <FileText className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div>
-            <div className={`text-2xl font-black ${(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'text-amber-500' : 'text-success'}`}>
-              {metrics.uncategorizedCount + metrics.unknownCount}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-none truncate">
-              {(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'Pending category mapping' : 'All transactions mapped'}
-            </p>
-          </div>
-        </div>
+        />
+        <MetricCard
+          title="Net Flow"
+          value={hasTransactions ? formatCurrency(metrics.net) : '—'}
+          description="Income minus expenses"
+          icon={<DollarSign className="w-4 h-4" />}
+          accentColor={metrics.net >= 0 ? 'success' : 'danger'}
+          valueClassName={`text-2xl font-bold ${hasTransactions ? (metrics.net >= 0 ? 'text-[#168A5B]' : 'text-[#C2413A]') : 'text-[var(--foreground)]'}`}
+          onClick={() => navigate('/transactions')}
+        />
       </div>
 
-      {/* Main Content Area */}
-      {hasTransactions ? (
-        <>
-          {/* What Needs Attention Panel */}
-          <div className="premium-glass rounded-2xl p-6 border border-border/20 shadow-xl space-y-6">
-            <div className="flex flex-col border-b border-border/25 pb-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-foreground">What needs attention</h3>
-                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">
-                  Priority Tasks
+      {/* ── Secondary metrics row ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard
+          title="Needs Review"
+          value={metrics.unreviewedCount}
+          description={metrics.unreviewedCount > 0 ? 'Transactions needing validation' : 'All entries reviewed'}
+          icon={<Clock className="w-4 h-4" />}
+          accentColor={metrics.unreviewedCount > 0 ? 'warning' : 'success'}
+          valueClassName={`text-2xl font-bold ${metrics.unreviewedCount > 0 ? 'text-[#B7791F]' : 'text-[#168A5B]'}`}
+          onClick={() => navigate('/transactions?review=pending')}
+        />
+        <MetricCard
+          title="Uncategorized"
+          value={metrics.uncategorizedCount + metrics.unknownCount}
+          description={(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'Pending category mapping' : 'All transactions mapped'}
+          icon={<FileText className="w-4 h-4" />}
+          accentColor={(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'warning' : 'success'}
+          valueClassName={`text-2xl font-bold ${(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'text-[#B7791F]' : 'text-[#168A5B]'}`}
+          onClick={() => navigate('/transactions?category=uncategorized')}
+        />
+        <MetricCard
+          title="Total Transactions"
+          value={hasTransactions ? metrics.count.toLocaleString() : '—'}
+          description={`${metrics.uploadsCount} file${metrics.uploadsCount !== 1 ? 's' : ''} imported`}
+          icon={<Layers className="w-4 h-4" />}
+          accentColor="primary"
+          onClick={() => navigate('/transactions')}
+        />
+        <MetricCard
+          title="Readiness Score"
+          value={readiness ? `${readiness.score}%` : '—'}
+          description={readiness && readiness.score >= 90 ? 'Ready to export' : 'Action items remaining'}
+          icon={<CheckCircle2 className="w-4 h-4" />}
+          accentColor={readiness && readiness.score >= 90 ? 'success' : 'warning'}
+          valueClassName={`text-2xl font-bold ${readiness ? (readiness.score >= 90 ? 'text-[#168A5B]' : 'text-[#B7791F]') : 'text-[var(--foreground)]'}`}
+          onClick={() => navigate('/reports')}
+        />
+      </div>
+
+      {/* ── Main content: Chart + Risk Snapshot ── */}
+      {hasTransactions && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Cash Flow Chart */}
+          <SectionCard
+            title="Cash Flow Overview"
+            description="Last 15 days of inflow and outflow activity"
+            className="lg:col-span-2"
+            action={
+              <div className="flex items-center gap-4 text-[11px]">
+                <span className="flex items-center gap-1.5" style={{ color: '#168A5B' }}>
+                  <span className="w-2 h-2 rounded-full" style={{ background: '#168A5B' }} /> Inflow
+                </span>
+                <span className="flex items-center gap-1.5" style={{ color: '#C2413A' }}>
+                  <span className="w-2 h-2 rounded-full" style={{ background: '#C2413A' }} /> Outflow
                 </span>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Start here when you want to clean up this month’s books.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Left Column: Task Rows */}
-              <div className="space-y-3.5">
-                {/* 1. Open Risks */}
-                <div 
-                  onClick={() => navigate('/risk-inbox')}
-                  className="flex items-center justify-between p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-1.5 h-1.5 rounded-full ${metrics.openRisksCount > 0 ? 'bg-risk' : 'bg-success'}`} />
-                    <span className="text-xs font-semibold text-foreground">
-                      {metrics.openRisksCount > 0 ? `${metrics.openRisksCount} open risks` : 'No open risks flagged'}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors font-medium">
-                    {metrics.openRisksCount > 0 ? 'Resolve risks →' : 'Verified'}
-                  </span>
-                </div>
-
-                {/* 2. Transactions Needing Review */}
-                <div 
-                  onClick={() => navigate('/transactions?review=pending')}
-                  className="flex items-center justify-between p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-1.5 h-1.5 rounded-full ${metrics.unreviewedCount > 0 ? 'bg-amber-500' : 'bg-success'}`} />
-                    <span className="text-xs font-semibold text-foreground">
-                      {metrics.unreviewedCount > 0 ? `${metrics.unreviewedCount} transactions need review` : 'All transactions reviewed'}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors font-medium">
-                    {metrics.unreviewedCount > 0 ? 'Review entries →' : 'Verified'}
-                  </span>
-                </div>
-
-                {/* 3. Uncategorized & Unknown rows */}
-                <div 
-                  onClick={() => navigate('/transactions?category=uncategorized')}
-                  className="flex items-center justify-between p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-1.5 h-1.5 rounded-full ${(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'bg-amber-500' : 'bg-success'}`} />
-                    <span className="text-xs font-semibold text-foreground">
-                      {(metrics.uncategorizedCount + metrics.unknownCount) > 0 
-                        ? `${metrics.uncategorizedCount + metrics.unknownCount} uncategorized or unknown rows` 
-                        : 'All transactions categorized'}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors font-medium">
-                    {(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'Map categories →' : 'Verified'}
-                  </span>
-                </div>
-
-                {/* 4. Accountant pack status */}
-                <div 
-                  onClick={() => navigate('/reports')}
-                  className="flex items-center justify-between p-3 bg-white/5 border border-border/20 rounded-xl hover:bg-white/10 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-1.5 h-1.5 rounded-full ${readiness?.score && readiness.score >= 90 ? 'bg-success' : 'bg-amber-500'}`} />
-                    <span className="text-xs font-semibold text-foreground">
-                      {readiness?.score && readiness.score >= 90 ? 'Accountant pack is ready to export' : 'Accountant pack is still draft'}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors font-medium">
-                    View reports →
-                  </span>
-                </div>
-              </div>
-
-              {/* Right Column: Explainer and CTAs */}
-              <div className="flex flex-col justify-between bg-white/5 p-4 rounded-xl border border-border/20">
-                <div className="space-y-2">
-                  <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Quick Actions</h4>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">
-                    Start with the items blocking month-end readiness.
-                  </p>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => navigate('/risk-inbox')}
-                      className="px-4 py-2 bg-teal-500 text-black font-bold rounded-xl text-xs hover:bg-teal-400 transition-all cursor-pointer shadow-lg shadow-teal-500/10"
-                    >
-                      Open Risk Inbox
-                    </button>
-                    <button
-                      onClick={() => navigate('/transactions?review=pending')}
-                      className="px-4 py-2 bg-white/5 hover:bg-white/10 text-foreground font-semibold rounded-xl text-xs transition-colors border border-border/30 cursor-pointer"
-                    >
-                      Review Transactions
-                    </button>
-                    <button
-                      onClick={() => {
-                        const event = new CustomEvent('open-ask-libby', { detail: { query: 'What should I fix first?' } });
-                        window.dispatchEvent(event);
-                      }}
-                      className="px-4 py-2 bg-white/5 hover:bg-white/10 text-foreground font-semibold rounded-xl text-xs transition-colors border border-border/30 cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-teal-400" />
-                      Ask Libby
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-4 pt-2.5 border-t border-border/20">
-                    {sugMetrics.pending > 0 && (
-                      <button
-                        onClick={() => setIsAIQueueOpen(true)}
-                        className="text-xs font-bold text-teal-400 hover:text-teal-300 transition-colors flex items-center gap-1.5 cursor-pointer bg-transparent border-0 p-0"
-                      >
-                        <Sparkles className="w-3 h-3 text-teal-400" /> Prepare AI Review
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Cash Flow Timeline Chart */}
-          {chartData.length > 0 && (
-            <div className="premium-glass rounded-2xl p-6 border border-border/20 shadow-xl space-y-4">
-              <div className="flex items-center justify-between border-b border-border/20 pb-3">
-                <div>
-                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Cash Flow Timeline</h3>
-                </div>
-                <div className="flex items-center gap-4 text-[10px] font-bold">
-                  <span className="flex items-center gap-1.5 text-success">
-                    <span className="w-1.5 h-1.5 rounded-full bg-success" /> Inflow
-                  </span>
-                  <span className="flex items-center gap-1.5 text-risk">
-                    <span className="w-1.5 h-1.5 rounded-full bg-risk" /> Outflow
-                  </span>
-                </div>
-              </div>
-
-              <div className="h-56 w-full mt-2">
+            }
+          >
+            {chartData.length > 0 ? (
+              <div className="h-56 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                  <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="inflowGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--chart-stop-inflow)" stopOpacity={0.15}/>
-                        <stop offset="95%" stopColor="var(--chart-stop-inflow)" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#168A5B" stopOpacity={0.12}/>
+                        <stop offset="95%" stopColor="#168A5B" stopOpacity={0}/>
                       </linearGradient>
                       <linearGradient id="outflowGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--chart-stop-outflow)" stopOpacity={0.15}/>
-                        <stop offset="95%" stopColor="var(--chart-stop-outflow)" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#C2413A" stopOpacity={0.10}/>
+                        <stop offset="95%" stopColor="#C2413A" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--chart-grid)" />
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="var(--chart-label)" 
-                      fontSize={9} 
-                      tickLine={false} 
-                      axisLine={false} 
-                    />
-                    <YAxis 
-                      stroke="var(--chart-label)" 
-                      fontSize={9} 
-                      tickLine={false} 
-                      axisLine={false}
-                      tickFormatter={(value) => `${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
-                    />
+                    <XAxis dataKey="date" stroke="var(--chart-label)" fontSize={10} tickLine={false} axisLine={false} />
+                    <YAxis stroke="var(--chart-label)" fontSize={10} tickLine={false} axisLine={false}
+                      tickFormatter={v => `${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
                     <Tooltip content={<CustomChartTooltip />} />
-                    <Area 
-                      type="monotone" 
-                      dataKey="inflow" 
-                      stroke="var(--chart-stroke-inflow)" 
-                      strokeWidth={1.5}
-                      fillOpacity={1} 
-                      fill="url(#inflowGrad)" 
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="outflow" 
-                      stroke="var(--chart-stroke-outflow)" 
-                      strokeWidth={1.5}
-                      fillOpacity={1} 
-                      fill="url(#outflowGrad)" 
-                    />
+                    <Area type="monotone" dataKey="inflow" stroke="#168A5B" strokeWidth={1.75} fillOpacity={1} fill="url(#inflowGrad)" />
+                    <Area type="monotone" dataKey="outflow" stroke="#C2413A" strokeWidth={1.75} fillOpacity={1} fill="url(#outflowGrad)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </div>
-          )}
-
-          {/* File Interpretation and Strategic Insights Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4 border-t border-border/20">
-            {/* File Interpretation / Import Summary */}
-            <div className="premium-glass rounded-2xl p-6 border border-border/20 shadow-xl space-y-5">
-              <div className="flex items-center gap-3 border-b border-border/25 pb-4">
-                <div className="p-2 bg-teal-500/10 border border-teal-500/20 rounded-xl shrink-0 shadow-sm">
-                  <img src={aeLogo} alt="Kaeo logo" className="w-5 h-5 object-contain" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">File Interpretation</h3>
-                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-0.5">Import Summary</p>
-                </div>
+            ) : (
+              <div className="h-40 flex items-center justify-center">
+                <p className="text-[13px]" style={{ color: 'var(--muted-foreground)' }}>No chart data yet</p>
               </div>
+            )}
+          </SectionCard>
 
-              <div className="flex flex-col md:flex-row gap-6 items-start">
-                <div className="flex-1 space-y-4">
-                  <p className="text-xs text-muted-foreground leading-relaxed font-medium">
-                    {isExpenseOnly ? (
-                      <>Kaeo detected this as an <span className="text-foreground font-bold">expense-only ledger</span>. To run cash flow comparisons, ingest an invoice register or a bank statement containing deposit logs.</>
-                    ) : isMixed ? (
-                      <>Kaeo detected a <span className="text-foreground font-bold">mixed income and expense register</span>. Multi-dimensional workspace categorizations are fully synchronized.</>
-                    ) : (
-                      <>Kaeo categorized your ledger. You can inspect composition details and make adjustments below.</>
-                    )}
-                  </p>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-border/20 pt-4">
-                    <div className="flex flex-col">
-                      <span className="text-[9px] font-bold text-muted-foreground uppercase">Income rows</span>
-                      <span className="text-xs font-bold text-success mt-0.5">{metrics.incomeCount}</span>
-                    </div>
-                    {metrics.refundCount > 0 && (
-                      <div className="flex flex-col">
-                        <span className="text-[9px] font-bold text-muted-foreground uppercase">Refund rows</span>
-                        <span className="text-xs font-bold text-success mt-0.5">{metrics.refundCount}</span>
-                      </div>
-                    )}
-                    <div className="flex flex-col">
-                      <span className="text-[9px] font-bold text-muted-foreground uppercase">Expense rows</span>
-                      <span className="text-xs font-bold text-risk mt-0.5">{metrics.expenseCount}</span>
-                    </div>
-                    {metrics.unknownCount > 0 && (
-                      <div 
-                        onClick={() => navigate('/transactions?type=unknown')}
-                        className="flex flex-col cursor-pointer hover:opacity-80 transition-all group"
-                      >
-                        <span className="text-[9px] font-bold text-muted-foreground group-hover:text-primary uppercase">Unknown rows</span>
-                        <span className="text-xs font-bold text-muted-foreground mt-0.5 group-hover:text-primary">{metrics.unknownCount}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* SVG Ring */}
-                <div className="hidden sm:flex items-center justify-center shrink-0 p-1.5 bg-white/5 border border-border/20 rounded-full">
-                  <div className="relative w-16 h-16">
-                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                      <path
-                        className="text-white/5"
-                        strokeWidth="2.5"
-                        stroke="currentColor"
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                      <path
-                        className="text-success"
-                        strokeWidth="2.5"
-                        strokeDasharray={`${incomePercentage}, 100`}
-                        stroke="currentColor"
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                      <span className="text-[10px] font-bold">{incomePercentage}%</span>
-                      <span className="text-[6px] font-bold text-muted-foreground uppercase leading-none font-semibold">Inflow</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Strategic Insights */}
-            <div className="premium-glass rounded-2xl p-6 border border-border/20 shadow-xl space-y-4 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2 border-b border-border/25 pb-4 mb-4">
-                  <Info className="w-4 h-4 text-muted-foreground" />
-                  <h3 className="text-sm font-bold text-foreground">Strategic Insights</h3>
-                </div>
-                <ul className="space-y-3.5 text-xs text-muted-foreground font-semibold leading-relaxed">
-                  {metrics.topVendor.amount > 0 && (
-                    <li className="flex gap-2.5 items-start">
-                      <span className="text-primary mt-0.5">•</span>
-                      <span>
-                        <strong className="text-foreground">{metrics.topVendor.name}</strong> is your largest expense destination ({formatCurrency(metrics.topVendor.amount)} total).
-                      </span>
-                    </li>
-                  )}
-                  <li className="flex gap-2.5 items-start">
-                    <span className="text-primary mt-0.5">•</span>
-                    <span>
-                      <strong className="text-foreground">{formatCurrency(metrics.duplicateExposure)}</strong> duplicate exposure needs review.
-                    </span>
-                  </li>
-                  <li className="flex gap-2.5 items-start">
-                    <span className="text-primary mt-0.5">•</span>
-                    <span>
-                      <strong className="text-foreground">{metrics.uncategorizedCount}</strong> transactions are uncategorized.
-                    </span>
-                  </li>
-                  {metrics.unreviewedCount > 0 && (
-                    <li className="flex gap-2.5 items-start">
-                      <span className="text-primary mt-0.5">•</span>
-                      <span>
-                        <strong className="text-foreground">{metrics.unreviewedCount}</strong> transactions need review.
-                      </span>
-                    </li>
-                  )}
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Lower Collapsible Sections */}
-          <div className="space-y-4 pt-4 border-t border-border/20">
-            {/* Collapsible Recent Activity */}
-            <div className="premium-glass rounded-2xl border border-border/20 overflow-hidden shadow-md">
-              <button
-                onClick={() => setShowRecentActivity(!showRecentActivity)}
-                className="w-full px-6 py-4 flex items-center justify-between bg-white/2 hover:bg-white/5 transition-all text-left"
-              >
-                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                  Recent Activity
-                </h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground font-semibold">
-                    {showRecentActivity ? 'Collapse' : 'Expand'}
-                  </span>
-                  {showRecentActivity ? (
-                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  )}
-                </div>
+          {/* Risk Snapshot */}
+          <SectionCard
+            title="Risk Snapshot"
+            description="Open issues by category"
+            action={
+              <button onClick={() => navigate('/risk-inbox')}
+                className="text-[12px] font-medium flex items-center gap-1 transition-colors"
+                style={{ color: 'var(--primary)' }}>
+                View all <ChevronRight className="w-3.5 h-3.5" />
               </button>
-
-              {showRecentActivity && (
-                <div className="border-t border-border/10 divide-y divide-border/10 bg-white/2">
-                  {recentTransactions.map((tx) => {
-                    const isIncome = ['income', 'refund'].includes(tx.type);
-                    const isExpense = ['expense', 'vendor_payment', 'subscription'].includes(tx.type);
-                    const isFailed = ['failed', 'failed_payment'].includes(tx.type);
-                    
-                    let badgeClass = 'bg-muted/30 text-muted-foreground border-border/40';
-                    if (isIncome) badgeClass = 'bg-success/10 text-success border-success/20';
-                    else if (isExpense || isFailed) badgeClass = 'bg-risk/10 text-risk border-risk/20';
-
-                    let textClass = 'text-muted-foreground';
-                    if (isIncome) textClass = 'text-success';
-                    else if (isExpense || isFailed) textClass = 'text-risk';
-
-                    return (
-                      <div key={tx.id} className="px-6 py-3 flex items-center justify-between hover:bg-white/5 transition-colors group">
-                        <div className="flex items-center gap-3.5 min-w-0">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${badgeClass}`}>
-                            {isExpense ? <ArrowUpRight className="w-3.5 h-3.5" /> : isIncome ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-xs font-semibold truncate text-foreground group-hover:text-primary transition-colors">
-                              {tx.description}
-                            </div>
-                            <div className="text-[8px] font-black tracking-widest uppercase text-muted-foreground/60 mt-0.5">
-                              {tx.type.replace('_', ' ')}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className={`text-xs font-bold ${textClass}`}>
-                            {isIncome ? '+' : isExpense ? '-' : ''}{formatCurrency(Math.abs(tx.amount))}
-                          </div>
-                          <div className="text-[9px] text-muted-foreground mt-0.5">
-                            {new Date(tx.transaction_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div className="px-6 py-3 bg-white/2 flex justify-end">
-                    <button 
-                      onClick={() => navigate('/transactions')}
-                      className="text-[10px] font-black text-teal-400 hover:text-teal-300 uppercase tracking-widest cursor-pointer bg-transparent border-none outline-none"
-                    >
-                      View Full Ledger
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Collapsible Workspace Signals & Legend */}
-            <div className="premium-glass rounded-2xl border border-border/20 overflow-hidden shadow-md">
-              <button
-                onClick={() => setShowWorkspaceDetails(!showWorkspaceDetails)}
-                className="w-full px-6 py-4 flex items-center justify-between bg-white/2 hover:bg-white/5 transition-all text-left"
-              >
-                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <Layers className="w-3.5 h-3.5 text-muted-foreground" />
-                  Workspace Signals & Legend
-                </h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground font-semibold">
-                    {showWorkspaceDetails ? 'Collapse' : 'Expand'}
-                  </span>
-                  {showWorkspaceDetails ? (
-                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  )}
-                </div>
-              </button>
-
-              {showWorkspaceDetails && (
-                <div className="border-t border-border/10 p-6 bg-white/2 space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Workspace Signals */}
-                    <div className="premium-glass rounded-xl p-5 border border-border/20 space-y-3">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                        Workspace Signals
-                      </h4>
-                      <div className="grid grid-cols-1 gap-2">
-                        <div 
-                          onClick={() => navigate('/vendors')}
-                          className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
-                        >
-                          <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Unique Vendors</span>
-                          <span className="font-bold text-foreground group-hover/item:text-primary">{metrics.uniqueVendorsCount} active</span>
-                        </div>
-                        <div 
-                          onClick={() => navigate('/files')}
-                          className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
-                        >
-                           <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Invoice Matching Status</span>
-                           <span className="font-bold text-foreground group-hover/item:text-primary">
-                             {metrics.totalInvoicesCount > 0 ? `${metrics.matchedInvoicesCount} / ${metrics.totalInvoicesCount} matched` : "0 pending"}
-                           </span>
-                        </div>
-                        <div 
-                          onClick={() => navigate('/files')}
-                          className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
-                        >
-                          <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Imported Bank Sheets</span>
-                          <span className="font-bold text-foreground group-hover/item:text-primary">{metrics.uploadsCount} statement files</span>
-                        </div>
-                        <div 
-                          onClick={() => navigate('/settings?tab=spend-rules')}
-                          className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
-                        >
-                          <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Active Compliance Rules</span>
-                          <span className="font-bold text-foreground group-hover/item:text-primary">{metrics.rulesActiveCount} rules active</span>
-                        </div>
-                        <div 
-                          onClick={() => navigate('/libby')}
-                          className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20 hover:border-border/30 transition-all cursor-pointer group/item"
-                        >
-                          <span className="font-semibold text-muted-foreground group-hover/item:text-foreground">Libby Suggestions</span>
-                          <span className="font-bold text-foreground group-hover/item:text-primary">
-                            {metrics.suggestionsCount > 0 ? `${metrics.suggestionsCount} tips ready` : "No issues"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Intelligence Legend */}
-                    <div className="p-5 bg-white/2 rounded-xl border border-border/20 space-y-2 flex flex-col justify-center">
-                      <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-2">Intelligence Legend</h4>
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold">
-                          <div className="w-1.5 h-1.5 rounded-full bg-success" />
-                          Income: Verified revenue entries
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold">
-                          <div className="w-1.5 h-1.5 rounded-full bg-risk" />
-                          Expenses: Direct outflow entries
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold">
-                          <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
-                          Unknown: Uncategorized context
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-
-            {/* Collapsible Launch Checklist */}
-            <div className="premium-glass rounded-2xl border border-border/20 overflow-hidden shadow-md">
-              <button
-                onClick={() => setShowChecklist(!showChecklist)}
-                className="w-full px-6 py-4 flex items-center justify-between bg-white/2 hover:bg-white/5 transition-all text-left"
-              >
-                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-muted-foreground" />
-                  Launch Checklist & Roadmap
-                </h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground font-semibold">
-                    {showChecklist ? 'Collapse' : 'Expand'}
-                  </span>
-                  {showChecklist ? (
-                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  )}
-                </div>
-              </button>
-
-              {showChecklist && (
-                <div className="border-t border-border/10 p-6 bg-white/2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Launch Checklist */}
-                  <div className="premium-glass rounded-xl p-5 border border-border/20 space-y-4">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-foreground">Launch Checklist</h4>
-                    <div className="space-y-3 pt-1">
-                      {/* 1. Create Workspace */}
-                      <div className="flex items-start gap-2.5 text-xs text-foreground/80">
-                        <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-bold line-through text-muted-foreground">Create workspace</span>
-                          <span className="text-[9px] text-muted-foreground/60">Workspace configured</span>
-                        </div>
-                      </div>
-
-                      {/* 2. Upload First Statement */}
-                      <div className="flex items-start gap-2.5 text-xs text-foreground/80">
-                        {metrics.count > 0 ? (
-                          <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
-                            <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
-                          </div>
-                        ) : (
-                          <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
-                        )}
-                        <div className="flex flex-col">
-                          <span className={metrics.count > 0 ? "font-bold line-through text-muted-foreground" : "font-bold text-foreground"}>Upload first statement</span>
-                          {metrics.count > 0 ? (
-                            <span className="text-[9px] text-muted-foreground/60">Uploaded {metrics.count} rows</span>
-                          ) : (
-                            <Link to="/files" className="text-[9px] text-teal-400 hover:underline">Upload bank statement →</Link>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 3. Review Risks */}
-                      <div className="flex items-start gap-2.5 text-xs text-foreground/80">
-                        {metrics.count > 0 && metrics.openRisksCount === 0 ? (
-                          <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
-                            <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
-                          </div>
-                        ) : (
-                          <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
-                        )}
-                        <div className="flex flex-col">
-                          <span className={metrics.count > 0 && metrics.openRisksCount === 0 ? "font-bold line-through text-muted-foreground" : "font-bold text-foreground"}>Review risks</span>
-                          {metrics.openRisksCount > 0 ? (
-                            <Link to="/risk-inbox" className="text-[9px] text-teal-400 hover:underline">Resolve {metrics.openRisksCount} active risks →</Link>
-                          ) : (
-                            <span className="text-[9px] text-muted-foreground/60">No pending risks</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 4. Categorize Unknown Rows */}
-                      <div className="flex items-start gap-2.5 text-xs text-foreground/80">
-                        {metrics.count > 0 && metrics.uncategorizedCount === 0 ? (
-                          <div className="w-4 h-4 rounded border border-teal-500 bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
-                            <svg className="w-2.5 h-2.5 fill-none stroke-[3] stroke-current" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
-                          </div>
-                        ) : (
-                          <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
-                        )}
-                        <div className="flex flex-col">
-                          <span className={metrics.count > 0 && metrics.uncategorizedCount === 0 ? "font-bold line-through text-muted-foreground" : "font-bold text-foreground"}>Categorize unknown rows</span>
-                          {metrics.uncategorizedCount > 0 ? (
-                            <Link to="/transactions?category=uncategorized" className="text-[9px] text-teal-400 hover:underline">Categorize {metrics.uncategorizedCount} rows →</Link>
-                          ) : (
-                            <span className="text-[9px] text-muted-foreground/60">All rows categorized</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 5. Generate Accountant Pack */}
-                      <div className="flex items-start gap-2.5 text-xs text-foreground/80">
-                        <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
-                        <div className="flex flex-col">
-                          <span className="font-bold text-foreground">Generate accountant pack</span>
-                          <Link to="/reports" className="text-[9px] text-teal-400 hover:underline">Generate pack →</Link>
-                        </div>
-                      </div>
-
-                      {/* 6. Ask Libby for Next Action */}
-                      <div className="flex items-start gap-2.5 text-xs text-foreground/80">
-                        <div className="w-4 h-4 rounded border border-border bg-muted/20 shrink-0 mt-0.5" />
-                        <div className="flex flex-col">
-                          <span className="font-bold text-foreground">Ask Libby for next action</span>
-                          <Link to="/libby" className="text-[9px] text-teal-400 hover:underline">Consult Libby Advisor →</Link>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Integration Roadmap */}
-                  <div className="premium-glass rounded-xl p-5 border border-border/20 space-y-4">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-foreground">Integration Roadmap</h4>
-                    <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      Future capabilities planned for the active Kaeo Spend Control network.
-                    </p>
-                    <div className="grid grid-cols-1 gap-2">
-                      <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20">
-                        <span className="font-bold text-foreground/85">Bank Feed Integrations</span>
-                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase">Coming Soon</span>
-                      </div>
-                      <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20">
-                        <span className="font-bold text-foreground/85">Tally &amp; Zoho Sync</span>
-                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase">Planned</span>
-                      </div>
-                      <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20">
-                        <span className="font-bold text-foreground/85">Approval Workflows</span>
-                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase">Coming Soon</span>
-                      </div>
-                      <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20">
-                        <span className="font-bold text-foreground/85">UPI Payment Controls</span>
-                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase">Planned</span>
-                      </div>
-                      <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20">
-                        <span className="font-bold text-foreground/85">Card/Spend Policy Layer</span>
-                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase">Coming Soon</span>
-                      </div>
-                      <div className="flex justify-between items-center text-[10px] px-2.5 py-1.5 bg-white/2 rounded-lg border border-border/20">
-                        <span className="font-bold text-foreground/85">Accountant Collaboration</span>
-                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase">Planned</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      ) : (
-        /* Empty state: No financial ledger uploaded */
-        <div className="premium-glass border border-dashed border-border/40 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5 shadow-xl">
-          <div className="w-16 h-16 bg-teal-500/10 rounded-2xl flex items-center justify-center border border-teal-500/20 shadow-inner">
-            <FileText className="w-8 h-8 text-teal-400/40" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-lg font-bold tracking-tight">Upload your first statement to see your spend-control dashboard.</h3>
-            <p className="text-xs text-muted-foreground max-w-sm font-medium">
-              Upload and import a transaction sheet to activate AI CFO insights.
-            </p>
-          </div>
-          <button 
-            onClick={() => navigate('/files')}
-            className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 transition-all shadow-xl shadow-primary/20 cursor-pointer"
+            }
           >
-            Upload CSV/XLSX
-          </button>
+            {riskSnapshot.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-2">
+                <CheckCircle2 className="w-8 h-8" style={{ color: '#168A5B', opacity: 0.6 }} />
+                <p className="text-[13px] font-medium" style={{ color: '#168A5B' }}>No open risks</p>
+                <p className="text-[11px] text-center" style={{ color: 'var(--muted-foreground)' }}>
+                  Run a risk scan to detect issues
+                </p>
+                <button onClick={() => navigate('/risk-inbox')} className="btn-secondary btn-sm mt-1">
+                  Open Risk Inbox
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {riskSnapshot.map((group, i) => (
+                  <div key={i}
+                    onClick={() => navigate('/risk-inbox')}
+                    className="flex items-center justify-between gap-3 py-2 cursor-pointer rounded-lg px-1 transition-colors group"
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--muted)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${group.severity === 'critical' || group.severity === 'high' ? 'risk-dot-critical' : group.severity === 'medium' ? 'risk-dot-medium' : 'risk-dot-low'}`} />
+                      <span className="text-[13px] font-medium truncate capitalize" style={{ color: 'var(--foreground)' }}>
+                        {group.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full"
+                        style={{ background: 'rgba(194,65,58,0.08)', color: '#C2413A' }}>
+                        {group.count}
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--muted-foreground)' }} />
+                    </div>
+                  </div>
+                ))}
+                {metrics.openRisksCount > 0 && (
+                  <div className="pt-2 border-t border-[var(--border)]">
+                    <p className="text-[12px]" style={{ color: 'var(--muted-foreground)' }}>
+                      Total exposure: <span className="font-semibold" style={{ color: '#C2413A' }}>
+                        {formatCurrency(metrics.duplicateExposure)}
+                      </span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </SectionCard>
         </div>
       )}
 
-      {/* Add Manual Transaction Modal */}
-      {isAddTxOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
-          onClick={() => setIsAddTxOpen(false)}
-        >
-          <div 
-            className="w-full max-w-lg premium-floating-panel rounded-3xl p-6 shadow-2xl relative my-8 animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button 
-              onClick={() => setIsAddTxOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
+      {/* ── Ask Kaeo Panel ── */}
+      <SectionCard
+        title="Ask Kaeo"
+        description="Get instant answers about your finances — powered by AI"
+        action={
+          <button onClick={() => navigate('/libby')} className="btn-secondary btn-sm">
+            Open Ask Kaeo
+          </button>
+        }
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          {suggestedPrompts.map((prompt, i) => (
+            <button
+              key={i}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('open-ask-libby', { detail: { query: prompt.query } }));
+              }}
+              className="text-left px-3.5 py-3 rounded-xl border border-[var(--border)] transition-all cursor-pointer group"
+              style={{ background: 'var(--muted)' }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(15,118,110,0.06)';
+                e.currentTarget.style.borderColor = 'rgba(15,118,110,0.20)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'var(--muted)';
+                e.currentTarget.style.borderColor = 'var(--border)';
+              }}
             >
-              <X className="w-4 h-4" />
+              <Sparkles className="w-3.5 h-3.5 mb-1.5 transition-colors" style={{ color: 'var(--primary)' }} />
+              <span className="text-[12px] font-medium leading-snug block" style={{ color: 'var(--foreground)' }}>
+                {prompt.label}
+              </span>
             </button>
-            
-            <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 mb-3">
-              <Plus className="w-5 h-5 text-primary" />
-            </div>
-            
-            <h3 className="text-base font-bold text-foreground mb-1">Add Manual Transaction</h3>
-            <p className="text-xs text-muted-foreground mb-5">
-              Record an offline or manual financial flow. The risk engine will automatically analyze it against uploaded bills.
-            </p>
-            
-            <form onSubmit={handleSaveManualTx} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Date */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Transaction Date</label>
-                  <input 
-                    type="date"
-                    required
-                    value={manualTxDate}
-                    onChange={(e) => setManualTxDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
-                  />
-                </div>
+          ))}
+        </div>
+      </SectionCard>
 
-                {/* Flow Type */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Flow Type</label>
-                  <select
-                    value={manualTxType}
-                    onChange={(e) => setManualTxType(e.target.value as any)}
-                    className="w-full px-3 py-2 bg-[#161a18] border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="expense">Expense (Outflow)</option>
-                    <option value="income">Revenue / Sales (Inflow)</option>
-                    <option value="refund">Refund / Recovery (Inflow)</option>
-                    <option value="unknown">Unknown Outflow</option>
+      {/* ── Recent Transactions ── */}
+      {recentTransactions.length > 0 && (
+        <SectionCard
+          title="Recent Transactions"
+          description="Latest imported and manually-added entries"
+          action={
+            <button onClick={() => navigate('/transactions')}
+              className="text-[12px] font-medium flex items-center gap-1"
+              style={{ color: 'var(--primary)' }}>
+              View all <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          }
+          noPadding
+        >
+          <div className="overflow-x-auto">
+            <table className="kaeo-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Category</th>
+                  <th className="text-right">Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentTransactions.map(tx => {
+                  const amtVal = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+                    ? Number(tx.amount_in_base_currency) : Number(tx.amount);
+                  const isInflow = amtVal > 0;
+                  const category = getDisplayCategory(tx);
+                  return (
+                    <tr key={tx.id}
+                      onClick={() => navigate(`/transactions?search=${encodeURIComponent(tx.description || '')}`)}
+                      className="cursor-pointer">
+                      <td className="td-muted whitespace-nowrap">
+                        {tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'}
+                      </td>
+                      <td>
+                        <div>
+                          <p className="text-[13px] font-medium truncate max-w-[220px]" style={{ color: 'var(--foreground)' }}>
+                            {tx.counterparty_name || tx.description || 'Unnamed'}
+                          </p>
+                          {tx.counterparty_name && tx.description && (
+                            <p className="text-[11px] truncate max-w-[220px]" style={{ color: 'var(--muted-foreground)' }}>
+                              {tx.description}
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="text-[12px] px-2 py-0.5 rounded font-medium"
+                          style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+                          {category}
+                        </span>
+                      </td>
+                      <td className="td-amount">
+                        <span style={{ color: isInflow ? '#168A5B' : '#C2413A' }}>
+                          {isInflow ? '+' : ''}{formatCurrency(amtVal)}
+                        </span>
+                      </td>
+                      <td>
+                        <StatusChip variant={reviewStatusToVariant(tx.review_status)} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </SectionCard>
+      )}
+
+      {/* ── Add Transaction Modal ── */}
+      {isAddTxOpen && (
+        <div className="kaeo-modal-overlay" onClick={() => setIsAddTxOpen(false)}>
+          <div className="kaeo-modal" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-[17px] font-semibold">Add Manual Transaction</h2>
+              <button onClick={() => setIsAddTxOpen(false)} className="p-1.5 rounded-lg transition-colors cursor-pointer"
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--muted)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                <span style={{ color: 'var(--muted-foreground)' }}>✕</span>
+              </button>
+            </div>
+            <form onSubmit={handleSaveManualTx} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: 'var(--muted-foreground)' }}>Date</label>
+                  <input type="date" className="kaeo-input" value={manualTxDate} onChange={e => setManualTxDate(e.target.value)} required />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: 'var(--muted-foreground)' }}>Type</label>
+                  <select className="kaeo-input" value={manualTxType} onChange={e => setManualTxType(e.target.value as any)}>
+                    <option value="expense">Expense</option>
+                    <option value="income">Income</option>
+                    <option value="refund">Refund</option>
+                    <option value="unknown">Unknown</option>
                   </select>
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Amount */}
-                <div className="space-y-1.5 col-span-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Amount (INR)</label>
-                  <input 
-                    type="number"
-                    required
-                    step="0.01"
-                    min="0.01"
-                    placeholder="5,000.00"
-                    value={manualTxAmt}
-                    onChange={(e) => setManualTxAmt(e.target.value)}
-                    className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
-                  />
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: 'var(--muted-foreground)' }}>Description</label>
+                <input type="text" className="kaeo-input" placeholder="Transaction description" value={manualTxDesc} onChange={e => setManualTxDesc(e.target.value)} required />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: 'var(--muted-foreground)' }}>Amount (₹)</label>
+                  <input type="number" min="0" step="0.01" className="kaeo-input" placeholder="0.00" value={manualTxAmt} onChange={e => setManualTxAmt(e.target.value)} required />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: 'var(--muted-foreground)' }}>Vendor</label>
+                  <input type="text" className="kaeo-input" placeholder="Vendor name (optional)" value={manualTxVendor} onChange={e => setManualTxVendor(e.target.value)} />
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Vendor / Counterparty */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Vendor / Counterparty</label>
-                  <input 
-                    type="text"
-                    placeholder="e.g. AWS, Stripe, Google"
-                    value={manualTxVendor}
-                    onChange={(e) => setManualTxVendor(e.target.value)}
-                    className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
-                  />
-                </div>
-
-                {/* Audit / Internal Note */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Audit / Internal Note</label>
-                  <input 
-                    type="text"
-                    placeholder="Optional memo..."
-                    value={manualTxNote}
-                    onChange={(e) => setManualTxNote(e.target.value)}
-                    className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
-                  />
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description</label>
-                <input 
-                  type="text"
-                  required
-                  placeholder="e.g. Github Copilot subscription"
-                  value={manualTxDesc}
-                  onChange={(e) => setManualTxDesc(e.target.value)}
-                  className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
-                />
-              </div>
-
-              {/* Category */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</label>
-                  {manualTxDesc && (
-                    <span className="text-[8px] font-black uppercase text-teal-400 bg-teal-500/10 px-1 py-0.2 rounded border border-teal-500/20">Auto suggested</span>
-                  )}
-                </div>
-                <select
-                  value={manualTxCat}
-                  onChange={(e) => setManualTxCat(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#161a18] border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary"
-                >
-                  {ALL_CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: 'var(--muted-foreground)' }}>
+                  Category <span className="font-normal normal-case tracking-normal">(AI-suggested: <span style={{ color: 'var(--primary)' }}>{manualTxCat}</span>)</span>
+                </label>
+                <select className="kaeo-input" value={manualTxCat} onChange={e => setManualTxCat(e.target.value)}>
+                  {ALL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-
-              <div className="flex gap-3 border-t border-border/20 pt-4 mt-6">
-                <button 
-                  type="button"
-                  onClick={() => setIsAddTxOpen(false)}
-                  disabled={manualTxSaving}
-                  className="flex-1 py-2.5 bg-card hover:bg-muted text-foreground font-semibold rounded-xl text-xs transition-colors border border-border/40"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  disabled={manualTxSaving}
-                  className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-xl text-xs hover:opacity-90 transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
-                >
-                  {manualTxSaving ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Save Transaction
-                    </>
-                  )}
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: 'var(--muted-foreground)' }}>Review Note</label>
+                <input type="text" className="kaeo-input" placeholder="Optional note" value={manualTxNote} onChange={e => setManualTxNote(e.target.value)} />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setIsAddTxOpen(false)} className="btn-secondary flex-1">Cancel</button>
+                <button type="submit" disabled={manualTxSaving} className="btn-primary flex-1 justify-center">
+                  {manualTxSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Transaction'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-      <AIReviewQueueModal 
-        isOpen={isAIQueueOpen} 
-        onClose={() => setIsAIQueueOpen(false)} 
-        onRefreshParent={fetchDashboardData} 
-      />
+
+      {/* AI Queue Modal */}
+      {isAIQueueOpen && (
+        <AIReviewQueueModal
+          isOpen={isAIQueueOpen}
+          onClose={() => setIsAIQueueOpen(false)}
+          onRefreshParent={fetchDashboardData}
+        />
+      )}
     </div>
   );
 };
