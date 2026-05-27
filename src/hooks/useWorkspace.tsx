@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
 import { trackUsageEvent } from '../lib/billing';
@@ -270,6 +270,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [user]);
 
+  const lastFetchedUserIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!user) {
       setOrganizations([]);
@@ -278,9 +280,13 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setActiveClientState(null);
       setProfile(null);
       setError(null);
+      lastFetchedUserIdRef.current = null;
       return;
     }
-    fetchWorkspaces();
+    if (user.id !== lastFetchedUserIdRef.current) {
+      lastFetchedUserIdRef.current = user.id;
+      fetchWorkspaces();
+    }
   }, [user, fetchWorkspaces]);
 
   const fetchClientsForOrg = async (orgId: string) => {
