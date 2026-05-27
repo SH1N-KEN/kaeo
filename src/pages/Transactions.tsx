@@ -33,13 +33,8 @@ import { trackAuditEvent } from '../lib/auditEngine';
 import { AIReviewQueueModal } from '../components/ai/AIReviewQueueModal';
 import { applyReviewSuggestion } from '../lib/reviewActions';
 import { Sparkles } from 'lucide-react';
-import { formatINR } from '../lib/formatters';
+import { formatCurrency, formatSignedCurrency } from '../lib/formatters';
 import { useWorkspaceRefresh } from '../hooks/useWorkspaceRefresh';
-
-// ── Shared currency formatter ────────────────────────────────────────────────
-function formatCurrency(amount: number, _currencyCode: string = 'INR', forceSign: boolean = false): string {
-  return formatINR(amount, { showSign: forceSign });
-}
 
 // ── Sort types ────────────────────────────────────────────────────────────────
 type SortKey = 'transaction_date' | 'description' | 'category' | 'amount' | 'type' | 'source_provider' | 'review_status' | 'counterparty_name';
@@ -506,9 +501,9 @@ const Transactions: React.FC = () => {
         <div className="flex gap-2.5 flex-shrink-0">
           <button
             onClick={() => setIsAIQueueOpen(true)}
-            className="btn-secondary flex items-center gap-1.5"
+            className="btn-secondary flex items-center gap-1.5 border-border/40 hover:bg-muted/30"
           >
-            <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--primary)' }} /> AI Suggestions
+            <Sparkles className="w-3.5 h-3.5 text-[var(--primary)]" /> AI Suggestions
           </button>
         </div>
       </div>
@@ -521,16 +516,16 @@ const Transactions: React.FC = () => {
       )}
 
       {/* ── Filter bar ── */}
-      <div className="kaeo-card p-4 space-y-3">
+      <div className="kaeo-card p-4 space-y-3.5 bg-card/40 border-border/30 backdrop-blur-md rounded-xl">
         {/* Row 1: search + type tabs */}
         <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
           {/* Search */}
           <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--muted-foreground)' }} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-muted-foreground" />
             <input
               type="text"
               placeholder="Search description, counterparty, category…"
-              className="kaeo-input pl-9"
+              className="kaeo-input pl-9 text-xs py-2 bg-background/50 border-border/30 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 rounded-lg"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -544,8 +539,8 @@ const Transactions: React.FC = () => {
                 onClick={() => setFilterType(t)}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold capitalize transition-all border cursor-pointer ${
                   filterType === t
-                    ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
-                    : 'border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]'
+                    ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm'
+                    : 'border-border/30 text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]'
                 }`}
                 style={filterType !== t ? { background: 'var(--card)' } : {}}
               >
@@ -559,32 +554,34 @@ const Transactions: React.FC = () => {
         <div className="flex flex-wrap gap-2 items-center">
           {/* Review status */}
           <select
-            className="kaeo-input" style={{ width: 'auto', fontSize: '12px', padding: '6px 10px' }}
+            className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
+            style={{ width: 'auto' }}
             value={filterReview}
             onChange={(e) => setFilterReview(e.target.value as ReviewFilter)}
           >
             <option value="all">All review statuses</option>
-              <option value="pending">Pending Review</option>
-              <option value="new">New</option>
-              <option value="needs_review">Needs Review</option>
-              <option value="reviewed">Reviewed</option>
-              <option value="ignored">Ignored</option>
-              <option value="resolved">Resolved</option>
-              <option value="ai_suggested">AI Suggested</option>
-              {filterReview === 'uncategorized' && (
-                <option value="uncategorized">Uncategorized</option>
-              )}
-              {filterReview === 'unknown' && (
-                <option value="unknown">Unknown Rows</option>
-              )}
-              {filterReview === 'high_value' && (
-                <option value="high_value">High-value expenses</option>
-              )}
+            <option value="pending">Pending Review</option>
+            <option value="new">New</option>
+            <option value="needs_review">Needs Review</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="ignored">Ignored</option>
+            <option value="resolved">Resolved</option>
+            <option value="ai_suggested">AI Suggested</option>
+            {filterReview === 'uncategorized' && (
+              <option value="uncategorized">Uncategorized</option>
+            )}
+            {filterReview === 'unknown' && (
+              <option value="unknown">Unknown Rows</option>
+            )}
+            {filterReview === 'high_value' && (
+              <option value="high_value">High-value expenses</option>
+            )}
           </select>
 
           {/* Category */}
           <select
-            className="kaeo-input" style={{ width: 'auto', fontSize: '12px', padding: '6px 10px' }}
+            className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
+            style={{ width: 'auto' }}
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
           >
@@ -596,7 +593,8 @@ const Transactions: React.FC = () => {
 
           {/* Date range */}
           <select
-            className="kaeo-input" style={{ width: 'auto', fontSize: '12px', padding: '6px 10px' }}
+            className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
+            style={{ width: 'auto' }}
             value={filterDateRange}
             onChange={(e) => setFilterDateRange(e.target.value as DateRange)}
           >
@@ -608,11 +606,11 @@ const Transactions: React.FC = () => {
           {/* Toggle More Filters */}
           <button
             onClick={() => setShowMoreFilters(prev => !prev)}
-            className="btn-secondary btn-sm flex items-center gap-1"
+            className="px-3 py-1.5 bg-background/50 hover:bg-background/80 border border-border/30 text-[11px] font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors"
           >
-            <Filter className="w-3 h-3" />
+            <Filter className="w-3 h-3 text-muted-foreground" />
             {showMoreFilters ? 'Fewer' : 'More'}
-            {showMoreFilters ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {showMoreFilters ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
 
           {/* Collapsible Advanced Filters */}
@@ -620,7 +618,8 @@ const Transactions: React.FC = () => {
             <div className="flex flex-wrap gap-2 items-center animate-kaeo-fade">
               {availableSources.length > 1 && (
                 <select
-                  className="kaeo-input" style={{ width: 'auto', fontSize: '12px', padding: '6px 10px' }}
+                  className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
+                  style={{ width: 'auto' }}
                   value={filterSource}
                   onChange={(e) => setFilterSource(e.target.value)}
                 >
@@ -631,7 +630,8 @@ const Transactions: React.FC = () => {
                 </select>
               )}
               <select
-                className="kaeo-input" style={{ width: 'auto', fontSize: '12px', padding: '6px 10px' }}
+                className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
+                style={{ width: 'auto' }}
                 value={filterAmountRange}
                 onChange={(e) => setFilterAmountRange(e.target.value as AmountRange)}
               >
@@ -645,10 +645,7 @@ const Transactions: React.FC = () => {
 
           {hasActiveFilters && (
             <button onClick={clearFilters}
-              className="flex items-center gap-1.5 text-[12px] font-medium cursor-pointer transition-colors"
-              style={{ color: 'var(--muted-foreground)' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--foreground)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted-foreground)')}
+              className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground cursor-pointer transition-colors ml-2"
             >
               <X className="w-3 h-3" /> Clear filters
             </button>
@@ -657,16 +654,16 @@ const Transactions: React.FC = () => {
       </div>
 
       {/* ── Summary strip ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Showing', value: `${filteredTransactions.length.toLocaleString()} / ${transactions.length}`, color: 'var(--foreground)' },
-          { label: 'Inflow', value: formatCurrency(summary.inflow, activeClient.base_currency || 'INR'), color: '#168A5B' },
-          { label: 'Outflow', value: formatCurrency(summary.outflow, activeClient.base_currency || 'INR'), color: '#C2413A' },
-          { label: 'Net', value: formatCurrency(summary.net, activeClient.base_currency || 'INR', true), color: summary.net >= 0 ? '#168A5B' : '#C2413A' },
+          { label: 'Inflow', value: formatCurrency(summary.inflow, activeClient.base_currency || 'INR'), color: 'var(--success)' },
+          { label: 'Outflow', value: formatCurrency(summary.outflow, activeClient.base_currency || 'INR'), color: 'var(--danger)' },
+          { label: 'Net', value: formatCurrency(summary.net, activeClient.base_currency || 'INR', true), color: summary.net >= 0 ? 'var(--success)' : 'var(--danger)' },
         ].map(s => (
-          <div key={s.label} className="kaeo-card p-4 text-center">
-            <p className="section-label mb-1.5">{s.label}</p>
-            <p className="text-[17px] font-bold tracking-tight" style={{ color: s.color }}>{s.value}</p>
+          <div key={s.label} className="kaeo-card p-4 rounded-xl bg-card/45 border-border/30 backdrop-blur-md flex flex-col items-center justify-center">
+            <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase mb-1">{s.label}</span>
+            <span className="text-lg font-bold tracking-tight" style={{ color: s.color }}>{s.value}</span>
           </div>
         ))}
       </div>
@@ -674,33 +671,36 @@ const Transactions: React.FC = () => {
       {/* ── Table ── */}
       {loading && transactions.length === 0 ? (
         <div className="kaeo-card h-[40vh] flex flex-col items-center justify-center gap-4">
-          <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--primary)' }} />
-          <p className="text-[13px] font-medium" style={{ color: 'var(--muted-foreground)' }}>Loading ledger…</p>
+          <Loader2 className="w-6 h-6 animate-spin text-[var(--primary)]" />
+          <p className="text-[13px] font-medium text-muted-foreground">Loading ledger…</p>
         </div>
       ) : transactions.length === 0 ? (
-        <div className="kaeo-card">
+        <div className="kaeo-card p-8 rounded-xl border-border/30">
           <EmptyState
-            icon={<UploadCloud className="w-7 h-7" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />}
-            title="No transactions yet"
-            description="Upload a bank statement or CSV to start reviewing your ledger."
-            action={{ label: 'Upload Files', onClick: () => {} }}
+            icon={<UploadCloud className="w-8 h-8 text-muted-foreground/50" />}
+            title="Upload a statement to start reviewing transactions."
+            description="Import a PDF bank statement or a CSV file to populate your ledger."
+            action={{ 
+              label: 'Go to Files', 
+              onClick: () => navigate('/files') 
+            }}
           />
         </div>
       ) : sortedTransactions.length === 0 ? (
-        <div className="kaeo-card">
+        <div className="kaeo-card p-8 rounded-xl border-border/30">
           <EmptyState
-            icon={<FileText className="w-7 h-7" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />}
+            icon={<FileText className="w-8 h-8 text-muted-foreground/50" />}
             title="No transactions match"
             description="Try adjusting or clearing your filters."
             action={{ label: 'Clear filters', onClick: clearFilters }}
           />
         </div>
       ) : (
-        <div className="kaeo-card overflow-hidden">
+        <div className="kaeo-card rounded-xl border-border/30 overflow-hidden shadow-sm bg-card/30 backdrop-blur-md">
           <div className="overflow-x-auto">
             <table className="kaeo-table min-w-[860px]">
               <thead>
-                <tr>
+                <tr className="bg-muted/30">
                   <th
                     className={thClass}
                     onClick={() => handleSort('transaction_date')}
@@ -771,27 +771,27 @@ const Transactions: React.FC = () => {
                   <th className="px-4 py-3 border-b border-border/50 w-10" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/40">
+              <tbody className="divide-y divide-border/10">
                 {sortedTransactions.map((tx) => {
                   const cat = tx._displayCategory as TransactionCategory;
                   const badge = getCategoryBadgeStyle(cat);
                   const isMenuOpen = openMenuId === tx.id;
-
+ 
                   return (
                     <tr
                       key={tx.id}
-                      className="group relative"
+                      className="group relative border-b border-border/10 hover:bg-muted/20 transition-colors duration-150"
                       onClick={() => { if (isMenuOpen) setOpenMenuId(null); }}
                     >
                       {/* Date */}
-                      <td className="whitespace-nowrap td-muted">
-                        {tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
+                      <td className="whitespace-nowrap td-muted px-4 py-3.5 text-xs text-muted-foreground font-medium">
+                        {tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                       </td>
-
+ 
                       {/* Counterparty + Description */}
-                      <td className="max-w-[280px]">
-                        <div className="space-y-0.5">
-                          <span className="text-[13px] font-semibold block truncate text-[var(--foreground)]">
+                      <td className="max-w-[280px] px-4 py-3.5">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[13px] font-bold block truncate text-[var(--foreground)]">
                             {tx.counterparty_name && tx.counterparty_name !== 'No counterparty' ? tx.counterparty_name : (tx.description?.split(' ')[0] || 'Unknown Vendor')}
                           </span>
                           <span className="text-[11px] block truncate text-[var(--muted-foreground)] font-normal" title={tx.description}>
@@ -799,16 +799,16 @@ const Transactions: React.FC = () => {
                           </span>
                         </div>
                       </td>
-
+ 
                       {/* Category badge */}
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3.5 whitespace-nowrap">
                         {(() => {
                           const categorySuggestion = suggestions.find(
                             s => s.entity_type === 'transaction' && 
                             s.entity_id === tx.id && 
                             s.suggestion_type === 'categorize_transaction'
                           );
-
+ 
                           if (categorySuggestion) {
                             return (
                               <div className="flex flex-col gap-1.5">
@@ -817,28 +817,28 @@ const Transactions: React.FC = () => {
                                 >
                                   {cat}
                                 </span>
-                                <div className="text-[10px] text-teal-400 font-bold bg-teal-500/10 px-2 py-1.5 rounded border border-teal-500/20 mt-1 flex flex-col gap-1.5">
+                                <div className="text-[10px] bg-primary/5 text-primary border border-primary/20 p-2 rounded-lg mt-1 flex flex-col gap-1.5">
                                   <button
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setSelectedSuggestion(categorySuggestion);
                                     }}
-                                    className="flex items-center justify-between gap-1 w-full text-left font-bold cursor-pointer hover:underline text-teal-400 bg-transparent border-none p-0"
+                                    className="flex items-center justify-between gap-1 w-full text-left font-bold cursor-pointer hover:underline text-primary bg-transparent border-none p-0"
                                   >
                                     <span className="flex items-center gap-1">
-                                      <Sparkles className="w-3 h-3 text-teal-400 animate-pulse" />
+                                      <Sparkles className="w-3 h-3 text-primary animate-pulse" />
                                       Suggested: {categorySuggestion.proposed_value.category}
                                     </span>
                                     <span className="text-[9px] underline opacity-80 shrink-0">View</span>
                                   </button>
-                                  <span className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-2">
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleApproveSuggestion(categorySuggestion);
                                       }}
-                                      className="px-2 py-0.5 bg-success text-black text-[9px] font-black rounded hover:bg-success/80 transition-all cursor-pointer"
+                                      className="px-2 py-0.5 bg-[var(--success)] text-white text-[9px] font-black rounded hover:bg-success/80 transition-all cursor-pointer"
                                     >
                                       Approve
                                     </button>
@@ -847,16 +847,16 @@ const Transactions: React.FC = () => {
                                         e.stopPropagation();
                                         handleRejectSuggestion(categorySuggestion);
                                       }}
-                                      className="px-2 py-0.5 bg-risk text-white text-[9px] font-black rounded hover:bg-risk/80 transition-all cursor-pointer"
+                                      className="px-2 py-0.5 bg-[var(--danger)] text-white text-[9px] font-black rounded hover:bg-risk/80 transition-all cursor-pointer"
                                     >
                                       Reject
                                     </button>
-                                  </span>
+                                  </div>
                                 </div>
                               </div>
                             );
                           }
-
+ 
                           return (
                             <span
                               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
@@ -866,9 +866,9 @@ const Transactions: React.FC = () => {
                           );
                         })()}
                       </td>
-
+ 
                       {/* Amount */}
-                      <td className="td-amount whitespace-nowrap">
+                      <td className="td-amount whitespace-nowrap px-4 py-3.5 text-right font-semibold text-[13px]">
                         {(() => {
                           const displayAmt = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
                             ? tx.amount_in_base_currency : tx.amount;
@@ -876,35 +876,36 @@ const Transactions: React.FC = () => {
                           const isOutflow = dirDerived === 'outflow' || (!dirDerived && Number(displayAmt) < 0);
                           const isTransfer = tx.type === 'transfer';
                           const isRefund = tx.type === 'refund';
-                          const amtColor = isTransfer ? '#2563EB' : isRefund ? '#0F766E' : isOutflow ? '#C2413A' : '#168A5B';
+                          const amtColor = isTransfer ? '#2563EB' : isRefund ? 'var(--accent)' : isOutflow ? 'var(--danger)' : 'var(--success)';
+                          const signedAmt = displayAmt === 0 ? 0 : (isOutflow ? -Math.abs(Number(displayAmt)) : Math.abs(Number(displayAmt)));
                           return (
                             <span className="text-[13px] font-semibold" style={{ color: amtColor }}>
-                              {isOutflow && !isRefund && !isTransfer ? '' : '+'}{formatCurrency(displayAmt, 'INR', true)}
+                              {formatSignedCurrency(signedAmt)}
                             </span>
                           );
                         })()}
                       </td>
-
+ 
                       {/* Confidence */}
-                      <td className="text-center whitespace-nowrap">
+                      <td className="text-center whitespace-nowrap px-4 py-3.5">
                         {(() => {
                           const conf = tx.raw_row_json?.intelligence?.intelligence_confidence || (tx.review_status === 'reviewed' ? 'high' : 'medium');
-                          const confCfg: Record<string, { label: string; bg: string; text: string; border: string }> = {
-                            high:   { label: 'High',   bg: 'bg-[rgba(22,138,91,0.06)]', text: 'text-[#168A5B]', border: 'border-[rgba(22,138,91,0.15)]' },
-                            medium: { label: 'Medium', bg: 'bg-[rgba(183,121,31,0.06)]', text: 'text-[#B7791F]', border: 'border-[rgba(183,121,31,0.15)]' },
-                            low:    { label: 'Low',    bg: 'bg-[rgba(194,65,58,0.06)]', text: 'text-[#C2413A]', border: 'border-[rgba(194,65,58,0.15)]' },
+                          const confCfg: Record<string, { label: string; style?: React.CSSProperties }> = {
+                            high:   { label: 'High',   style: { background: 'rgba(22, 138, 91, 0.06)', color: 'var(--success)', borderColor: 'rgba(22, 138, 91, 0.15)' } },
+                            medium: { label: 'Medium', style: { background: 'rgba(183, 121, 31, 0.06)', color: 'var(--warning)', borderColor: 'rgba(183, 121, 31, 0.15)' } },
+                            low:    { label: 'Low',    style: { background: 'rgba(194, 65, 58, 0.06)',  color: 'var(--danger)',  borderColor: 'rgba(194, 65, 58, 0.15)' } },
                           };
                           const cfg = confCfg[conf] || confCfg.medium;
                           return (
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border" style={cfg.style}>
                               {cfg.label}
                             </span>
                           );
                         })()}
                       </td>
-
+ 
                       {/* Risk */}
-                      <td className="text-center whitespace-nowrap">
+                      <td className="text-center whitespace-nowrap px-4 py-3.5">
                         {(() => {
                           const amtVal = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
                             ? Number(tx.amount_in_base_currency) : Number(tx.amount);
@@ -913,34 +914,34 @@ const Transactions: React.FC = () => {
                           const isUncategorized = cat === 'Uncategorized';
                           
                           let riskLabel = 'Clear';
-                          let riskClass = 'bg-[rgba(22,138,91,0.06)] text-[#168A5B] border-[rgba(22,138,91,0.15)]';
+                          let riskStyle: React.CSSProperties = { background: 'rgba(22, 138, 91, 0.06)', color: 'var(--success)', borderColor: 'rgba(22, 138, 91, 0.15)' };
                           
                           if (isMismatch) {
                             riskLabel = 'Balance Mismatch';
-                            riskClass = 'bg-[rgba(194,65,58,0.08)] text-[#C2413A] border-[rgba(194,65,58,0.18)]';
+                            riskStyle = { background: 'rgba(194, 65, 58, 0.08)', color: 'var(--danger)', borderColor: 'rgba(194, 65, 58, 0.18)' };
                           } else if (isHighValue) {
                             riskLabel = 'High-Value';
-                            riskClass = 'bg-[rgba(183,121,31,0.08)] text-[#B7791F] border-[rgba(183,121,31,0.18)]';
+                            riskStyle = { background: 'rgba(183, 121, 31, 0.08)', color: 'var(--warning)', borderColor: 'rgba(183, 121, 31, 0.18)' };
                           } else if (isUncategorized) {
                             riskLabel = 'Uncategorized';
-                            riskClass = 'bg-[rgba(93,107,102,0.08)] text-[#5D6B66] border-[rgba(93,107,102,0.18)]';
+                            riskStyle = { background: 'rgba(93, 107, 102, 0.08)', color: 'var(--muted-foreground)', borderColor: 'rgba(93, 107, 102, 0.18)' };
                           }
                           
                           return (
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${riskClass}`}>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border" style={riskStyle}>
                               {riskLabel}
                             </span>
                           );
                         })()}
                       </td>
-
+ 
                       {/* Review Status */}
-                      <td className="whitespace-nowrap">
+                      <td className="whitespace-nowrap px-4 py-3.5 text-center">
                         <ReviewBadge status={tx.review_status || 'new'} />
                       </td>
-
+ 
                       {/* Row actions */}
-                      <td className="text-right relative" style={{ padding: '12px 12px' }}>
+                      <td className="text-right relative px-4 py-3.5 w-10">
                         <button
                           className="p-1.5 rounded-lg transition-all cursor-pointer opacity-0 group-hover:opacity-100"
                           style={{ color: 'var(--muted-foreground)' }}
@@ -957,7 +958,7 @@ const Transactions: React.FC = () => {
                             <circle cx="16" cy="10" r="1.5" />
                           </svg>
                         </button>
-
+ 
                         {isMenuOpen && (
                           <div
                             className="absolute right-4 top-full mt-1 w-48 kaeo-popover z-50 animate-kaeo-scale"
@@ -1014,50 +1015,50 @@ const Transactions: React.FC = () => {
       {/* Selected Suggestion Detail Modal */}
       {selectedSuggestion && (
         <div className="kaeo-modal-overlay" onClick={() => setSelectedSuggestion(null)}>
-          <div className="kaeo-modal max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
+          <div className="kaeo-modal max-w-md bg-card/95 border-border/50 backdrop-blur-xl rounded-2xl p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-teal-400 animate-pulse" />
-                <h2 className="text-[17px] font-semibold">AI Review Suggestion</h2>
+                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                <h2 className="text-base font-bold text-foreground">AI Review Suggestion</h2>
               </div>
-              <button type="button" onClick={() => setSelectedSuggestion(null)} className="p-1.5 rounded-lg transition-colors cursor-pointer"
+              <button type="button" onClick={() => setSelectedSuggestion(null)} className="p-1.5 rounded-lg transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--muted)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                <span style={{ color: 'var(--muted-foreground)' }}>✕</span>
+                ✕
               </button>
             </div>
-
+ 
             <div className="space-y-4">
               {/* Info block */}
-              <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl p-4 space-y-2">
-                <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-teal-500/20 text-teal-400 border border-teal-500/30">
+              <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 space-y-1">
+                <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-primary/10 text-primary border border-primary/20">
                   {selectedSuggestion.suggestion_type.replace(/_/g, ' ')}
                 </span>
-                <h3 className="font-bold text-sm text-foreground mt-1">
+                <h3 className="font-bold text-sm text-foreground mt-1.5">
                   Categorize Transaction
                 </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   {selectedSuggestion.reason}
                 </p>
               </div>
-
+ 
               {/* Affected Transaction Details */}
-              <div className="bg-background/50 border border-border/50 rounded-xl p-4 space-y-2.5">
-                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 block">Affected Transaction</span>
+              <div className="bg-background/40 border border-border/30 rounded-xl p-4 space-y-2">
+                <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground/60 block">Affected Transaction</span>
                 {(() => {
                   const tx = transactions.find(t => t.id === selectedSuggestion.entity_id);
                   if (!tx) return <p className="text-xs text-muted-foreground">Transaction details not found.</p>;
                   return (
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between items-start">
-                        <span className="text-xs font-semibold text-foreground truncate max-w-[200px]" title={tx.description}>
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-xs font-bold text-foreground truncate max-w-[200px]" title={tx.description}>
                           {tx.counterparty_name || tx.description}
                         </span>
                         <span className="text-xs font-bold text-foreground">
                           {formatCurrency(tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined ? tx.amount_in_base_currency : tx.amount)}
                         </span>
                       </div>
-                      <div className="flex justify-between text-[11px] text-muted-foreground">
+                      <div className="flex justify-between text-[10px] text-muted-foreground/80">
                         <span>{tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN') : '—'}</span>
                         <span className="capitalize">{tx.type}</span>
                       </div>
@@ -1065,15 +1066,15 @@ const Transactions: React.FC = () => {
                   );
                 })()}
               </div>
-
+ 
               {/* Recommended Action */}
-              <div className="bg-muted/30 border border-border/30 rounded-xl p-4 space-y-1">
-                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 block">Recommended Action</span>
+              <div className="bg-muted/20 border border-border/20 rounded-xl p-4 space-y-1">
+                <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground/60 block">Recommended Action</span>
                 <p className="text-xs font-bold text-foreground">
-                  Update category to <span className="text-teal-400 font-extrabold">{selectedSuggestion.proposed_value?.category}</span>
+                  Update category to <span className="text-primary font-extrabold">{selectedSuggestion.proposed_value?.category}</span>
                 </p>
               </div>
-
+ 
               {/* Buttons */}
               <div className="flex flex-col gap-2 pt-2">
                 <div className="flex gap-2">
@@ -1083,7 +1084,7 @@ const Transactions: React.FC = () => {
                       handleApproveSuggestion(selectedSuggestion);
                       setSelectedSuggestion(null);
                     }}
-                    className="btn-primary flex-1 justify-center text-xs"
+                    className="btn-primary flex-1 justify-center text-xs py-2 rounded-xl"
                   >
                     Apply
                   </button>
@@ -1093,7 +1094,7 @@ const Transactions: React.FC = () => {
                       handleRejectSuggestion(selectedSuggestion);
                       setSelectedSuggestion(null);
                     }}
-                    className="btn-secondary flex-1 justify-center text-xs"
+                    className="btn-secondary flex-1 justify-center text-xs py-2 rounded-xl"
                   >
                     Ignore
                   </button>
