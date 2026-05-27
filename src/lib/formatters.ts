@@ -53,5 +53,30 @@ export const getCleanClientName = (name?: string | null): string => {
   if (trimmed === '') return 'No business selected';
   return trimmed;
 };
+export function formatCurrency(
+  amount: number | null | undefined,
+  currency = 'INR',
+  signed = false,
+): string {
+  const value = Number(amount ?? 0);
+  const absolute = signed ? Math.abs(value) : value;
 
+  const formatted = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 0,
+  }).format(absolute);
 
+  if (!signed || value === 0) {
+    return formatted;
+  }
+
+  return `${value > 0 ? '+' : '-'}${formatted}`;
+}
+
+export function formatSignedCurrency(
+  amount: number | null | undefined,
+  currency = 'INR',
+): string {
+  return formatCurrency(amount, currency, true);
+}
