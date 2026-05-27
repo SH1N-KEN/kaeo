@@ -182,86 +182,66 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const storedOrgId = localStorage.getItem(newOrgKey);
       const storedClientId = localStorage.getItem(newClientKey);
 
-      // Check all accessible clients to search specifically for "type shi"
-      const { data: allUserCls } = await supabase
-        .from('clients')
-        .select('*');
-
-      console.log('=== DEV DIAGNOSTICS ===');
-      console.log('User ID:', user.id);
-      console.log('Organizations:', orgs);
-      console.log('All visible clients:', allUserCls);
-      console.log('localStorage keys:', {
-        oldOrg: localStorage.getItem(oldOrgKey),
-        oldClient: localStorage.getItem(oldClientKey),
-        newOrg: localStorage.getItem(newOrgKey),
-        newClient: localStorage.getItem(newClientKey),
-      });
-
-      const typeShiClient = (allUserCls || []).find(c => 
-        (c.name?.toLowerCase().includes('type shi') || 
-        c.metadata?.business_name?.toLowerCase().includes('type shi')) &&
-        c.status?.toLowerCase() !== 'archived' &&
-        c.status?.toLowerCase() !== 'deleted'
-      );
-      if (typeShiClient) {
-        console.log('Found "type shi" client in DB:', typeShiClient);
-      } else {
-        console.log('"type shi" client NOT found in DB.');
-      }
-      console.log('========================');
-
       if (orgs && orgs.length > 0) {
-        let foundOrg = orgs.find(o => o.id === storedOrgId) || orgs[0];
-
-        // 4. Fetch Clients for resolved org
-        const { data: cls, error: clsError } = await supabase
+        // 4. Fetch ALL clients across ALL orgs the user belongs to.
+        //    This prevents businesses in non-primary orgs from going missing.
+        const { data: allCls, error: allClsError } = await supabase
           .from('clients')
           .select('*')
-          .eq('organization_id', foundOrg.id)
           .order('name');
 
-        if (clsError) {
-          console.error('useWorkspace: Error fetching clients:', clsError);
-          throw clsError;
+        if (allClsError) {
+          console.error('useWorkspace: Error fetching all clients:', allClsError);
+          throw allClsError;
         }
 
-        // Active clients are those not explicitly archived or deleted
-        const activeCls = (cls || []).filter(c => {
+        // Active clients = not explicitly archived or deleted
+        const allActiveCls = (allCls || []).filter(c => {
           const status = c.status?.toLowerCase();
           return status !== 'archived' && status !== 'deleted';
         });
-        
-        console.log('useWorkspace: Active clients found for org:', activeCls?.length || 0);
-        setClients(activeCls);
 
-        let resolvedClient = activeCls.find(c => c.id === storedClientId);
+        console.log('useWorkspace: Total active clients across all orgs:', allActiveCls.length);
+        console.log('useWorkspace: Client names:', allActiveCls.map(c => `${c.name} (org: ${c.organization_id})`));
 
-        // Auto-recovery / Select "type shi" if no valid client selection is stored and it exists
-        if (!resolvedClient && typeShiClient) {
-          const correspondingOrg = orgs.find(o => o.id === typeShiClient.organization_id);
-          if (correspondingOrg) {
-            foundOrg = correspondingOrg;
-            
-            // Re-fetch clients for type shi's org
-            const { data: tsCls } = await supabase
-              .from('clients')
-              .select('*')
-              .eq('organization_id', foundOrg.id)
-              .order('name');
-            
-            const activeTsCls = (tsCls || []).filter(c => {
-              const status = c.status?.toLowerCase();
-              return status !== 'archived' && status !== 'deleted';
-            });
-            setClients(activeTsCls);
-            resolvedClient = activeTsCls.find(c => c.id === typeShiClient.id) || typeShiClient;
-          }
+        // 5. Resolve active client: first try stored clientId across ALL clients.
+        //    If the stored client is in a different org than stored org, switch org to match.
+        let resolvedClient = allActiveCls.find(c => c.id === storedClientId) || null;
+
+        // Determine the active org: prefer org that owns the resolved client,
+        // then fall back to stored org, then first org.
+        let foundOrg: typeof orgs[0];
+        if (resolvedClient) {
+          // Switch to the org that owns the resolved client (cross-org recovery)
+          foundOrg = orgs.find(o => o.id === resolvedClient!.organization_id)
+            || orgs.find(o => o.id === storedOrgId)
+            || orgs[0];
+        } else {
+          foundOrg = orgs.find(o => o.id === storedOrgId) || orgs[0];
         }
 
-        // If no active client selected but activeCls exists, select the first one
-        if (!resolvedClient && activeCls.length > 0) {
-          resolvedClient = activeCls[0];
+        // 6. For the active org, collect that org's clients as the switcher list.
+        //    For business_owner mode: show all clients across all orgs (flat list).
+        //    For accountant mode: show clients for the active org only.
+        const modeFromProfile = profileData?.account_mode || (prof?.account_mode ?? null);
+        let clientsForSwitcher: typeof allActiveCls;
+        if (modeFromProfile === 'business_owner') {
+          // Business owners may have businesses spread across orgs (e.g. from re-onboarding bugs).
+          // Show all of them in the switcher so nothing is hidden.
+          clientsForSwitcher = allActiveCls;
+        } else {
+          // Accountants manage clients scoped to their active workspace org.
+          clientsForSwitcher = allActiveCls.filter(c => c.organization_id === foundOrg.id);
+        }
+
+        setClients(clientsForSwitcher);
+
+        // 7. If still no resolved client, pick the first from the switcher list.
+        if (!resolvedClient && clientsForSwitcher.length > 0) {
+          resolvedClient = clientsForSwitcher[0];
+          // Update foundOrg to match the auto-selected client
+          const autoOrg = orgs.find(o => o.id === resolvedClient!.organization_id);
+          if (autoOrg) foundOrg = autoOrg;
         }
 
         setActiveOrgState(foundOrg);
@@ -270,10 +250,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (resolvedClient) {
           setActiveClientState(resolvedClient);
           localStorage.setItem(newClientKey, resolvedClient.id);
-          console.log('useWorkspace: Resolved active client set to:', resolvedClient.name);
+          console.log('useWorkspace: Resolved active client:', resolvedClient.name, '| org:', foundOrg.name);
         } else {
           setActiveClientState(null);
           localStorage.removeItem(newClientKey);
+          console.log('useWorkspace: No active client resolved');
         }
       } else {
         console.log('useWorkspace: No organizations found for user');
@@ -347,6 +328,12 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setActiveClientState(client);
     if (client && user) {
       localStorage.setItem(`kaeo:${user.id}:activeClientId`, client.id);
+      // Also update the active org to match the client's org (cross-org client switching)
+      const clientOrg = organizations.find(o => o.id === client.organization_id);
+      if (clientOrg && clientOrg.id !== activeOrg?.id) {
+        setActiveOrgState(clientOrg);
+        localStorage.setItem(`kaeo:${user.id}:activeOrganizationId`, clientOrg.id);
+      }
     }
   };
 
