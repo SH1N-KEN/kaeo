@@ -88,21 +88,21 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false
           </div>
           {accountMode === 'business_owner' ? (
             <div className="flex flex-col items-start min-w-0 flex-1 justify-center">
-              <span className="truncate text-xs font-bold text-[#E8F0EE]">
+              <span className="truncate text-xs font-bold text-[var(--sidebar-foreground)]">
                 {displayName}
               </span>
             </div>
           ) : (
             <div className="flex flex-col items-start min-w-0 flex-1 text-left">
-              <span className="truncate text-[10px] text-[#7E9C98] uppercase tracking-wider font-bold">
+              <span className="truncate text-[10px] text-[var(--sidebar-foreground)] opacity-70 uppercase tracking-wider font-bold">
                 {getCleanClientName(activeOrg.name)}
               </span>
-              <span className="truncate text-xs text-[#E8F0EE]">
+              <span className="truncate text-xs text-[var(--sidebar-foreground)]">
                 {displayName}
               </span>
             </div>
           )}
-          <ChevronDown className={`w-4 h-4 text-[#7E9C98] transition-transform chevron-icon ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 text-[var(--sidebar-foreground)] opacity-70 transition-transform chevron-icon ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       )}
  
@@ -124,28 +124,28 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false
               <div className="px-1 py-1 space-y-0.5">
                 <button 
                   onClick={handleAddBusinessClick}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-left text-foreground font-semibold"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-[var(--muted)] transition-colors text-left text-foreground font-semibold"
                 >
                   <Plus className="w-3.5 h-3.5 text-primary" />
                   Add business
                 </button>
                 <button 
                   onClick={handleEditBusinessClick}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-left text-foreground"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-[var(--muted)] transition-colors text-left text-foreground"
                 >
                   <Edit3 className="w-3.5 h-3.5 text-muted-foreground" />
                   Edit business profile
                 </button>
                 <button 
                   onClick={() => { navigate('/files'); setIsOpen(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-left text-foreground"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-[var(--muted)] transition-colors text-left text-foreground"
                 >
                   <Upload className="w-3.5 h-3.5 text-muted-foreground" />
                   Upload files
                 </button>
                 <button 
                   onClick={() => { navigate('/settings'); setIsOpen(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-left text-foreground"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-[var(--muted)] transition-colors text-left text-foreground"
                 >
                   <Settings className="w-3.5 h-3.5 text-muted-foreground" />
                   Business settings
@@ -163,9 +163,9 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false
                       <button
                         key={client.id}
                         onClick={() => { setActiveClient(client); setIsOpen(false); }}
-                        className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-white/5 text-muted-foreground'}`}
+                        className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-[var(--muted)] text-muted-foreground'}`}
                       >
-                        <Briefcase className="w-3 h-3" />
+                        <Briefcase className="w-3.5 h-3.5" />
                         <span className="truncate flex-1 text-left">{getCleanClientName(client.name)}</span>
                         {activeClient?.id === client.id && <Check className="w-3 h-3" />}
                       </button>
@@ -185,7 +185,7 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false
               <div className="px-1 py-1 space-y-0.5">
                 <button 
                   onClick={() => { navigate('/settings'); setIsOpen(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-left text-foreground"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-[var(--muted)] transition-colors text-left text-foreground"
                 >
                   <Settings className="w-3.5 h-3.5 text-muted-foreground" />
                   Workspace settings
@@ -205,14 +205,14 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false
               <div className="px-1 py-1 space-y-0.5">
                 <button 
                   onClick={handleAddBusinessClick}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-left text-foreground font-semibold"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-[var(--muted)] transition-colors text-left text-foreground font-semibold"
                 >
                   <Plus className="w-3.5 h-3.5 text-primary" />
                   Add client business
                 </button>
                 <button 
                   onClick={() => { navigate('/settings?tab=clients'); setIsOpen(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-left text-foreground"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-[var(--muted)] transition-colors text-left text-foreground"
                 >
                   <Settings className="w-3.5 h-3.5 text-muted-foreground" />
                   Manage clients
@@ -220,7 +220,7 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false
                 {activeClient && (
                   <button 
                     onClick={() => { navigate('/files'); setIsOpen(false); }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors text-left text-foreground"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-[var(--muted)] transition-colors text-left text-foreground"
                   >
                     <Upload className="w-3.5 h-3.5 text-muted-foreground" />
                     Upload files for current client
@@ -239,9 +239,9 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false
                       <button
                         key={client.id}
                         onClick={() => { setActiveClient(client); setIsOpen(false); }}
-                        className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-white/5 text-muted-foreground'}`}
+                        className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${activeClient?.id === client.id ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-[var(--muted)] text-muted-foreground'}`}
                       >
-                        <Briefcase className="w-3 h-3" />
+                        <Briefcase className="w-3.5 h-3.5" />
                         <span className="truncate flex-1 text-left">{getCleanClientName(client.name)}</span>
                         {activeClient?.id === client.id && <Check className="w-3 h-3" />}
                       </button>

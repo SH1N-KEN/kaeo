@@ -246,7 +246,7 @@ const FloatingAskKaeo: React.FC = () => {
                 <Link
                   to="/libby"
                   onClick={() => setIsOpen(false)}
-                  className="p-2 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
+                  className="p-2 rounded-xl hover:bg-[var(--muted)] text-muted-foreground hover:text-foreground transition-colors"
                   title="Open Libby"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -254,7 +254,7 @@ const FloatingAskKaeo: React.FC = () => {
                 {hasRealMessages && (
                   <button
                     onClick={clearMessages}
-                    className="p-2 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    className="p-2 rounded-xl hover:bg-[var(--muted)] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     title="Clear chat"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -262,7 +262,7 @@ const FloatingAskKaeo: React.FC = () => {
                 )}
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-2 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  className="p-2 rounded-xl hover:bg-[var(--muted)] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   title="Close"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -320,7 +320,7 @@ const FloatingAskKaeo: React.FC = () => {
                         onClick={async () => {
                           await sendMessage(query);
                         }}
-                        className="w-full text-left px-3 py-2 bg-card hover:bg-white/5 text-foreground font-semibold rounded-xl border border-border/50 hover:border-emerald-500/30 text-xs transition-all cursor-pointer flex items-center justify-between group"
+                        className="w-full text-left px-3 py-2 bg-card hover:bg-[var(--muted)] text-foreground font-semibold rounded-xl border border-border/50 hover:border-emerald-500/30 text-xs transition-all cursor-pointer flex items-center justify-between group"
                       >
                         <span className="truncate pr-2">{query}</span>
                         <Sparkles className="w-3 h-3 text-muted-foreground group-hover:text-teal-400 transition-colors shrink-0" />

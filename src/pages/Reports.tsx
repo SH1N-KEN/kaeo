@@ -312,7 +312,7 @@ export default function Reports() {
                       </div>
                       <button
                         onClick={() => navigate(linkPath)}
-                        className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-foreground font-bold rounded-lg text-[10px] transition-colors border border-border/30 shrink-0 cursor-pointer"
+                        className="px-2.5 py-1.5 bg-[var(--surface-muted)] hover:bg-[var(--muted)] text-foreground font-bold rounded-lg text-[10px] transition-colors border border-border/30 shrink-0 cursor-pointer"
                       >
                         {linkText}
                       </button>

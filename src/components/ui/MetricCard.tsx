@@ -32,18 +32,18 @@ const MetricCard: React.FC<MetricCardProps> = ({
 }) => {
   const accentMap = {
     default: { icon: 'bg-[var(--muted)] text-[var(--muted-foreground)]' },
-    success: { icon: 'bg-[rgba(22,138,91,0.10)] text-[#168A5B]' },
-    danger:  { icon: 'bg-[rgba(194,65,58,0.10)] text-[#C2413A]' },
-    warning: { icon: 'bg-[rgba(183,121,31,0.10)] text-[#B7791F]' },
-    primary: { icon: 'bg-[rgba(15,118,110,0.10)] text-[#0F766E]' },
+    success: { icon: 'bg-[var(--success)]/10 text-[var(--success)]' },
+    danger:  { icon: 'bg-[var(--danger)]/10 text-[var(--danger)]' },
+    warning: { icon: 'bg-[var(--warning)]/10 text-[var(--warning)]' },
+    primary: { icon: 'bg-[var(--primary)]/10 text-[var(--primary)]' },
   };
 
   const valueColorMap = {
     default: 'text-[var(--foreground)]',
-    success: 'text-[#168A5B]',
-    danger:  'text-[#C2413A]',
-    warning: 'text-[#B7791F]',
-    primary: 'text-[#0F766E]',
+    success: 'text-[var(--success)]',
+    danger:  'text-[var(--danger)]',
+    warning: 'text-[var(--warning)]',
+    primary: 'text-[var(--primary)]',
   };
 
   const Tag = onClick ? 'button' : 'div';
@@ -65,8 +65,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
                 trend.isNeutral
                   ? 'bg-[var(--muted)] text-[var(--muted-foreground)]'
                   : trend.isPositive
-                    ? 'bg-[rgba(22,138,91,0.10)] text-[#168A5B]'
-                    : 'bg-[rgba(194,65,58,0.10)] text-[#C2413A]'
+                    ? 'bg-[var(--success)]/10 text-[var(--success)]'
+                    : 'bg-[var(--danger)]/10 text-[var(--danger)]'
               }`}
             >
               {!trend.isNeutral && (

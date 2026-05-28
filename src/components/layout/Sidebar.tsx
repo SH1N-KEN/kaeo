@@ -148,7 +148,7 @@ const Sidebar: React.FC = () => {
             {/* Subtle collapse button */}
             <button
               onClick={() => setCollapsed(true)}
-              className="p-1 rounded-lg text-[#7E9C98] hover:text-[#E8F0EE] hover:bg-[rgba(47,184,166,0.06)] transition-colors cursor-pointer"
+              className="p-1 rounded-lg text-[var(--sidebar-foreground)] opacity-70 hover:opacity-100 hover:bg-[var(--sidebar-active)] transition-colors cursor-pointer"
               title="Collapse sidebar"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -203,13 +203,11 @@ const Sidebar: React.FC = () => {
       </div>
 
       {/* ── Profile ── */}
-      <div className="p-3 relative border-t border-teal-500/5 mt-auto" ref={menuRef}>
+      <div className="p-3 relative border-t border-[var(--sidebar-border)] mt-auto" ref={menuRef}>
         <button
           onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-          className={`w-full flex items-center gap-2.5 p-2 rounded-xl transition-all cursor-pointer text-left group ${collapsed ? 'justify-center' : ''}`}
+          className={`w-full flex items-center gap-2.5 p-2 rounded-xl transition-all cursor-pointer text-left group ${collapsed ? 'justify-center' : ''} hover:bg-[var(--sidebar-active)]`}
           style={{ borderRadius: 10 }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(22, 38, 35, 0.4)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
           {/* Avatar */}
           <div
@@ -225,10 +223,10 @@ const Sidebar: React.FC = () => {
 
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-semibold text-[#E8F0EE] truncate leading-tight">
+              <p className="text-[13px] font-semibold text-[var(--sidebar-foreground)] truncate leading-tight">
                 {userName}
               </p>
-              <p className="text-[11px] text-[#7E9C98] truncate leading-none mt-0.5">
+              <p className="text-[11px] text-[var(--sidebar-foreground)] opacity-70 truncate leading-none mt-0.5">
                 {userEmail}
               </p>
             </div>

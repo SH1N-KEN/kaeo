@@ -703,7 +703,7 @@ const RiskInbox: React.FC = () => {
                                 navigate(`/transactions?search=${encodeURIComponent(selectedRisk.title || '')}`);
                               }
                             }}
-                            className="px-3 py-2 rounded-lg text-[10px] font-bold border bg-white/5 border-border/40 hover:border-primary/40 text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
+                            className="px-3 py-2 rounded-lg text-[10px] font-bold border bg-[var(--surface-muted)] border-border/40 hover:border-primary/40 text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
                           >
                             <span>Open Transaction</span>
                             <ArrowRight className="w-3 h-3 text-muted-foreground" />
@@ -714,7 +714,7 @@ const RiskInbox: React.FC = () => {
                               onClick={() => {
                                 navigate(`/vendors?search=${encodeURIComponent(selectedRisk.evidence_json.vendor_name)}`);
                               }}
-                              className="px-3 py-2 rounded-lg text-[10px] font-bold border bg-white/5 border-border/40 hover:border-primary/40 text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
+                              className="px-3 py-2 rounded-lg text-[10px] font-bold border bg-[var(--surface-muted)] border-border/40 hover:border-primary/40 text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
                             >
                               <span>Open Vendor</span>
                               <ArrowRight className="w-3 h-3 text-muted-foreground" />
@@ -726,7 +726,7 @@ const RiskInbox: React.FC = () => {
                               onClick={() => {
                                 navigate('/files?tab=invoices');
                               }}
-                              className="px-3 py-2 rounded-lg text-[10px] font-bold border bg-white/5 border-border/40 hover:border-primary/40 text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
+                              className="px-3 py-2 rounded-lg text-[10px] font-bold border bg-[var(--surface-muted)] border-border/40 hover:border-primary/40 text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
                             >
                               <span>Review Invoice</span>
                               <ArrowRight className="w-3 h-3 text-muted-foreground" />

@@ -418,7 +418,7 @@ const Vendors: React.FC = () => {
           >
             <button 
               onClick={() => setSelectedVendor(null)}
-              className="absolute top-4 right-4 p-1.5 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-xl hover:bg-[var(--muted)] text-muted-foreground hover:text-foreground transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
@@ -434,15 +434,15 @@ const Vendors: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-white/5 p-4 rounded-xl border border-border/20">
+              <div className="bg-[var(--surface-muted)] p-4 rounded-xl border border-border/20">
                 <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider block">Total Spend</span>
                 <span className="text-lg font-black text-risk">{formatCurrency(selectedVendor.total_spend)}</span>
               </div>
-              <div className="bg-white/5 p-4 rounded-xl border border-border/20">
+              <div className="bg-[var(--surface-muted)] p-4 rounded-xl border border-border/20">
                 <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider block">Recurrence Pattern</span>
                 <span className="text-lg font-black text-foreground capitalize">{selectedVendor.recurrence_pattern}</span>
               </div>
-              <div className="bg-white/5 p-4 rounded-xl border border-border/20">
+              <div className="bg-[var(--surface-muted)] p-4 rounded-xl border border-border/20">
                 <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider block">Recommendation</span>
                 <span className="text-sm font-black text-primary block mt-1">{getFriendlyRecommendation(selectedVendor.recommendation || 'review')}</span>
               </div>
@@ -450,7 +450,7 @@ const Vendors: React.FC = () => {
 
             {/* Recommendation Reason */}
             {selectedVendor.recommendation_reason && (
-              <div className="bg-white/5 p-4 rounded-xl border border-border/20 mb-6 space-y-1">
+              <div className="bg-[var(--surface-muted)] p-4 rounded-xl border border-border/20 mb-6 space-y-1">
                 <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">CFO Recommendation Notes</span>
                 <p className="text-xs text-foreground/90 leading-relaxed">{selectedVendor.recommendation_reason}</p>
               </div>
@@ -467,7 +467,7 @@ const Vendors: React.FC = () => {
                 ) : (
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                     {vendorTransactions.slice(0, 5).map(tx => (
-                      <div key={tx.id} className="p-2.5 bg-white/5 border border-border/20 rounded-xl flex items-center justify-between text-xs">
+                      <div key={tx.id} className="p-2.5 bg-[var(--surface-muted)] border border-border/20 rounded-xl flex items-center justify-between text-xs">
                         <div>
                           <p className="font-bold text-foreground truncate max-w-[150px]">{tx.description}</p>
                           <p className="text-[9px] text-muted-foreground">{new Date(tx.transaction_date).toLocaleDateString()}</p>

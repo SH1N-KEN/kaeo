@@ -434,7 +434,7 @@ const Settings: React.FC = () => {
 
                 <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1 custom-scrollbar">
                   {clients.map((c: any) => (
-                    <div key={c.id} className={`flex justify-between items-center text-xs p-1.5 rounded-lg border ${activeClient?.id === c.id ? 'border-primary/45 bg-primary/5 text-foreground' : 'border-border/10 bg-white/5 text-muted-foreground'}`}>
+                    <div key={c.id} className={`flex justify-between items-center text-xs p-1.5 rounded-lg border ${activeClient?.id === c.id ? 'border-primary/45 bg-primary/5 text-foreground' : 'border-border/10 bg-[var(--surface-muted)] text-muted-foreground'}`}>
                       <span className="font-semibold truncate max-w-[150px]">{c.name}</span>
                       <span className="text-[10px]">{c.industry || 'General'}</span>
                     </div>

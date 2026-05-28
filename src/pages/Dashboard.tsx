@@ -571,48 +571,6 @@ const Dashboard: React.FC = () => {
 
   const hasTransactions = metrics.count > 0;
 
-  const getSpendTrend = () => {
-    if (!hasTransactions || !trends.hasPrevPeriod) return undefined;
-    if (trends.prevSpend === 0) {
-      return trends.curSpend > 0 ? { label: 'New activity', isNeutral: true } : undefined;
-    }
-    const pct = ((trends.curSpend - trends.prevSpend) / trends.prevSpend) * 100;
-    if (pct === 0) return undefined;
-    if (pct < 0) {
-      return { value: Math.abs(pct), label: `${pct.toFixed(1)}%`, isPositive: true, direction: 'down' as const };
-    } else {
-      return { value: Math.abs(pct), label: `+${pct.toFixed(1)}%`, isPositive: false, direction: 'up' as const };
-    }
-  };
-
-  const getIncomeTrend = () => {
-    if (!hasTransactions || !trends.hasPrevPeriod) return undefined;
-    if (trends.prevIncome === 0) {
-      return trends.curIncome > 0 ? { label: 'New activity', isNeutral: true } : undefined;
-    }
-    const pct = ((trends.curIncome - trends.prevIncome) / trends.prevIncome) * 100;
-    if (pct === 0) return undefined;
-    if (pct > 0) {
-      return { value: pct, label: `+${pct.toFixed(1)}%`, isPositive: true, direction: 'up' as const };
-    } else {
-      return { value: Math.abs(pct), label: `${pct.toFixed(1)}%`, isPositive: false, direction: 'down' as const };
-    }
-  };
-
-  const getNetTrend = () => {
-    if (!hasTransactions || !trends.hasPrevPeriod) return undefined;
-    if (trends.prevNet === 0) {
-      return trends.curNet !== 0 ? { label: 'New activity', isNeutral: true } : undefined;
-    }
-    const pct = ((trends.curNet - trends.prevNet) / Math.abs(trends.prevNet)) * 100;
-    if (pct === 0) return undefined;
-    if (pct > 0) {
-      return { value: pct, label: `+${pct.toFixed(1)}%`, isPositive: true, direction: 'up' as const };
-    } else {
-      return { value: Math.abs(pct), label: `${pct.toFixed(1)}%`, isPositive: false, direction: 'down' as const };
-    }
-  };
-
   const getReadinessDesc = () => {
     if (!hasTransactions) return 'Upload data to calculate readiness';
     const risks = metrics.openRisksCount;
@@ -688,7 +646,7 @@ const Dashboard: React.FC = () => {
           title="Total Spend"
           value={hasTransactions ? formatCurrency(metrics.expenses) : '—'}
           description={hasTransactions ? (trends.hasPrevPeriod ? `${metrics.expenseCount} transactions this month (vs prev month)` : `${metrics.expenseCount} transactions from imported files`) : 'Upload a statement to begin review.'}
-          trend={getSpendTrend()}
+          trend={undefined}
           icon={<ArrowUpRight className="w-4 h-4" />}
           accentColor={hasTransactions ? 'danger' : 'default'}
           valueClassName={hasTransactions ? 'text-[var(--danger)] text-2xl font-bold' : 'text-[var(--muted-foreground)] text-2xl font-bold'}
@@ -698,7 +656,7 @@ const Dashboard: React.FC = () => {
           title="Money In"
           value={hasTransactions ? formatCurrency(metrics.income) : '—'}
           description={hasTransactions ? (trends.hasPrevPeriod ? `${metrics.incomeCount} transactions this month (vs prev month)` : `${metrics.incomeCount} transactions from imported files`) : 'Upload a statement to begin review.'}
-          trend={getIncomeTrend()}
+          trend={undefined}
           icon={<ArrowDownLeft className="w-4 h-4" />}
           accentColor={hasTransactions ? 'success' : 'default'}
           valueClassName={hasTransactions ? 'text-[var(--success)] text-2xl font-bold' : 'text-[var(--muted-foreground)] text-2xl font-bold'}
@@ -718,7 +676,7 @@ const Dashboard: React.FC = () => {
           title="Net Flow"
           value={hasTransactions ? formatCurrency(metrics.net) : '—'}
           description={hasTransactions ? (trends.hasPrevPeriod ? 'Net income minus expenses (vs prev month)' : 'Income minus expenses') : 'Upload a statement to begin review.'}
-          trend={getNetTrend()}
+          trend={undefined}
           icon={<DollarSign className="w-4 h-4" />}
           accentColor={hasTransactions ? (metrics.net >= 0 ? 'success' : 'danger') : 'default'}
           valueClassName={hasTransactions ? `text-2xl font-bold ${metrics.net >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}` : 'text-[var(--muted-foreground)] text-2xl font-bold'}
