@@ -88,21 +88,21 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false
           </div>
           {accountMode === 'business_owner' ? (
             <div className="flex flex-col items-start min-w-0 flex-1 justify-center">
-              <span className="truncate text-xs font-bold text-foreground">
+              <span className="truncate text-xs font-bold text-[#E8F0EE]">
                 {displayName}
               </span>
             </div>
           ) : (
             <div className="flex flex-col items-start min-w-0 flex-1 text-left">
-              <span className="truncate text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
+              <span className="truncate text-[10px] text-[#7E9C98] uppercase tracking-wider font-bold">
                 {getCleanClientName(activeOrg.name)}
               </span>
-              <span className="truncate text-xs">
+              <span className="truncate text-xs text-[#E8F0EE]">
                 {displayName}
               </span>
             </div>
           )}
-          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform chevron-icon ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 text-[#7E9C98] transition-transform chevron-icon ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       )}
  
