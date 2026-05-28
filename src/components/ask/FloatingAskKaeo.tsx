@@ -163,7 +163,7 @@ const FloatingAskKaeo: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.95 }}
             transition={{ type: 'spring', damping: 22, stiffness: 320 }}
-            className="fixed bottom-6 right-6 z-[100] group"
+            className="fixed bottom-4 right-4 z-[100] group"
           >
             {/* Tooltip on hover */}
             <div
@@ -183,26 +183,27 @@ const FloatingAskKaeo: React.FC = () => {
               onClick={() => setIsOpen(true)}
               aria-label="Open Libby advisor"
               className={`
-                flex items-center gap-2.5
-                h-11 px-4 rounded-full
-                bg-card/95 backdrop-blur-md
-                border border-emerald-500/30
-                shadow-lg shadow-black/20
-                text-foreground text-sm font-semibold
-                hover:border-emerald-400/50 hover:bg-card hover:shadow-xl hover:shadow-black/25
+                flex items-center gap-2
+                h-9 px-3.5 rounded-full
+                bg-card/90 backdrop-blur-md
+                border border-emerald-500/20
+                shadow-md shadow-black/5
+                dark:shadow-black/20
+                text-foreground text-xs font-semibold
+                hover:border-emerald-400/40 hover:bg-card hover:shadow-lg
                 transition-all duration-200
                 cursor-pointer
               `}
             >
-              <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
 
               {/* Label */}
               <span className="leading-none text-foreground font-semibold">Ask Libby</span>
 
               {/* Status dot — mint pulse */}
-              <span className="relative flex h-2 w-2 ml-0.5">
+              <span className="relative flex h-1.5 w-1.5 ml-0.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-40" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400/70" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400/70" />
               </span>
             </button>
           </motion.div>
@@ -218,7 +219,7 @@ const FloatingAskKaeo: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-            className="fixed bottom-6 right-6 z-[100] w-[calc(100vw-3rem)] sm:w-[400px] max-h-[620px] flex flex-col rounded-2xl border border-border/60 bg-card/97 backdrop-blur-xl shadow-2xl shadow-black/30 overflow-hidden"
+            className="fixed bottom-4 right-4 z-[100] w-[calc(100vw-2rem)] sm:w-[380px] max-h-[580px] flex flex-col rounded-2xl border border-border/60 bg-card/97 backdrop-blur-xl shadow-2xl shadow-black/10 dark:shadow-black/30 overflow-hidden"
           >
             {/* ── Header ── */}
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40 bg-card/80 backdrop-blur-md shrink-0">

@@ -687,7 +687,7 @@ const Dashboard: React.FC = () => {
         <MetricCard
           title="Total Spend"
           value={hasTransactions ? formatCurrency(metrics.expenses) : '—'}
-          description={hasTransactions ? `${metrics.expenseCount} transactions from imported files` : 'Upload a statement to begin review.'}
+          description={hasTransactions ? (trends.hasPrevPeriod ? `${metrics.expenseCount} transactions this month (vs prev month)` : `${metrics.expenseCount} transactions from imported files`) : 'Upload a statement to begin review.'}
           trend={getSpendTrend()}
           icon={<ArrowUpRight className="w-4 h-4" />}
           accentColor={hasTransactions ? 'danger' : 'default'}
@@ -697,7 +697,7 @@ const Dashboard: React.FC = () => {
         <MetricCard
           title="Money In"
           value={hasTransactions ? formatCurrency(metrics.income) : '—'}
-          description={hasTransactions ? `${metrics.incomeCount} transactions from imported files` : 'Upload a statement to begin review.'}
+          description={hasTransactions ? (trends.hasPrevPeriod ? `${metrics.incomeCount} transactions this month (vs prev month)` : `${metrics.incomeCount} transactions from imported files`) : 'Upload a statement to begin review.'}
           trend={getIncomeTrend()}
           icon={<ArrowDownLeft className="w-4 h-4" />}
           accentColor={hasTransactions ? 'success' : 'default'}
@@ -717,7 +717,7 @@ const Dashboard: React.FC = () => {
         <MetricCard
           title="Net Flow"
           value={hasTransactions ? formatCurrency(metrics.net) : '—'}
-          description={hasTransactions ? 'Income minus expenses' : 'Upload a statement to begin review.'}
+          description={hasTransactions ? (trends.hasPrevPeriod ? 'Net income minus expenses (vs prev month)' : 'Income minus expenses') : 'Upload a statement to begin review.'}
           trend={getNetTrend()}
           icon={<DollarSign className="w-4 h-4" />}
           accentColor={hasTransactions ? (metrics.net >= 0 ? 'success' : 'danger') : 'default'}
@@ -882,7 +882,7 @@ const Dashboard: React.FC = () => {
                     
                     <div className="flex items-end justify-between">
                       <div className="space-y-0.5 min-w-0">
-                        <p className="text-[11px] text-[var(--muted-foreground)] leading-tight truncate">
+                        <p className="text-[11px] text-[var(--muted-foreground)] leading-tight mt-0.5">
                           {group.desc}
                         </p>
                         {hasRisks && group.amount > 0 && (

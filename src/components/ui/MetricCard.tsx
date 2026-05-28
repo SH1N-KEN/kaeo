@@ -87,7 +87,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
 
       {/* Value */}
       <div>
-        <div className={`text-2xl font-bold tracking-tight leading-none ${valueClassName || valueColorMap[accentColor]}`}>
+        <div className={`text-2xl font-bold leading-none ${valueClassName || valueColorMap[accentColor]}`}>
           {value}
         </div>
         {description && (

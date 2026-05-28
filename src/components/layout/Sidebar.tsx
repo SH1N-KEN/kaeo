@@ -225,10 +225,10 @@ const Sidebar: React.FC = () => {
 
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-semibold text-[var(--foreground)] truncate leading-tight">
+              <p className="text-[13px] font-semibold text-[#E8F0EE] truncate leading-tight">
                 {userName}
               </p>
-              <p className="text-[11px] text-[var(--muted-foreground)] truncate leading-none mt-0.5">
+              <p className="text-[11px] text-[#7E9C98] truncate leading-none mt-0.5">
                 {userEmail}
               </p>
             </div>

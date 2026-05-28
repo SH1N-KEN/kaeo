@@ -58,17 +58,17 @@
 /* ─── LIGHT MODE TOKENS ─── */
 :root {
   /* Backgrounds */
-  --background:        #F6F8F5;
-  --surface:           #FFFFFF;
-  --surface-muted:     #F0F4F1;
+  --background:        #F5F4F0; /* Warm stone-beige background */
+  --surface:           #FAFAFA;
+  --surface-muted:     #EAE9E4;
 
   /* Foreground */
-  --foreground:        #101615;
-  --foreground-muted:  #5D6B66;
+  --foreground:        #1A2220; /* Soft dark slate for premium text contrast */
+  --foreground-muted:  #6E7370;
 
   /* Card */
-  --card:              #FFFFFF;
-  --card-foreground:   #101615;
+  --card:              #FFFFFF; /* Pure white cards sitting on warm beige */
+  --card-foreground:   #1A2220;
 
   /* Brand */
   --primary:           #0F766E;
@@ -76,20 +76,20 @@
   --primary-foreground:#FFFFFF;
 
   /* Secondary */
-  --secondary:         rgba(15, 118, 110, 0.08);
+  --secondary:         rgba(15, 118, 110, 0.06);
   --secondary-foreground: #0F766E;
 
   /* Muted */
-  --muted:             #F0F4F1;
-  --muted-foreground:  #5D6B66;
+  --muted:             #EAE9E4;
+  --muted-foreground:  #6E7370;
 
   /* Accent */
   --accent:            #2FB8A6;
   --accent-foreground: #101615;
 
   /* Borders */
-  --border:            #DDE5E1;
-  --input:             #DDE5E1;
+  --border:            #DFDDD7; /* Warm, visible but soft borders */
+  --input:             #DFDDD7;
   --ring:              #0F766E;
 
   /* Status */
@@ -98,13 +98,13 @@
   --success:  #168A5B;
 
   /* Shadows */
-  --shadow-card:    0 1px 3px 0 rgba(16, 22, 21, 0.06), 0 1px 2px -1px rgba(16, 22, 21, 0.04);
-  --shadow-popover: 0 10px 40px rgba(16, 22, 21, 0.10), 0 2px 8px rgba(16, 22, 21, 0.06);
-  --shadow-modal:   0 20px 60px rgba(16, 22, 21, 0.12), 0 4px 16px rgba(16, 22, 21, 0.08);
+  --shadow-card:    0 2px 8px rgba(16, 22, 21, 0.03), 0 1px 3px rgba(16, 22, 21, 0.02);
+  --shadow-popover: 0 10px 40px rgba(16, 22, 21, 0.06), 0 2px 8px rgba(16, 22, 21, 0.04);
+  --shadow-modal:   0 20px 60px rgba(16, 22, 21, 0.08), 0 4px 16px rgba(16, 22, 21, 0.06);
 
   /* Chart */
   --chart-grid:           rgba(15, 118, 110, 0.06);
-  --chart-label:          #5D6B66;
+  --chart-label:          #6E7370;
   --chart-stroke-inflow:  #168A5B;
   --chart-stroke-outflow: #C2413A;
 }
@@ -519,7 +519,6 @@
   text-align: right;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
 }
 
 .kaeo-table .td-muted {
