@@ -429,7 +429,7 @@ const Files: React.FC = () => {
           
         const normalizedResult = normalizeIngestedRows(rowsToImport, autoMapping.mapping, {
           provider: parseResult.provider,
-          currency: activeClient.base_currency || 'INR'
+          currency: 'INR'
         });
 
         if (normalizedResult.transactions.length === 0) {
