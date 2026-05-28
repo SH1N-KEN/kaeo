@@ -55,28 +55,16 @@ export const getCleanClientName = (name?: string | null): string => {
 };
 export function formatCurrency(
   amount: number | null | undefined,
-  currency = 'INR',
+  _currency?: string,
   signed = false,
 ): string {
   const value = Number(amount ?? 0);
-  const absolute = signed ? Math.abs(value) : value;
-
-  const formatted = new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(absolute);
-
-  if (!signed || value === 0) {
-    return formatted;
-  }
-
-  return `${value > 0 ? '+' : '-'}${formatted}`;
+  return formatINR(value, { showSign: signed });
 }
 
 export function formatSignedCurrency(
   amount: number | null | undefined,
-  currency = 'INR',
+  _currency?: string,
 ): string {
-  return formatCurrency(amount, currency, true);
+  return formatCurrency(amount, _currency, true);
 }

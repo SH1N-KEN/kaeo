@@ -513,7 +513,7 @@ export default function Reports() {
                     (report.summary_json?.netCashMovement || 0) >= 0 ? 'text-success' : 'text-risk'
                   }`}>
                     {report.summary_json?.netCashMovement !== undefined ? 
-                      formatReportCurrency(report.summary_json.netCashMovement, activeClient.base_currency || 'INR') 
+                      formatReportCurrency(report.summary_json.netCashMovement) 
                       : '₹0'}
                   </span>
                 </div>

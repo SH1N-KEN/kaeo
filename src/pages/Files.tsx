@@ -1182,7 +1182,7 @@ const Files: React.FC = () => {
                             {inv.due_date ? new Date(inv.due_date).toLocaleDateString('en-IN') : '—'}
                           </td>
                           <td className="px-6 py-4 font-extrabold text-foreground">
-                            {formatMoney(inv.total_amount || 0, inv.currency || 'INR')}
+                            {formatMoney(inv.total_amount || 0)}
                           </td>
                           <td className="px-6 py-4">
                             <StatusBadge 
@@ -1464,7 +1464,7 @@ const Files: React.FC = () => {
                               <h5 className="font-bold text-xs truncate mt-0.5">{cand.description}</h5>
                             </div>
                             <span className="font-black text-xs text-foreground shrink-0 pl-2">
-                              {formatMoney(Math.abs(cand.amount), cand.currency || 'INR')}
+                              {formatMoney(Math.abs(cand.amount))}
                             </span>
                           </div>
                         );

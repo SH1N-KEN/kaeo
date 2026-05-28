@@ -126,7 +126,7 @@ export default function ReportDetail() {
             <div>
               <p className="text-muted-foreground uppercase text-xs font-semibold tracking-wider mb-1">Net Cash</p>
               <p className={`font-medium ${summary.netCashMovement >= 0 ? 'text-success' : 'text-risk'}`}>
-                {formatReportCurrency(summary.netCashMovement, activeClient?.base_currency || 'INR')}
+                {formatReportCurrency(summary.netCashMovement)}
               </p>
             </div>
           </div>
@@ -148,25 +148,25 @@ export default function ReportDetail() {
             <div className={`grid grid-cols-1 md:${sections.financialSummary.refunds > 0 ? 'grid-cols-4' : 'grid-cols-3'} gap-6`}>
               <div className="bg-muted/30 p-6 rounded-lg border">
                 <p className="text-muted-foreground text-sm font-medium mb-1">Total Income</p>
-                <p className="text-3xl font-bold text-success">{formatReportCurrency(sections.financialSummary.income, activeClient?.base_currency || 'INR')}</p>
+                <p className="text-3xl font-bold text-success">{formatReportCurrency(sections.financialSummary.income)}</p>
                 <p className="text-xs text-muted-foreground mt-2">{sections.financialSummary.incomeCount} transactions</p>
               </div>
               {sections.financialSummary.refunds > 0 && (
                 <div className="bg-muted/30 p-6 rounded-lg border">
                   <p className="text-muted-foreground text-sm font-medium mb-1">Refunds / Recoveries</p>
-                  <p className="text-3xl font-bold text-success">{formatReportCurrency(sections.financialSummary.refunds, activeClient?.base_currency || 'INR')}</p>
+                  <p className="text-3xl font-bold text-success">{formatReportCurrency(sections.financialSummary.refunds)}</p>
                   <p className="text-xs text-muted-foreground mt-2">{sections.financialSummary.refundCount || 0} transactions</p>
                 </div>
               )}
               <div className="bg-muted/30 p-6 rounded-lg border">
                 <p className="text-muted-foreground text-sm font-medium mb-1">Total Expenses</p>
-                <p className="text-3xl font-bold text-risk">{formatReportCurrency(sections.financialSummary.expenses, activeClient?.base_currency || 'INR')}</p>
+                <p className="text-3xl font-bold text-risk">{formatReportCurrency(sections.financialSummary.expenses)}</p>
                 <p className="text-xs text-muted-foreground mt-2">{sections.financialSummary.expenseCount} transactions</p>
               </div>
               <div className="bg-muted/30 p-6 rounded-lg border">
                 <p className="text-muted-foreground text-sm font-medium mb-1">Net Cash Movement</p>
                 <p className={`text-3xl font-bold ${summary.netCashMovement >= 0 ? 'text-success' : 'text-risk'}`}>
-                  {formatReportCurrency(summary.netCashMovement, activeClient?.base_currency || 'INR')}
+                  {formatReportCurrency(summary.netCashMovement)}
                 </p>
               </div>
             </div>
@@ -182,7 +182,7 @@ export default function ReportDetail() {
               </h3>
               {summary.recurringCommitment > 0 && (
                 <div className="text-sm font-medium bg-muted px-3 py-1 rounded-full">
-                  Estimated Recurring Commitment: <span className="text-foreground">{formatReportCurrency(summary.recurringCommitment, activeClient?.base_currency || 'INR')} /mo</span>
+                  Estimated Recurring Commitment: <span className="text-foreground">{formatReportCurrency(summary.recurringCommitment)} /mo</span>
                 </div>
               )}
             </div>
@@ -203,7 +203,7 @@ export default function ReportDetail() {
                       <tr key={idx} className="bg-card">
                         <td className="px-4 py-3 font-medium">{vendor.normalized_name}</td>
                         <td className="px-4 py-3 text-muted-foreground">{vendor.category || 'Uncategorized'}</td>
-                        <td className="px-4 py-3 text-right">{formatReportCurrency(vendor.totalSpend, activeClient?.base_currency || 'INR')}</td>
+                        <td className="px-4 py-3 text-right">{formatReportCurrency(vendor.totalSpend)}</td>
                         <td className="px-4 py-3 text-center">
                           {vendor.is_recurring && <CheckCircle2 className="h-4 w-4 mx-auto text-muted-foreground" />}
                         </td>
@@ -256,7 +256,7 @@ export default function ReportDetail() {
                           </span>
                         </td>
                         <td className="px-4 py-3 capitalize text-muted-foreground">{risk.status.replace('_', ' ')}</td>
-                        <td className="px-4 py-3 text-right">{risk.amount_at_risk ? formatReportCurrency(risk.amount_at_risk, activeClient?.base_currency || 'INR') : '-'}</td>
+                        <td className="px-4 py-3 text-right">{risk.amount_at_risk ? formatReportCurrency(risk.amount_at_risk) : '-'}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -16,7 +16,7 @@ export interface ReportInput {
   generatedBy?: string;
 }
 
-export function formatReportCurrency(amount: number, _currency: string = "INR") {
+export function formatReportCurrency(amount: number, _currency?: string) {
   return formatINR(amount);
 }
 

@@ -657,9 +657,9 @@ const Transactions: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Showing', value: `${filteredTransactions.length.toLocaleString()} / ${transactions.length}`, color: 'var(--foreground)' },
-          { label: 'Inflow', value: formatCurrency(summary.inflow, activeClient.base_currency || 'INR'), color: 'var(--success)' },
-          { label: 'Outflow', value: formatCurrency(summary.outflow, activeClient.base_currency || 'INR'), color: 'var(--danger)' },
-          { label: 'Net', value: formatCurrency(summary.net, activeClient.base_currency || 'INR', true), color: summary.net >= 0 ? 'var(--success)' : 'var(--danger)' },
+          { label: 'Inflow', value: formatCurrency(summary.inflow), color: 'var(--success)' },
+          { label: 'Outflow', value: formatCurrency(summary.outflow), color: 'var(--danger)' },
+          { label: 'Net', value: formatSignedCurrency(summary.net), color: summary.net >= 0 ? 'var(--success)' : 'var(--danger)' },
         ].map(s => (
           <div key={s.label} className="kaeo-card p-4 rounded-xl bg-card/45 border-border/30 backdrop-blur-md flex flex-col items-center justify-center">
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase mb-1">{s.label}</span>
