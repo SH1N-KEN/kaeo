@@ -45,7 +45,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   className = '',
 }) => {
   return (
-    <div className={`flex flex-col md:flex-row md:items-start justify-between gap-4 mb-7 ${className}`}>
+    <div className={`flex flex-col md:flex-row md:items-start justify-between gap-4 mb-5 ${className}`}>
       {/* Left: title + description */}
       <div className="min-w-0">
         <div className="flex items-center gap-2.5 mb-1 flex-wrap">
@@ -79,7 +79,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
           {secondaryAction && (
             <button
               onClick={secondaryAction.onClick}
-              className="btn-secondary flex items-center gap-1.5"
+              className="btn-secondary btn-sm flex items-center gap-1.5"
             >
               {secondaryAction.icon}
               {secondaryAction.label}
@@ -89,7 +89,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
             <button
               onClick={primaryAction.onClick}
               disabled={primaryAction.disabled}
-              className="btn-primary flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary btn-sm flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {primaryAction.icon}
               {primaryAction.label}

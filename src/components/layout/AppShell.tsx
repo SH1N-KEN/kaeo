@@ -45,7 +45,7 @@ const AppShell: React.FC = () => {
           <Topbar />
           <main className="flex-1 overflow-y-auto print:overflow-visible print:block">
             <div
-              className="mx-auto px-7 py-7 print:max-w-none print:mx-0 print:p-0"
+              className="mx-auto px-7 pt-4 pb-7 print:max-w-none print:mx-0 print:p-0"
               style={{ maxWidth: 1320 }}
             >
               <Outlet />

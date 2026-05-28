@@ -16,6 +16,15 @@ export const calculateMonthEndReadiness = (
 ): ReadinessResult => {
   const transactions = getCleanTransactions(rawTransactions);
 
+  if (transactions.length === 0) {
+    return {
+      score: 0,
+      status: 'Not ready',
+      checklist: ['Upload data to calculate readiness'],
+      deductions: []
+    };
+  }
+
   let score = 100;
   const deductions: { reason: string; amount: number }[] = [];
   const checklist = new Set<string>();

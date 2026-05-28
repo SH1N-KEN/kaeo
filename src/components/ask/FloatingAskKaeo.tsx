@@ -194,10 +194,7 @@ const FloatingAskKaeo: React.FC = () => {
                 cursor-pointer
               `}
             >
-              {/* ae icon with mint border */}
-              <div className="w-6 h-6 rounded-md bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shrink-0 transition-colors">
-                <img src={aeLogo} alt="Libby" className="w-3.5 h-3.5 object-contain" />
-              </div>
+              <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
 
               {/* Label */}
               <span className="leading-none text-foreground font-semibold">Ask Libby</span>

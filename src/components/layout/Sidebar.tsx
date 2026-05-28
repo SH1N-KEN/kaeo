@@ -7,7 +7,6 @@ import {
   CreditCard,
   LogOut,
   ChevronLeft,
-  ChevronRight,
   Sun,
   Moon,
   Building2,
@@ -114,37 +113,40 @@ const Sidebar: React.FC = () => {
       {/* ── Logo ── */}
       <div
         className="flex items-center relative"
-        style={{ height: 64, padding: collapsed ? '0 16px' : '0 20px' }}
+        style={{ height: 64, padding: collapsed ? '0' : '0 20px' }}
       >
         {collapsed ? (
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto"
-            style={{ background: 'rgba(15,118,110,0.10)', border: '1px solid rgba(15,118,110,0.20)' }}>
+          <button
+            onClick={() => setCollapsed(false)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto hover:bg-[rgba(15,118,110,0.15)] transition-colors cursor-pointer border"
+            style={{ background: 'rgba(15,118,110,0.10)', borderColor: 'rgba(15,118,110,0.20)' }}
+            title="Expand sidebar"
+          >
             <img src={aeLogo} alt="Kaeo" className="w-4 h-4 object-contain" />
-          </div>
+          </button>
         ) : (
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgba(15,118,110,0.10)', border: '1px solid rgba(15,118,110,0.20)' }}>
-              <img src={aeLogo} alt="Kaeo" className="w-4 h-4 object-contain" />
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(15,118,110,0.10)', border: '1px solid rgba(15,118,110,0.20)' }}>
+                <img src={aeLogo} alt="Kaeo" className="w-4 h-4 object-contain" />
+              </div>
+              <span className="text-[20px] font-bold tracking-tight leading-none"
+                style={{ color: 'var(--primary)', letterSpacing: '-0.03em' }}>
+                Kaeo
+              </span>
             </div>
-            <span className="text-[20px] font-bold tracking-tight leading-none"
-              style={{ color: 'var(--primary)', letterSpacing: '-0.03em' }}>
-              Kaeo
-            </span>
+            
+            {/* Subtle collapse button inside header */}
+            <button
+              onClick={() => setCollapsed(true)}
+              className="p-1 rounded-lg text-[#7E9C98] hover:text-[#E8F0EE] hover:bg-[rgba(47,184,166,0.06)] transition-colors cursor-pointer"
+              title="Collapse sidebar"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
           </div>
         )}
-
-        {/* Collapse toggle */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="sidebar-toggle-btn"
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed
-            ? <ChevronRight className="w-3.5 h-3.5" />
-            : <ChevronLeft  className="w-3.5 h-3.5" />
-          }
-        </button>
       </div>
 
       {/* WorkspaceSwitcher Area */}

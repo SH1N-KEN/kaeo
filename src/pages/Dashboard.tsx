@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   Layers,
   Sparkles,
-  Upload,
   ChevronRight,
 } from 'lucide-react';
 import { useWorkspace } from '../hooks/useWorkspace';
@@ -463,11 +462,6 @@ const Dashboard: React.FC = () => {
         description={`Spend overview, risks, and report readiness for ${getCleanClientName(activeClient.name)}`}
         badge={{ label: 'Live', variant: 'default' }}
         primaryAction={{
-          label: 'Import Data',
-          onClick: () => navigate('/files'),
-          icon: <Upload className="w-4 h-4" />
-        }}
-        secondaryAction={{
           label: 'Generate Report',
           onClick: handleDownloadReport,
           icon: <Download className="w-4 h-4" />
@@ -584,12 +578,12 @@ const Dashboard: React.FC = () => {
         />
         <MetricCard
           title="Readiness Score"
-          value={readiness ? `${readiness.score}%` : '—'}
-          description={readiness && readiness.score >= 90 ? 'Ready for accountant close' : 'Resolve open items to reach 100%'}
-          trend={readiness ? { value: readiness.score, isPositive: readiness.score >= 90 } : undefined}
+          value={hasTransactions && readiness ? `${readiness.score}%` : '—'}
+          description={hasTransactions ? (readiness && readiness.score >= 90 ? 'Ready for accountant close' : 'Resolve open items to reach 100%') : 'Upload data to calculate readiness'}
+          trend={hasTransactions && readiness ? { value: readiness.score, isPositive: readiness.score >= 90 } : undefined}
           icon={<CheckCircle2 className="w-4 h-4" />}
-          accentColor={readiness && readiness.score >= 90 ? 'success' : 'warning'}
-          valueClassName={`text-2xl font-bold ${readiness ? (readiness.score >= 90 ? 'text-[var(--success)]' : 'text-[var(--warning)]') : 'text-[var(--foreground)]'}`}
+          accentColor={hasTransactions && readiness ? (readiness.score >= 90 ? 'success' : 'warning') : 'default'}
+          valueClassName={`text-2xl font-bold ${hasTransactions && readiness ? (readiness.score >= 90 ? 'text-[var(--success)]' : 'text-[var(--warning)]') : 'text-[var(--muted-foreground)]'}`}
           onClick={() => navigate('/reports')}
         />
       </div>

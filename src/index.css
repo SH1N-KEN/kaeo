@@ -544,9 +544,9 @@
 }
 
 .page-title {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
   color: var(--foreground);
   line-height: 1.2;
 }
@@ -649,7 +649,7 @@
 ───────────────────────────────────────────────────────────── */
 
 .topbar-base {
-  height: 3.75rem;
+  height: 3.25rem;
   background: rgba(246, 248, 245, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
