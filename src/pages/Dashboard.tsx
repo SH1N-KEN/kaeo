@@ -140,6 +140,39 @@ const Dashboard: React.FC = () => {
     uploadsCount: 0, suggestionsCount: 0
   });
   const [readiness, setReadiness] = useState<ReadinessResult | null>(null);
+  const [trends, setTrends] = useState<{
+    spendChange: number | null;
+    incomeChange: number | null;
+    netChange: number | null;
+    countChange: number | null;
+    hasPrevPeriod: boolean;
+    prevMonthName: string;
+    currentMonthName: string;
+    prevSpend: number;
+    curSpend: number;
+    prevIncome: number;
+    curIncome: number;
+    prevNet: number;
+    curNet: number;
+    prevCount: number;
+    curCount: number;
+  }>({
+    spendChange: null,
+    incomeChange: null,
+    netChange: null,
+    countChange: null,
+    hasPrevPeriod: false,
+    prevMonthName: '',
+    currentMonthName: '',
+    prevSpend: 0,
+    curSpend: 0,
+    prevIncome: 0,
+    curIncome: 0,
+    prevNet: 0,
+    curNet: 0,
+    prevCount: 0,
+    curCount: 0
+  });
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [openRisksData, setOpenRisksData] = useState<any[]>([]);
@@ -179,6 +212,99 @@ const Dashboard: React.FC = () => {
       setOpenRisksData(risksData || []);
       const readinessResult = calculateMonthEndReadiness(cleanTransactions, risksData || []);
       setReadiness(readinessResult);
+
+      // Group clean transactions by Year-Month for trend calculation
+      const monthlyData: Record<string, { income: number; expenses: number; net: number; count: number }> = {};
+      cleanTransactions.forEach(tx => {
+        if (!tx.transaction_date) return;
+        const date = new Date(tx.transaction_date);
+        const year = date.getFullYear();
+        const month = date.getMonth(); // 0-11
+        const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+        if (!monthlyData[key]) {
+          monthlyData[key] = { income: 0, expenses: 0, net: 0, count: 0 };
+        }
+
+        const txAmountVal = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+          ? Number(tx.amount_in_base_currency) : Number(tx.amount);
+        const amt = Math.abs(txAmountVal);
+        const directionDerived = tx.raw_row_json?.direction_derived as string | undefined;
+        const isInflowTx = directionDerived === 'inflow' || (!directionDerived && txAmountVal > 0);
+
+        if (tx.type !== 'transfer') {
+          if (tx.type === 'income' && isInflowTx && amt > 0) {
+            monthlyData[key].income += amt;
+          } else if (['expense', 'vendor_payment', 'subscription', 'bank_charge'].includes(tx.type)) {
+            monthlyData[key].expenses += amt;
+          }
+        }
+        monthlyData[key].count++;
+      });
+
+      // Calculate net for each month
+      Object.keys(monthlyData).forEach(key => {
+        monthlyData[key].net = monthlyData[key].income - monthlyData[key].expenses;
+      });
+
+      const sortedMonths = Object.keys(monthlyData).sort();
+      let currentMonthKey = sortedMonths[sortedMonths.length - 1];
+      let previousMonthKey = sortedMonths[sortedMonths.length - 2];
+
+      let trendMetrics = {
+        spendChange: null as number | null,
+        incomeChange: null as number | null,
+        netChange: null as number | null,
+        countChange: null as number | null,
+        hasPrevPeriod: false,
+        prevMonthName: '',
+        currentMonthName: '',
+        prevSpend: 0,
+        curSpend: 0,
+        prevIncome: 0,
+        curIncome: 0,
+        prevNet: 0,
+        curNet: 0,
+        prevCount: 0,
+        curCount: 0
+      };
+
+      if (currentMonthKey && previousMonthKey) {
+        const cur = monthlyData[currentMonthKey];
+        const prev = monthlyData[previousMonthKey];
+
+        const getMonthName = (key: string) => {
+          const [y, m] = key.split('-');
+          const monthIndex = Number(m) - 1;
+          const monthName = new Date(Number(y), monthIndex).toLocaleString('en-US', { month: 'short' });
+          return `${monthName} '${y.substring(2)}`;
+        };
+
+        trendMetrics.currentMonthName = getMonthName(currentMonthKey);
+        trendMetrics.prevMonthName = getMonthName(previousMonthKey);
+        trendMetrics.hasPrevPeriod = true;
+
+        trendMetrics.curSpend = cur.expenses;
+        trendMetrics.prevSpend = prev.expenses;
+        trendMetrics.curIncome = cur.income;
+        trendMetrics.prevIncome = prev.income;
+        trendMetrics.curNet = cur.net;
+        trendMetrics.prevNet = prev.net;
+        trendMetrics.curCount = cur.count;
+        trendMetrics.prevCount = prev.count;
+
+        const calcPct = (cVal: number, pVal: number) => {
+          if (pVal === 0) return null;
+          return ((cVal - pVal) / Math.abs(pVal)) * 100;
+        };
+
+        trendMetrics.spendChange = calcPct(cur.expenses, prev.expenses);
+        trendMetrics.incomeChange = calcPct(cur.income, prev.income);
+        trendMetrics.netChange = calcPct(cur.net, prev.net);
+        trendMetrics.countChange = calcPct(cur.count, prev.count);
+      }
+
+      setTrends(trendMetrics);
 
       const vendors: Record<string, number> = {};
       const dailyMap: Record<string, { inflow: number; outflow: number; rawDate: string }> = {};
@@ -311,7 +437,7 @@ const Dashboard: React.FC = () => {
       { key: 'duplicate_payment', label: 'Duplicate Suspected', desc: 'Identical amount and recipient markers detected', severity: 'critical', count: 0, amount: 0 },
       { key: 'invoice_payment_mismatch', label: 'Invoice Mismatch', desc: 'Invoices mismatching records or ledger entries', severity: 'high', count: 0, amount: 0 },
       { key: 'unusual_vendor_spend', label: 'Unusual Vendor Spend', desc: 'Spike in vendor payment velocity or frequency', severity: 'medium', count: 0, amount: 0 },
-      { key: 'uncategorized_transaction', label: 'Uncategorized High-Value Transaction', desc: 'Unmapped spend exceeding ₹50,000 limit', severity: 'low', count: 0, amount: 0 },
+      { key: 'uncategorized_transaction', label: 'Uncategorized Transaction', desc: 'Unmapped spend exceeding ₹50,000 limit', severity: 'low', count: 0, amount: 0 },
     ];
 
     const groups: Record<string, { count: number; amount: number; severity: string }> = {};
@@ -445,6 +571,63 @@ const Dashboard: React.FC = () => {
 
   const hasTransactions = metrics.count > 0;
 
+  const getSpendTrend = () => {
+    if (!hasTransactions || !trends.hasPrevPeriod) return undefined;
+    if (trends.prevSpend === 0) {
+      return trends.curSpend > 0 ? { label: 'New activity', isNeutral: true } : undefined;
+    }
+    const pct = ((trends.curSpend - trends.prevSpend) / trends.prevSpend) * 100;
+    if (pct === 0) return undefined;
+    if (pct < 0) {
+      return { value: Math.abs(pct), label: `${pct.toFixed(1)}%`, isPositive: true, direction: 'down' as const };
+    } else {
+      return { value: Math.abs(pct), label: `+${pct.toFixed(1)}%`, isPositive: false, direction: 'up' as const };
+    }
+  };
+
+  const getIncomeTrend = () => {
+    if (!hasTransactions || !trends.hasPrevPeriod) return undefined;
+    if (trends.prevIncome === 0) {
+      return trends.curIncome > 0 ? { label: 'New activity', isNeutral: true } : undefined;
+    }
+    const pct = ((trends.curIncome - trends.prevIncome) / trends.prevIncome) * 100;
+    if (pct === 0) return undefined;
+    if (pct > 0) {
+      return { value: pct, label: `+${pct.toFixed(1)}%`, isPositive: true, direction: 'up' as const };
+    } else {
+      return { value: Math.abs(pct), label: `${pct.toFixed(1)}%`, isPositive: false, direction: 'down' as const };
+    }
+  };
+
+  const getNetTrend = () => {
+    if (!hasTransactions || !trends.hasPrevPeriod) return undefined;
+    if (trends.prevNet === 0) {
+      return trends.curNet !== 0 ? { label: 'New activity', isNeutral: true } : undefined;
+    }
+    const pct = ((trends.curNet - trends.prevNet) / Math.abs(trends.prevNet)) * 100;
+    if (pct === 0) return undefined;
+    if (pct > 0) {
+      return { value: pct, label: `+${pct.toFixed(1)}%`, isPositive: true, direction: 'up' as const };
+    } else {
+      return { value: Math.abs(pct), label: `${pct.toFixed(1)}%`, isPositive: false, direction: 'down' as const };
+    }
+  };
+
+  const getReadinessDesc = () => {
+    if (!hasTransactions) return 'Upload data to calculate readiness';
+    const risks = metrics.openRisksCount;
+    const reviews = metrics.unreviewedCount;
+    if (risks === 0 && reviews === 0) {
+      return 'Ready for accountant close';
+    }
+    const parts = [];
+    if (risks > 0) parts.push(`${risks} risk${risks > 1 ? 's' : ''}`);
+    if (reviews > 0) parts.push(`${reviews} pending review${reviews > 1 ? 's' : ''}`);
+    return `Resolve ${parts.join(' and ')}`;
+  };
+
+  const isReadinessComplete = metrics.openRisksCount === 0 && metrics.unreviewedCount === 0;
+
   const suggestedPrompts = [
     { label: 'What changed this month?',        query: 'What changed this month?' },
     { label: 'Show duplicate payments',          query: 'Show duplicate payments' },
@@ -458,8 +641,8 @@ const Dashboard: React.FC = () => {
 
       {/* ── Page Header ── */}
       <PageHeader
-        title="Finance Command Center"
-        description={`Spend overview, risks, and report readiness for ${getCleanClientName(activeClient.name)}`}
+        title="Finance Review"
+        description={`Review spend, risks, and reports for ${getCleanClientName(activeClient.name)}`}
         badge={{ label: 'Live', variant: 'default' }}
         primaryAction={{
           label: 'Generate Report',
@@ -504,43 +687,41 @@ const Dashboard: React.FC = () => {
         <MetricCard
           title="Total Spend"
           value={hasTransactions ? formatCurrency(metrics.expenses) : '—'}
-          description={hasTransactions ? `${metrics.expenseCount} transactions from imported files` : 'No expense data'}
-          trend={hasTransactions ? { value: 12.4, isPositive: false } : undefined}
+          description={hasTransactions ? `${metrics.expenseCount} transactions from imported files` : 'Upload a statement to begin review.'}
+          trend={getSpendTrend()}
           icon={<ArrowUpRight className="w-4 h-4" />}
-          accentColor="danger"
-          valueClassName="text-[var(--danger)] text-2xl font-bold"
+          accentColor={hasTransactions ? 'danger' : 'default'}
+          valueClassName={hasTransactions ? 'text-[var(--danger)] text-2xl font-bold' : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/transactions?type=expense')}
         />
         <MetricCard
-          title="Revenue"
+          title="Money In"
           value={hasTransactions ? formatCurrency(metrics.income) : '—'}
-          description={hasTransactions ? `${metrics.incomeCount} transactions from imported files` : 'No revenue data'}
-          trend={hasTransactions ? { value: 8.2, isPositive: true } : undefined}
+          description={hasTransactions ? `${metrics.incomeCount} transactions from imported files` : 'Upload a statement to begin review.'}
+          trend={getIncomeTrend()}
           icon={<ArrowDownLeft className="w-4 h-4" />}
-          accentColor="success"
-          valueClassName="text-[var(--success)] text-2xl font-bold"
+          accentColor={hasTransactions ? 'success' : 'default'}
+          valueClassName={hasTransactions ? 'text-[var(--success)] text-2xl font-bold' : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/transactions?type=income')}
         />
         <MetricCard
           title="Open Risks"
-          value={metrics.openRisksCount}
-          description={metrics.openRisksCount > 0
-            ? `${formatCurrency(metrics.duplicateExposure)} duplicate exposure`
-            : 'No compliance issues found'}
-          trend={metrics.openRisksCount > 0 ? { value: metrics.openRisksCount, isPositive: false } : undefined}
+          value={hasTransactions ? metrics.openRisksCount : '—'}
+          description={hasTransactions ? (metrics.openRisksCount > 0 ? `${formatCurrency(metrics.duplicateExposure)} duplicate exposure` : 'No compliance issues found') : 'Upload data to calculate risks'}
+          trend={undefined}
           icon={<ShieldAlert className="w-4 h-4" />}
-          accentColor={metrics.openRisksCount > 0 ? 'danger' : 'success'}
-          valueClassName={`text-2xl font-bold ${metrics.openRisksCount > 0 ? 'text-[var(--danger)]' : 'text-[var(--success)]'}`}
+          accentColor={hasTransactions ? (metrics.openRisksCount > 0 ? 'danger' : 'success') : 'default'}
+          valueClassName={hasTransactions ? `text-2xl font-bold ${metrics.openRisksCount > 0 ? 'text-[var(--danger)]' : 'text-[var(--success)]'}` : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/risk-inbox')}
         />
         <MetricCard
           title="Net Flow"
           value={hasTransactions ? formatCurrency(metrics.net) : '—'}
-          description="Income minus expenses"
-          trend={hasTransactions ? { value: 4.3, isPositive: metrics.net >= 0 } : undefined}
+          description={hasTransactions ? 'Income minus expenses' : 'Upload a statement to begin review.'}
+          trend={getNetTrend()}
           icon={<DollarSign className="w-4 h-4" />}
-          accentColor={metrics.net >= 0 ? 'success' : 'danger'}
-          valueClassName={`text-2xl font-bold ${hasTransactions ? (metrics.net >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]') : 'text-[var(--foreground)]'}`}
+          accentColor={hasTransactions ? (metrics.net >= 0 ? 'success' : 'danger') : 'default'}
+          valueClassName={hasTransactions ? `text-2xl font-bold ${metrics.net >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}` : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/transactions')}
         />
       </div>
@@ -549,41 +730,42 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Needs Review"
-          value={metrics.unreviewedCount}
-          description={metrics.unreviewedCount > 0 ? `${metrics.unreviewedCount} transactions need validation` : 'All entries verified'}
-          trend={metrics.unreviewedCount > 0 ? { value: 24, isPositive: false } : { value: 100, isPositive: true }}
+          value={hasTransactions ? metrics.unreviewedCount : '—'}
+          description={hasTransactions ? (metrics.unreviewedCount > 0 ? `${metrics.unreviewedCount} transactions need validation` : 'All entries verified') : 'Upload data to verify'}
+          trend={undefined}
           icon={<Clock className="w-4 h-4" />}
-          accentColor={metrics.unreviewedCount > 0 ? 'warning' : 'success'}
-          valueClassName={`text-2xl font-bold ${metrics.unreviewedCount > 0 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}`}
+          accentColor={hasTransactions ? (metrics.unreviewedCount > 0 ? 'warning' : 'success') : 'default'}
+          valueClassName={hasTransactions ? `text-2xl font-bold ${metrics.unreviewedCount > 0 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}` : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/transactions?review=pending')}
         />
         <MetricCard
           title="Uncategorized"
-          value={metrics.uncategorizedCount + metrics.unknownCount}
-          description={(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'Requires classification' : 'All transactions mapped'}
-          trend={(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? { value: 8, isPositive: false } : { value: 100, isPositive: true }}
+          value={hasTransactions ? (metrics.uncategorizedCount + metrics.unknownCount) : '—'}
+          description={hasTransactions ? ((metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'Requires classification' : 'All transactions mapped') : 'Upload data to map'}
+          trend={undefined}
           icon={<FileText className="w-4 h-4" />}
-          accentColor={(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'warning' : 'success'}
-          valueClassName={`text-2xl font-bold ${(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}`}
+          accentColor={hasTransactions ? ((metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'warning' : 'success') : 'default'}
+          valueClassName={hasTransactions ? `text-2xl font-bold ${(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}` : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/transactions?category=uncategorized')}
         />
         <MetricCard
           title="Total Transactions"
           value={hasTransactions ? metrics.count.toLocaleString() : '—'}
-          description={`${metrics.uploadsCount} file${metrics.uploadsCount !== 1 ? 's' : ''} successfully parsed`}
-          trend={hasTransactions ? { value: 25, isPositive: true } : undefined}
+          description={hasTransactions ? `${metrics.uploadsCount} file${metrics.uploadsCount !== 1 ? 's' : ''} successfully parsed` : 'Upload a statement to begin review.'}
+          trend={undefined}
           icon={<Layers className="w-4 h-4" />}
-          accentColor="primary"
+          accentColor={hasTransactions ? 'primary' : 'default'}
+          valueClassName={hasTransactions ? 'text-[var(--foreground)] text-2xl font-bold' : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/transactions')}
         />
         <MetricCard
           title="Readiness Score"
           value={hasTransactions && readiness ? `${readiness.score}%` : '—'}
-          description={hasTransactions ? (readiness && readiness.score >= 90 ? 'Ready for accountant close' : 'Resolve open items to reach 100%') : 'Upload data to calculate readiness'}
-          trend={hasTransactions && readiness ? { value: readiness.score, isPositive: readiness.score >= 90 } : undefined}
+          description={getReadinessDesc()}
+          trend={undefined}
           icon={<CheckCircle2 className="w-4 h-4" />}
-          accentColor={hasTransactions && readiness ? (readiness.score >= 90 ? 'success' : 'warning') : 'default'}
-          valueClassName={`text-2xl font-bold ${hasTransactions && readiness ? (readiness.score >= 90 ? 'text-[var(--success)]' : 'text-[var(--warning)]') : 'text-[var(--muted-foreground)]'}`}
+          accentColor={hasTransactions && readiness ? (isReadinessComplete ? 'success' : 'warning') : 'default'}
+          valueClassName={`text-2xl font-bold ${hasTransactions && readiness ? (isReadinessComplete ? 'text-[var(--success)]' : 'text-[var(--warning)]') : 'text-[var(--muted-foreground)]'}`}
           onClick={() => navigate('/reports')}
         />
       </div>
@@ -723,10 +905,27 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
+      {!hasTransactions && (
+        <div className="kaeo-card py-12 px-6 flex flex-col items-center justify-center text-center max-w-xl mx-auto border border-dashed border-[var(--border)] mt-4">
+          <FileText className="w-10 h-10 text-[var(--muted-foreground)] mb-4" style={{ opacity: 0.5 }} />
+          <h3 className="text-[16px] font-semibold mb-2 text-[var(--foreground)]">No transaction data</h3>
+          <p className="text-[13px] text-[var(--muted-foreground)] max-w-sm mb-6">
+            Upload a statement to begin review.
+          </p>
+          <button
+            onClick={() => navigate('/files')}
+            className="btn-primary"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Upload statement
+          </button>
+        </div>
+      )}
+
       {/* ── Ask Libby Panel ── */}
       <SectionCard
         title="Ask Libby"
-        description="Libby is Kaeo’s AI finance operator. Ask her to find risks, summarize spend, review vendors, and generate accountant-ready reports."
+        description="Get guided help with risks, transactions, vendors, and reports."
         action={
           <button onClick={() => navigate('/libby')} className="btn-secondary btn-sm">
             Ask Libby

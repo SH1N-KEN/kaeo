@@ -7,9 +7,11 @@ interface MetricCardProps {
   description?: string;
   icon?: React.ReactNode;
   trend?: {
-    value: number;
-    isPositive: boolean;
+    value?: number;
+    isPositive?: boolean;
+    isNeutral?: boolean;
     label?: string;
+    direction?: 'up' | 'down';
   };
   className?: string;
   valueClassName?: string;
@@ -60,15 +62,19 @@ const MetricCard: React.FC<MetricCardProps> = ({
           {trend && (
             <span
               className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                trend.isPositive
-                  ? 'bg-[rgba(22,138,91,0.10)] text-[#168A5B]'
-                  : 'bg-[rgba(194,65,58,0.10)] text-[#C2413A]'
+                trend.isNeutral
+                  ? 'bg-[var(--muted)] text-[var(--muted-foreground)]'
+                  : trend.isPositive
+                    ? 'bg-[rgba(22,138,91,0.10)] text-[#168A5B]'
+                    : 'bg-[rgba(194,65,58,0.10)] text-[#C2413A]'
               }`}
             >
-              {trend.isPositive
-                ? <TrendingUp className="w-3 h-3" />
-                : <TrendingDown className="w-3 h-3" />}
-              {trend.value}%
+              {!trend.isNeutral && (
+                (trend.direction === 'down' || (trend.direction === undefined && !trend.isPositive))
+                  ? <TrendingDown className="w-3 h-3" />
+                  : <TrendingUp className="w-3 h-3" />
+              )}
+              {trend.label !== undefined ? trend.label : `${trend.value}%`}
             </span>
           )}
           {icon && (

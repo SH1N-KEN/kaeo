@@ -24,7 +24,10 @@ export const formatINR = (amount: number, options?: FormatOptions): string => {
   }
 
   const formatter = new Intl.NumberFormat('en-IN', formatterOptions);
-  const formatted = formatter.format(absAmount);
+  let formatted = formatter.format(absAmount);
+  
+  // Ensure no spaces between currency symbol (₹) and the amount digits
+  formatted = formatted.replace(/[\s\u00A0\u202F]/g, '');
 
   if (isNegative) {
     return `-${formatted}`;
