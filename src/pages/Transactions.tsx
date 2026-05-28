@@ -525,7 +525,8 @@ const Transactions: React.FC = () => {
             <input
               type="text"
               placeholder="Search description, counterparty, category…"
-              className="kaeo-input pl-9 text-xs py-2 bg-background/50 border-border/30 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 rounded-lg"
+              className="kaeo-input text-xs py-2 bg-background/50 border-border/30 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 rounded-lg"
+              style={{ paddingLeft: '2.5rem' }}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
