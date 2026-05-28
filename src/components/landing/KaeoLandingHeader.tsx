@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, ArrowRight } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
-
 import aeLogo from '../../assets/kaeo-ae-logo.png';
 
 export const KaeoLandingHeader: React.FC = () => {
@@ -22,14 +21,12 @@ export const KaeoLandingHeader: React.FC = () => {
   const handleNavClick = (e: React.MouseEvent, targetId: string) => {
     e.preventDefault();
     setMobileMenuOpen(false);
-    
-    // If user is authenticated and clicks pricing, go to /billing
+
     if (targetId === 'pricing' && user) {
       navigate('/billing');
       return;
     }
-    
-    // Check if we are on the landing page
+
     if (window.location.pathname !== '/') {
       navigate('/', { state: { scrollTo: targetId } });
       return;
@@ -37,151 +34,267 @@ export const KaeoLandingHeader: React.FC = () => {
 
     const element = document.getElementById(targetId);
     if (element) {
-      const headerOffset = 80;
+      const headerOffset = 72;
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-      
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+      window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
     }
   };
 
   return (
-    <header 
+    <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled 
-          ? 'py-4 bg-background/80 dark:bg-[#070908]/80 backdrop-blur-lg border-b border-border' 
-          : 'py-6 bg-transparent border-b border-transparent'
+        isScrolled
+          ? 'bg-[#050F0D]/90 backdrop-blur-xl border-b border-[#2FB8A6]/10'
+          : 'bg-transparent border-b border-transparent'
       }`}
+      style={{ padding: '0 0' }}
     >
-      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '18px 48px',
+          maxWidth: '1280px',
+          margin: '0 auto',
+        }}
+      >
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/25 shrink-0">
-            <img src={aeLogo} alt="ae Logo" className="w-4.5 h-4.5 object-contain" />
-          </div>
-          <span className="text-xl font-black tracking-tight text-foreground leading-none">
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+          <img
+            src={aeLogo}
+            alt="Kaeo"
+            style={{
+              width: '28px',
+              height: '28px',
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 0 8px rgba(47, 184, 166, 0.35))',
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              fontSize: '22px',
+              fontWeight: 700,
+              letterSpacing: '-0.02em',
+              color: '#E8F0EE',
+              lineHeight: 1,
+            }}
+          >
             Kaeo
           </span>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8">
-          <a 
-            href="#product" 
-            onClick={(e) => handleNavClick(e, 'product')}
-            className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Product
-          </a>
-          <a 
-            href="#how-it-works" 
+        {/* Desktop Nav */}
+        <nav
+          className="hidden md:flex"
+          style={{ display: 'flex', alignItems: 'center', gap: '32px' }}
+        >
+          <a
+            href="#how-it-works"
             onClick={(e) => handleNavClick(e, 'how-it-works')}
-            className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            style={{
+              fontSize: '14px',
+              fontWeight: 500,
+              color: 'rgba(232, 240, 238, 0.55)',
+              textDecoration: 'none',
+              transition: 'color 0.15s ease',
+            }}
+            className="hover:text-[#E8F0EE]"
           >
             How it works
           </a>
-          <a 
-            href="#pricing" 
+          <a
+            href="#what-kaeo-catches"
+            onClick={(e) => handleNavClick(e, 'what-kaeo-catches')}
+            style={{
+              fontSize: '14px',
+              fontWeight: 500,
+              color: 'rgba(232, 240, 238, 0.55)',
+              textDecoration: 'none',
+              transition: 'color 0.15s ease',
+            }}
+            className="hover:text-[#E8F0EE]"
+          >
+            Features
+          </a>
+          <a
+            href="#pricing"
             onClick={(e) => handleNavClick(e, 'pricing')}
-            className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            style={{
+              fontSize: '14px',
+              fontWeight: 500,
+              color: 'rgba(232, 240, 238, 0.55)',
+              textDecoration: 'none',
+              transition: 'color 0.15s ease',
+            }}
+            className="hover:text-[#E8F0EE]"
           >
             Pricing
           </a>
         </nav>
 
-        {/* Desktop Auth Actions */}
-        <div className="hidden md:flex items-center gap-4">
+        {/* Desktop CTA */}
+        <div className="hidden md:flex" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {user ? (
-            <Link 
+            <Link
               to="/dashboard"
-              className="px-5 py-2 bg-primary text-primary-foreground rounded-xl font-bold text-sm shadow-md shadow-primary/10 hover:opacity-90 transition-all flex items-center gap-1.5"
+              style={{
+                background: '#2FB8A6',
+                color: '#050F0D',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '999px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-block',
+                textDecoration: 'none',
+              }}
             >
-              Go to Dashboard
-              <ArrowRight className="w-4 h-4" />
+              Dashboard →
             </Link>
           ) : (
             <>
-              <Link 
+              <Link
                 to="/login"
-                className="text-sm font-bold text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: 'rgba(232, 240, 238, 0.55)',
+                  textDecoration: 'none',
+                  padding: '8px 12px',
+                }}
+                className="hover:text-[#E8F0EE]"
               >
                 Sign in
               </Link>
-              <Link 
+              <Link
                 to="/signup"
-                className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl font-bold text-sm shadow-md shadow-primary/10 hover:opacity-90 transition-all"
+                style={{
+                  background: '#2FB8A6',
+                  color: '#050F0D',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '999px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-block',
+                  textDecoration: 'none',
+                }}
               >
-                Start free
+                Start reviewing →
               </Link>
             </>
           )}
         </div>
 
-        {/* Mobile Menu Button */}
-        <button 
+        {/* Mobile Menu Toggle */}
+        <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
+          className="md:hidden"
+          style={{
+            padding: '8px',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            color: '#E8F0EE',
+          }}
           aria-label="Toggle menu"
         >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {mobileMenuOpen ? <X style={{ width: '22px', height: '22px' }} /> : <Menu style={{ width: '22px', height: '22px' }} />}
         </button>
       </div>
 
-      {/* Mobile Dropdown Menu */}
+      {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-background/95 dark:bg-[#070908]/95 backdrop-blur-xl border-b border-border py-6 px-6 animate-in slide-in-from-top-4 duration-200">
-          <nav className="flex flex-col gap-5 mb-6">
-            <a 
-              href="#product" 
-              onClick={(e) => handleNavClick(e, 'product')}
-              className="text-base font-bold text-muted-foreground hover:text-foreground transition-colors py-1"
-            >
-              Product
-            </a>
-            <a 
-              href="#how-it-works" 
-              onClick={(e) => handleNavClick(e, 'how-it-works')}
-              className="text-base font-bold text-muted-foreground hover:text-foreground transition-colors py-1"
-            >
-              How it works
-            </a>
-            <a 
-              href="#pricing" 
-              onClick={(e) => handleNavClick(e, 'pricing')}
-              className="text-base font-bold text-muted-foreground hover:text-foreground transition-colors py-1"
-            >
-              Pricing
-            </a>
+        <div
+          style={{
+            background: 'rgba(5, 15, 13, 0.98)',
+            backdropFilter: 'blur(24px)',
+            borderBottom: '1px solid rgba(47, 184, 166, 0.12)',
+            padding: '24px 24px 32px',
+          }}
+          className="md:hidden"
+        >
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+            {[
+              { label: 'How it works', id: 'how-it-works' },
+              { label: 'Features', id: 'what-kaeo-catches' },
+              { label: 'Pricing', id: 'pricing' },
+            ].map(({ label, id }) => (
+              <a
+                key={id}
+                href={`#${id}`}
+                onClick={(e) => handleNavClick(e, id)}
+                style={{
+                  fontSize: '16px',
+                  fontWeight: 500,
+                  color: 'rgba(232, 240, 238, 0.7)',
+                  textDecoration: 'none',
+                  padding: '4px 0',
+                }}
+              >
+                {label}
+              </a>
+            ))}
           </nav>
-          
-          <div className="flex flex-col gap-3 pt-4 border-t border-border/50">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid rgba(47, 184, 166, 0.10)', paddingTop: '20px' }}>
             {user ? (
-              <Link 
+              <Link
                 to="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold text-center shadow-md shadow-primary/10 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                style={{
+                  background: '#2FB8A6',
+                  color: '#050F0D',
+                  padding: '14px 20px',
+                  borderRadius: '12px',
+                  fontWeight: 600,
+                  fontSize: '15px',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  display: 'block',
+                }}
               >
-                Go to Dashboard
-                <ArrowRight className="w-4 h-4" />
+                Dashboard →
               </Link>
             ) : (
               <>
-                <Link 
+                <Link
                   to="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full py-3 text-center font-bold text-muted-foreground hover:text-foreground transition-colors border border-border rounded-xl bg-muted/20"
+                  style={{
+                    border: '1px solid rgba(47, 184, 166, 0.20)',
+                    color: '#E8F0EE',
+                    padding: '14px 20px',
+                    borderRadius: '12px',
+                    fontWeight: 500,
+                    fontSize: '15px',
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                    display: 'block',
+                  }}
                 >
                   Sign in
                 </Link>
-                <Link 
+                <Link
                   to="/signup"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold text-center shadow-md shadow-primary/10 hover:opacity-90 transition-all"
+                  style={{
+                    background: '#2FB8A6',
+                    color: '#050F0D',
+                    padding: '14px 20px',
+                    borderRadius: '12px',
+                    fontWeight: 600,
+                    fontSize: '15px',
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                    display: 'block',
+                  }}
                 >
-                  Start free
+                  Start reviewing →
                 </Link>
               </>
             )}

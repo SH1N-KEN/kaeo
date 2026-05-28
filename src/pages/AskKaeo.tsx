@@ -4,7 +4,7 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import { useAskKaeoChat } from '../hooks/useAskKaeoChat';
 import { Send, AlertCircle, User, Shield, Zap, Sparkles, ExternalLink } from 'lucide-react';
 import EmptyState from '../components/ui/EmptyState';
-import aeLogo from '../assets/kaeo-ae-logo.png';
+
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useWorkspaceRefresh, triggerWorkspaceRefresh } from '../hooks/useWorkspaceRefresh';
@@ -291,13 +291,13 @@ const AskKaeo = () => {
         {/* HEADER */}
         <div className="p-4 border-b bg-card/50 backdrop-blur-sm flex justify-between items-center z-10">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-center shrink-0">
-              <img src={aeLogo} alt="Ask Libby" className="w-4.5 h-4.5 object-contain" />
+            <div className="w-9 h-9 rounded-xl bg-teal-500/10 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4.5 h-4.5 text-teal-400" />
             </div>
             <div>
               <h2 className="font-semibold tracking-tight">Ask Libby</h2>
               <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
-                AI Spend Assistant
+                AI-assisted finance review
               </p>
             </div>
           </div>
@@ -357,8 +357,8 @@ const AskKaeo = () => {
                 <div key={msg.id || idx} className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
                   {!isUser && (
                     <div className="flex-shrink-0 mt-1">
-                      <div className="h-8 w-8 rounded-lg bg-teal-500/10 border border-teal-500/25 flex items-center justify-center">
-                        <img src={aeLogo} alt="Libby" className="w-4 h-4 object-contain" />
+                      <div className="h-8 w-8 rounded-full bg-teal-500/10 flex items-center justify-center">
+                        <span className="w-3 h-3 rounded-full bg-teal-400" style={{ boxShadow: '0 0 6px rgba(52,211,153,0.45)' }} />
                       </div>
                     </div>
                   )}
@@ -432,8 +432,8 @@ const AskKaeo = () => {
           {loading && (
             <div className="flex gap-4 justify-start">
               <div className="flex-shrink-0 mt-1">
-                <div className="h-8 w-8 rounded-lg bg-teal-500/10 border border-teal-500/25 flex items-center justify-center">
-                  <img src={aeLogo} alt="Libby" className="w-4 h-4 object-contain" />
+                <div className="h-8 w-8 rounded-full bg-teal-500/10 flex items-center justify-center">
+                  <span className="w-3 h-3 rounded-full bg-teal-400" style={{ boxShadow: '0 0 6px rgba(52,211,153,0.45)' }} />
                 </div>
               </div>
               <div className="bg-card border rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm flex items-center gap-2">

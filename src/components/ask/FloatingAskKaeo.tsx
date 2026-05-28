@@ -10,7 +10,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import aeLogo from '../../assets/kaeo-ae-logo.png';
+
 import { useAskKaeoChat } from '../../hooks/useAskKaeoChat';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { Plus } from 'lucide-react';
@@ -223,8 +223,8 @@ const FloatingAskKaeo: React.FC = () => {
             {/* ── Header ── */}
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40 bg-card/80 backdrop-blur-md shrink-0">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shrink-0">
-                  <img src={aeLogo} alt="Libby" className="w-4 h-4 object-contain" />
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4 text-emerald-400" />
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-sm font-bold tracking-tight text-foreground leading-tight">
@@ -232,7 +232,7 @@ const FloatingAskKaeo: React.FC = () => {
                   </h3>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="text-[10px] text-muted-foreground font-semibold">
-                      AI CFO Operator
+                      AI-assisted finance review
                     </span>
                     <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                       Grounded in Kaeo data
@@ -339,14 +339,10 @@ const FloatingAskKaeo: React.FC = () => {
                       key={msg.id}
                       className={`flex gap-2.5 ${isUser ? 'justify-end' : 'justify-start'}`}
                     >
-                      {/* AI avatar with mint border */}
+                      {/* AI avatar — clean teal dot */}
                       {!isUser && (
-                        <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shrink-0 mt-0.5">
-                          <img
-                            src={aeLogo}
-                            alt="Libby"
-                            className="w-3.5 h-3.5 object-contain"
-                          />
+                        <div className="w-7 h-7 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" style={{ boxShadow: '0 0 6px rgba(52,211,153,0.5)' }} />
                         </div>
                       )}
 
@@ -458,8 +454,8 @@ const FloatingAskKaeo: React.FC = () => {
               {/* Typing indicator */}
               {loading && (
                 <div className="flex gap-2.5 justify-start">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shrink-0 mt-0.5">
-                    <img src={aeLogo} alt="Libby" className="w-3.5 h-3.5 object-contain" />
+                  <div className="w-7 h-7 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" style={{ boxShadow: '0 0 6px rgba(52,211,153,0.5)' }} />
                   </div>
                   <div className="bg-muted/40 border border-border/40 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 bg-emerald-400/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />

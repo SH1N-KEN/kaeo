@@ -76,9 +76,11 @@ const Login: React.FC = () => {
         <div className="absolute bottom-0 right-0 w-[300px] h-[300px] bg-teal-500/5 rounded-full blur-[95px] pointer-events-none" />
 
         <Link to="/" className="flex items-center gap-2.5 z-10 self-start group">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/25 shrink-0">
-            <img src={aeLogo} alt="ae Logo" className="w-4.5 h-4.5 object-contain" />
-          </div>
+          <img
+            src={aeLogo}
+            alt="Kaeo"
+            style={{ width: 28, height: 28, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(47,184,166,0.35))', flexShrink: 0 }}
+          />
           <span className="text-xl font-black tracking-tight text-white leading-none">
             Kaeo
           </span>
@@ -133,9 +135,11 @@ const Login: React.FC = () => {
           {/* Mobile Logo Only */}
           <div className="flex lg:hidden flex-col items-center justify-center mb-6">
             <Link to="/" className="flex items-center gap-2.5">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/25 shrink-0">
-                <img src={aeLogo} alt="ae Logo" className="w-4.5 h-4.5 object-contain" />
-              </div>
+              <img
+                src={aeLogo}
+                alt="Kaeo"
+                style={{ width: 28, height: 28, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(47,184,166,0.35))', flexShrink: 0 }}
+              />
               <span className="text-xl font-black tracking-tight text-foreground leading-none">
                 Kaeo
               </span>

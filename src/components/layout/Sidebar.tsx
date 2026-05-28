@@ -118,26 +118,34 @@ const Sidebar: React.FC = () => {
         {collapsed ? (
           <button
             onClick={() => setCollapsed(false)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto hover:bg-[rgba(15,118,110,0.15)] transition-colors cursor-pointer border"
-            style={{ background: 'rgba(15,118,110,0.10)', borderColor: 'rgba(15,118,110,0.20)' }}
+            className="flex items-center justify-center mx-auto transition-opacity hover:opacity-70 cursor-pointer"
+            style={{ width: 40, height: 40 }}
             title="Expand sidebar"
           >
-            <img src={aeLogo} alt="Kaeo" className="w-4 h-4 object-contain" />
+            <img src={aeLogo} alt="Kaeo" style={{ width: 26, height: 26, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(47,184,166,0.4))' }} />
           </button>
         ) : (
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(15,118,110,0.10)', border: '1px solid rgba(15,118,110,0.20)' }}>
-                <img src={aeLogo} alt="Kaeo" className="w-4 h-4 object-contain" />
-              </div>
-              <span className="text-[20px] font-bold tracking-tight leading-none"
-                style={{ color: 'var(--primary)', letterSpacing: '-0.03em' }}>
+              <img
+                src={aeLogo}
+                alt="Kaeo"
+                style={{ width: 28, height: 28, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(47,184,166,0.35))', flexShrink: 0 }}
+              />
+              <span
+                style={{
+                  fontSize: 21,
+                  fontWeight: 700,
+                  letterSpacing: '-0.03em',
+                  color: 'var(--primary)',
+                  lineHeight: 1,
+                }}
+              >
                 Kaeo
               </span>
             </div>
-            
-            {/* Subtle collapse button inside header */}
+
+            {/* Subtle collapse button */}
             <button
               onClick={() => setCollapsed(true)}
               className="p-1 rounded-lg text-[#7E9C98] hover:text-[#E8F0EE] hover:bg-[rgba(47,184,166,0.06)] transition-colors cursor-pointer"

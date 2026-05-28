@@ -509,9 +509,11 @@ const Onboarding: React.FC = () => {
       {/* Header bar */}
       <header className="px-6 h-16 border-b border-white/5 flex items-center justify-between shrink-0 bg-[#070908]/80 backdrop-blur-md relative z-20">
         <div className="flex items-center gap-2 select-none">
-          <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/25">
-            <img src={aeLogo} alt="ae" className="w-4 h-4 object-contain" />
-          </div>
+          <img
+            src={aeLogo}
+            alt="Kaeo"
+            style={{ width: 26, height: 26, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(47,184,166,0.35))', flexShrink: 0 }}
+          />
           <span className="text-lg font-bold tracking-tight text-teal-400 leading-none">
             Kaeo
           </span>

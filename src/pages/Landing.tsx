@@ -3,654 +3,881 @@ import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../components/auth/AuthProvider';
 import { KaeoLandingHeader } from '../components/landing/KaeoLandingHeader';
 import { KaeoHero } from '../components/landing/KaeoHero';
-import { AnimatedGroup } from '../components/ui/AnimatedGroup';
-import { 
-  UploadCloud, 
-  Sparkles, 
-  AlertTriangle, 
-  MessageSquare, 
-  FileCheck, 
-  CheckCircle,
-  TrendingDown,
-  Users,
-  ShieldAlert,
-  ArrowRight,
-  FileText
-} from 'lucide-react';
+import { motion } from 'framer-motion';
 import aeLogo from '../assets/kaeo-ae-logo.png';
+
+/* ═══════════════════════════════════════════════
+   SECTION LABEL COMPONENT
+═══════════════════════════════════════════════ */
+const SectionLabel = ({ code, label }: { code: string; label: string }) => (
+  <div style={{ color: '#2FB8A6', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '16px', textTransform: 'uppercase' as const, fontWeight: 500 }}>
+    {code} — {label}
+  </div>
+);
+
+/* ═══════════════════════════════════════════════
+   HOW IT WORKS — STEP CARD
+═══════════════════════════════════════════════ */
+const StepCard = ({
+  num, label, title, description, visual,
+}: {
+  num: string; label: string; title: string; description: string; visual: React.ReactNode;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 24 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, margin: '-60px' }}
+    transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+    style={{
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '16px',
+    }}
+  >
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+      <span style={{
+        fontStyle: 'italic',
+        color: '#2FB8A6',
+        fontSize: '40px',
+        lineHeight: '0.85',
+        letterSpacing: '-0.04em',
+        fontWeight: 700,
+      }}>{num}</span>
+      <span style={{
+        color: '#2FB8A6',
+        fontFamily: 'ui-monospace, monospace',
+        fontSize: '10px',
+        letterSpacing: '0.10em',
+        textTransform: 'uppercase' as const,
+        fontWeight: 600,
+      }}>{label}</span>
+    </div>
+    <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#E8F0EE', letterSpacing: '-0.02em', margin: 0 }}>{title}</h3>
+    <p style={{ fontSize: '14px', color: 'rgba(232,240,238,0.50)', lineHeight: 1.6, margin: 0 }}>{description}</p>
+    <div style={{
+      background: '#0D1714',
+      border: '1px solid rgba(47,184,166,0.12)',
+      borderRadius: '12px',
+      padding: '16px',
+      marginTop: '4px',
+    }}>
+      {visual}
+    </div>
+  </motion.div>
+);
+
+/* ── Step visuals ─────────────────────────────── */
+const UploadVisual = () => (
+  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '6px' }}>
+    {['hdfc_statement_apr26.xlsx', 'axis_q4_fy26.csv', 'vendor_invoices.pdf'].map((f, i) => (
+      <div key={i} style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '7px 10px',
+        background: 'rgba(255,255,255,0.03)',
+        borderRadius: '7px',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}>
+        <span style={{ fontSize: '11px', color: 'rgba(232,240,238,0.65)', fontFamily: 'ui-monospace, monospace' }}>{f}</span>
+        <span style={{ fontSize: '9px', color: '#2FB8A6', fontFamily: 'ui-monospace, monospace', fontWeight: 700 }}>✓ ready</span>
+      </div>
+    ))}
+  </div>
+);
+
+const MapVisual = () => (
+  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '6px', fontSize: '11px' }}>
+    {[
+      { target: 'Transaction Date', source: 'Value Date', status: 'mapped' },
+      { target: 'Description', source: 'Narration / Description', status: 'mapped' },
+      { target: 'Debit', source: 'Withdrawal Amt (INR)', status: 'mapped' },
+      { target: 'Credit', source: 'Deposit Amt (INR)', status: 'mapped' },
+    ].map((row, i) => (
+      <div key={i} style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '7px 10px',
+        background: 'rgba(255,255,255,0.03)',
+        borderRadius: '7px',
+        border: '1px solid rgba(255,255,255,0.05)',
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '2px' }}>
+          <span style={{ fontSize: '10px', color: 'rgba(232,240,238,0.65)', fontWeight: 600 }}>{row.target}</span>
+          <span style={{ fontSize: '9px', color: '#2FB8A6', fontFamily: 'ui-monospace, monospace' }}>← {row.source}</span>
+        </div>
+        <span style={{ fontSize: '8px', color: '#2FB8A6', background: 'rgba(47,184,166,0.10)', border: '1px solid rgba(47,184,166,0.20)', borderRadius: '4px', padding: '2px 6px', fontWeight: 700, textTransform: 'uppercase' }}>{row.status}</span>
+      </div>
+    ))}
+  </div>
+);
+
+const ReviewVisual = () => (
+  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '5px' }}>
+    {[
+      { title: 'Duplicate suspect', type: 'Duplicate payment', amount: '₹75,000', severity: 'critical', sColor: '#E05450' },
+      { title: 'High-value outflow', type: 'High-value payment', amount: '₹1,24,000', severity: 'high', sColor: '#E05450' },
+      { title: 'Unmapped UPI payee', type: 'Uncategorized', amount: '₹18,500', severity: 'medium', sColor: '#D4922A' },
+    ].map((item, i) => (
+      <div key={i} style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '7px 10px',
+        background: 'rgba(224, 84, 80, 0.03)',
+        borderRadius: '7px',
+        border: `1px solid ${item.severity === 'medium' ? 'rgba(212,146,42,0.15)' : 'rgba(224,84,80,0.15)'}`,
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '2px' }}>
+          <span style={{ fontSize: '10px', color: '#E8F0EE', fontWeight: 600 }}>{item.title}</span>
+          <span style={{ fontSize: '9px', color: 'rgba(232,240,238,0.40)' }}>{item.type}</span>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: item.sColor, fontFamily: 'ui-monospace, monospace' }}>{item.amount}</div>
+          <span style={{ fontSize: '7px', fontWeight: 900, textTransform: 'uppercase', color: item.sColor }}>{item.severity}</span>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const ExplainVisual = () => (
+  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
+    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ background: 'rgba(47,184,166,0.15)', borderRadius: '10px 10px 2px 10px', padding: '8px 12px', fontSize: '12px', color: '#E8F0EE', maxWidth: '80%' }}>
+        Why is this ₹1,24,000 payment flagged?
+      </div>
+    </div>
+    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+      <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(47,184,166,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
+        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2FB8A6', display: 'inline-block', boxShadow: '0 0 5px rgba(47,184,166,0.5)' }} />
+      </div>
+      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '2px 10px 10px 10px', padding: '8px 12px', fontSize: '11px', color: 'rgba(232,240,238,0.65)', lineHeight: 1.5, flex: 1 }}>
+        This outflow to <strong style={{ color: '#E8F0EE' }}>Mumbai Supplies Pvt Ltd</strong> is <span style={{ color: '#D4922A' }}>3.2× above</span> your average vendor payment this quarter. Recommend reviewing invoice before clearing.
+      </div>
+    </div>
+  </div>
+);
+
+const ExportVisual = () => (
+  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '6px' }}>
+    {[
+      { label: 'Finance Review Pack · Apr 2026', type: 'PDF', ready: true },
+      { label: 'Transaction Ledger · Apr 2026', type: 'CSV', ready: true },
+      { label: 'Risk Summary Report', type: 'PDF', ready: false },
+    ].map((item, i) => (
+      <div key={i} style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '8px 10px',
+        background: 'rgba(255,255,255,0.03)',
+        borderRadius: '7px',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}>
+        <div>
+          <div style={{ fontSize: '11px', color: '#E8F0EE', fontWeight: 500 }}>{item.label}</div>
+          <div style={{ fontSize: '9px', color: 'rgba(232,240,238,0.35)', fontFamily: 'ui-monospace, monospace', marginTop: '1px' }}>{item.type}</div>
+        </div>
+        <span style={{
+          fontSize: '9px', fontWeight: 700, fontFamily: 'ui-monospace, monospace',
+          padding: '3px 8px', borderRadius: '4px',
+          background: item.ready ? 'rgba(47,184,166,0.12)' : 'rgba(255,255,255,0.05)',
+          color: item.ready ? '#2FB8A6' : 'rgba(232,240,238,0.35)',
+          border: `1px solid ${item.ready ? 'rgba(47,184,166,0.22)' : 'rgba(255,255,255,0.08)'}`,
+        }}>{item.ready ? '↓ Export' : 'Pending'}</span>
+      </div>
+    ))}
+  </div>
+);
+
+/* ═══════════════════════════════════════════════
+   CATCH CARD
+═══════════════════════════════════════════════ */
+const CatchCard = ({ title, description, example }: { title: string; description: string; example: string }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, margin: '-40px' }}
+    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+    style={{
+      background: '#0D1714',
+      border: '1px solid rgba(47,184,166,0.10)',
+      borderRadius: '14px',
+      padding: '22px',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '10px',
+      transition: 'border-color 0.2s ease',
+    }}
+    className="catch-card"
+  >
+    <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#E8F0EE', margin: 0, letterSpacing: '-0.01em' }}>{title}</h4>
+    <p style={{ fontSize: '13px', color: 'rgba(232,240,238,0.50)', lineHeight: 1.55, margin: 0 }}>{description}</p>
+    <div style={{
+      fontFamily: 'ui-monospace, monospace',
+      fontSize: '11px',
+      color: '#2FB8A6',
+      background: 'rgba(47,184,166,0.07)',
+      border: '1px solid rgba(47,184,166,0.14)',
+      borderRadius: '6px',
+      padding: '6px 10px',
+      marginTop: '2px',
+    }}>
+      {example}
+    </div>
+  </motion.div>
+);
+
+/* ═══════════════════════════════════════════════
+   REPORT MOCK
+═══════════════════════════════════════════════ */
+const ReportMock = () => (
+  <div style={{
+    background: '#080E0C',
+    border: '1px solid rgba(47,184,166,0.14)',
+    borderRadius: '16px',
+    overflow: 'hidden',
+    fontFamily: 'inherit',
+    boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+  }}>
+    {/* Header */}
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '16px 20px',
+      background: 'rgba(47,184,166,0.06)',
+      borderBottom: '1px solid rgba(47,184,166,0.10)',
+    }}>
+      <div>
+        <div style={{ fontSize: '11px', color: 'rgba(232,240,238,0.40)', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.06em', marginBottom: '2px' }}>KAEO · FINANCE REVIEW PACK</div>
+        <div style={{ fontSize: '16px', fontWeight: 700, color: '#E8F0EE', letterSpacing: '-0.02em', fontStyle: 'italic' }}>April 2026</div>
+      </div>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <span style={{ fontSize: '10px', padding: '4px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.06)', color: 'rgba(232,240,238,0.50)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600 }}>CSV</span>
+        <span style={{ fontSize: '10px', padding: '4px 10px', borderRadius: '6px', background: '#2FB8A6', color: '#050F0D', fontWeight: 700 }}>PDF Export</span>
+      </div>
+    </div>
+
+    {/* Summary stats */}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+      {[
+        { label: 'Money In', value: '+₹12,80,400', color: '#22B573' },
+        { label: 'Money Out', value: '−₹8,42,200', color: '#E05450' },
+        { label: 'Open Risks', value: '3 items', color: '#D4922A' },
+      ].map((stat, i) => (
+        <div key={i} style={{ padding: '16px 18px', background: '#080E0C' }}>
+          <div style={{ fontSize: '10px', color: 'rgba(232,240,238,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase' as const, fontFamily: 'ui-monospace, monospace', marginBottom: '6px' }}>{stat.label}</div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: stat.color, letterSpacing: '-0.02em', fontFamily: 'ui-monospace, monospace' }}>{stat.value}</div>
+        </div>
+      ))}
+    </div>
+
+    {/* Transaction rows */}
+    <div style={{ padding: '16px 20px' }}>
+      <div style={{ fontSize: '11px', color: 'rgba(232,240,238,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase' as const, fontFamily: 'ui-monospace, monospace', marginBottom: '10px' }}>Review-ready transactions</div>
+      <table style={{ width: '100%', borderCollapse: 'collapse' as const, fontSize: '12px' }}>
+        <thead>
+          <tr>
+            {['Date', 'Description', 'Category', 'Amount', 'Status'].map((h) => (
+              <th key={h} style={{ padding: '6px 8px', textAlign: 'left', color: 'rgba(232,240,238,0.30)', fontSize: '10px', letterSpacing: '0.06em', textTransform: 'uppercase' as const, fontFamily: 'ui-monospace, monospace', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            { date: '28 Apr', desc: 'Razorpay Settlement', cat: 'Inflow / Revenue', amount: '+₹4,80,000', status: 'Verified', sColor: '#22B573', aColor: '#22B573' },
+            { date: '26 Apr', desc: 'Mumbai Supplies Pvt Ltd', cat: 'Vendor Payment', amount: '−₹1,24,000', status: 'Needs review', sColor: '#D4922A', aColor: '#E05450' },
+            { date: '25 Apr', desc: 'UPI/Unknown Narration', cat: 'Uncategorized', amount: '−₹18,500', status: 'Flagged', sColor: '#E05450', aColor: '#E05450' },
+            { date: '22 Apr', desc: 'HDFC Bank Interest', cat: 'Bank Income', amount: '+₹2,840', status: 'Verified', sColor: '#22B573', aColor: '#22B573' },
+          ].map((row, i) => (
+            <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <td style={{ padding: '9px 8px', color: 'rgba(232,240,238,0.40)', fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}>{row.date}</td>
+              <td style={{ padding: '9px 8px', color: '#E8F0EE', fontWeight: 500 }}>{row.desc}</td>
+              <td style={{ padding: '9px 8px' }}>
+                <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(47,184,166,0.08)', color: '#2FB8A6', border: '1px solid rgba(47,184,166,0.14)', fontWeight: 600 }}>{row.cat}</span>
+              </td>
+              <td style={{ padding: '9px 8px', color: row.aColor, fontWeight: 700, fontFamily: 'ui-monospace, monospace', fontSize: '11px', textAlign: 'right' as const }}>{row.amount}</td>
+              <td style={{ padding: '9px 8px', textAlign: 'center' as const }}>
+                <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: `${row.sColor}18`, color: row.sColor, border: `1px solid ${row.sColor}28`, fontWeight: 700, fontFamily: 'ui-monospace, monospace', letterSpacing: '0.04em' }}>{row.status}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(47,184,166,0.06)', borderRadius: '8px', border: '1px solid rgba(47,184,166,0.12)', fontSize: '12px', color: 'rgba(232,240,238,0.55)' }}>
+        <span style={{ color: '#2FB8A6', fontWeight: 600 }}>11 uncategorized rows</span> and <span style={{ color: '#D4922A', fontWeight: 600 }}>2 vendor payment notes</span> need your review before this report is accountant-ready.
+      </div>
+    </div>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════
+   LIBBY CHAT MOCK
+═══════════════════════════════════════════════ */
+const LibbyChatMock = () => (
+  <div style={{
+    background: '#080E0C',
+    border: '1px solid rgba(47, 184, 166, 0.14)',
+    borderRadius: '16px',
+    padding: '20px',
+    fontFamily: 'inherit',
+    boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2FB8A6', boxShadow: '0 0 8px #2FB8A6' }} />
+        <span style={{ fontSize: '13px', fontWeight: 600, color: '#E8F0EE' }}>Ask Libby</span>
+      </div>
+      <span style={{ fontSize: '9px', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.06em', color: 'rgba(232, 240, 238, 0.35)', textTransform: 'uppercase' as const, fontWeight: 600 }}>Your Kaeo data · Apr 2026</span>
+    </div>
+    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ background: 'rgba(47,184,166,0.15)', borderRadius: '12px 12px 2px 12px', padding: '10px 14px', fontSize: '13px', color: '#E8F0EE', maxWidth: '80%', lineHeight: 1.5 }}>
+          Which vendor is taking most of my spend this month?
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(47,184,166,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
+          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2FB8A6', display: 'inline-block', boxShadow: '0 0 6px rgba(47,184,166,0.45)' }} />
+        </div>
+        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '2px 12px 12px 12px', padding: '12px 14px', fontSize: '13px', color: 'rgba(232,240,238,0.65)', lineHeight: 1.6, flex: 1 }}>
+          Based on your uploaded statements: <strong style={{ color: '#E8F0EE' }}>Mumbai Supplies Pvt Ltd</strong> accounts for <span style={{ color: '#D4922A', fontWeight: 700 }}>₹1,24,000</span> — your largest single vendor outflow this period. This is <span style={{ color: '#D4922A' }}>3.2× above</span> your April average.
+          <br /><br />
+          <span style={{ color: '#2FB8A6' }}>2 other payments to this vendor in March</span> suggest a recurring relationship worth reviewing.
+        </div>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ background: 'rgba(47,184,166,0.15)', borderRadius: '12px 12px 2px 12px', padding: '10px 14px', fontSize: '13px', color: '#E8F0EE', maxWidth: '80%', lineHeight: 1.5 }}>
+          Is my report ready to send to my CA?
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(47,184,166,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
+          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2FB8A6', display: 'inline-block', boxShadow: '0 0 6px rgba(47,184,166,0.45)' }} />
+        </div>
+        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '2px 12px 12px 12px', padding: '12px 14px', fontSize: '13px', color: 'rgba(232,240,238,0.65)', lineHeight: 1.6, flex: 1 }}>
+          Not yet — <span style={{ color: '#D4922A', fontWeight: 600 }}>11 rows are uncategorized</span> and <span style={{ color: '#E05450', fontWeight: 600 }}>1 duplicate payment needs your confirmation</span>. Once you resolve those, report readiness will reach 100%.
+        </div>
+      </div>
+    </div>
+    <div style={{ marginTop: '16px', padding: '10px 14px', background: 'rgba(47,184,166,0.06)', border: '1px solid rgba(47,184,166,0.14)', borderRadius: '8px', fontSize: '11px', color: 'rgba(232,240,238,0.40)', lineHeight: 1.5, fontStyle: 'italic' }}>
+      AI-assisted explanations are being built into the review workflow. Libby explains patterns from your data — it does not file returns or replace your CA.
+    </div>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════
+   MAIN LANDING PAGE
+═══════════════════════════════════════════════ */
 
 export const Landing: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
-    // Check if redirect state contains a scroll request
-    if (location.state && (location.state as any).scrollTo) {
-      const targetId = (location.state as any).scrollTo;
+    if (location.state && (location.state as { scrollTo?: string }).scrollTo) {
+      const targetId = (location.state as { scrollTo: string }).scrollTo;
       setTimeout(() => {
         const element = document.getElementById(targetId);
         if (element) {
-          const headerOffset = 80;
+          const headerOffset = 72;
           const elementPosition = element.getBoundingClientRect().top;
           const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-          window.scrollTo({
-            top: offsetPosition,
-            behavior: 'smooth'
-          });
+          window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
         }
       }, 100);
-      // Clear state after scrolling
       window.history.replaceState({}, document.title);
     }
   }, [location]);
 
-  const handleScrollToSection = (e: React.MouseEvent, targetId: string) => {
-    e.preventDefault();
-    const element = document.getElementById(targetId);
-    if (element) {
-      const headerOffset = 80;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-    }
+  const S = {
+    // Page wrapper
+    page: {
+      background: '#050F0D',
+      color: '#E8F0EE',
+      fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
+      minHeight: '100vh',
+    } as React.CSSProperties,
+
+    // Section container
+    section: (bg?: string): React.CSSProperties => ({
+      padding: '100px 48px',
+      background: bg ?? '#050F0D',
+      borderTop: '1px solid rgba(47,184,166,0.08)',
+    }),
+
+    // Inner max-width wrapper
+    inner: {
+      maxWidth: '1280px',
+      margin: '0 auto',
+      width: '100%',
+    } as React.CSSProperties,
+
+    // Section heading
+    h2: {
+      fontWeight: 700,
+      fontSize: 'clamp(32px, 4vw, 54px)',
+      letterSpacing: '-0.03em',
+      lineHeight: 1.1,
+      margin: '0 0 20px',
+      color: '#E8F0EE',
+    } as React.CSSProperties,
+
+    // Italic teal accent span
+    accent: {
+      fontFamily: '"Instrument Serif", serif',
+      fontStyle: 'italic',
+      fontWeight: 400,
+      color: '#2FB8A6',
+      textTransform: 'none',
+    } as React.CSSProperties,
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 selection:text-primary">
-      {/* Navigation Header */}
+    <div style={S.page}>
       <KaeoLandingHeader />
 
-      {/* Hero Section */}
+      {/* ═══════ 001 — HERO ═══════ */}
       <div id="product">
         <KaeoHero />
       </div>
 
-      {/* Problem Section */}
-      <section className="py-24 border-t border-border/40 relative overflow-hidden bg-card/10">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-risk/5 to-transparent pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="text-xs font-bold uppercase tracking-widest text-risk bg-risk/10 px-3 py-1.5 rounded-full border border-risk/20">The SME Spend Chaos</span>
-            <h2 className="text-3xl md:text-5xl font-black mt-6 mb-4 tracking-tight leading-tight">
-              Where does your cash leak every month?
-            </h2>
-            <p className="text-muted-foreground text-sm max-w-xl mx-auto">
-              Indian SMEs lose lakhs every year due to silent billing errors, duplicate transactions, and untracked subscription creep.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="p-6 rounded-2xl border border-risk/15 bg-card/40 backdrop-blur-sm space-y-4">
-              <div className="w-10 h-10 rounded-xl bg-risk/10 text-risk flex items-center justify-center">
-                <ShieldAlert className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-bold text-foreground">Duplicate Charges</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Payment gateways or software tools often double-invoice your company. Without transaction hashing, these go completely unnoticed.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl border border-warning/15 bg-card/40 backdrop-blur-sm space-y-4">
-              <div className="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-bold text-foreground">SaaS Subscription Spikes</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Slack, AWS, and server utility fees increase dynamically with usage. Without alerts, a 40% vendor increase is only seen at quarter-end.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl border border-border bg-card/40 backdrop-blur-sm space-y-4">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary dark:text-[#2fb8a6] flex items-center justify-center">
-                <TrendingDown className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-bold text-foreground">Messy Statement formats</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                HDFC, ICICI, and UPI exports come with non-financial meta rows, headers, and varying date schemas. Parsing them manually takes hours.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl border border-border bg-card/40 backdrop-blur-sm space-y-4">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary dark:text-[#2fb8a6] flex items-center justify-center">
-                <Users className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-bold text-foreground">Delayed Compliance</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Accountants spend days categorizing transactions manually for tax filing. Kaeo builds clean, accountant-ready ledgers in minutes.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section id="how-it-works" className="py-24 border-t border-border bg-muted/20 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-black mb-4">How Kaeo Works</h2>
-            <p className="text-muted-foreground text-sm font-semibold uppercase tracking-wider">Five simple steps to clear cashflow transparency.</p>
-          </div>
-
-          <AnimatedGroup className="grid grid-cols-1 md:grid-cols-5 gap-8" staggerDelay={0.15}>
-            {/* Step 1 */}
-            <div className="relative group">
-              <div className="p-6 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all flex flex-col h-full premium-glass">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black mb-4 group-hover:scale-105 transition-transform">
-                  1
-                </div>
-                <h3 className="text-base font-bold mb-2 flex items-center gap-1.5">
-                  <UploadCloud className="w-4 h-4 text-primary dark:text-[#2fb8a6]" />
-                  Upload Statement
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Drag and drop your bank CSV or XLSX file. No formatting cleanups needed.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="relative group">
-              <div className="p-6 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all flex flex-col h-full premium-glass">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black mb-4 group-hover:scale-105 transition-transform">
-                  2
-                </div>
-                <h3 className="text-base font-bold mb-2 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-primary dark:text-[#2fb8a6]" />
-                  Automated Cleanup
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Kaeo detects headers, maps debits/credits, cleans dates, and parses amounts.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="relative group">
-              <div className="p-6 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all flex flex-col h-full premium-glass">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black mb-4 group-hover:scale-105 transition-transform">
-                  3
-                </div>
-                <h3 className="text-base font-bold mb-2 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-primary dark:text-[#2fb8a6]" />
-                  Analyze Risks
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Automatically screen for double charges, vendor anomalies, and cash leaks.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 4 */}
-            <div className="relative group">
-              <div className="p-6 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all flex flex-col h-full premium-glass">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black mb-4 group-hover:scale-105 transition-transform">
-                  4
-                </div>
-                <h3 className="text-base font-bold mb-2 flex items-center gap-1.5">
-                  <MessageSquare className="w-4 h-4 text-primary dark:text-[#2fb8a6]" />
-                  Ask Libby
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Query your numbers in natural language. Get immediate fiscal advice.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 5 */}
-            <div className="relative group">
-              <div className="p-6 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all flex flex-col h-full premium-glass">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black mb-4 group-hover:scale-105 transition-transform">
-                  5
-                </div>
-                <h3 className="text-base font-bold mb-2 flex items-center gap-1.5">
-                  <FileCheck className="w-4 h-4 text-primary dark:text-[#2fb8a6]" />
-                  Export Reports
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Download accountant-ready PDFs or CSV summaries of categorized transactions.
-                </p>
-              </div>
-            </div>
-          </AnimatedGroup>
-        </div>
-      </section>
-
-      {/* Features Grid Section */}
-      <section className="py-24 border-t border-border/40">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-black mb-4">Core CFO Features</h2>
-            <p className="text-muted-foreground text-sm font-semibold uppercase tracking-wider">Engineered for absolute fiscal precision.</p>
-          </div>
-
-          <AnimatedGroup className="grid grid-cols-1 md:grid-cols-3 gap-8" staggerDelay={0.1}>
-            {/* Feature 1 */}
-            <div className="p-8 rounded-2xl border border-border bg-card flex flex-col justify-between hover:shadow-xl hover:border-primary/25 transition-all premium-glass">
-              <div className="space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
-                  <UploadCloud className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold">CSV/XLSX Ingestion</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Direct ledger parsing. Handles messy sheets, blank rows, and multiple worksheets automatically without breaking column offsets.
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="p-8 rounded-2xl border border-border bg-card flex flex-col justify-between hover:shadow-xl hover:border-primary/25 transition-all premium-glass">
-              <div className="space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
-                  <TrendingDown className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold">Duplicate Detection</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Protect against double invoicing and incorrect gateway payouts. Kaeo hashes key parameters to isolate exact duplicate rows instantly.
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="p-8 rounded-2xl border border-border bg-card flex flex-col justify-between hover:shadow-xl hover:border-primary/25 transition-all premium-glass">
-              <div className="space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
-                  <Users className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold">Vendor Intelligence</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Uncover where your capital flows. Classifies expenses by vendors and categories automatically to highlight spend spikes.
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="p-8 rounded-2xl border border-border bg-card flex flex-col justify-between hover:shadow-xl hover:border-primary/25 transition-all premium-glass">
-              <div className="space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
-                  <AlertTriangle className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold">Risk Inbox</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  A centralized queue for suspicious entries, unmapped transactions, and currency warnings. Resolve items in a few clicks.
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 5 */}
-            <div className="p-8 rounded-2xl border border-border bg-card flex flex-col justify-between hover:shadow-xl hover:border-primary/25 transition-all premium-glass">
-              <div className="space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
-                  <MessageSquare className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold">Libby AI Advisor</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  A fully integrated semantic financial companion. Analyze top vendors, identify anomalies, and prompt questions for Libby's immediate answers.
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 6 */}
-            <div className="p-8 rounded-2xl border border-border bg-card flex flex-col justify-between hover:shadow-xl hover:border-primary/25 transition-all premium-glass">
-              <div className="space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
-                  <FileCheck className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold">Accountant-Ready Reports</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Export complete transaction logs with verified mappings. Speed up tax compliance and reconciliations for your accountants.
-                </p>
-              </div>
-            </div>
-          </AnimatedGroup>
-        </div>
-      </section>
-
-      {/* Libby Preview Section */}
-      <section className="py-24 border-t border-border/40 bg-muted/10 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Context Left */}
-            <div className="lg:col-span-5 space-y-6">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#2fb8a6] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Ask Libby</span>
-              <h2 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">
-                An AI CFO Operator that actually knows your bank accounts
-              </h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Stop waiting for custom queries or pivot tables. Kaeo provides a semantic chatbot that analyzes your uploaded statement files in real time. Ask about recurring costs, SaaS licenses, vendor growths, and tax categories.
-              </p>
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-2 text-xs font-semibold">
-                  <CheckCircle className="w-4 h-4 text-[#2fb8a6]" />
-                  Fully isolated local vector queries
-                </div>
-                <div className="flex items-center gap-2 text-xs font-semibold">
-                  <CheckCircle className="w-4 h-4 text-[#2fb8a6]" />
-                  Flags potential double charges dynamically
-                </div>
-                <div className="flex items-center gap-2 text-xs font-semibold">
-                  <CheckCircle className="w-4 h-4 text-[#2fb8a6]" />
-                  No configuration or prompt engineering required
-                </div>
-              </div>
-            </div>
-
-            {/* Mock Chat Interface Right */}
-            <div className="lg:col-span-7 p-5 rounded-2xl border border-border/60 bg-card premium-glass shadow-2xl space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-border/30">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#2fb8a6]" />
-                  <span className="text-xs font-bold text-foreground">Libby Advisor</span>
-                </div>
-                <span className="text-[10px] font-bold text-muted-foreground">Session Active</span>
-              </div>
-
-              {/* Chat Bubble Container */}
-              <div className="space-y-4 h-[280px] overflow-y-auto pr-1 text-xs">
-                {/* User Message */}
-                <div className="flex justify-end">
-                  <div className="max-w-[75%] p-3 rounded-xl rounded-tr-none bg-primary text-primary-foreground font-semibold">
-                    Who are my top 3 growing SaaS vendors this quarter, and did we have any double invoices?
-                  </div>
-                </div>
-
-                {/* Kaeo AI Reply */}
-                <div className="flex gap-2.5 items-start">
-                  <div className="w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/25 flex items-center justify-center shrink-0">
-                    <img src={aeLogo} alt="ae" className="w-3.5 h-3.5 object-contain" />
-                  </div>
-                  <div className="flex-1 max-w-[80%] p-3.5 rounded-xl rounded-tl-none bg-muted/40 border border-border/30 space-y-2.5">
-                    <p className="leading-relaxed">
-                      Analyzing transaction ledgers for <strong>Q1 FY26</strong>. Here are the growing software vendors:
-                    </p>
-                    <div className="p-2 rounded-lg bg-background/50 border border-border/20 space-y-1.5">
-                      <div className="flex justify-between">
-                        <span className="font-bold">1. Amazon Web Services</span>
-                        <span className="text-risk font-semibold">₹2,45,000 (+42%)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-bold">2. Slack Technologies</span>
-                        <span className="text-risk font-semibold">₹90,000 (+15%)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-bold">3. Google Workspace</span>
-                        <span className="text-muted-foreground">₹45,000 (Flat)</span>
-                      </div>
-                    </div>
-                    <div className="p-2 rounded-lg bg-risk/5 border border-risk/20 flex gap-2 items-start">
-                      <AlertTriangle className="w-3.5 h-3.5 text-risk shrink-0 mt-0.5" />
-                      <p className="text-[11px] text-muted-foreground leading-normal">
-                        <strong>Duplicate Warning:</strong> I detected a potential double payment of <strong>₹75,000</strong> to <strong>Slack Technologies</strong> on <strong>12 April 2026</strong>. Both transactions shared identical descriptor hashes. Action recommended in Risk Inbox.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Reports Preview Section */}
-      <section className="py-24 border-t border-border/40 relative">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#2fb8a6] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Reports & Mappings</span>
-            <h2 className="text-3xl md:text-5xl font-black mt-6 mb-4 tracking-tight leading-tight">
-              Instant tax-ready accounting outputs
-            </h2>
-            <p className="text-muted-foreground text-sm max-w-xl mx-auto">
-              Skip manual categorization spreadsheets. Kaeo automatically maps transactions to semantic accounting categories.
-            </p>
-          </div>
-
-          <div className="max-w-5xl mx-auto rounded-2xl border border-border/80 overflow-hidden shadow-2xl bg-card premium-glass">
-            {/* Header bar */}
-            <div className="flex items-center justify-between px-6 py-4 bg-muted/20 border-b border-border/50 select-none">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-primary dark:text-[#2fb8a6]" />
-                <span className="text-xs font-bold text-foreground">Verified Ledgers</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded bg-muted/60 text-foreground text-[10px] font-bold border border-border">CSV Export</span>
-                <span className="px-2.5 py-1 rounded bg-primary text-primary-foreground text-[10px] font-bold shadow-sm">PDF Export</span>
-              </div>
-            </div>
-
-            {/* Ledger content */}
-            <div className="p-4 overflow-x-auto">
-              <table className="w-full min-w-[600px] text-xs text-left">
-                <thead>
-                  <tr className="border-b border-border/40 text-muted-foreground uppercase text-[9px] tracking-wider">
-                    <th className="py-3 px-4">Date</th>
-                    <th className="py-3 px-4">Description</th>
-                    <th className="py-3 px-4">Category Mapping</th>
-                    <th className="py-3 px-4 text-right">Amount</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/20 font-medium">
-                  <tr>
-                    <td className="py-3.5 px-4 text-muted-foreground">12 Apr 2026</td>
-                    <td className="py-3.5 px-4 font-bold">Slack Technologies</td>
-                    <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded-full bg-warning/10 text-warning border border-warning/15 text-[9px]">SaaS Subscription</span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right text-risk font-bold">-₹75,000</td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span className="px-2 py-0.5 rounded bg-risk/10 text-risk border border-risk/15 text-[9px] font-bold">Risk Flagged</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-3.5 px-4 text-muted-foreground">08 Apr 2026</td>
-                    <td className="py-3.5 px-4 font-bold">Acme Sales Corp Pvt Ltd</td>
-                    <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/15 text-[9px]">Inflow / Revenue</span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right text-success font-bold">+₹9,42,500</td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span className="px-2 py-0.5 rounded bg-success/10 text-success border border-success/15 text-[9px] font-bold">Verified</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-3.5 px-4 text-muted-foreground">05 Apr 2026</td>
-                    <td className="py-3.5 px-4 font-bold">Razorpay Inward Transfer</td>
-                    <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/15 text-[9px]">Refund / Reversal</span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right text-success font-bold">+₹16,000</td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span className="px-2 py-0.5 rounded bg-success/10 text-success border border-success/15 text-[9px] font-bold">Verified</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-3.5 px-4 text-muted-foreground">01 Apr 2026</td>
-                    <td className="py-3.5 px-4 font-bold">Amazon Web Services Cloud</td>
-                    <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded-full bg-warning/10 text-warning border border-warning/15 text-[9px]">Utility / SaaS</span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right text-risk font-bold">-₹2,45,000</td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span className="px-2 py-0.5 rounded bg-success/10 text-success border border-success/15 text-[9px] font-bold">Verified</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Tiers Section */}
-      <section id="pricing" className="py-24 border-t border-border/40 bg-muted/20">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-black mb-4">Pricing Plans</h2>
-            <p className="text-muted-foreground text-sm font-semibold uppercase tracking-wider">Start simple, scale as your transaction volume grows.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-stretch max-w-6xl mx-auto">
-            {/* Free */}
-            <div className="p-6 rounded-2xl border border-border bg-card flex flex-col justify-between h-full relative premium-glass">
-              <div className="space-y-4">
-                <h3 className="text-sm font-black uppercase tracking-wider text-muted-foreground">Free</h3>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black">₹0</span>
-                  <span className="text-xs text-muted-foreground">/mo</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Perfect for early sandbox testing and small side-hustles.</p>
-                <div className="w-full h-px bg-border/50" />
-                <ul className="space-y-2 text-xs font-semibold">
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> 1 Client Profile</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> 2 Files Ingested / mo</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> 100 Transactions Limit</li>
-                </ul>
-              </div>
-              <Link 
-                to={user ? "/billing" : "/signup"}
-                className="w-full mt-8 py-3 bg-muted hover:bg-muted/80 text-foreground text-center text-xs font-bold rounded-xl transition-all cursor-pointer border border-border/40"
-              >
-                {user ? 'View billing' : 'Start free'}
-              </Link>
-            </div>
-
-            {/* Starter */}
-            <div className="p-6 rounded-2xl border border-border bg-card flex flex-col justify-between h-full relative premium-glass">
-              <div className="space-y-4">
-                <h3 className="text-sm font-black uppercase tracking-wider text-muted-foreground">Starter</h3>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black">₹999</span>
-                  <span className="text-xs text-muted-foreground">/mo</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Ideal for growing freelancers and small consulting shops.</p>
-                <div className="w-full h-px bg-border/50" />
-                <ul className="space-y-2 text-xs font-semibold">
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> 3 Client Profiles</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> 10 Files Ingested / mo</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> 500 Transactions Limit</li>
-                </ul>
-              </div>
-              <Link 
-                to={user ? "/billing" : "/signup"}
-                className="w-full mt-8 py-3 bg-primary text-primary-foreground text-center text-xs font-bold rounded-xl hover:opacity-90 shadow-md shadow-primary/10 transition-all cursor-pointer"
-              >
-                {user ? 'Upgrade to Starter' : 'Start Free Trial'}
-              </Link>
-            </div>
-
-            {/* Growth */}
-            <div className="p-6 rounded-2xl border-2 border-primary bg-card flex flex-col justify-between h-full relative shadow-xl premium-glass">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-wider rounded-full shadow-lg">
-                Most Popular
-              </div>
-              <div className="space-y-4">
-                <h3 className="text-sm font-black uppercase tracking-wider text-primary">Growth</h3>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black">₹2,999</span>
-                  <span className="text-xs text-muted-foreground">/mo</span>
-                </div>
-                <p className="text-xs text-muted-foreground">For active SME businesses needing full monthly cash flow audits.</p>
-                <div className="w-full h-px bg-border/50" />
-                <ul className="space-y-2 text-xs font-semibold">
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> 10 Client Profiles</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> 30 Files Ingested / mo</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> 2,500 Transactions Limit</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> Priority Support</li>
-                </ul>
-              </div>
-              <Link 
-                to={user ? "/billing" : "/signup"}
-                className="w-full mt-8 py-3 bg-primary text-primary-foreground text-center text-xs font-bold rounded-xl hover:opacity-90 shadow-md shadow-primary/10 transition-all cursor-pointer"
-              >
-                {user ? 'Upgrade to Growth' : 'Start Free Trial'}
-              </Link>
-            </div>
-
-            {/* Accountant */}
-            <div className="p-6 rounded-2xl border border-border bg-card flex flex-col justify-between h-full relative premium-glass">
-              <div className="space-y-4">
-                <h3 className="text-sm font-black uppercase tracking-wider text-muted-foreground">Accountant</h3>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black">₹7,999</span>
-                  <span className="text-xs text-muted-foreground">/mo</span>
-                </div>
-                <p className="text-xs text-muted-foreground">For accountants and agencies managing client organizations.</p>
-                <div className="w-full h-px bg-border/50" />
-                <ul className="space-y-2 text-xs font-semibold">
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> Unlimited Clients</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> 100 Files Ingested / mo</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> 10,000 Transactions Limit</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-teal-500" /> Dedicated Account Manager</li>
-                </ul>
-              </div>
-              <Link 
-                to={user ? "/billing" : "/signup"}
-                className="w-full mt-8 py-3 bg-muted hover:bg-muted/80 text-foreground text-center text-xs font-bold rounded-xl transition-all cursor-pointer border border-border/40"
-              >
-                {user ? 'Contact Support' : 'Sign Up Now'}
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Final CTA Section */}
-      <section className="py-24 border-t border-border/40 relative overflow-hidden bg-[#070908] text-white">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="max-w-4xl mx-auto px-6 text-center space-y-8 relative z-10">
-          <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
-            Stop losing money on hidden spend today.
+      {/* ═══════ 002 — HOW IT WORKS ═══════ */}
+      <section id="how-it-works" style={S.section('#050F0D')}>
+        <div style={S.inner}>
+          <SectionLabel code="002" label="HOW IT WORKS" />
+          <h2 style={S.h2}>
+            From upload to <span style={S.accent}>review-ready</span> in minutes.
           </h2>
-          <p className="text-sm md:text-base text-muted-slate max-w-xl mx-auto leading-relaxed">
-            Get accountant-ready reports, verify SaaS bills, and query your transaction files with Libby, your AI CFO operator. Sign up in 2 minutes.
+          <p style={{ fontSize: '17px', color: 'rgba(232,240,238,0.45)', maxWidth: '540px', marginBottom: '60px', lineHeight: 1.6 }}>
+            No formatting, no pivot tables, no manual categorization. Kaeo handles the cleanup so you can focus on the review.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link 
-              to={user ? "/dashboard" : "/signup"}
-              className="w-full sm:w-auto px-8 py-4 bg-primary text-primary-foreground rounded-xl font-bold hover:opacity-95 shadow-xl shadow-primary/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '32px',
+          }}>
+            <StepCard
+              num="01" label="Upload"
+              title="Drop your statements"
+              description="Upload CSV or XLSX bank statements from HDFC, ICICI, Axis, or any Indian bank. Invoices and Razorpay exports too."
+              visual={<UploadVisual />}
+            />
+            <StepCard
+              num="02" label="Map"
+              title="Kaeo detects everything"
+              description="Dates, narrations, debits, credits, balances, UPI references, vendors, and categories — auto-detected with confidence scoring."
+              visual={<MapVisual />}
+            />
+            <StepCard
+              num="03" label="Review"
+              title="Flag what needs attention"
+              description="Uncategorized rows, high-value payments, duplicate suspects, and balance mismatches surface for your review."
+              visual={<ReviewVisual />}
+            />
+            <StepCard
+              num="04" label="Explain"
+              title="Ask Libby for context"
+              description="When a transaction looks odd, ask Libby for guided context — patterns, vendor history, and risk signals from your data."
+              visual={<ExplainVisual />}
+            />
+            <StepCard
+              num="05" label="Export"
+              title="Send to your accountant"
+              description="Generate accountant-ready finance review packs and clean transaction ledgers. Ready to share, no manual formatting required."
+              visual={<ExportVisual />}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ 003 — WHAT KAEO CATCHES ═══════ */}
+      <section id="what-kaeo-catches" style={S.section('#0A1410')}>
+        <div style={S.inner}>
+          <SectionLabel code="003" label="WHAT KAEO CATCHES" />
+          <h2 style={S.h2}>
+            The messy finance checks <span style={S.accent}>most teams miss.</span>
+          </h2>
+          <p style={{ fontSize: '17px', color: 'rgba(232,240,238,0.45)', maxWidth: '520px', marginBottom: '56px', lineHeight: 1.6 }}>
+            Not theoretical risks. Actual patterns that surface when you properly parse Indian bank statements.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
+            <CatchCard
+              title="Duplicate payments"
+              description="Same vendor, same amount, close date — often from double-clicking payment portals or failed gateway retries."
+              example="₹75,000 × 2 → Slack Technologies · 12 Apr"
+            />
+            <CatchCard
+              title="High-value outflows"
+              description="Single large debits that deviate significantly from your vendor payment patterns. Worth a second look before month close."
+              example="₹1,24,000 → Mumbai Supplies · 3.2× above avg"
+            />
+            <CatchCard
+              title="Uncategorized spend"
+              description="Transactions with cryptic UPI narrations or generic NEFT descriptions that don't map to a known vendor or category."
+              example="11 rows → UPI/Unknown/various · needs mapping"
+            />
+            <CatchCard
+              title="Vendor concentration"
+              description="One vendor consuming a disproportionate share of your monthly outflow — a supply chain or negotiation flag."
+              example="62% of Apr outflow → 3 vendor accounts"
+            />
+            <CatchCard
+              title="Invoice / payment mismatch"
+              description="Invoice amount doesn't match the bank debit for the same vendor — partial payments, rounding errors, or billing discrepancies."
+              example="Invoice ₹48,200 vs. debit ₹50,610 · tax discrepancy"
+            />
+            <CatchCard
+              title="Balance movement mismatch"
+              description="Closing balance from your statement doesn't match the running total from parsed transactions — missing rows or import errors."
+              example="₹8,400 gap → closing balance vs. transaction sum"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ 004 — BUILT FOR INDIA ═══════ */}
+      <section style={S.section('#050F0D')}>
+        <div style={S.inner}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '80px', alignItems: 'center' }} className="india-grid">
+            <div>
+              <SectionLabel code="004" label="BUILT FOR INDIA" />
+              <h2 style={S.h2}>
+                Designed around Indian SME <span style={S.accent}>finance workflows.</span>
+              </h2>
+              <p style={{ fontSize: '16px', color: 'rgba(232,240,238,0.50)', lineHeight: 1.65, marginBottom: '36px', maxWidth: '460px' }}>
+                Indian bank statements don't follow a clean standard. UPI narrations are cryptic. NEFT/RTGS rows mix metadata. Kaeo is built to handle all of it without you having to pre-clean anything.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '14px' }}>
+                {[
+                  { label: 'Bank statement formats', detail: 'HDFC · ICICI · Axis · SBI · Kotak and more' },
+                  { label: 'UPI narration parsing', detail: 'Maps cryptic UPI references to vendors and categories' },
+                  { label: 'Vendor payment tracking', detail: 'Identify recurring vs. one-time outflows across months' },
+                  { label: 'Accountant review workflow', detail: 'Export packs your CA can use immediately without cleanup' },
+                  { label: 'GST/reporting preparation', detail: 'Clean categorized ledgers for future GST and audit workflows' },
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(47,184,166,0.12)', border: '1px solid rgba(47,184,166,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
+                      <span style={{ color: '#2FB8A6', fontSize: '10px', fontWeight: 700 }}>✓</span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#E8F0EE', marginBottom: '2px' }}>{item.label}</div>
+                      <div style={{ fontSize: '13px', color: 'rgba(232,240,238,0.45)' }}>{item.detail}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              {/* India-specific bank statement mock */}
+              <div style={{
+                background: '#0D1714',
+                border: '1px solid rgba(47,184,166,0.14)',
+                borderRadius: '16px',
+                padding: '20px',
+                fontFamily: 'ui-monospace, monospace',
+                boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+              }}>
+                <div style={{ fontSize: '10px', color: 'rgba(232,240,238,0.35)', letterSpacing: '0.08em', marginBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '10px' }}>
+                  HDFC BANK · A/C •••4827 · April 2026 Statement
+                </div>
+                {[
+                  { date: '28/04', narr: 'UPI/RAZORPAY PAYMENTS/9820XXXXX', dr: '', cr: '4,80,000.00', bal: '12,84,200.00', type: 'inflow' },
+                  { date: '26/04', narr: 'NEFT/MUMBAI SUPPLIES/IND234', dr: '1,24,000.00', cr: '', bal: '8,04,200.00', type: 'risk' },
+                  { date: '25/04', narr: 'UPI/UNKNOWN/7839XXXXX/REF99213', dr: '18,500.00', cr: '', bal: '9,28,200.00', type: 'warn' },
+                  { date: '22/04', narr: 'IMPS/HDFC BANK INTEREST', dr: '', cr: '2,840.00', bal: '9,46,700.00', type: 'inflow' },
+                  { date: '20/04', narr: 'SI/AXIS BANK EMI/LOANXXX', dr: '45,000.00', cr: '', bal: '9,43,860.00', type: 'normal' },
+                ].map((row, i) => (
+                  <div key={i} style={{
+                    display: 'grid',
+                    gridTemplateColumns: '44px 1fr 80px 80px',
+                    gap: '8px',
+                    padding: '7px 0',
+                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    fontSize: '10px',
+                    alignItems: 'center',
+                  }}>
+                    <span style={{ color: 'rgba(232,240,238,0.35)' }}>{row.date}</span>
+                    <span style={{
+                      color: row.type === 'risk' ? '#E05450' : row.type === 'warn' ? '#D4922A' : 'rgba(232,240,238,0.65)',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>{row.narr}</span>
+                    <span style={{ textAlign: 'right', color: row.dr ? '#E05450' : 'rgba(232,240,238,0.20)', fontWeight: row.dr ? 700 : 400 }}>{row.dr || '—'}</span>
+                    <span style={{ textAlign: 'right', color: row.cr ? '#22B573' : 'rgba(232,240,238,0.20)', fontWeight: row.cr ? 700 : 400 }}>{row.cr || '—'}</span>
+                  </div>
+                ))}
+                <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <span style={{ fontSize: '10px', color: 'rgba(232,240,238,0.35)' }}>↳ Kaeo parsed 142 rows · 11 uncategorized</span>
+                  <span style={{ fontSize: '10px', color: '#2FB8A6', fontWeight: 700 }}>● processed</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ 005 — ASK LIBBY ═══════ */}
+      <section style={S.section('#0A1410')}>
+        <div style={S.inner}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.1fr)', gap: '80px', alignItems: 'center' }} className="libby-grid">
+            <div>
+              <SectionLabel code="005" label="ASK LIBBY" />
+              <h2 style={S.h2}>
+                Ask Libby when the numbers <span style={S.accent}>need explanation.</span>
+              </h2>
+              <p style={{ fontSize: '16px', color: 'rgba(232,240,238,0.50)', lineHeight: 1.65, marginBottom: '32px', maxWidth: '440px' }}>
+                Libby helps explain risks, vendors, transaction patterns, and report readiness using your Kaeo data — giving you context when something looks off.
+              </p>
+              <div style={{ padding: '16px 18px', background: 'rgba(47,184,166,0.06)', border: '1px solid rgba(47,184,166,0.14)', borderRadius: '10px', fontSize: '13px', color: 'rgba(232,240,238,0.45)', lineHeight: 1.6, marginBottom: '24px' }}>
+                <span style={{ color: '#2FB8A6', fontWeight: 600 }}>Note:</span> AI-assisted explanations are being built into the review workflow. Libby helps you understand your data — it does not file returns, automate payments, or replace your CA.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '10px' }}>
+                {[
+                  'Ask about your top vendor spends',
+                  'Understand why a payment was flagged',
+                  'Check report readiness before sharing with CA',
+                  'Spot recurring payments and subscription patterns',
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <span style={{ color: '#2FB8A6', fontSize: '12px', fontFamily: 'ui-monospace, monospace', fontWeight: 700, flexShrink: 0 }}>→</span>
+                    <span style={{ fontSize: '14px', color: 'rgba(232,240,238,0.55)' }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <LibbyChatMock />
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ 006 — REPORTS ═══════ */}
+      <section style={S.section('#050F0D')}>
+        <div style={S.inner}>
+          <SectionLabel code="006" label="REPORTS" />
+          <h2 style={{ ...S.h2, maxWidth: '600px' }}>
+            Reports your accountant <span style={S.accent}>can actually use.</span>
+          </h2>
+          <p style={{ fontSize: '17px', color: 'rgba(232,240,238,0.45)', maxWidth: '520px', marginBottom: '52px', lineHeight: 1.6 }}>
+            Not raw exports. Clean, structured finance review packs with period summary, open risks, uncategorized items, and vendor spend — ready to share.
+          </p>
+          <ReportMock />
+        </div>
+      </section>
+
+      {/* ═══════ 007 — PRICING ═══════ */}
+      <section id="pricing" style={S.section('#0A1410')}>
+        <div style={{ ...S.inner, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+          <SectionLabel code="007" label="PRICING" />
+          <h2 style={{ ...S.h2, margin: '0 auto 20px', maxWidth: '600px' }}>
+            Start simple, <span style={S.accent}>scale as you grow.</span>
+          </h2>
+          <p style={{ fontSize: '17px', color: 'rgba(232,240,238,0.45)', maxWidth: '480px', margin: '0 auto 52px', lineHeight: 1.6 }}>
+            One seat, one SME. Pay for what you use as your transaction volume grows.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', maxWidth: '1000px', width: '100%', justifyContent: 'center', textAlign: 'left' }}>
+            {[
+              {
+                name: 'Free',
+                price: '₹0',
+                period: '/mo',
+                desc: 'Try Kaeo with a small statement file.',
+                features: ['1 client profile', '2 files/month', '100 transactions'],
+                cta: user ? 'View billing' : 'Start free',
+                href: user ? '/billing' : '/signup',
+                highlight: false,
+              },
+              {
+                name: 'Starter',
+                price: '₹999',
+                period: '/mo',
+                desc: 'For freelancers and solo finance operators.',
+                features: ['3 client profiles', '10 files/month', '500 transactions'],
+                cta: user ? 'Upgrade' : 'Start free trial',
+                href: user ? '/billing' : '/signup',
+                highlight: false,
+              },
+              {
+                name: 'Growth',
+                price: '₹2,999',
+                period: '/mo',
+                desc: 'For active SMEs with regular monthly review cycles.',
+                features: ['10 client profiles', '30 files/month', '2,500 transactions', 'Priority support'],
+                cta: user ? 'Upgrade' : 'Start free trial',
+                href: user ? '/billing' : '/signup',
+                highlight: true,
+              },
+              {
+                name: 'Accountant',
+                price: '₹7,999',
+                period: '/mo',
+                desc: 'For CA firms managing multiple client accounts.',
+                features: ['Unlimited clients', '100 files/month', '10,000 transactions', 'Account manager'],
+                cta: user ? 'Contact support' : 'Sign up',
+                href: user ? '/billing' : '/signup',
+                highlight: false,
+              },
+            ].map((plan) => (
+              <div
+                key={plan.name}
+                style={{
+                  background: plan.highlight ? 'rgba(47,184,166,0.08)' : '#0D1714',
+                  border: plan.highlight ? '1px solid rgba(47,184,166,0.30)' : '1px solid rgba(47,184,166,0.10)',
+                  borderRadius: '14px',
+                  padding: '24px',
+                  display: 'flex',
+                  flexDirection: 'column' as const,
+                  gap: '16px',
+                  position: 'relative' as const,
+                  textAlign: 'left',
+                }}
+              >
+                {plan.highlight && (
+                  <div style={{
+                    position: 'absolute' as const, top: '-11px', left: '50%', transform: 'translateX(-50%)',
+                    background: '#2FB8A6', color: '#050F0D',
+                    fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const,
+                    padding: '4px 12px', borderRadius: '999px',
+                  }}>Most popular</div>
+                )}
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: plan.highlight ? '#2FB8A6' : 'rgba(232,240,238,0.40)', marginBottom: '8px' }}>{plan.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                    <span style={{ fontSize: '30px', fontWeight: 700, color: '#E8F0EE', letterSpacing: '-0.02em', fontFamily: 'ui-monospace, monospace' }}>{plan.price}</span>
+                    <span style={{ fontSize: '13px', color: 'rgba(232,240,238,0.35)' }}>{plan.period}</span>
+                  </div>
+                  <p style={{ fontSize: '13px', color: 'rgba(232,240,238,0.45)', lineHeight: 1.5, marginTop: '8px' }}>{plan.desc}</p>
+                </div>
+                <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+                <ul style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px', listStyle: 'none', margin: 0, padding: 0, flex: 1 }}>
+                  {plan.features.map((f) => (
+                    <li key={f} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'rgba(232,240,238,0.60)', fontWeight: 500 }}>
+                      <span style={{ color: '#2FB8A6', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>✓</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to={plan.href}
+                  style={{
+                    display: 'block',
+                    textAlign: 'center',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    background: plan.highlight ? '#2FB8A6' : 'rgba(47,184,166,0.08)',
+                    color: plan.highlight ? '#050F0D' : '#2FB8A6',
+                    border: plan.highlight ? 'none' : '1px solid rgba(47,184,166,0.20)',
+                    transition: 'opacity 0.15s ease',
+                  }}
+                  className="hover:opacity-90"
+                >
+                  {plan.cta}
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ 008 — FINAL CTA ═══════ */}
+      <section style={{ ...S.section('#050F0D'), position: 'relative', overflow: 'hidden' }}>
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            width: '600px', height: '300px',
+            background: 'radial-gradient(ellipse, rgba(47, 184, 166, 0.12) 0%, transparent 65%)',
+            pointerEvents: 'none',
+          }}
+        />
+        <div style={{ ...S.inner, textAlign: 'center', position: 'relative' }}>
+          <div style={{ color: '#2FB8A6', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 500, marginBottom: '24px' }}>
+            008 — GET STARTED
+          </div>
+          <h2 style={{ ...S.h2, fontSize: 'clamp(36px, 5vw, 68px)', maxWidth: '640px', margin: '0 auto 20px' }}>
+            Clean books start with <span style={S.accent}>clean review.</span>
+          </h2>
+          <p style={{ fontSize: '17px', color: 'rgba(232,240,238,0.45)', maxWidth: '460px', margin: '0 auto 40px', lineHeight: 1.6 }}>
+            Upload your first bank statement and see your transactions mapped, categorized, and flagged in minutes.
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <Link
+              to={user ? '/dashboard' : '/signup'}
+              style={{
+                background: '#2FB8A6',
+                color: '#050F0D',
+                padding: '16px 36px',
+                borderRadius: '999px',
+                fontSize: '16px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                display: 'inline-block',
+                transition: 'opacity 0.15s ease',
+              }}
+              className="hover:opacity-90"
             >
-              {user ? 'Go to Dashboard' : 'Start free'}
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              {user ? 'Go to Dashboard →' : 'Start reviewing →'}
             </Link>
-            <a 
-              href="#product-preview"
-              onClick={(e) => handleScrollToSection(e, 'product-preview')}
-              className="w-full sm:w-auto px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+            <a
+              href="#how-it-works"
+              onClick={(e) => { e.preventDefault(); document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }); }}
+              style={{
+                color: 'rgba(232,240,238,0.55)',
+                fontSize: '15px',
+                fontWeight: 500,
+                textDecoration: 'none',
+                padding: '16px 28px',
+                border: '1px solid rgba(47,184,166,0.18)',
+                borderRadius: '999px',
+                display: 'inline-block',
+                transition: 'all 0.15s ease',
+              }}
+              className="hover:border-[#2FB8A6]/40 hover:text-[#E8F0EE]"
             >
-              View demo preview
+              See how it works
             </a>
           </div>
+          <p style={{ marginTop: '28px', fontSize: '13px', color: 'rgba(232,240,238,0.30)', lineHeight: 1.5 }}>
+            No credit card required · Indian bank statement formats supported · Accountant-ready output
+          </p>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border/40 py-12 bg-card text-muted-foreground">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/25 shrink-0">
-              <img src={aeLogo} alt="ae Logo" className="w-4 h-4 object-contain" />
-            </div>
-            <span className="text-lg font-black tracking-tight text-foreground leading-none">
-              Kaeo
-            </span>
+      {/* ═══════ FOOTER ═══════ */}
+      <footer style={{ borderTop: '1px solid rgba(47,184,166,0.08)', padding: '40px 48px', background: '#050F0D' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+            <img src={aeLogo} alt="Kaeo" style={{ width: 22, height: 22, objectFit: 'contain', filter: 'drop-shadow(0 0 6px rgba(47,184,166,0.35))', flexShrink: 0 }} />
+            <span style={{ fontSize: '16px', fontWeight: 700, color: '#E8F0EE', letterSpacing: '-0.02em' }}>Kaeo</span>
           </Link>
-          <p className="text-xs">
-            &copy; 2026 Kaeo Finance OS. India-first SME CFO Intelligence. All rights reserved.
+          <p style={{ fontSize: '13px', color: 'rgba(232,240,238,0.30)', margin: 0 }}>
+            © 2026 Kaeo. Finance review workspace for Indian SMEs.
           </p>
-          <div className="flex gap-6 text-xs font-semibold">
+          <div style={{ display: 'flex', gap: '24px' }}>
             {user ? (
-              <Link to="/dashboard" className="hover:text-foreground transition-colors">Go to Dashboard</Link>
+              <Link to="/dashboard" style={{ fontSize: '13px', color: 'rgba(232,240,238,0.45)', textDecoration: 'none', fontWeight: 500 }} className="hover:text-[#E8F0EE]">Dashboard</Link>
             ) : (
               <>
-                <Link to="/login" className="hover:text-foreground transition-colors">Sign In</Link>
-                <Link to="/signup" className="hover:text-foreground transition-colors">Start Free</Link>
+                <Link to="/login" style={{ fontSize: '13px', color: 'rgba(232,240,238,0.45)', textDecoration: 'none', fontWeight: 500 }} className="hover:text-[#E8F0EE]">Sign in</Link>
+                <Link to="/signup" style={{ fontSize: '13px', color: 'rgba(232,240,238,0.45)', textDecoration: 'none', fontWeight: 500 }} className="hover:text-[#E8F0EE]">Start free</Link>
               </>
             )}
           </div>
         </div>
       </footer>
+
+      {/* Responsive overrides */}
+      <style>{`
+        @media (max-width: 900px) {
+          .india-grid, .libby-grid {
+            grid-template-columns: 1fr !important;
+            gap: 48px !important;
+          }
+        }
+        @media (max-width: 600px) {
+          section { padding: 72px 24px !important; }
+          footer { padding: 32px 24px !important; flex-direction: column !important; align-items: flex-start !important; }
+        }
+        .catch-card:hover {
+          border-color: rgba(47, 184, 166, 0.24) !important;
+        }
+      `}</style>
     </div>
   );
 };
