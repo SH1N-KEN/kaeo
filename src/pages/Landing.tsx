@@ -1122,9 +1122,9 @@ const InteractiveRiskCards: React.FC = () => {
       whyMatters: "Large outflows can hide accidental or unauthorized spend.",
       whatKaeoShows: "Amount, vendor, date, category, and review status.",
       nextReview: "Confirm purpose and supporting invoice.",
-      accentColor: '#E05450',
-      mutedBg: 'rgba(224, 84, 80, 0.03)',
-      borderTint: 'rgba(224, 84, 80, 0.20)'
+      accentColor: '#D3524A', // muted red
+      mutedBg: 'rgba(211, 82, 74, 0.04)',
+      borderTint: 'rgba(211, 82, 74, 0.20)'
     },
     {
       title: "Duplicate suspects",
@@ -1133,9 +1133,9 @@ const InteractiveRiskCards: React.FC = () => {
       whyMatters: "Same amount/vendor close together may indicate double payment.",
       whatKaeoShows: "Matching transactions and timing.",
       nextReview: "Mark duplicate or clear if intentional.",
-      accentColor: '#E05450',
-      mutedBg: 'rgba(224, 84, 80, 0.03)',
-      borderTint: 'rgba(224, 84, 80, 0.20)'
+      accentColor: '#E2843A', // muted amber/orange
+      mutedBg: 'rgba(226, 132, 58, 0.04)',
+      borderTint: 'rgba(226, 132, 58, 0.20)'
     },
     {
       title: "Balance mismatch",
@@ -1144,9 +1144,9 @@ const InteractiveRiskCards: React.FC = () => {
       whyMatters: "Ledger movement may not match expected balance.",
       whatKaeoShows: "Period movement and mismatch amount.",
       nextReview: "Check missing rows or import issues.",
-      accentColor: '#D4922A',
-      mutedBg: 'rgba(212, 146, 42, 0.03)',
-      borderTint: 'rgba(212, 146, 42, 0.20)'
+      accentColor: '#E6C02E', // muted amber/yellow
+      mutedBg: 'rgba(230, 192, 46, 0.04)',
+      borderTint: 'rgba(230, 192, 46, 0.20)'
     },
     {
       title: "Invoice mismatch",
@@ -1155,9 +1155,9 @@ const InteractiveRiskCards: React.FC = () => {
       whyMatters: "Invoice and payment records may not line up.",
       whatKaeoShows: "Vendor, invoice, payment, and difference.",
       nextReview: "Confirm invoice/payment pairing.",
-      accentColor: '#D4922A',
-      mutedBg: 'rgba(212, 146, 42, 0.03)',
-      borderTint: 'rgba(212, 146, 42, 0.20)'
+      accentColor: '#E06D53', // muted red-orange
+      mutedBg: 'rgba(224, 109, 83, 0.04)',
+      borderTint: 'rgba(224, 109, 83, 0.20)'
     },
     {
       title: "Uncategorized spend",
@@ -1166,9 +1166,9 @@ const InteractiveRiskCards: React.FC = () => {
       whyMatters: "Reports are weaker when spend is unmapped.",
       whatKaeoShows: "Rows needing category review.",
       nextReview: "Assign category before export.",
-      accentColor: '#138C7E',
-      mutedBg: 'rgba(19, 140, 126, 0.03)',
-      borderTint: 'rgba(19, 140, 126, 0.20)'
+      accentColor: '#5C7C8A', // muted slate/blue
+      mutedBg: 'rgba(92, 124, 138, 0.04)',
+      borderTint: 'rgba(92, 124, 138, 0.20)'
     },
     {
       title: "Vendor concentration",
@@ -1177,9 +1177,9 @@ const InteractiveRiskCards: React.FC = () => {
       whyMatters: "Too much spend with one vendor can create dependency or leakage.",
       whatKaeoShows: "Top vendor exposure and recurring spend.",
       nextReview: "Review necessity and alternatives.",
-      accentColor: '#138C7E',
-      mutedBg: 'rgba(19, 140, 126, 0.03)',
-      borderTint: 'rgba(19, 140, 126, 0.20)'
+      accentColor: '#8A5FE2', // muted purple/indigo
+      mutedBg: 'rgba(138, 95, 226, 0.04)',
+      borderTint: 'rgba(138, 95, 226, 0.20)'
     }
   ];
 
@@ -1192,6 +1192,12 @@ const InteractiveRiskCards: React.FC = () => {
         {cards.map((card, idx) => {
           const isActive = activeCard === idx;
           const accent = card.accentColor;
+          
+          const bg = isActive ? card.mutedBg : '#121514';
+          const border = isActive ? accent : 'rgba(140, 150, 148, 0.10)';
+          const dotColor = isActive ? accent : 'rgba(140, 150, 148, 0.20)';
+          const previewTextColor = isActive ? accent : 'rgba(232, 240, 238, 0.50)';
+
           return (
             <div
               key={idx}
@@ -1204,9 +1210,9 @@ const InteractiveRiskCards: React.FC = () => {
                 }
               }}
               style={{
-                background: isActive ? card.mutedBg : '#121514',
+                background: bg,
                 border: '1.5px solid',
-                borderColor: isActive ? accent : 'rgba(140, 150, 148, 0.10)',
+                borderColor: border,
                 borderRadius: '14px',
                 padding: '20px',
                 cursor: 'pointer',
@@ -1214,29 +1220,31 @@ const InteractiveRiskCards: React.FC = () => {
                 flexDirection: 'column',
                 gap: '12px',
                 outline: 'none',
+                transition: 'all 0.2s ease',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#E8F0EE', margin: 0 }}>{card.title}</h4>
                 <span style={{ 
-                  fontSize: '10px', 
-                  color: accent, 
-                  transform: isActive ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.25s ease',
-                }}>
-                  ▼
-                </span>
+                  width: '6px', 
+                  height: '6px', 
+                  borderRadius: '50%', 
+                  background: dotColor,
+                  boxShadow: isActive ? `0 0 6px ${accent}` : 'none',
+                  transition: 'all 0.2s ease',
+                }} />
               </div>
               <p style={{ fontSize: '13px', color: 'rgba(232,240,238,0.50)', lineHeight: 1.5, margin: 0 }}>{card.description}</p>
               
               <div style={{
                 fontFamily: 'ui-monospace, monospace',
                 fontSize: '11px',
-                color: 'rgba(232, 240, 238, 0.65)',
+                color: previewTextColor,
                 background: 'rgba(140, 150, 148, 0.04)',
                 border: '1px solid rgba(140, 150, 148, 0.08)',
                 borderRadius: '6px',
                 padding: '6px 10px',
+                transition: 'color 0.2s ease',
               }}>
                 {card.example}
               </div>
@@ -1279,16 +1287,30 @@ const InteractiveRiskCards: React.FC = () => {
       {/* Left Column: Grid of cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
         {cards.map((card, idx) => {
-          const isCurrentActive = activeIdx === idx;
-          const isCurrentHovered = hoveredCard === idx;
-          const isCurrentSelected = selectedCard === idx;
+          const isSelected = selectedCard === idx;
+          const isHovered = hoveredCard === idx;
+          const isActive = isSelected || isHovered;
           const accent = card.accentColor;
-          const bg = isCurrentActive ? card.mutedBg : '#121514';
-          const border = isCurrentSelected 
+
+          const bg = isSelected 
+            ? card.mutedBg 
+            : isHovered 
+              ? 'rgba(255, 255, 255, 0.015)' 
+              : '#121514';
+
+          const border = isSelected 
             ? accent 
-            : isCurrentHovered 
+            : isHovered 
               ? card.borderTint 
               : 'rgba(140, 150, 148, 0.10)';
+
+          const dotColor = isSelected 
+            ? accent 
+            : isHovered 
+              ? `${accent}80` 
+              : 'rgba(140, 150, 148, 0.20)';
+
+          const previewTextColor = isActive ? accent : 'rgba(232, 240, 238, 0.50)';
 
           return (
             <div
@@ -1316,10 +1338,10 @@ const InteractiveRiskCards: React.FC = () => {
                 flexDirection: 'column',
                 gap: '8px',
                 outline: 'none',
-                transform: isCurrentHovered ? 'translateY(-2px)' : 'translateY(0)',
-                boxShadow: isCurrentSelected 
+                transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
+                boxShadow: isSelected 
                   ? `0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)` 
-                  : isCurrentHovered 
+                  : isHovered 
                     ? `0 4px 12px rgba(0, 0, 0, 0.20)` 
                     : 'none',
                 transition: reducedMotion 
@@ -1335,8 +1357,8 @@ const InteractiveRiskCards: React.FC = () => {
                   width: '6px', 
                   height: '6px', 
                   borderRadius: '50%', 
-                  background: isCurrentSelected ? accent : 'transparent',
-                  boxShadow: isCurrentSelected ? `0 0 6px ${accent}` : 'none',
+                  background: dotColor,
+                  boxShadow: isSelected ? `0 0 6px ${accent}` : 'none',
                   transition: 'all 0.2s ease',
                 }} />
               </div>
@@ -1344,7 +1366,7 @@ const InteractiveRiskCards: React.FC = () => {
               <div style={{
                 fontFamily: 'ui-monospace, monospace',
                 fontSize: '10.5px',
-                color: isCurrentSelected ? accent : 'rgba(232, 240, 238, 0.50)',
+                color: previewTextColor,
                 background: 'rgba(140, 150, 148, 0.03)',
                 border: '1px solid rgba(140, 150, 148, 0.06)',
                 borderRadius: '6px',
@@ -1353,6 +1375,7 @@ const InteractiveRiskCards: React.FC = () => {
                 textOverflow: 'ellipsis',
                 overflow: 'hidden',
                 whiteSpace: 'nowrap',
+                transition: 'color 0.2s ease',
               }}>
                 {card.example}
               </div>
@@ -1365,16 +1388,18 @@ const InteractiveRiskCards: React.FC = () => {
       {activeCardObj && (
         <div style={{ 
           background: '#121514', 
-          border: '1.5px solid rgba(140, 150, 148, 0.12)', 
+          border: '1.5px solid', 
+          borderColor: `${activeCardObj.accentColor}20`,
           borderRadius: '16px', 
           padding: '28px',
           display: 'flex',
           flexDirection: 'column',
           gap: '24px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+          boxShadow: `0 24px 60px rgba(0,0,0,0.5), 0 0 40px ${activeCardObj.accentColor}05`,
           height: '100%',
           justifyContent: 'center',
           position: 'relative',
+          transition: reducedMotion ? 'border-color 0.2s' : 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         }}>
           <div key={activeIdx} className="animate-kaeo-fade" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
