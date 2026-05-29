@@ -144,14 +144,23 @@ export default function Reports() {
       }
 
       // Generate CSV
-      const headers = ['Date', 'Description', 'Amount (INR)', 'Type', 'Category', 'Source', 'Review Status'];
+      const headers = ['Date', 'Description', 'Vendor / Counterparty', 'Amount (INR)', 'Type', 'Category', 'Paid By', 'Payment Method', 'Proof Status', 'Is Staff Expense', 'Review Status'];
+      const resolveField = (tx: any, field: string) =>
+        tx[field] !== undefined && tx[field] !== null
+          ? tx[field]
+          : tx.raw_row_json?.[field] ?? tx.raw_row_json?.metadata?.[field];
+
       const rows = data.map(tx => [
         tx.transaction_date?.split('T')[0] || '',
         `"${(tx.description || '').replace(/"/g, '""')}"`,
+        `"${(tx.counterparty_name || '').replace(/"/g, '""')}"`,
         tx.amount,
         tx.type,
         tx.category || 'Uncategorized',
-        tx.source_provider || 'Manual',
+        resolveField(tx, 'paid_by') || '',
+        resolveField(tx, 'payment_method') || '',
+        resolveField(tx, 'proof_status') || '',
+        resolveField(tx, 'is_staff_expense') ? 'Yes' : 'No',
         tx.review_status || 'new'
       ]);
 

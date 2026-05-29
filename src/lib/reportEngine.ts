@@ -1,6 +1,7 @@
 // No date-fns needed
 import { inferCategory, normalizeVendorName } from './vendorEngine';
 import { formatINR } from './formatters';
+import { getDisplayCategory } from './categoryEngine';
 
 export interface ReportInput {
   organization: any;
@@ -262,8 +263,72 @@ export function summarizeSourceFiles(imports: any[], uploadedFiles: any[], trans
   return Array.from(uniqueFiles.values());
 }
 
+export function summarizeStaffExpenses(transactions: any[]) {
+  const resolveField = (tx: any, field: string) =>
+    tx[field] !== undefined && tx[field] !== null
+      ? tx[field]
+      : tx.raw_row_json?.[field] ?? tx.raw_row_json?.metadata?.[field];
+
+  const staffTxs = transactions.filter(tx => {
+    const isStaff = resolveField(tx, 'is_staff_expense') === true ||
+                    resolveField(tx, 'is_staff_expense') === 'true';
+    const cat = getDisplayCategory(tx);
+    return isStaff || cat === 'Staff / Petty Expenses';
+  });
+
+  const totalAmount = staffTxs.reduce((sum, tx) => {
+    const amt = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+      ? Number(tx.amount_in_base_currency)
+      : Number(tx.amount);
+    return sum + Math.abs(amt || 0);
+  }, 0);
+
+  const missingProofTxs = staffTxs.filter(tx => {
+    const ps = resolveField(tx, 'proof_status');
+    return !ps || ps === 'missing' || ps === 'needs_review';
+  });
+
+  const unknownMethodTxs = staffTxs.filter(tx => {
+    const pm = resolveField(tx, 'payment_method') || 'unknown';
+    return pm === 'unknown';
+  });
+
+  const reviewNeededAmount = missingProofTxs.reduce((sum, tx) => {
+    const amt = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+      ? Number(tx.amount_in_base_currency)
+      : Number(tx.amount);
+    return sum + Math.abs(amt || 0);
+  }, 0);
+
+  // Top vendors/categories by spend
+  const topGroupMap: Record<string, number> = {};
+  staffTxs.forEach(tx => {
+    const { normalized } = normalizeVendorName(tx.description);
+    const cat = getDisplayCategory(tx);
+    const key = normalized || cat || 'Miscellaneous';
+    const amt = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+      ? Number(tx.amount_in_base_currency)
+      : Number(tx.amount);
+    topGroupMap[key] = (topGroupMap[key] || 0) + Math.abs(amt || 0);
+  });
+  const topGroups = Object.entries(topGroupMap)
+    .map(([name, spend]) => ({ name, spend }))
+    .sort((a, b) => b.spend - a.spend)
+    .slice(0, 5);
+
+  return {
+    count: staffTxs.length,
+    totalAmount,
+    missingProofCount: missingProofTxs.length,
+    unknownMethodCount: unknownMethodTxs.length,
+    reviewNeededAmount,
+    topGroups,
+    hasStaffExpenses: staffTxs.length > 0,
+  };
+}
+
 export function buildReportSections(data: any) {
-  const { transactionSummary, vendorSummary, riskSummary, noteSummary, sourceSummary, client, periodStart, periodEnd, isExplicitPeriod } = data;
+  const { transactionSummary, vendorSummary, riskSummary, noteSummary, sourceSummary, staffExpenseSummary, client, periodStart, periodEnd, isExplicitPeriod } = data;
 
   const executiveSummary = {
     clientName: client?.name || 'Unknown Client',
@@ -323,6 +388,7 @@ export function buildReportSections(data: any) {
     vendorSummary,
     riskSummary,
     noteSummary,
+    staffExpenseSummary: staffExpenseSummary || null,
     caveats,
     sourceFiles: sourceSummary
   };
@@ -350,6 +416,7 @@ export async function generateCFOReport(input: ReportInput) {
   const transactionSummary = summarizeTransactions(transactions);
   const vendorSummary = summarizeVendors(vendors, transactions);
   const riskSummary = summarizeRisks(riskEvents);
+  const staffExpenseSummary = summarizeStaffExpenses(transactions);
   
   // Filter notes to only those attached to risk_events (entity_type = 'risk_event')
   const riskNotes = notes.filter(n => n.entity_type === 'risk_event');
@@ -367,6 +434,7 @@ export async function generateCFOReport(input: ReportInput) {
     riskSummary,
     noteSummary,
     sourceSummary,
+    staffExpenseSummary,
     transactions
   });
 

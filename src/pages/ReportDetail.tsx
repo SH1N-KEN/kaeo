@@ -271,6 +271,92 @@ export default function ReportDetail() {
             )}
           </section>
 
+          {/* STAFF & PETTY EXPENSE REVIEW */}
+          {sections.staffExpenseSummary && (
+            <section className="print-section print:break-inside-auto">
+              <h2 className="text-2xl font-bold border-b pb-2 mb-6 flex items-center gap-3">
+                Staff &amp; Petty Expense Review
+                {sections.staffExpenseSummary.missingProofCount > 0 && (
+                  <span className="text-xs font-medium bg-amber-500/10 text-amber-600 px-2 py-1 rounded-full flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {sections.staffExpenseSummary.missingProofCount} need proof
+                  </span>
+                )}
+              </h2>
+
+              {!sections.staffExpenseSummary.hasStaffExpenses ? (
+                <div className="bg-muted/30 border border-border rounded-lg p-6 text-center text-muted-foreground">
+                  <p className="font-medium mb-1">No staff expenses detected yet.</p>
+                  <p className="text-sm">Staff expenses often happen across cards, UPI, cash, and bank transfers. Kaeo helps you review what needs proof before reports are exported.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-muted/30 p-4 rounded-lg border">
+                      <p className="text-muted-foreground text-xs font-medium mb-1">Total Staff Spend</p>
+                      <p className="text-2xl font-bold">{formatReportCurrency(sections.staffExpenseSummary.totalAmount)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{sections.staffExpenseSummary.count} transactions</p>
+                    </div>
+                    <div className="bg-muted/30 p-4 rounded-lg border">
+                      <p className="text-muted-foreground text-xs font-medium mb-1">Missing Proof</p>
+                      <p className={`text-2xl font-bold ${sections.staffExpenseSummary.missingProofCount > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                        {sections.staffExpenseSummary.missingProofCount}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {sections.staffExpenseSummary.missingProofCount === 0 ? 'No missing proof' : 'receipts / invoices'}
+                      </p>
+                    </div>
+                    <div className="bg-muted/30 p-4 rounded-lg border">
+                      <p className="text-muted-foreground text-xs font-medium mb-1">Unknown Payment Method</p>
+                      <p className={`text-2xl font-bold ${sections.staffExpenseSummary.unknownMethodCount > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                        {sections.staffExpenseSummary.unknownMethodCount}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">payment method unset</p>
+                    </div>
+                    <div className="bg-muted/30 p-4 rounded-lg border">
+                      <p className="text-muted-foreground text-xs font-medium mb-1">Needs Review</p>
+                      <p className="text-2xl font-bold text-amber-600">{formatReportCurrency(sections.staffExpenseSummary.reviewNeededAmount)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">pending proof or method</p>
+                    </div>
+                  </div>
+
+                  {sections.staffExpenseSummary.topGroups && sections.staffExpenseSummary.topGroups.length > 0 && (
+                    <>
+                      <h3 className="text-base font-semibold mb-3">Top Staff Expense Categories / Vendors</h3>
+                      <div className="border rounded-lg overflow-hidden print:overflow-visible">
+                        <table className="w-full text-sm text-left">
+                          <thead className="bg-muted/50 text-muted-foreground uppercase text-xs">
+                            <tr>
+                              <th className="px-4 py-3 font-medium">Vendor / Category</th>
+                              <th className="px-4 py-3 font-medium text-right">Total Spend</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {sections.staffExpenseSummary.topGroups.map((g: any, idx: number) => (
+                              <tr key={idx} className="bg-card">
+                                <td className="px-4 py-3 font-medium capitalize">{g.name}</td>
+                                <td className="px-4 py-3 text-right">{formatReportCurrency(g.spend)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {sections.staffExpenseSummary.missingProofCount > 0 && (
+                        <div className="mt-4 bg-amber-500/5 border border-amber-500/20 rounded-lg p-4 flex items-start gap-3">
+                          <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                          <p className="text-sm text-amber-700 dark:text-amber-500">
+                            {sections.staffExpenseSummary.missingProofCount} staff expense{sections.staffExpenseSummary.missingProofCount !== 1 ? 's' : ''} ({formatReportCurrency(sections.staffExpenseSummary.reviewNeededAmount)}) may need receipts or invoices before this report is finalised.
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </section>
+          )}
+
           {/* NOTES / REVIEW LOG */}
           {sections.noteSummary && sections.noteSummary.length > 0 && (
             <section className="print-section print:break-inside-auto">

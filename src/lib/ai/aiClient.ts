@@ -62,6 +62,17 @@ export interface AIStructuredContext {
     duplicate_invoices_count: number;
     top_invoiced_vendors: Array<{ name: string; spend: number }>;
   } | null;
+  staff_spend_summary?: {
+    count: number;
+    total_amount: number;
+    formatted_total: string;
+    missing_proof_count: number;
+    unknown_payment_method_count: number;
+    mixed_payment_method_risk_count: number;
+    proof_risk_count: number;
+    has_staff_expenses: boolean;
+    top_staff_vendors: Array<{ name: string; spend: string }>;
+  } | null;
 }
 
 export const askKaeoAi = async (context: AIStructuredContext): Promise<AskKaeoAIResponse | null> => {

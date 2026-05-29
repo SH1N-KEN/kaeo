@@ -165,7 +165,10 @@ export async function categorizeQuestion(query: string): Promise<AskKaeoCategory
     return 'service_alternatives';
   }
   
-  if (q.includes('risk') || q.includes('duplicate') || q.includes('unusual') || q.includes('invoice') || q.includes('mismatch')) {
+  if (q.includes('risk') || q.includes('duplicate') || q.includes('unusual') || q.includes('invoice') || q.includes('mismatch') ||
+      q.includes('staff') || q.includes('petty') || q.includes('proof') || q.includes('receipt') ||
+      q.includes('payment method') || q.includes('reimburs') || q.includes('missing proof') ||
+      q.includes('staff expense') || q.includes('cash expense') || q.includes('mixed payment')) {
     return 'risk_review';
   }
   
@@ -544,6 +547,50 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
 
   const responseMode = determineResponseMode(intent, query);
 
+  // BUILD STAFF SPEND SUMMARY for context injection
+  const resolveStaffField = (tx: any, field: string) =>
+    tx[field] !== undefined && tx[field] !== null
+      ? tx[field]
+      : tx.raw_row_json?.[field] ?? tx.raw_row_json?.metadata?.[field];
+
+  const staffTxs = transactions.filter(tx => {
+    const isStaff = resolveStaffField(tx, 'is_staff_expense') === true ||
+                    resolveStaffField(tx, 'is_staff_expense') === 'true';
+    const cat = tx.category || '';
+    return isStaff || cat === 'Staff / Petty Expenses';
+  });
+
+  const staffTotalAmount = staffTxs.reduce((sum, tx) => sum + Math.abs(getTxAmount(tx)), 0);
+  const staffMissingProof = staffTxs.filter(tx => {
+    const ps = resolveStaffField(tx, 'proof_status');
+    return !ps || ps === 'missing' || ps === 'needs_review';
+  });
+  const staffUnknownMethod = staffTxs.filter(tx => {
+    const pm = resolveStaffField(tx, 'payment_method') || 'unknown';
+    return pm === 'unknown';
+  });
+  const staffMixedMethodRisks = risks.filter(r => r.risk_type === 'mixed_payment_method_spend');
+  const staffProofRisks = risks.filter(r => r.risk_type === 'staff_expense_missing_proof');
+
+  const staff_spend_summary = {
+    count: staffTxs.length,
+    total_amount: staffTotalAmount,
+    formatted_total: formatReportCurrency(staffTotalAmount),
+    missing_proof_count: staffMissingProof.length,
+    unknown_payment_method_count: staffUnknownMethod.length,
+    mixed_payment_method_risk_count: staffMixedMethodRisks.length,
+    proof_risk_count: staffProofRisks.length,
+    has_staff_expenses: staffTxs.length > 0,
+    top_staff_vendors: (() => {
+      const map: Record<string, number> = {};
+      staffTxs.forEach(tx => {
+        const key = tx.description?.split(' ')[0] || 'Misc';
+        map[key] = (map[key] || 0) + Math.abs(getTxAmount(tx));
+      });
+      return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name, spend]) => ({ name, spend: formatReportCurrency(spend) }));
+    })()
+  };
+
   // BUILD STRUCTURED CONTEXT FOR AI
   const structuredContext: AIStructuredContext = {
     question: query + " (All financial amounts are in INR.)",
@@ -593,7 +640,8 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       risks: risks.length
     },
     approved_extra_numbers,
-    matching_vendor
+    matching_vendor,
+    staff_spend_summary
   };
 
   // TRY CALLING THE AI CLIENT
