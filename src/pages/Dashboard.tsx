@@ -729,13 +729,12 @@ const Dashboard: React.FC = () => {
 
       {/* ── Main content: Chart + Risk Snapshot ── */}
       {hasTransactions && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Cash Flow Chart */}
           <SectionCard
             title="Cash Flow Overview"
             description="Inflow and outflow activity over the last 15 days"
-            className="lg:col-span-2 flex flex-col"
-            bodyClassName="flex-1 flex flex-col"
+            className="lg:col-span-2"
           >
             <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-[var(--border)]">
               <div className="flex items-center gap-6">
@@ -762,7 +761,7 @@ const Dashboard: React.FC = () => {
             </div>
 
             {chartData.length > 0 ? (
-              <div className="h-[340px] w-full flex-1">
+              <div className="h-[240px] sm:h-[280px] lg:h-[320px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
