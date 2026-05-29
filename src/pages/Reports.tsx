@@ -427,11 +427,11 @@ export default function Reports() {
     <div className="space-y-6 max-w-5xl mx-auto pb-12 animate-in fade-in duration-500">
       {/* Month-End Readiness Checklist and Optimizer */}
       {readinessPlan && (
-        <div className="kaeo-card p-6 space-y-4">
+        <div className="frosted-card p-6 space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/15">
             <div>
               <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                <Zap className="w-4 h-4 text-teal-400" />
+                <Zap className="w-4 h-4 text-primary" />
                 Month-End Readiness Checklist
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5 font-medium">Your current ledger readiness score is {readinessPlan.currentScore}%.</p>
@@ -440,7 +440,7 @@ export default function Reports() {
               {readinessPlan.safeCount > 0 && (
                 <button
                   onClick={() => navigate('/transactions?review_status=ai_suggested')}
-                  className="px-3.5 py-1.5 bg-teal-500 hover:bg-teal-400 text-black text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                  className="px-3.5 py-1.5 bg-primary hover:opacity-90 text-primary-foreground text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1 shrink-0"
                 >
                   <Zap className="w-3.5 h-3.5" />
                   Auto-optimize (+{readinessPlan.projectedScore - readinessPlan.currentScore}%)
@@ -519,7 +519,7 @@ export default function Reports() {
       </div>
 
       {/* Configure Report Period Card */}
-      <div className="kaeo-card p-6 bg-card/45 border-border/30 backdrop-blur-md rounded-2xl space-y-4">
+      <div className="frosted-card p-6 bg-card/45 border-border/30 backdrop-blur-md rounded-2xl space-y-4">
         <div>
           <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-primary" />
@@ -605,7 +605,7 @@ export default function Reports() {
       )}
 
       {transactionCount === 0 ? (
-        <div className="kaeo-card py-12 flex flex-col items-center justify-center text-center gap-5">
+        <div className="frosted-card py-12 flex flex-col items-center justify-center text-center gap-5">
           <FileText className="h-12 w-12" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />
           <div>
             <h3 className="text-[16px] font-semibold mb-2">No data available</h3>
@@ -616,7 +616,7 @@ export default function Reports() {
           </button>
         </div>
       ) : reports.length === 0 ? (
-        <div className="kaeo-card py-12 flex flex-col items-center justify-center text-center gap-5">
+        <div className="frosted-card py-12 flex flex-col items-center justify-center text-center gap-5">
           <FileText className="h-12 w-12" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />
           <div>
             <h3 className="text-[16px] font-semibold mb-2">No reports yet</h3>
@@ -627,15 +627,15 @@ export default function Reports() {
           </button>
         </div>
       ) : filteredReports.length === 0 ? (
-        <div className="kaeo-card py-10 text-center" style={{ color: 'var(--muted-foreground)' }}>
+        <div className="frosted-card py-10 text-center" style={{ color: 'var(--muted-foreground)' }}>
           <p className="text-[13px] font-semibold">No matching reports found for "{searchVal}"</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredReports.map((report) => (
-            <div key={report.id} className="kaeo-card p-5 flex flex-col">
+            <div key={report.id} className="frosted-card p-5 flex flex-col">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-2 rounded-xl" style={{ background: 'rgba(15,118,110,0.08)' }}>
+                <div className="p-2 rounded-xl" style={{ background: 'var(--secondary)' }}>
                   <FileText className="h-5 w-5" style={{ color: 'var(--primary)' }} />
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap justify-end">

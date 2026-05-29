@@ -498,7 +498,7 @@ const Dashboard: React.FC = () => {
   const CustomChartTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="kaeo-card px-3 py-2.5 text-[12px]" style={{ minWidth: 140 }}>
+        <div className="frosted-popover px-3 py-2.5 text-[12px]" style={{ minWidth: 140 }}>
           <p className="font-semibold text-[var(--muted-foreground)] mb-1.5">{payload[0].payload.date}</p>
           <div className="space-y-1">
             <div className="flex items-center justify-between gap-4">
@@ -530,7 +530,7 @@ const Dashboard: React.FC = () => {
       return (
         <div className="h-[70vh] flex items-center justify-center animate-kaeo-fade">
           <div className="kaeo-card p-10 flex flex-col items-center text-center gap-5 max-w-sm">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(15,118,110,0.08)', border: '1px solid rgba(15,118,110,0.18)' }}>
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-muted border border-border">
               <Plus className="w-7 h-7" style={{ color: 'var(--primary)' }} />
             </div>
             <div>
@@ -614,9 +614,8 @@ const Dashboard: React.FC = () => {
         <div className="kaeo-card p-4 flex items-start justify-between gap-4"
           style={{ borderLeft: '3px solid var(--primary)' }}>
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgba(15,118,110,0.10)' }}>
-              <Sparkles className="w-4 h-4" style={{ color: 'var(--primary)' }} />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-muted border border-border">
+              <Sparkles className="w-4 h-4 text-primary" />
             </div>
             <div>
               <h4 className="text-[13px] font-semibold mb-0.5">Complete your business profile</h4>
@@ -864,7 +863,7 @@ const Dashboard: React.FC = () => {
       )}
 
       {!hasTransactions && (
-        <div className="kaeo-card py-12 px-6 flex flex-col items-center justify-center text-center max-w-xl mx-auto border border-dashed border-[var(--border)] mt-4">
+        <div className="frosted-card py-12 px-6 flex flex-col items-center justify-center text-center max-w-xl mx-auto border border-dashed border-[var(--border)] mt-4">
           <FileText className="w-10 h-10 text-[var(--muted-foreground)] mb-4" style={{ opacity: 0.5 }} />
           <h3 className="text-[16px] font-semibold mb-2 text-[var(--foreground)]">No transaction data</h3>
           <p className="text-[13px] text-[var(--muted-foreground)] max-w-sm mb-6">
@@ -897,18 +896,9 @@ const Dashboard: React.FC = () => {
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('open-ask-libby', { detail: { query: prompt.query } }));
               }}
-              className="text-left px-3.5 py-3 rounded-xl border border-[var(--border)] transition-all cursor-pointer group"
-              style={{ background: 'var(--muted)' }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(19,140,126,0.06)';
-                e.currentTarget.style.borderColor = 'rgba(19,140,126,0.20)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'var(--muted)';
-                e.currentTarget.style.borderColor = 'var(--border)';
-              }}
+              className="text-left px-3.5 py-3 rounded-xl border border-border bg-muted/30 hover:bg-muted/60 transition-all cursor-pointer group"
             >
-              <Sparkles className="w-3.5 h-3.5 mb-1.5 transition-colors" style={{ color: 'var(--primary)' }} />
+              <Sparkles className="w-3.5 h-3.5 mb-1.5 text-muted-foreground group-hover:text-primary transition-colors" />
               <span className="text-[12px] font-medium leading-snug block" style={{ color: 'var(--foreground)' }}>
                 {prompt.label}
               </span>

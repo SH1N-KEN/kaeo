@@ -317,8 +317,8 @@ const RiskInbox: React.FC = () => {
     if (clients && clients.length > 0) {
       return (
         <div className="h-[70vh] flex items-center justify-center animate-in fade-in duration-500">
-          <div className="kaeo-card p-10 flex flex-col items-center justify-center text-center space-y-5 max-w-md animate-kaeo-scale">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(15,118,110,0.10)', border: '1px solid rgba(15,118,110,0.18)' }}>
+          <div className="frosted-card p-10 flex flex-col items-center justify-center text-center space-y-5 max-w-md animate-kaeo-scale">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-muted border border-border">
               <Plus className="w-8 h-8" style={{ color: 'var(--primary)' }} />
             </div>
             <div className="space-y-1">
@@ -408,7 +408,7 @@ const RiskInbox: React.FC = () => {
           <p className="text-[13px] font-medium" style={{ color: 'var(--muted-foreground)' }}>Scanning ledger for anomalies…</p>
         </div>
       ) : txCount === 0 ? (
-        <div className="kaeo-card py-20 flex flex-col items-center justify-center text-center gap-5 animate-kaeo-fade">
+        <div className="frosted-card py-20 flex flex-col items-center justify-center text-center gap-5 animate-kaeo-fade">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'var(--muted)' }}>
             <Search className="w-7 h-7" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />
           </div>
@@ -423,7 +423,7 @@ const RiskInbox: React.FC = () => {
           </button>
         </div>
       ) : risks.length === 0 ? (
-        <div className="kaeo-card py-20 flex flex-col items-center justify-center text-center gap-5">
+        <div className="frosted-card py-20 flex flex-col items-center justify-center text-center gap-5">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(22,138,91,0.10)', border: '1px solid rgba(22,138,91,0.20)' }}>
             <CheckCircle2 className="w-7 h-7" style={{ color: '#168A5B' }} />
           </div>
@@ -466,7 +466,7 @@ const RiskInbox: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-8 space-y-3">
               {filteredRisks.length === 0 ? (
-                <div className="kaeo-card py-12 text-center">
+                <div className="frosted-card py-12 text-center">
                   <p className="text-[13px]" style={{ color: 'var(--muted-foreground)' }}>No risks matching &ldquo;{searchVal}&rdquo; found.</p>
                 </div>
               ) : (
@@ -477,10 +477,11 @@ const RiskInbox: React.FC = () => {
                       setSelectedRisk(risk);
                       fetchNotes(risk.id);
                     }}
-                    className="kaeo-card p-5 cursor-pointer relative overflow-hidden transition-all"
-                    style={selectedRisk?.id === risk.id ? { borderColor: 'var(--primary)', boxShadow: '0 0 0 1px rgba(15,118,110,0.20)' } : {}}
-                    onMouseEnter={e => { if (selectedRisk?.id !== risk.id) e.currentTarget.style.borderColor = 'rgba(15,118,110,0.30)'; }}
-                    onMouseLeave={e => { if (selectedRisk?.id !== risk.id) e.currentTarget.style.borderColor = 'var(--border)'; }}
+                    className={`frosted-card p-5 cursor-pointer relative overflow-hidden transition-all ${
+                      selectedRisk?.id === risk.id 
+                        ? 'border-primary shadow-sm bg-primary/[0.02]' 
+                        : 'frosted-card-hover hover:border-primary/40'
+                    }`}
                   >
                     {risk.status !== 'open' && (
                       <div className="absolute top-0 right-0 px-2.5 py-1 text-[10px] font-semibold rounded-bl-lg" style={{ background: 'rgba(22,138,91,0.10)', color: '#168A5B', borderLeft: '1px solid rgba(22,138,91,0.20)', borderBottom: '1px solid rgba(22,138,91,0.20)' }}>
@@ -575,7 +576,7 @@ const RiskInbox: React.FC = () => {
             <div className="lg:col-span-4">
               <div className="sticky top-8 space-y-6">
                 {selectedRisk ? (
-                  <div className="bg-card border border-primary/20 rounded-2xl overflow-hidden shadow-xl animate-in slide-in-from-right-4 duration-300">
+                  <div className="frosted-card overflow-hidden shadow-xl animate-in slide-in-from-right-4 duration-300">
                     <div className="p-6 bg-muted/20 border-b border-border/50">
                       <div className="flex items-center justify-between mb-4">
                         <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${getSeverityColor(selectedRisk.severity)}`}>
@@ -612,13 +613,13 @@ const RiskInbox: React.FC = () => {
                         if (!riskSuggestion) return null;
 
                         return (
-                          <div className="mt-3 p-3 bg-teal-500/10 border border-teal-500/20 rounded-xl space-y-2">
-                            <h4 className="text-[9px] font-black uppercase tracking-widest text-teal-400 flex items-center gap-1.5">
+                          <div className="mt-3 p-3 bg-[var(--secondary)] border border-[var(--border)] rounded-xl space-y-2">
+                            <h4 className="text-[9px] font-black uppercase tracking-widest text-[var(--primary)] flex items-center gap-1.5">
                               <Sparkles className="w-3 h-3 animate-pulse" /> Kaeo Recommendation
                             </h4>
                             <div className="text-[10px] text-foreground/90 font-medium space-y-1">
                               <div className="flex items-center gap-2">
-                                <span className="bg-teal-500/20 text-teal-400 px-1.5 py-0.5 rounded text-[8px] font-black uppercase">
+                                <span className="bg-primary/10 text-[var(--primary)] px-1.5 py-0.5 rounded text-[8px] font-black uppercase">
                                   {Math.round(riskSuggestion.confidence * 100)}% Confidence
                                 </span>
                                 <span className="text-muted-foreground">Action: {riskSuggestion.suggestion_type.replace(/_/g, ' ')}</span>

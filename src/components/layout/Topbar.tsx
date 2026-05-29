@@ -209,7 +209,7 @@ const Topbar: React.FC = () => {
 
   return (
     <>
-      <header className="topbar-base">
+      <header className="frosted-topbar">
         {/* Left: breadcrumb */}
         <div className="flex items-center gap-3 min-w-0">
           <Breadcrumb>

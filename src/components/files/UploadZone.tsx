@@ -42,7 +42,7 @@ const UploadZone: React.FC<UploadZoneProps> = ({ onFileSelect, loading }) => {
       onDragLeave={handleDrag}
       onDragOver={handleDrag}
       onDrop={handleDrop}
-      className={`relative border-2 border-dashed rounded-2xl p-12 transition-all premium-glass ${
+      className={`relative border-2 border-dashed rounded-2xl p-12 transition-all frosted-card ${
         dragActive 
           ? 'border-primary bg-primary/5 scale-[1.01]' 
           : 'border-border/30 hover:border-primary/50 hover:bg-white/5'
@@ -80,11 +80,11 @@ const UploadZone: React.FC<UploadZoneProps> = ({ onFileSelect, loading }) => {
         </label>
 
         <div className="flex flex-wrap justify-center gap-3 text-[10px] font-bold uppercase tracking-widest pt-4">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border" style={{ background: 'rgba(15,118,110,0.08)', color: 'var(--primary)', border: '1px solid rgba(15,118,110,0.20)' }}>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border" style={{ background: 'var(--secondary)', color: 'var(--primary)', border: '1px solid var(--border)' }}>
             <CheckCircle2 className="w-3 h-3" />
             <span>CSV</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border" style={{ background: 'rgba(15,118,110,0.08)', color: 'var(--primary)', border: '1px solid rgba(15,118,110,0.20)' }}>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border" style={{ background: 'var(--secondary)', color: 'var(--primary)', border: '1px solid var(--border)' }}>
             <CheckCircle2 className="w-3 h-3" />
             <span>XLSX / XLS</span>
           </div>

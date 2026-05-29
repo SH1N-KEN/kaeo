@@ -22,7 +22,7 @@ const SectionCard: React.FC<SectionCardProps> = ({
   const hasHeader = title || description || action;
 
   return (
-    <div className={`kaeo-card overflow-hidden ${className}`}>
+    <div className={`frosted-card overflow-hidden ${className}`}>
       {hasHeader && (
         <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-4 border-b border-[var(--border)]">
           <div className="min-w-0">

@@ -328,7 +328,7 @@ const Billing: React.FC = () => {
       )}
 
       {/* A. CURRENT SUBSCRIPTION CARD */}
-      <div className="bg-card border rounded-3xl overflow-hidden shadow-sm">
+      <div className="frosted-card rounded-3xl overflow-hidden shadow-sm">
         <div className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
@@ -437,7 +437,7 @@ const Billing: React.FC = () => {
             }
 
             return (
-              <div key={card.type} className="bg-card border rounded-2xl p-6 shadow-sm flex flex-col justify-between space-y-4">
+              <div key={card.type} className="frosted-card border rounded-2xl p-6 shadow-sm flex flex-col justify-between space-y-4">
                 <div className="space-y-2">
                   <div className="flex justify-between items-start">
                     <div className="p-2.5 bg-muted rounded-xl text-muted-foreground">
@@ -510,7 +510,7 @@ const Billing: React.FC = () => {
             return (
               <div 
                 key={plan.id} 
-                className={`relative bg-card border rounded-3xl p-6 flex flex-col justify-between shadow-sm transition-all duration-300 ${
+                className={`relative frosted-card border rounded-3xl p-6 flex flex-col justify-between shadow-sm transition-all duration-300 ${
                   isCurrent 
                     ? 'border-primary shadow-lg ring-1 ring-primary/30' 
                     : 'hover:border-border-hover'
@@ -591,7 +591,7 @@ const Billing: React.FC = () => {
       </div>
 
       {/* D. RAZORPAY PLATFORM NOTE */}
-      <div className="bg-primary/5 border border-primary/10 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="frosted-card p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-2">
           <h4 className="font-bold text-base text-foreground flex items-center gap-2">
             <Building2 className="w-5 h-5 text-primary" />

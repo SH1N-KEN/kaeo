@@ -40,7 +40,7 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false
           setClientToEdit(null);
           setIsCreateModalOpen(true);
         }}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dashed border-teal-500/25 hover:border-primary hover:text-primary transition-all text-xs font-medium w-full justify-center text-muted-foreground"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dashed border-border hover:border-primary/50 hover:text-foreground transition-all text-xs font-medium w-full justify-center text-muted-foreground"
       >
         <Plus className="w-3 h-3" />
         {!collapsed && <span>Add Business</span>}
@@ -71,7 +71,7 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false
       {collapsed ? (
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center justify-center w-10 h-10 rounded-xl transition-all hover:bg-teal-500/5 border border-teal-500/10 shrink-0 mx-auto"
+          className="flex items-center justify-center w-10 h-10 rounded-xl transition-all hover:bg-muted/40 border border-border/40 shrink-0 mx-auto"
           title={displayName}
         >
           <div className="w-5 h-5 rounded flex items-center justify-center shrink-0">
@@ -81,9 +81,9 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false
       ) : (
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all text-xs font-semibold w-full bg-teal-500/5 hover:bg-teal-500/10 border border-teal-500/10"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all text-xs font-semibold w-full bg-muted/30 hover:bg-muted/60 border border-border/40"
         >
-          <div className="w-5 h-5 bg-teal-500/10 rounded flex items-center justify-center border border-teal-500/20 shrink-0">
+          <div className="w-5 h-5 bg-muted rounded flex items-center justify-center border border-border/20 shrink-0">
             <Briefcase className="w-3.5 h-3.5 text-primary" />
           </div>
           {accountMode === 'business_owner' ? (

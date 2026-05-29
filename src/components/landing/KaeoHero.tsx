@@ -9,8 +9,8 @@ import aeLogo from '../../assets/kaeo-ae-logo.png';
 const UploadCard = () => (
   <div
     style={{
-      background: '#0D1714',
-      border: '1px solid rgba(19, 140, 126, 0.18)',
+      background: '#121514',
+      border: '1px solid rgba(140, 150, 148, 0.10)',
       borderRadius: '14px',
       padding: '20px',
       fontFamily: 'inherit',
@@ -21,12 +21,12 @@ const UploadCard = () => (
     </div>
     <div
       style={{
-        border: '1.5px dashed rgba(19, 140, 126, 0.30)',
+        border: '1.5px dashed rgba(140, 150, 148, 0.20)',
         borderRadius: '10px',
         padding: '18px 14px',
         textAlign: 'center',
         marginBottom: '12px',
-        background: 'rgba(19, 140, 126, 0.04)',
+        background: 'rgba(140, 150, 148, 0.03)',
       }}
     >
       <div style={{ fontSize: '20px', marginBottom: '4px' }}>↑</div>
@@ -37,10 +37,10 @@ const UploadCard = () => (
       {['hdfc_apr_2026.xlsx', 'razorpay_q1.csv'].map((f, i) => (
         <div key={i} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '8px 10px',
+          background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '8px 10px',
         }}>
           <span style={{ fontSize: '12px', color: '#E8F0EE', fontWeight: 500 }}>{f}</span>
-          <span style={{ fontSize: '10px', color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>● parsed</span>
+          <span style={{ fontSize: '10px', color: 'rgba(232, 240, 238, 0.45)', fontFamily: 'ui-monospace, monospace' }}>● parsed</span>
         </div>
       ))}
     </div>
@@ -50,8 +50,8 @@ const UploadCard = () => (
 const TransactionCard = () => (
   <div
     style={{
-      background: '#080E0C',
-      border: '1px solid rgba(19, 140, 126, 0.12)',
+      background: '#121514',
+      border: '1px solid rgba(140, 150, 148, 0.10)',
       borderRadius: '14px',
       padding: '16px',
       fontFamily: 'inherit',
@@ -87,9 +87,9 @@ const TransactionCard = () => (
           letterSpacing: '0.04em',
           textTransform: 'uppercase',
           textAlign: 'center',
-          background: row.risk ? 'rgba(224, 84, 80, 0.12)' : row.tag === 'inflow' ? 'rgba(34, 181, 115, 0.12)' : 'rgba(19, 140, 126, 0.10)',
-          color: row.risk ? '#E05450' : row.tag === 'inflow' ? '#22B573' : '#138C7E',
-          border: `1px solid ${row.risk ? 'rgba(224,84,80,0.20)' : row.tag === 'inflow' ? 'rgba(34,181,115,0.20)' : 'rgba(19,140,126,0.18)'}`,
+          background: row.risk ? 'rgba(224, 84, 80, 0.12)' : row.tag === 'inflow' ? 'rgba(34, 181, 115, 0.12)' : 'rgba(140, 150, 148, 0.08)',
+          color: row.risk ? '#E05450' : row.tag === 'inflow' ? '#22B573' : 'rgba(232, 240, 238, 0.65)',
+          border: `1px solid ${row.risk ? 'rgba(224,84,80,0.20)' : row.tag === 'inflow' ? 'rgba(34,181,115,0.20)' : 'rgba(140,150,148,0.12)'}`,
         }}>{row.tag}</span>
       </div>
     ))}
@@ -99,8 +99,8 @@ const TransactionCard = () => (
 const RiskCard = () => (
   <div
     style={{
-      background: '#0D1714',
-      border: '1px solid rgba(19, 140, 126, 0.14)',
+      background: '#121514',
+      border: '1px solid rgba(140, 150, 148, 0.10)',
       borderRadius: '14px',
       padding: '18px',
       fontFamily: 'inherit',
@@ -119,16 +119,16 @@ const RiskCard = () => (
         <div key={i} style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '8px 10px',
-          background: 'rgba(255,255,255,0.03)',
+          background: 'rgba(255,255,255,0.02)',
           borderRadius: '8px',
-          border: '1px solid rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.04)',
         }}>
           <span style={{ fontSize: '12px', color: 'rgba(232,240,238,0.65)', fontWeight: 400 }}>{item.label}</span>
           <span style={{ fontSize: '12px', color: item.color, fontWeight: 700, fontFamily: 'ui-monospace, monospace' }}>{item.count}</span>
         </div>
       ))}
     </div>
-    <div style={{ marginTop: '14px', padding: '10px 12px', background: 'rgba(19, 140, 126, 0.08)', borderRadius: '8px', border: '1px solid rgba(19, 140, 126, 0.18)' }}>
+    <div style={{ marginTop: '14px', padding: '10px 12px', background: 'rgba(140, 150, 148, 0.05)', borderRadius: '8px', border: '1px solid rgba(140, 150, 148, 0.10)' }}>
       <div style={{ fontSize: '11px', color: '#138C7E', fontWeight: 600, marginBottom: '2px' }}>Report readiness</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
@@ -149,7 +149,7 @@ export const KaeoHero: React.FC = () => {
     <section
       id="product"
       style={{
-        background: '#050F0D',
+        background: '#080A09',
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
@@ -168,7 +168,7 @@ export const KaeoHero: React.FC = () => {
           right: '-120px',
           width: '700px',
           height: '700px',
-          background: 'radial-gradient(circle, rgba(19, 140, 126, 0.10) 0%, transparent 65%)',
+          background: 'radial-gradient(circle, rgba(19, 140, 126, 0.04) 0%, transparent 65%)',
           pointerEvents: 'none',
         }}
       />
@@ -180,7 +180,7 @@ export const KaeoHero: React.FC = () => {
           left: '-80px',
           width: '500px',
           height: '500px',
-          background: 'radial-gradient(circle, rgba(19, 140, 126, 0.05) 0%, transparent 60%)',
+          background: 'radial-gradient(circle, rgba(19, 140, 126, 0.02) 0%, transparent 60%)',
           pointerEvents: 'none',
         }}
       />
@@ -254,7 +254,7 @@ export const KaeoHero: React.FC = () => {
                 to={user ? '/dashboard' : '/signup'}
                 style={{
                   background: '#138C7E',
-                  color: '#050F0D',
+                  color: '#080A09',
                   border: 'none',
                   padding: '14px 28px',
                   borderRadius: '999px',
@@ -281,7 +281,7 @@ export const KaeoHero: React.FC = () => {
                   fontWeight: 500,
                   textDecoration: 'none',
                   padding: '14px 24px',
-                  border: '1px solid rgba(19, 140, 126, 0.18)',
+                  border: '1px solid rgba(140, 150, 148, 0.18)',
                   borderRadius: '999px',
                   display: 'inline-block',
                   transition: 'all 0.15s ease',
@@ -330,11 +330,11 @@ export const KaeoHero: React.FC = () => {
             {/* Product mock frame */}
             <div
               style={{
-                background: '#080E0C',
-                border: '1px solid rgba(19, 140, 126, 0.15)',
+                background: '#121514',
+                border: '1px solid rgba(140, 150, 148, 0.12)',
                 borderRadius: '18px',
                 padding: '20px',
-                boxShadow: '0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(19, 140, 126, 0.08)',
+                boxShadow: '0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(140, 150, 148, 0.05)',
               }}
             >
               {/* Browser chrome */}

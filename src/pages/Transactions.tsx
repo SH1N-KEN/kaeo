@@ -599,7 +599,7 @@ const Transactions: React.FC = () => {
     if (clients && clients.length > 0) {
       return (
         <div className="h-[70vh] flex items-center justify-center animate-in fade-in">
-        <div className="kaeo-card p-10 flex flex-col items-center justify-center text-center space-y-5 max-w-md">
+        <div className="frosted-card p-10 flex flex-col items-center justify-center text-center space-y-5 max-w-md">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(15,118,110,0.10)', border: '1px solid rgba(15,118,110,0.18)' }}>
               <Plus className="w-8 h-8" style={{ color: 'var(--primary)' }} />
             </div>
@@ -666,7 +666,7 @@ const Transactions: React.FC = () => {
       )}
 
       {/* ── Filter bar ── */}
-      <div className="kaeo-card p-4 space-y-3.5 bg-card/40 border-border/30 backdrop-blur-md rounded-xl">
+      <div className="frosted-card p-4 space-y-3.5 bg-card/40 border-border/30 backdrop-blur-md rounded-xl">
         {/* Row 1: search + type tabs */}
         <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
           {/* Search */}
@@ -675,7 +675,7 @@ const Transactions: React.FC = () => {
             <input
               type="text"
               placeholder="Search description, counterparty, category…"
-              className="kaeo-input text-xs py-2 bg-background/50 border-border/30 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 rounded-lg"
+              className="frosted-input text-xs py-2 bg-background/50 border-border/30 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 rounded-lg"
               style={{ paddingLeft: '2.5rem' }}
               value={searchTerm}
               onChange={handleSearchChange}
@@ -705,7 +705,7 @@ const Transactions: React.FC = () => {
         <div className="flex flex-wrap gap-2 items-center">
           {/* Review status */}
           <select
-            className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
+            className="frosted-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
             style={{ width: 'auto' }}
             value={filterReview}
             onChange={(e) => updateFilterParams({ review_status: e.target.value })}
@@ -725,7 +725,7 @@ const Transactions: React.FC = () => {
 
           {/* Category */}
           <select
-            className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
+            className="frosted-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
             style={{ width: 'auto' }}
             value={filterCategory}
             onChange={(e) => updateFilterParams({ category: e.target.value })}
@@ -753,7 +753,7 @@ const Transactions: React.FC = () => {
             <div className="flex flex-wrap gap-2 items-center animate-kaeo-fade">
               {availableSources.length > 1 && (
                 <select
-                  className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
+                  className="frosted-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
                   style={{ width: 'auto' }}
                   value={filterSource}
                   onChange={(e) => updateFilterParams({ source: e.target.value })}
@@ -765,7 +765,7 @@ const Transactions: React.FC = () => {
                 </select>
               )}
               <select
-                className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
+                className="frosted-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
                 style={{ width: 'auto' }}
                 value={filterAmountRange}
                 onChange={(e) => updateFilterParams({ amountRange: e.target.value })}
@@ -807,7 +807,7 @@ const Transactions: React.FC = () => {
           { label: 'Outflow', value: formatCurrency(summary.outflow), color: 'var(--danger)' },
           { label: 'Net', value: formatSignedCurrency(summary.net), color: summary.net >= 0 ? 'var(--success)' : 'var(--danger)' },
         ].map(s => (
-          <div key={s.label} className="kaeo-card p-4 rounded-xl bg-card/45 border-border/30 backdrop-blur-md flex flex-col items-center justify-center">
+          <div key={s.label} className="frosted-card p-4 rounded-xl bg-card/45 border-border/30 backdrop-blur-md flex flex-col items-center justify-center">
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase mb-1">{s.label}</span>
             <span className="text-lg font-bold tracking-tight" style={{ color: s.color }}>{s.value}</span>
           </div>
@@ -816,12 +816,12 @@ const Transactions: React.FC = () => {
 
       {/* ── Table ── */}
       {loading && transactions.length === 0 ? (
-        <div className="kaeo-card h-[40vh] flex flex-col items-center justify-center gap-4">
+        <div className="frosted-card h-[40vh] flex flex-col items-center justify-center gap-4">
           <Loader2 className="w-6 h-6 animate-spin text-[var(--primary)]" />
           <p className="text-[13px] font-medium text-muted-foreground">Loading ledger…</p>
         </div>
       ) : transactions.length === 0 ? (
-        <div className="kaeo-card p-8 rounded-xl border-border/30">
+        <div className="frosted-card p-8 rounded-xl border-border/30">
           <EmptyState
             icon={<UploadCloud className="w-8 h-8 text-muted-foreground/50" />}
             title="Upload a statement to start reviewing transactions."
@@ -833,7 +833,7 @@ const Transactions: React.FC = () => {
           />
         </div>
       ) : sortedTransactions.length === 0 ? (
-        <div className="kaeo-card p-8 rounded-xl border-border/30">
+        <div className="frosted-card p-8 rounded-xl border-border/30">
           {filterTransactionId || (filterTransactionIds && filterTransactionIds.length > 0) ? (
             <EmptyState
               icon={<AlertCircle className="w-8 h-8 text-muted-foreground/50" />}
@@ -873,7 +873,7 @@ const Transactions: React.FC = () => {
               </button>
             </div>
           )}
-          <div className="kaeo-card rounded-xl border-border/30 overflow-hidden shadow-sm bg-card/30 backdrop-blur-md">
+          <div className="frosted-card rounded-xl border-border/30 overflow-hidden shadow-sm bg-card/30 backdrop-blur-md">
             <div className="overflow-x-auto">
             <table className="kaeo-table min-w-[860px]">
               <thead>

@@ -741,9 +741,9 @@ const Files: React.FC = () => {
     if (clients && clients.length > 0) {
       return (
         <div className="h-[70vh] flex items-center justify-center animate-in fade-in">
-          <div className="premium-glass border border-border/40 rounded-3xl p-10 flex flex-col items-center justify-center text-center space-y-5 max-w-md shadow-xl animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-teal-500/10 rounded-2xl flex items-center justify-center border border-teal-500/20 shadow-inner">
-              <Plus className="w-8 h-8 text-teal-400" />
+          <div className="frosted-card border border-border/40 rounded-3xl p-10 flex flex-col items-center justify-center text-center space-y-5 max-w-md shadow-xl animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 shadow-inner">
+              <Plus className="w-8 h-8 text-primary" />
             </div>
             <div className="space-y-1">
               <h3 className="text-lg font-bold tracking-tight">We found your business but it was not selected.</h3>
@@ -898,7 +898,7 @@ const Files: React.FC = () => {
       {activeTab === 'transactions' && (
         <>
           {/* 3-Step Guide */}
-          <div className="premium-glass p-4 rounded-xl border border-border/20 bg-white/[0.02] flex flex-col md:flex-row items-start md:items-center justify-between text-xs gap-3 mb-6">
+          <div className="frosted-card p-4 rounded-xl border border-border/20 bg-white/[0.02] flex flex-col md:flex-row items-start md:items-center justify-between text-xs gap-3 mb-6">
             <div className="flex items-center gap-2">
               <span className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${
                 !parseResult && !importSummary ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20' : 'bg-success/20 text-success'
@@ -938,7 +938,7 @@ const Files: React.FC = () => {
           )}
 
           {importSummary && (
-            <div className="premium-glass border border-success/30 rounded-2xl p-6 space-y-5 animate-in zoom-in-95">
+            <div className="frosted-card border border-success/30 rounded-2xl p-6 space-y-5 animate-in zoom-in-95">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-success/10 rounded-full flex items-center justify-center text-success">
                   <CheckCircle2 className="w-6 h-6" />
@@ -981,7 +981,7 @@ const Files: React.FC = () => {
                   </button>
                   <button
                     onClick={() => navigate('/libby')}
-                    className="px-4 py-2.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 rounded-xl text-xs font-bold border border-teal-500/25 flex items-center gap-1.5 transition-colors"
+                    className="px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold border border-primary/20 flex items-center gap-1.5 transition-colors"
                   >
                     <Sparkles className="w-4 h-4" /> Ask Libby what to fix
                   </button>
@@ -1049,7 +1049,7 @@ const Files: React.FC = () => {
               <div className="space-y-4">
                 <UploadZone onFileSelect={handleFileSelect} loading={loading} />
                 <div className="flex items-start gap-2.5 px-3 text-[11px] text-muted-foreground">
-                  <Sparkles className="w-3.5 h-3.5 text-teal-400 shrink-0 mt-0.5" />
+                  <Sparkles className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
                   <span>
                     <strong>Supported formats:</strong> CSV and XLSX bank statements or payment gateway exports. Kaeo will detect income, expenses, refunds, risks, and unknown rows automatically.
                   </span>
@@ -1060,21 +1060,21 @@ const Files: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div 
                   onClick={() => handleUploadTypeChange('bank_statement')}
-                  className="p-5 premium-glass premium-glass-hover border border-border/40 rounded-2xl cursor-pointer"
+                  className="p-5 frosted-card frosted-card-hover border border-border/40 rounded-2xl cursor-pointer"
                 >
                   <h4 className="font-bold text-xs text-foreground mb-1">Bank statement</h4>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">Import transactional ledger logs from HDFC, ICICI, etc.</p>
                 </div>
                 <div 
                   onClick={() => handleUploadTypeChange('gateway_export')}
-                  className="p-5 premium-glass premium-glass-hover border border-border/40 rounded-2xl cursor-pointer"
+                  className="p-5 frosted-card frosted-card-hover border border-border/40 rounded-2xl cursor-pointer"
                 >
                   <h4 className="font-bold text-xs text-foreground mb-1">Razorpay/payment export</h4>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">Import gateway exports directly to verify fees and charges.</p>
                 </div>
                 <div 
                   onClick={() => handleTabChange('invoices')}
-                  className="p-5 premium-glass premium-glass-hover border border-border/40 rounded-2xl cursor-pointer"
+                  className="p-5 frosted-card frosted-card-hover border border-border/40 rounded-2xl cursor-pointer"
                 >
                   <h4 className="font-bold text-xs text-foreground mb-1">Invoices Folder</h4>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">Reconcile scans against ledger outflow events.</p>
@@ -1104,7 +1104,7 @@ const Files: React.FC = () => {
       {activeTab === 'invoices' && (
         <div className="space-y-6">
           {/* Upload and OCR trigger */}
-          <div className="premium-glass border border-dashed border-border/50 rounded-2xl p-8 flex flex-col items-center justify-center text-center space-y-4 relative">
+          <div className="frosted-card border border-dashed border-border/50 rounded-2xl p-8 flex flex-col items-center justify-center text-center space-y-4 relative">
             <input 
               type="file"
               id="invoice-file-upload"
@@ -1113,7 +1113,7 @@ const Files: React.FC = () => {
               onChange={handleInvoiceUpload}
               disabled={uploadingInvoice}
             />
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(15,118,110,0.08)', border: '1px solid rgba(15,118,110,0.18)', color: 'var(--primary)' }}>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--primary)' }}>
               {uploadingInvoice ? <Loader2 className="w-6 h-6 animate-spin" /> : <FileText className="w-6 h-6" />}
             </div>
             <div>
@@ -1134,7 +1134,7 @@ const Files: React.FC = () => {
           </div>
 
           {/* List of scanned invoices */}
-          <div className="premium-glass border border-border/30 rounded-2xl overflow-hidden shadow-xl">
+          <div className="frosted-card border border-border/30 rounded-2xl overflow-hidden shadow-xl">
             <div className="px-6 py-4 border-b border-border/15 bg-white/[0.01] flex items-center justify-between">
               <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                 <FileText className="w-4 h-4" />
@@ -1215,7 +1215,7 @@ const Files: React.FC = () => {
                               <button 
                                 onClick={() => handleMarkPaid(inv.id)}
                                 disabled={inv.status === 'paid'}
-                                className="px-2.5 py-1 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/25 text-teal-400 font-bold rounded-lg text-[10px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="px-2.5 py-1 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary font-bold rounded-lg text-[10px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                               >
                                 Mark Paid
                               </button>
@@ -1257,7 +1257,7 @@ const Files: React.FC = () => {
           onClick={() => setSelectedInvoice(null)}
         >
           <div 
-            className="w-full max-w-4xl premium-floating-panel rounded-3xl p-6 shadow-2xl relative my-8 animate-in zoom-in-95 duration-200 grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="w-full max-w-4xl kaeo-modal rounded-3xl p-6 shadow-2xl relative my-8 animate-in zoom-in-95 duration-200 grid grid-cols-1 md:grid-cols-2 gap-6"
             onClick={(e) => e.stopPropagation()}
           >
             <button 
@@ -1270,7 +1270,7 @@ const Files: React.FC = () => {
             {/* Left Column - OCR Extracted metadata fields form */}
             <div className="space-y-4">
               <div>
-                <span className="text-[9px] font-black uppercase text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded">OCR Verification</span>
+                <span className="text-[9px] font-black uppercase text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded">OCR Verification</span>
                 <h3 className="text-base font-bold text-foreground mt-2">Verify Extracted Fields</h3>
                 <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
                   Confirm the fields detected by Kaeo's extraction simulator. Adjust values manually if needed.

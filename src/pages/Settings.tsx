@@ -347,7 +347,7 @@ const Settings: React.FC = () => {
           {/* TAB: Workspace Info */}
           {activeTab === 'workspace' && accountMode === 'accountant' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <form onSubmit={handleSaveFirm} className="premium-glass rounded-2xl border border-border/50 p-6 space-y-6">
+              <form onSubmit={handleSaveFirm} className="frosted-card rounded-2xl border border-border/50 p-6 space-y-6">
                 <div className="flex items-center justify-between border-b border-border/20 pb-4">
                   <div className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-muted-foreground" />
@@ -516,7 +516,7 @@ const Settings: React.FC = () => {
           {/* TAB: Review Rules */}
           {activeTab === 'spend-rules' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex flex-col md:flex-row gap-4 p-5 premium-glass rounded-2xl border border-primary/25 items-start">
+              <div className="flex flex-col md:flex-row gap-4 p-5 frosted-card rounded-2xl border border-primary/25 items-start">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
@@ -537,7 +537,7 @@ const Settings: React.FC = () => {
                   <span className="text-xs font-semibold">Loading rules…</span>
                 </div>
               ) : rulesSchemaMissing ? (
-                <div className="premium-glass rounded-2xl border border-border/40 p-6 text-center space-y-4">
+                <div className="frosted-card rounded-2xl border border-border/40 p-6 text-center space-y-4">
                   <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto opacity-50" />
                   <div className="space-y-1">
                     <h4 className="font-bold text-foreground text-sm">Spend Rules Setup Required</h4>
@@ -550,7 +550,7 @@ const Settings: React.FC = () => {
                 <form onSubmit={handleSaveAllRules} className="space-y-6">
                   <div className="space-y-4">
                     {/* 1. Duplicate Window */}
-                    <div className={`premium-glass rounded-2xl border p-5 transition-all duration-300 ${duplicateEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
+                    <div className={`frosted-card rounded-2xl border p-5 transition-all duration-300 ${duplicateEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
                       <div className="flex items-start justify-between gap-4">
                         <div className="space-y-1 flex-1">
                           <div className="flex items-center gap-2">
@@ -585,7 +585,7 @@ const Settings: React.FC = () => {
                     </div>
 
                     {/* 2. High Value Outflow */}
-                    <div className={`premium-glass rounded-2xl border p-5 transition-all duration-300 ${highValueEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
+                    <div className={`frosted-card rounded-2xl border p-5 transition-all duration-300 ${highValueEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
                       <div className="flex items-start justify-between gap-4">
                         <div className="space-y-1 flex-1">
                           <div className="flex items-center gap-2">
@@ -620,7 +620,7 @@ const Settings: React.FC = () => {
                     </div>
 
                     {/* 3. Large Subscriptions */}
-                    <div className={`premium-glass rounded-2xl border p-5 transition-all duration-300 ${subscriptionEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
+                    <div className={`frosted-card rounded-2xl border p-5 transition-all duration-300 ${subscriptionEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
                       <div className="flex items-start justify-between gap-4">
                         <div className="space-y-1 flex-1">
                           <div className="flex items-center gap-2">
@@ -655,7 +655,7 @@ const Settings: React.FC = () => {
                     </div>
 
                     {/* 4. Unknown Vendor Protection */}
-                    <div className={`premium-glass rounded-2xl border p-5 transition-all duration-300 ${unknownVendorEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
+                    <div className={`frosted-card rounded-2xl border p-5 transition-all duration-300 ${unknownVendorEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
                       <div className="flex items-start justify-between gap-4">
                         <div className="space-y-1 flex-1">
                           <div className="flex items-center gap-2">
@@ -677,7 +677,7 @@ const Settings: React.FC = () => {
                     </div>
 
                     {/* 5. Enforce Categorization */}
-                    <div className={`premium-glass rounded-2xl border p-5 transition-all duration-300 ${uncategorizedEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
+                    <div className={`frosted-card rounded-2xl border p-5 transition-all duration-300 ${uncategorizedEnabled ? 'border-primary/30 shadow-sm shadow-primary/5' : 'border-border/40 opacity-70'}`}>
                       <div className="flex items-start justify-between gap-4">
                         <div className="space-y-1 flex-1">
                           <div className="flex items-center gap-2">
@@ -725,7 +725,7 @@ const Settings: React.FC = () => {
           {/* TAB: Billing & Plan */}
           {activeTab === 'billing' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="premium-glass rounded-2xl border border-[var(--border)] p-6 space-y-6">
+              <div className="frosted-card rounded-2xl border border-[var(--border)] p-6 space-y-6">
                 <div className="flex justify-between items-start border-b border-border/10 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
@@ -778,7 +778,7 @@ const Settings: React.FC = () => {
               </div>
 
               {!billingSchemaMissing && currentPlan && usage && (
-                <div className="premium-glass rounded-2xl border border-[var(--border)] p-6 space-y-4">
+                <div className="frosted-card rounded-2xl border border-[var(--border)] p-6 space-y-4">
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">Resource Usage Overview</h4>
                   <div className="space-y-4">
                     {[
@@ -817,7 +817,7 @@ const Settings: React.FC = () => {
           {/* TAB: Integrations */}
           {activeTab === 'integrations' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex flex-col md:flex-row gap-4 p-5 premium-glass rounded-2xl border border-primary/25 items-start">
+              <div className="flex flex-col md:flex-row gap-4 p-5 frosted-card rounded-2xl border border-primary/25 items-start">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
                   <LinkIcon className="w-5 h-5" />
                 </div>
@@ -831,7 +831,7 @@ const Settings: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Excel / Google Sheets */}
-                <div className="premium-glass border border-success/30 shadow-sm shadow-success/5 rounded-2xl p-5 flex flex-col justify-between h-44">
+                <div className="frosted-card border border-success/30 shadow-sm shadow-success/5 rounded-2xl p-5 flex flex-col justify-between h-44">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-bold text-foreground text-sm">Excel / Google Sheets</h4>
@@ -848,7 +848,7 @@ const Settings: React.FC = () => {
                 </div>
 
                 {/* Razorpay */}
-                <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44">
+                <div className="frosted-card rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-bold text-foreground text-sm">Razorpay</h4>
@@ -864,7 +864,7 @@ const Settings: React.FC = () => {
                 </div>
 
                 {/* Tally */}
-                <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44 opacity-70">
+                <div className="frosted-card rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44 opacity-70">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-bold text-foreground text-sm">Tally Prime / ERP 9</h4>
@@ -880,7 +880,7 @@ const Settings: React.FC = () => {
                 </div>
 
                 {/* Zoho Books */}
-                <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44 opacity-70">
+                <div className="frosted-card rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-44 opacity-70">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-bold text-foreground text-sm">Zoho Books</h4>
@@ -901,7 +901,7 @@ const Settings: React.FC = () => {
           {/* TAB: Data & Reset */}
           {activeTab === 'data' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex flex-col md:flex-row gap-4 p-5 premium-glass rounded-2xl border border-primary/25 items-start">
+              <div className="flex flex-col md:flex-row gap-4 p-5 frosted-card rounded-2xl border border-primary/25 items-start">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
                   <Database className="w-5 h-5" />
                 </div>
@@ -915,7 +915,7 @@ const Settings: React.FC = () => {
 
               {/* Safe Data Areas */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-40">
+                <div className="frosted-card rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-40">
                   <div>
                     <h4 className="font-bold text-foreground text-sm mb-1">Uploaded Files</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed font-medium">
@@ -927,7 +927,7 @@ const Settings: React.FC = () => {
                   </Link>
                 </div>
 
-                <div className="premium-glass rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-40">
+                <div className="frosted-card rounded-2xl border border-border/50 p-5 flex flex-col justify-between h-40">
                   <div>
                     <h4 className="font-bold text-foreground text-sm mb-1">Imported Transactions</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed font-medium">
@@ -941,7 +941,7 @@ const Settings: React.FC = () => {
               </div>
 
               {/* Danger Zone — Separated cleanly */}
-              <div className="premium-glass rounded-2xl border border-risk/30 overflow-hidden shadow-lg shadow-risk/5">
+              <div className="frosted-card rounded-2xl border border-risk/30 overflow-hidden shadow-lg shadow-risk/5">
                 <div className="p-4 bg-risk/5 border-b border-risk/10">
                   <h4 className="font-bold text-risk flex items-center gap-2 text-xs uppercase tracking-wider">
                     <ShieldCheck className="w-4 h-4 text-risk" /> Danger Zone

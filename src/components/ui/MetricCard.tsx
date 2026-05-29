@@ -50,7 +50,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
 
   return (
     <Tag
-      className={`kaeo-card ${onClick ? 'kaeo-card-clickable cursor-pointer' : ''} p-5 flex flex-col justify-between h-full min-h-[120px] ${className}`}
+      className={`frosted-card ${onClick ? 'frosted-card-hover' : ''} p-5 flex flex-col justify-between h-full min-h-[120px] ${className}`}
       onClick={onClick}
     >
       {/* Header row */}
