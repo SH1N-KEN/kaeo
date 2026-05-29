@@ -140,7 +140,7 @@ const Dashboard: React.FC = () => {
     uploadsCount: 0, suggestionsCount: 0
   });
   const [readiness, setReadiness] = useState<ReadinessResult | null>(null);
-  const [trends, setTrends] = useState<{
+  const [, setTrends] = useState<{
     spendChange: number | null;
     incomeChange: number | null;
     netChange: number | null;
@@ -644,7 +644,7 @@ const Dashboard: React.FC = () => {
         <MetricCard
           title="Total Spend"
           value={hasTransactions ? formatCurrency(metrics.expenses) : '—'}
-          description={hasTransactions ? (trends.hasPrevPeriod ? `${metrics.expenseCount} transactions this month (vs prev month)` : `${metrics.expenseCount} transactions from imported files`) : 'Upload a statement to begin review.'}
+          description={hasTransactions ? `${metrics.expenseCount} expense transactions from imported files` : 'Upload a statement to begin review.'}
           trend={undefined}
           icon={<ArrowUpRight className="w-4 h-4" />}
           accentColor={hasTransactions ? 'danger' : 'default'}
@@ -654,7 +654,7 @@ const Dashboard: React.FC = () => {
         <MetricCard
           title="Money In"
           value={hasTransactions ? formatCurrency(metrics.income) : '—'}
-          description={hasTransactions ? (trends.hasPrevPeriod ? `${metrics.incomeCount} transactions this month (vs prev month)` : `${metrics.incomeCount} transactions from imported files`) : 'Upload a statement to begin review.'}
+          description={hasTransactions ? `${metrics.incomeCount} inflow transactions from imported files` : 'Upload a statement to begin review.'}
           trend={undefined}
           icon={<ArrowDownLeft className="w-4 h-4" />}
           accentColor={hasTransactions ? 'success' : 'default'}
@@ -674,7 +674,7 @@ const Dashboard: React.FC = () => {
         <MetricCard
           title="Net Flow"
           value={hasTransactions ? formatCurrency(metrics.net) : '—'}
-          description={hasTransactions ? (trends.hasPrevPeriod ? 'Net income minus expenses (vs prev month)' : 'Income minus expenses') : 'Upload a statement to begin review.'}
+          description={hasTransactions ? 'Money in minus money out' : 'Upload a statement to begin review.'}
           trend={undefined}
           icon={<DollarSign className="w-4 h-4" />}
           accentColor={hasTransactions ? (metrics.net >= 0 ? 'success' : 'danger') : 'default'}
@@ -708,7 +708,7 @@ const Dashboard: React.FC = () => {
         <MetricCard
           title="Total Transactions"
           value={hasTransactions ? metrics.count.toLocaleString() : '—'}
-          description={hasTransactions ? `${metrics.uploadsCount} file${metrics.uploadsCount !== 1 ? 's' : ''} successfully parsed` : 'Upload a statement to begin review.'}
+          description={hasTransactions ? `${metrics.count.toLocaleString()} transactions in imported files${metrics.uploadsCount > 0 ? ` · across ${metrics.uploadsCount} file${metrics.uploadsCount !== 1 ? 's' : ''}` : ''}` : 'Upload a statement to begin review.'}
           trend={undefined}
           icon={<Layers className="w-4 h-4" />}
           accentColor={hasTransactions ? 'primary' : 'default'}
