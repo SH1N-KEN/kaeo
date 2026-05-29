@@ -990,6 +990,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   backdrop-filter: blur(18px) saturate(135%);
   -webkit-backdrop-filter: blur(18px) saturate(135%);
   border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-radius: 1.25rem;
   box-shadow: 0 18px 50px rgba(0,0,0,0.14);
 }
 
@@ -1002,6 +1003,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   backdrop-filter: blur(18px) saturate(135%);
   -webkit-backdrop-filter: blur(18px) saturate(135%);
   border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-radius: 1.25rem;
   box-shadow: 0 18px 50px rgba(0,0,0,0.14);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
