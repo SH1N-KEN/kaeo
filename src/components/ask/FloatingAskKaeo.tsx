@@ -223,60 +223,58 @@ const FloatingAskKaeo: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-            className="fixed bottom-4 right-4 z-[100] w-[calc(100vw-2rem)] sm:w-[380px] max-h-[580px] flex flex-col rounded-2xl overflow-hidden"
+            className="fixed bottom-4 right-4 z-[100] w-[calc(100vw-24px)] sm:w-[380px] max-h-[calc(100vh-32px)] sm:max-h-[580px] flex flex-col rounded-2xl overflow-hidden"
             style={{
               background: 'var(--card)',
               border: '1px solid var(--border)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              boxShadow: 'var(--shadow-modal)',
+              backdropFilter: 'blur(24px)',
+              WebkitBackdropFilter: 'blur(24px)',
+              boxShadow: '0 12px 40px -4px rgba(0, 0, 0, 0.12), 0 4px 20px -2px rgba(0, 0, 0, 0.08)',
             }}
           >
             {/* ── Header ── */}
-            <div className="flex items-center justify-between px-5 py-3.5 shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(15,118,110,0.10)', border: '1px solid rgba(15,118,110,0.18)' }}>
+            <div className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-[var(--border)] bg-card/65 backdrop-blur-md">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(15,118,110,0.08)', border: '1px solid rgba(15,118,110,0.18)' }}>
                   <Sparkles className="w-4 h-4" style={{ color: 'var(--primary)' }} />
                 </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-bold tracking-tight text-foreground leading-tight">
-                    Libby
-                  </h3>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] text-muted-foreground font-semibold">
-                      AI-assisted finance review
-                    </span>
-                    <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(15,118,110,0.08)', color: 'var(--primary)', border: '1px solid rgba(15,118,110,0.18)' }}>
-                      Grounded in Kaeo data
+                <div className="min-w-0 flex flex-col justify-center">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-foreground leading-none">Libby</span>
+                    <span className="text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/15 shrink-0">
+                      Grounded
                     </span>
                   </div>
+                  <span className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-none">
+                    AI Finance Advisor
+                  </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
                 <Link
                   to="/libby"
                   onClick={() => setIsOpen(false)}
-                  className="p-2 rounded-xl hover:bg-[var(--muted)] text-muted-foreground hover:text-foreground transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-[var(--muted)] text-muted-foreground hover:text-foreground transition-all duration-150"
                   title="Open Libby"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  <ExternalLink className="w-4 h-4" />
                 </Link>
                 {hasRealMessages && (
                   <button
                     onClick={clearMessages}
-                    className="p-2 rounded-xl hover:bg-[var(--muted)] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg hover:bg-[var(--muted)] text-muted-foreground hover:text-foreground transition-all duration-150 cursor-pointer"
                     title="Clear chat"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 )}
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-2 rounded-xl hover:bg-[var(--muted)] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg hover:bg-[var(--muted)] text-muted-foreground hover:text-foreground transition-all duration-150 cursor-pointer"
                   title="Close"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -331,10 +329,10 @@ const FloatingAskKaeo: React.FC = () => {
                         onClick={async () => {
                           await sendMessage(query);
                         }}
-                        className="w-full text-left px-3 py-2 bg-card hover:bg-[var(--muted)] text-foreground font-semibold rounded-xl border border-border/50 hover:border-emerald-500/30 text-xs transition-all cursor-pointer flex items-center justify-between group"
+                        className="w-full text-left px-3.5 py-2.5 bg-card hover:bg-[var(--muted)] text-foreground font-semibold rounded-xl border border-border/50 hover:border-[var(--primary)]/30 text-xs transition-all cursor-pointer flex items-center justify-between group"
                       >
-                        <span className="truncate pr-2">{query}</span>
-                        <Sparkles className="w-3 h-3 text-muted-foreground group-hover:text-teal-400 transition-colors shrink-0" />
+                        <span className="truncate pr-2 font-medium">{query}</span>
+                        <Sparkles className="w-3.5 h-3.5 text-muted-foreground group-hover:text-[var(--primary)] transition-colors shrink-0" />
                       </button>
                     ))}
                   </div>
@@ -359,10 +357,10 @@ const FloatingAskKaeo: React.FC = () => {
                       )}
 
                       <div
-                        className={`max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap ${
+                        className={`max-w-[80%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap font-medium ${
                           isUser
                             ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                            : 'bg-muted/40 border border-border/40 text-foreground rounded-tl-sm'
+                            : 'bg-muted/40 border border-border/40 text-foreground rounded-tl-sm font-normal'
                         }`}
                       >
                         {isUser ? msg.content : shortenMessage(msg.content, idx > 0 ? messages[idx - 1].content : '')}
@@ -447,7 +445,7 @@ const FloatingAskKaeo: React.FC = () => {
 
                         {/* Grounded badge */}
                         {!isUser && !isGreeting && !isLimitExceeded && !isError && (
-                          <p className="text-[9px] text-muted-foreground mt-2 pt-2 border-t border-border/30 flex items-center gap-1 font-medium animate-in fade-in">
+                          <p className="text-[9px] text-muted-foreground/85 mt-2 pt-2 border-t border-border/10 flex items-center gap-1.5 font-medium animate-in fade-in">
                             <Sparkles className="w-2.5 h-2.5" style={{ color: 'var(--primary)' }} />
                             {(() => {
                               const status = msg.source_json?.grounding_status;
@@ -488,7 +486,7 @@ const FloatingAskKaeo: React.FC = () => {
 
             {/* ── Input Area ── */}
             {hasContext && (
-              <div className="px-4 py-3 shrink-0" style={{ borderTop: '1px solid var(--border)', background: 'var(--card)' }}>
+              <div className="px-4 py-3.5 shrink-0 border-t border-[var(--border)] bg-card/65 backdrop-blur-md">
                 <form onSubmit={handleSend} className="flex items-center gap-2">
                   <input
                     ref={inputRef}
@@ -497,24 +495,24 @@ const FloatingAskKaeo: React.FC = () => {
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Ask Libby what to review…"
                     disabled={loading}
-                    className="flex-1 bg-muted/30 border border-border/40 rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all disabled:opacity-50"
+                    className="flex-1 bg-muted/30 border border-border/40 rounded-xl px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all disabled:opacity-50"
                   />
                   <button
                     type="submit"
                     disabled={!input.trim() || loading}
-                    className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:opacity-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                    className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:opacity-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
                   >
-                    <Send className="w-4 h-4" />
+                    <Send className="w-3.5 h-3.5" />
                   </button>
                 </form>
-                <div className="flex items-center justify-between mt-2">
-                  <p className="text-[9px] text-muted-foreground">
+                <div className="flex items-center justify-between mt-2.5 px-0.5">
+                  <p className="text-[9px] text-muted-foreground/80 font-medium">
                     Answers grounded in your financial data.
                   </p>
                   <Link
                     to="/libby"
                     onClick={() => setIsOpen(false)}
-                    className="text-[9px] font-bold transition-colors flex items-center gap-1"
+                    className="text-[9px] font-bold transition-colors flex items-center gap-1 hover:opacity-80"
                     style={{ color: 'var(--primary)' }}
                   >
                     Open Libby

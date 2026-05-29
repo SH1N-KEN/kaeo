@@ -213,7 +213,8 @@ function sanitizeTextNumbers(text: string, context: {
 }): { sanitizedText: string; repairedCount: number; hasUnrepairable: boolean } {
   let repairedCount = 0;
 
-  const numRegex = /([₹$]|Rs\.?|INR)?\s*(\d[\d,.]*)\b/gi;
+  // Pattern captures optional negative sign before/after optional currency symbols
+  const numRegex = /(-)?\s*([₹$]|Rs\.?|INR)?\s*(-)?\s*(\d[\d,.]*)\b/gi;
 
   let lastIndex = 0;
   let resultText = "";
@@ -221,25 +222,38 @@ function sanitizeTextNumbers(text: string, context: {
   let match;
   while ((match = numRegex.exec(text)) !== null) {
     const fullMatch = match[0];
-    const currencyPrefix = match[1];
-    const numberStr = match[2];
+    const negBefore = match[1];
+    const currencyPrefix = match[2];
+    const negAfter = match[3];
+    const numberStr = match[4];
 
     resultText += text.slice(lastIndex, match.index);
     lastIndex = numRegex.lastIndex;
 
+    const isNegative = !!(negBefore || negAfter);
     const cleanDigits = numberStr.replace(/[^\d]/g, '');
-    const val = parseInt(cleanDigits, 10);
+    let val = parseInt(cleanDigits, 10);
 
     if (isNaN(val)) {
       resultText += fullMatch;
       continue;
     }
 
-    const isYear = val >= 2020 && val <= 2030;
-    const isSmall = val < 10;
+    if (isNegative) {
+      val = -val;
+    }
+
+    const isYear = Math.abs(val) >= 2020 && Math.abs(val) <= 2030;
+    const isSmall = Math.abs(val) < 10;
     const isPercentage = text.substring(match.index + fullMatch.length).trim().startsWith('%');
     
-    if (isYear || isSmall || isPercentage) {
+    // Check if part of date (preceded or followed by hyphen and a digit, e.g. 2026-05-29)
+    const prevChar = match.index > 0 ? text[match.index - 1] : '';
+    const nextChar = match.index + fullMatch.length < text.length ? text[match.index + fullMatch.length] : '';
+    const isDateHyphen = (prevChar === '-' && /\d/.test(text[match.index - 2] || '')) || 
+                         (nextChar === '-' && /\d/.test(text[match.index + fullMatch.length + 1] || ''));
+    
+    if (isYear || isSmall || isPercentage || isDateHyphen) {
       resultText += fullMatch;
       continue;
     }
@@ -287,7 +301,7 @@ function sanitizeTextNumbers(text: string, context: {
       replacementStr = String(context.transactionCount);
     } else if (contextSnippet.includes("risk") || contextSnippet.includes("exposure") || contextSnippet.includes("threat")) {
       keywordMatched = true;
-      if (currencyPrefix || val > 500) {
+      if (currencyPrefix || Math.abs(val) > 500) {
         expectedVal = context.duplicateExposure;
         replacementStr = formatINR(context.duplicateExposure);
       } else {
@@ -309,21 +323,31 @@ function sanitizeTextNumbers(text: string, context: {
     }
 
     if (keywordMatched && expectedVal !== null) {
-      const isCorrect = Math.abs(expectedVal - val) / Math.max(1, expectedVal) < 0.02;
+      const isCorrect = Math.abs(expectedVal - val) / Math.max(1, Math.abs(expectedVal)) < 0.02;
       if (isCorrect) {
-        resultText += fullMatch;
+        const isFin = currencyPrefix || 
+                      expectedVal === context.netCash || 
+                      expectedVal === context.income || 
+                      expectedVal === context.expenses || 
+                      expectedVal === context.refunds || 
+                      expectedVal === context.duplicateExposure;
+        if (isFin) {
+          resultText += formatINR(expectedVal);
+        } else {
+          resultText += String(expectedVal);
+        }
       } else {
         repairedCount++;
-        resultText += (currencyPrefix && !replacementStr.startsWith('₹') && !replacementStr.startsWith('$') ? currencyPrefix : '') + replacementStr;
+        resultText += (currencyPrefix && !replacementStr.startsWith('₹') && !replacementStr.startsWith('$') ? '₹' : '') + replacementStr;
         if (isDev) {
           console.debug(`[Libby Sanitizer] Repaired conflicting number '${fullMatch}' with expected metric value '${replacementStr}'`);
         }
       }
     } else {
-      let isApproved = context.approvedNumbers.has(val);
+      let isApproved = context.approvedNumbers.has(Math.abs(val));
       if (!isApproved) {
         for (const approvedVal of context.approvedNumbers) {
-          if (Math.abs(approvedVal - val) / Math.max(1, approvedVal) < 0.02) {
+          if (Math.abs(approvedVal - Math.abs(val)) / Math.max(1, approvedVal) < 0.02) {
             isApproved = true;
             break;
           }
@@ -331,7 +355,17 @@ function sanitizeTextNumbers(text: string, context: {
       }
 
       if (isApproved) {
-        resultText += fullMatch;
+        const isFin = currencyPrefix || 
+                      Math.abs(val) === Math.round(Math.abs(context.netCash)) || 
+                      Math.abs(val) === Math.round(context.income) || 
+                      Math.abs(val) === Math.round(context.expenses) || 
+                      Math.abs(val) === Math.round(context.refunds) || 
+                      Math.abs(val) === Math.round(context.duplicateExposure);
+        if (isFin) {
+          resultText += formatINR(val);
+        } else {
+          resultText += String(val);
+        }
       } else {
         repairedCount++;
         const qualitativeStr = currencyPrefix ? "the recorded amount" : "multiple";

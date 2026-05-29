@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useAskKaeoChat } from '../hooks/useAskKaeoChat';
-import { Send, AlertCircle, User, Shield, Zap, Sparkles, ExternalLink } from 'lucide-react';
+import { Send, AlertCircle, User, Zap, Sparkles, ExternalLink } from 'lucide-react';
 import EmptyState from '../components/ui/EmptyState';
 
 import { useToast } from '../hooks/useToast';
@@ -289,14 +289,19 @@ const AskKaeo = () => {
       {/* Left/Center Column: Chat Box */}
       <div className="lg:col-span-2 flex flex-col h-[calc(100vh-10rem)] bg-background rounded-2xl border overflow-hidden shadow-sm">
         {/* HEADER */}
-        <div className="p-4 border-b bg-card/50 backdrop-blur-sm flex justify-between items-center z-10">
+        <div className="p-4 border-b bg-card/65 backdrop-blur-md flex justify-between items-center z-10">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-teal-500/10 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4.5 h-4.5 text-teal-400" />
+            <div className="w-8 h-8 rounded-lg bg-[var(--primary)]/10 border border-[var(--primary)]/18 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4.5 h-4.5 text-[var(--primary)]" />
             </div>
             <div>
-              <h2 className="font-semibold tracking-tight">Ask Libby</h2>
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-sm font-bold text-foreground leading-none">Ask Libby</h2>
+                <span className="text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/15 shrink-0">
+                  Grounded
+                </span>
+              </div>
+              <p className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-none">
                 AI-assisted finance review
               </p>
             </div>
@@ -338,10 +343,10 @@ const AskKaeo = () => {
                     onClick={async () => {
                       await sendMessage(query);
                     }}
-                    className="w-full text-left px-4 py-3 bg-card hover:bg-white/5 text-foreground font-semibold rounded-xl border border-border/60 hover:border-teal-500/30 text-xs transition-all cursor-pointer flex items-center justify-between group"
+                    className="w-full text-left px-4 py-3 bg-card hover:bg-[var(--muted)] text-foreground font-semibold rounded-xl border border-border/60 hover:border-[var(--primary)]/30 text-xs transition-all cursor-pointer flex items-center justify-between group"
                   >
-                    <span>{query}</span>
-                    <Sparkles className="w-3.5 h-3.5 text-muted-foreground group-hover:text-teal-400 transition-colors shrink-0" />
+                    <span className="font-medium">{query}</span>
+                    <Sparkles className="w-3.5 h-3.5 text-muted-foreground group-hover:text-[var(--primary)] transition-colors shrink-0" />
                   </button>
                 ))}
               </div>
@@ -357,15 +362,15 @@ const AskKaeo = () => {
                 <div key={msg.id || idx} className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
                   {!isUser && (
                     <div className="flex-shrink-0 mt-1">
-                      <div className="h-8 w-8 rounded-full bg-teal-500/10 flex items-center justify-center">
-                        <span className="w-3 h-3 rounded-full bg-teal-400" style={{ boxShadow: '0 0 6px rgba(52,211,153,0.45)' }} />
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(15,118,110,0.10)' }}>
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--primary)', boxShadow: '0 0 6px rgba(15,118,110,0.35)' }} />
                       </div>
                     </div>
                   )}
                   
-                  <div className="flex flex-col gap-1.5 max-w-[85%] md:max-w-[75%]">
-                    <div className={`rounded-2xl px-5 py-4 ${isUser ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-card border rounded-tl-sm shadow-sm'}`}>
-                      <div className="text-sm leading-relaxed opacity-95">
+                  <div className="flex flex-col gap-1.5 max-w-[80%] md:max-w-[70%]">
+                    <div className={`rounded-2xl px-4 py-3 ${isUser ? 'bg-primary text-primary-foreground rounded-tr-sm font-medium' : 'bg-muted/40 border border-border/40 text-foreground rounded-tl-sm font-normal'}`}>
+                      <div className="text-[13px] leading-relaxed">
                         {renderStructuredContent(msg.content)}
                       </div>
                       {isLimitExceeded && (
@@ -404,8 +409,8 @@ const AskKaeo = () => {
                         </div>
                       )}
                       {!isUser && !isGreeting && !isLimitExceeded && !isError && (
-                        <div className="mt-3 pt-3 border-t border-border/50 text-[10px] text-muted-foreground flex items-center gap-1.5 font-medium animate-in fade-in">
-                          <Shield className="w-3 h-3 text-teal-400" />
+                        <div className="mt-2.5 pt-2.5 border-t border-border/10 text-[9px] text-muted-foreground/85 flex items-center gap-1.5 font-medium animate-in fade-in">
+                          <Sparkles className="w-2.5 h-2.5" style={{ color: 'var(--primary)' }} />
                           {(() => {
                             const status = msg.source_json?.grounding_status;
                             if (status === 'verified') return 'Verified from Kaeo data';
@@ -419,8 +424,8 @@ const AskKaeo = () => {
 
                   {isUser && (
                     <div className="flex-shrink-0 mt-1">
-                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center border">
-                        <User className="h-4 w-4 text-muted-foreground" />
+                      <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center border">
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
                       </div>
                     </div>
                   )}
@@ -432,15 +437,15 @@ const AskKaeo = () => {
           {loading && (
             <div className="flex gap-4 justify-start">
               <div className="flex-shrink-0 mt-1">
-                <div className="h-8 w-8 rounded-full bg-teal-500/10 flex items-center justify-center">
-                  <span className="w-3 h-3 rounded-full bg-teal-400" style={{ boxShadow: '0 0 6px rgba(52,211,153,0.45)' }} />
+                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(15,118,110,0.10)' }}>
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--primary)', boxShadow: '0 0 6px rgba(15,118,110,0.35)' }} />
                 </div>
               </div>
-              <div className="bg-card border rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-teal-400/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-1.5 h-1.5 bg-teal-400/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-1.5 h-1.5 bg-teal-400/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                <span className="text-[11px] text-muted-foreground ml-1 font-semibold">Thinking...</span>
+              <div className="bg-muted/40 border border-border/40 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'rgba(15,118,110,0.5)', animationDelay: '0ms' }} />
+                <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'rgba(15,118,110,0.5)', animationDelay: '150ms' }} />
+                <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'rgba(15,118,110,0.5)', animationDelay: '300ms' }} />
+                <span className="text-[10px] text-muted-foreground ml-1.5 font-semibold">Thinking...</span>
               </div>
             </div>
           )}
@@ -448,28 +453,26 @@ const AskKaeo = () => {
         </div>
 
         {/* INPUT AREA */}
-        <div className="p-4 bg-card/80 backdrop-blur-md border-t">
-          <form onSubmit={handleSendMessage} className="relative max-w-4xl mx-auto flex items-end gap-2">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask Libby about your net cash, top vendors, or open risks..."
-                className="w-full bg-background border rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground/50 border-border/60"
-                disabled={loading}
-              />
-            </div>
+        <div className="p-4 border-t border-[var(--border)] bg-card/65 backdrop-blur-md shrink-0">
+          <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex items-center gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask Libby what to review…"
+              className="flex-1 bg-muted/30 border border-border/40 rounded-xl px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all disabled:opacity-50"
+              disabled={loading}
+            />
             <button
               type="submit"
               disabled={!input.trim() || loading}
-              className="h-[46px] px-4 bg-primary text-primary-foreground rounded-xl flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 cursor-pointer"
+              className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:opacity-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
             >
-              <Send className="h-4 w-4" />
+              <Send className="w-3.5 h-3.5" />
             </button>
           </form>
-          <div className="text-center mt-2">
-            <p className="text-[10px] text-muted-foreground font-medium">Libby uses your business data and live research when needed to keep answers useful and grounded.</p>
+          <div className="text-center mt-2.5">
+            <p className="text-[10px] text-muted-foreground/80 font-medium">Libby uses your business data to keep answers useful and grounded.</p>
           </div>
         </div>
       </div>
