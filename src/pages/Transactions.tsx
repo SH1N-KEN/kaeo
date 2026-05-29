@@ -75,6 +75,8 @@ const Transactions: React.FC = () => {
   const [filterDateRange, setFilterDateRange] = useState<DateRange>('all');
   const [filterAmountRange, setFilterAmountRange] = useState<AmountRange>('all');
   const [filterReview, setFilterReview] = useState<ReviewFilter>('all');
+  const [filterTransactionId, setFilterTransactionId] = useState<string | null>(null);
+  const [filterTransactionIds, setFilterTransactionIds] = useState<string[] | null>(null);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   // ── Sort state ────────────────────────────────────────────────────────────
@@ -177,11 +179,42 @@ const Transactions: React.FC = () => {
     } else {
       setFilterSource('all');
     }
+
+    // 5. Transaction ID mapping
+    const transactionIdParam = searchParams.get('transactionId') || searchParams.get('txId');
+    const transactionIdsParam = searchParams.get('transactionIds');
+
+    if (transactionIdParam) {
+      setFilterTransactionId(transactionIdParam);
+    } else {
+      setFilterTransactionId(null);
+    }
+
+    if (transactionIdsParam) {
+      setFilterTransactionIds(transactionIdsParam.split(',').filter(Boolean));
+    } else {
+      setFilterTransactionIds(null);
+    }
   }, [searchParams]);
 
   useEffect(() => {
     if (activeClient) fetchTransactions();
   }, [activeClient]);
+
+  useEffect(() => {
+    if (!loading && (filterTransactionId || (filterTransactionIds && filterTransactionIds.length > 0))) {
+      const targetId = filterTransactionId || filterTransactionIds?.[0];
+      if (targetId) {
+        const timer = setTimeout(() => {
+          const el = document.getElementById(`tx-row-${targetId}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [loading, filterTransactionId, filterTransactionIds]);
 
   // Re-fetch when Libby applies a transaction action workspace-wide
   useWorkspaceRefresh(useCallback(() => {
@@ -280,6 +313,14 @@ const Transactions: React.FC = () => {
     const last30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     return displayTransactions.filter((tx) => {
+      // Transaction ID overrides (bypasses standard search/filters)
+      if (filterTransactionId) {
+        return tx.id === filterTransactionId;
+      }
+      if (filterTransactionIds && filterTransactionIds.length > 0) {
+        return filterTransactionIds.includes(tx.id);
+      }
+
       // Search
       if (searchTerm) {
         const hay = [tx.description, tx.counterparty_name, tx._displayCategory, tx.source_provider]
@@ -335,7 +376,7 @@ const Transactions: React.FC = () => {
 
       return true;
     });
-  }, [displayTransactions, searchTerm, filterType, filterCategory, filterSource, filterDateRange, filterAmountRange, filterReview, suggestions]);
+  }, [displayTransactions, searchTerm, filterType, filterCategory, filterSource, filterDateRange, filterAmountRange, filterReview, filterTransactionId, filterTransactionIds, suggestions]);
 
   // ── Sorting ───────────────────────────────────────────────────────────────
   const sortedTransactions = useMemo(() => {
@@ -416,7 +457,9 @@ const Transactions: React.FC = () => {
     filterSource !== 'all' ||
     filterDateRange !== 'all' ||
     filterAmountRange !== 'all' ||
-    filterReview !== 'all';
+    filterReview !== 'all' ||
+    filterTransactionId ||
+    (filterTransactionIds && filterTransactionIds.length > 0);
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -426,8 +469,11 @@ const Transactions: React.FC = () => {
     setFilterDateRange('all');
     setFilterAmountRange('all');
     setFilterReview('all');
+    setFilterTransactionId(null);
+    setFilterTransactionIds(null);
     setSortKey('transaction_date');
     setSortDir('desc');
+    navigate('/transactions');
   };
 
   // ── Sort indicator icon ───────────────────────────────────────────────────
@@ -689,12 +735,21 @@ const Transactions: React.FC = () => {
         </div>
       ) : sortedTransactions.length === 0 ? (
         <div className="kaeo-card p-8 rounded-xl border-border/30">
-          <EmptyState
-            icon={<FileText className="w-8 h-8 text-muted-foreground/50" />}
-            title="No transactions match"
-            description="Try adjusting or clearing your filters."
-            action={{ label: 'Clear filters', onClick: clearFilters }}
-          />
+          {filterTransactionId || (filterTransactionIds && filterTransactionIds.length > 0) ? (
+            <EmptyState
+              icon={<AlertCircle className="w-8 h-8 text-muted-foreground/50" />}
+              title="Transaction not found"
+              description="No matching transaction found for this risk. The transaction may have been deleted, filtered out, or imported under another client."
+              action={{ label: 'View all transactions', onClick: clearFilters }}
+            />
+          ) : (
+            <EmptyState
+              icon={<FileText className="w-8 h-8 text-muted-foreground/50" />}
+              title="No transactions match"
+              description="Try adjusting or clearing your filters."
+              action={{ label: 'Clear filters', onClick: clearFilters }}
+            />
+          )}
         </div>
       ) : (
         <div className="kaeo-card rounded-xl border-border/30 overflow-hidden shadow-sm bg-card/30 backdrop-blur-md">
@@ -778,10 +833,14 @@ const Transactions: React.FC = () => {
                   const badge = getCategoryBadgeStyle(cat);
                   const isMenuOpen = openMenuId === tx.id;
  
+                  const isHighlighted = tx.id === filterTransactionId || (filterTransactionIds && filterTransactionIds.includes(tx.id));
+ 
                   return (
                     <tr
                       key={tx.id}
-                      className="group relative border-b border-border/10 hover:bg-muted/20 transition-colors duration-150"
+                      id={`tx-row-${tx.id}`}
+                      className={`group relative border-b border-border/10 hover:bg-muted/20 transition-colors duration-150 ${isHighlighted ? 'bg-teal-500/5' : ''}`}
+                      style={isHighlighted ? { borderLeft: '3px solid #2FB8A6' } : {}}
                       onClick={() => { if (isMenuOpen) setOpenMenuId(null); }}
                     >
                       {/* Date */}

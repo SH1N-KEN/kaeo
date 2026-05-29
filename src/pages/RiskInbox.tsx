@@ -696,11 +696,22 @@ const RiskInbox: React.FC = () => {
                         <div className="flex flex-col gap-2">
                           <button 
                             onClick={() => {
-                              const txId = selectedRisk.evidence_json?.transaction_id || selectedRisk.evidence_json?.tx_id;
-                              if (txId) {
-                                navigate(`/transactions?search=${txId}`);
+                              const evidence = selectedRisk.evidence_json || {};
+                              const txId = evidence.transaction_id || evidence.tx_id || selectedRisk.transaction_id;
+                              const txIds = evidence.transaction_ids || selectedRisk.related_transaction_ids;
+
+                              if (txIds && txIds.length > 0) {
+                                navigate(`/transactions?transactionIds=${txIds.join(',')}`);
+                              } else if (txId) {
+                                navigate(`/transactions?transactionId=${txId}`);
                               } else {
-                                navigate(`/transactions?search=${encodeURIComponent(selectedRisk.title || '')}`);
+                                const fallbackTerm = 
+                                  evidence.vendor_name || 
+                                  evidence.counterparty || 
+                                  evidence.description || 
+                                  selectedRisk.title || 
+                                  '';
+                                navigate(`/transactions?search=${encodeURIComponent(fallbackTerm)}`);
                               }
                             }}
                             className="px-3 py-2 rounded-lg text-[10px] font-bold border bg-[var(--surface-muted)] border-border/40 hover:border-primary/40 text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
