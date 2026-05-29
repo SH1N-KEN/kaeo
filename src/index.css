@@ -979,51 +979,61 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .frosted-panel {
-  background: color-mix(in srgb, var(--card) 85%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(223, 221, 215, 0.6);
   backdrop-filter: blur(18px) saturate(135%);
   -webkit-backdrop-filter: blur(18px) saturate(135%);
   border-radius: 1.25rem;
+}
+
+.dark .frosted-panel {
+  background: rgba(18, 22, 21, 0.80);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .frosted-card {
-  background: color-mix(in srgb, var(--card) 82%, transparent);
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(18px) saturate(135%);
   -webkit-backdrop-filter: blur(18px) saturate(135%);
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border: 1px solid rgba(223, 221, 215, 0.6);
   border-radius: 1.25rem;
-  box-shadow: 0 18px 50px rgba(0,0,0,0.14);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.06);
 }
-
+ 
 .dark .frosted-card {
+  background: rgba(18, 22, 21, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.02), 0 18px 50px rgba(0,0,0,0.3);
 }
 
 .frosted-card-hover {
-  background: color-mix(in srgb, var(--card) 82%, transparent);
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(18px) saturate(135%);
   -webkit-backdrop-filter: blur(18px) saturate(135%);
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border: 1px solid rgba(223, 221, 215, 0.6);
   border-radius: 1.25rem;
-  box-shadow: 0 18px 50px rgba(0,0,0,0.14);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.06);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
 }
 
 .dark .frosted-card-hover {
+  background: rgba(18, 22, 21, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.02), 0 18px 50px rgba(0,0,0,0.3);
 }
 
 .frosted-card-hover:hover {
-  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
-  background: color-mix(in srgb, var(--card) 88%, transparent);
+  border-color: rgba(15, 118, 110, 0.25);
+  background: rgba(255, 255, 255, 0.88);
   transform: translateY(-2px);
-  box-shadow: 0 22px 60px rgba(0,0,0,0.22);
+  box-shadow: 0 22px 60px rgba(0,0,0,0.12);
 }
 
 .dark .frosted-card-hover:hover {
   background: rgba(22, 28, 26, 0.6);
   box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04), 0 22px 60px rgba(0,0,0,0.4);
+  border-color: rgba(19, 140, 126, 0.25);
 }
 
 .frosted-sidebar {
@@ -1087,8 +1097,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .frosted-popover {
-  background: color-mix(in srgb, var(--card) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(223, 221, 215, 0.65);
   border-radius: 0.875rem;
   box-shadow: var(--shadow-popover);
   backdrop-filter: blur(24px) saturate(120%);
@@ -1103,8 +1113,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 .frosted-input {
   width: 100%;
-  background: color-mix(in srgb, var(--card) 60%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  background: rgba(255, 255, 255, 0.60);
+  border: 1px solid rgba(223, 221, 215, 0.5);
   border-radius: 0.625rem;
   padding: 0.5625rem 0.875rem;
   font-size: 0.875rem;
@@ -1121,7 +1131,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 .frosted-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
 }
 
 .frosted-pill {
@@ -1132,18 +1142,24 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  background: rgba(15, 118, 110, 0.08);
   color: var(--primary);
-  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  border: 1px solid rgba(15, 118, 110, 0.20);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
 
+.dark .frosted-pill {
+  background: rgba(19, 140, 126, 0.08);
+  color: var(--primary);
+  border: 1px solid rgba(19, 140, 126, 0.20);
+}
+
 .frosted-modal {
-  background: color-mix(in srgb, var(--card) 85%, transparent);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(24px) saturate(140%);
   -webkit-backdrop-filter: blur(24px) saturate(140%);
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border: 1px solid rgba(223, 221, 215, 0.6);
   box-shadow: var(--shadow-modal);
   border-radius: 1.25rem;
 }
@@ -1154,12 +1170,17 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .pricing-card {
-  background: color-mix(in srgb, var(--card) 82%, transparent) !important;
+  background: rgba(255, 255, 255, 0.82) !important;
   backdrop-filter: blur(18px) saturate(135%) !important;
   -webkit-backdrop-filter: blur(18px) saturate(135%) !important;
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent) !important;
+  border: 1px solid rgba(223, 221, 215, 0.6) !important;
   box-shadow: 0 18px 50px rgba(0,0,0,0.14) !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.dark .pricing-card {
+  background: rgba(18, 22, 21, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
 }
 
 .pricing-card:hover {
