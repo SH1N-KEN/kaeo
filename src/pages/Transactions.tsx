@@ -35,13 +35,17 @@ import { applyReviewSuggestion } from '../lib/reviewActions';
 import { Sparkles } from 'lucide-react';
 import { formatCurrency, formatSignedCurrency } from '../lib/formatters';
 import { useWorkspaceRefresh } from '../hooks/useWorkspaceRefresh';
+import {
+  getThisMonthRange,
+  getLastMonthRange,
+  getLast30DaysRange,
+  isWithinDateRange
+} from '../lib/dateRanges';
 
 // ── Sort types ────────────────────────────────────────────────────────────────
 type SortKey = 'transaction_date' | 'description' | 'category' | 'amount' | 'type' | 'source_provider' | 'review_status' | 'counterparty_name';
 type SortDir = 'asc' | 'desc';
 
-// ── Date range presets ────────────────────────────────────────────────────────
-type DateRange = 'all' | 'this_month' | 'last_30';
 
 // ── Amount range presets ──────────────────────────────────────────────────────
 type AmountRange = 'all' | 'under_10k' | '10k_50k' | 'above_50k';
@@ -61,7 +65,7 @@ const Transactions: React.FC = () => {
     setActiveClient
   } = useWorkspace();
   const { toast } = useToast();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,12 +76,57 @@ const Transactions: React.FC = () => {
   const [filterType, setFilterType] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterSource, setFilterSource] = useState('all');
-  const [filterDateRange, setFilterDateRange] = useState<DateRange>('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [filterAmountRange, setFilterAmountRange] = useState<AmountRange>('all');
   const [filterReview, setFilterReview] = useState<ReviewFilter>('all');
   const [filterTransactionId, setFilterTransactionId] = useState<string | null>(null);
   const [filterTransactionIds, setFilterTransactionIds] = useState<string[] | null>(null);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
+
+  const thisMonth = useMemo(() => getThisMonthRange(), []);
+  const lastMonth = useMemo(() => getLastMonthRange(), []);
+  const last30 = useMemo(() => getLast30DaysRange(), []);
+
+  const isThisMonthActive = fromDate === thisMonth.from && toDate === thisMonth.to;
+  const isLastMonthActive = fromDate === lastMonth.from && toDate === lastMonth.to;
+  const isLast30Active = fromDate === last30.from && toDate === last30.to;
+
+  const handleFromDateChange = (val: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (val) params.set('from', val);
+    else params.delete('from');
+    setSearchParams(params);
+  };
+
+  const handleToDateChange = (val: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (val) params.set('to', val);
+    else params.delete('to');
+    setSearchParams(params);
+  };
+
+  const applyQuickRange = (rangeType: 'this_month' | 'last_month' | 'last_30') => {
+    const params = new URLSearchParams(searchParams);
+    let range: { from: string; to: string };
+    if (rangeType === 'this_month') {
+      range = thisMonth;
+    } else if (rangeType === 'last_month') {
+      range = lastMonth;
+    } else {
+      range = last30;
+    }
+    params.set('from', range.from);
+    params.set('to', range.to);
+    setSearchParams(params);
+  };
+
+  const clearDates = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete('from');
+    params.delete('to');
+    setSearchParams(params);
+  };
 
   // ── Sort state ────────────────────────────────────────────────────────────
   const [sortKey, setSortKey] = useState<SortKey>('transaction_date');
@@ -195,6 +244,12 @@ const Transactions: React.FC = () => {
     } else {
       setFilterTransactionIds(null);
     }
+
+    // 6. Custom Date range mapping
+    const fromParam = searchParams.get('from') || '';
+    const toParam = searchParams.get('to') || '';
+    setFromDate(fromParam);
+    setToDate(toParam);
   }, [searchParams]);
 
   useEffect(() => {
@@ -308,9 +363,6 @@ const Transactions: React.FC = () => {
 
   // ── Filtering ─────────────────────────────────────────────────────────────
   const filteredTransactions = useMemo(() => {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const last30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     return displayTransactions.filter((tx) => {
       // Transaction ID overrides (bypasses standard search/filters)
@@ -339,11 +391,9 @@ const Transactions: React.FC = () => {
       // Source filter
       if (filterSource !== 'all' && tx.source_provider !== filterSource) return false;
 
-      // Date range
-      if (filterDateRange !== 'all') {
-        const txDate = new Date(tx.transaction_date);
-        if (filterDateRange === 'this_month' && txDate < startOfMonth) return false;
-        if (filterDateRange === 'last_30' && txDate < last30) return false;
+      // Date range filter
+      if (fromDate || toDate) {
+        if (!isWithinDateRange(tx.transaction_date, fromDate, toDate)) return false;
       }
 
       // Amount range (absolute value)
@@ -376,7 +426,7 @@ const Transactions: React.FC = () => {
 
       return true;
     });
-  }, [displayTransactions, searchTerm, filterType, filterCategory, filterSource, filterDateRange, filterAmountRange, filterReview, filterTransactionId, filterTransactionIds, suggestions]);
+  }, [displayTransactions, searchTerm, filterType, filterCategory, filterSource, fromDate, toDate, filterAmountRange, filterReview, filterTransactionId, filterTransactionIds, suggestions]);
 
   // ── Sorting ───────────────────────────────────────────────────────────────
   const sortedTransactions = useMemo(() => {
@@ -455,7 +505,8 @@ const Transactions: React.FC = () => {
     filterType !== 'all' ||
     filterCategory !== 'all' ||
     filterSource !== 'all' ||
-    filterDateRange !== 'all' ||
+    fromDate ||
+    toDate ||
     filterAmountRange !== 'all' ||
     filterReview !== 'all' ||
     filterTransactionId ||
@@ -466,7 +517,6 @@ const Transactions: React.FC = () => {
     setFilterType('all');
     setFilterCategory('all');
     setFilterSource('all');
-    setFilterDateRange('all');
     setFilterAmountRange('all');
     setFilterReview('all');
     setFilterTransactionId(null);
@@ -638,17 +688,61 @@ const Transactions: React.FC = () => {
             ))}
           </select>
 
-          {/* Date range */}
-          <select
-            className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
-            style={{ width: 'auto' }}
-            value={filterDateRange}
-            onChange={(e) => setFilterDateRange(e.target.value as DateRange)}
-          >
-            <option value="all">All time</option>
-            <option value="this_month">This month</option>
-            <option value="last_30">Last 30 days</option>
-          </select>
+          {/* Custom Date Range Picker Container */}
+          <div className="flex items-center gap-1.5 bg-background/50 border border-border/30 rounded-lg px-2 py-1 select-none">
+            <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => handleFromDateChange(e.target.value)}
+              className="bg-transparent border-none text-[11px] font-semibold text-foreground focus:outline-none focus:ring-0 p-0 cursor-pointer"
+              style={{ width: '105px' }}
+            />
+            <span className="text-[10px] text-muted-foreground font-bold uppercase shrink-0">to</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => handleToDateChange(e.target.value)}
+              className="bg-transparent border-none text-[11px] font-semibold text-foreground focus:outline-none focus:ring-0 p-0 cursor-pointer"
+              style={{ width: '105px' }}
+            />
+          </div>
+
+          {/* Quick Date Range Buttons */}
+          <div className="flex items-center gap-1 bg-background/50 border border-border/30 rounded-lg p-1">
+            <button
+              onClick={() => applyQuickRange('this_month')}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                isThisMonthActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              This Month
+            </button>
+            <button
+              onClick={() => applyQuickRange('last_month')}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                isLastMonthActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Last Month
+            </button>
+            <button
+              onClick={() => applyQuickRange('last_30')}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                isLast30Active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Last 30d
+            </button>
+            {(fromDate || toDate) && (
+              <button
+                onClick={clearDates}
+                className="px-1.5 py-0.5 text-[10px] font-bold text-[var(--danger)] hover:bg-[rgba(194,65,58,0.1)] rounded transition-all cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
 
           {/* Toggle More Filters */}
           <button
@@ -700,6 +794,12 @@ const Transactions: React.FC = () => {
         </div>
       </div>
 
+      {(fromDate || toDate) && (
+        <div className="text-xs font-semibold text-muted-foreground pl-1 -mb-2 animate-kaeo-fade">
+          Showing transactions {fromDate && `from ${fromDate}`} {toDate && `to ${toDate}`}
+        </div>
+      )}
+
       {/* ── Summary strip ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
@@ -741,6 +841,13 @@ const Transactions: React.FC = () => {
               title="Transaction not found"
               description="No matching transaction found for this risk. The transaction may have been deleted, filtered out, or imported under another client."
               action={{ label: 'View all transactions', onClick: clearFilters }}
+            />
+          ) : (fromDate || toDate) ? (
+            <EmptyState
+              icon={<Calendar className="w-8 h-8 text-muted-foreground/50" />}
+              title="No transactions found"
+              description="No transactions found in this date range."
+              action={{ label: 'Clear date filter', onClick: clearDates }}
             />
           ) : (
             <EmptyState

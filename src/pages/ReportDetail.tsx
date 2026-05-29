@@ -112,8 +112,8 @@ export default function ReportDetail() {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
             <div>
-              <p className="text-muted-foreground uppercase text-xs font-semibold tracking-wider mb-1">Period</p>
-              <p className="font-medium">{summary.period}</p>
+              <p className="text-muted-foreground uppercase text-xs font-semibold tracking-wider mb-1">Report Period</p>
+              <p className="font-medium">{summary.period || 'All imported data'}</p>
             </div>
             <div>
               <p className="text-muted-foreground uppercase text-xs font-semibold tracking-wider mb-1">Generated</p>

@@ -263,11 +263,13 @@ export function summarizeSourceFiles(imports: any[], uploadedFiles: any[], trans
 }
 
 export function buildReportSections(data: any) {
-  const { transactionSummary, vendorSummary, riskSummary, noteSummary, sourceSummary, client } = data;
+  const { transactionSummary, vendorSummary, riskSummary, noteSummary, sourceSummary, client, periodStart, periodEnd, isExplicitPeriod } = data;
 
   const executiveSummary = {
     clientName: client?.name || 'Unknown Client',
-    period: `${data.periodStart || 'Unknown'} to ${data.periodEnd || 'Unknown'}`,
+    period: isExplicitPeriod
+      ? `${periodStart || 'Unknown'} to ${periodEnd || 'Unknown'}`
+      : 'All imported data',
     transactionCount: transactionSummary.transactionCount,
     totalIncome: transactionSummary.income,
     totalRefunds: transactionSummary.refunds || 0,
@@ -343,6 +345,7 @@ export async function generateCFOReport(input: ReportInput) {
   
   const periodStart = explicitStart || calcStart;
   const periodEnd = explicitEnd || calcEnd;
+  const isExplicitPeriod = !!(explicitStart || explicitEnd);
 
   const transactionSummary = summarizeTransactions(transactions);
   const vendorSummary = summarizeVendors(vendors, transactions);
@@ -358,6 +361,7 @@ export async function generateCFOReport(input: ReportInput) {
     client,
     periodStart,
     periodEnd,
+    isExplicitPeriod,
     transactionSummary,
     vendorSummary,
     riskSummary,
@@ -366,7 +370,10 @@ export async function generateCFOReport(input: ReportInput) {
     transactions
   });
 
-  const title = `CFO Report - ${client?.name || 'Client'} - ${new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(new Date())}`;
+  let title = `CFO Report - ${client?.name || 'Client'} - ${new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(new Date())}`;
+  if (isExplicitPeriod) {
+    title = `CFO Report (${periodStart} to ${periodEnd}) - ${client?.name || 'Client'}`;
+  }
 
   const sourceFileIds = sourceSummary.map(s => s.id).filter(Boolean);
   const sourceFileNames = sourceSummary.map(s => s.fileName);

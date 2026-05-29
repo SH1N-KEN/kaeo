@@ -11,6 +11,13 @@ import EmptyState from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
 import { generateMonthEndReviewPlan } from '../lib/aiReviewEngine';
 import StatusBadge from '../components/ui/StatusBadge';
+import {
+  getThisMonthRange,
+  getLastMonthRange,
+  getLast30DaysRange,
+  getCurrentFinancialYearRange,
+  formatDateRangeLabel
+} from '../lib/dateRanges';
 
 const getReportStatus = (rep: any) => {
   if (rep.summary_json?.openRisksCount > 0) return 'needs_review';
@@ -35,6 +42,15 @@ export default function Reports() {
   const [readinessPlan, setReadinessPlan] = useState<any>(null);
   const { toast } = useToast();
 
+  const [reportFromDate, setReportFromDate] = useState('');
+  const [reportToDate, setReportToDate] = useState('');
+  const [periodTxCount, setPeriodTxCount] = useState<number | null>(null);
+
+  const thisMonth = React.useMemo(() => getThisMonthRange(), []);
+  const lastMonth = React.useMemo(() => getLastMonthRange(), []);
+  const last30 = React.useMemo(() => getLast30DaysRange(), []);
+  const fy = React.useMemo(() => getCurrentFinancialYearRange(), []);
+
   const filteredReports = React.useMemo(() => {
     if (!searchVal) return reports;
     const term = searchVal.toLowerCase();
@@ -51,6 +67,104 @@ export default function Reports() {
       setLoading(false);
     }
   }, [activeOrg, activeClient]);
+
+  useEffect(() => {
+    if (activeClient) {
+      fetchPeriodTxCount();
+    } else {
+      setPeriodTxCount(null);
+    }
+  }, [activeClient, reportFromDate, reportToDate]);
+
+  const fetchPeriodTxCount = async () => {
+    if (!activeClient) return;
+    try {
+      let query = supabase
+        .from('transactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('client_id', activeClient.id);
+
+      if (reportFromDate) {
+        query = query.gte('transaction_date', reportFromDate);
+      }
+      if (reportToDate) {
+        query = query.lte('transaction_date', reportToDate);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      setPeriodTxCount(count || 0);
+    } catch (e) {
+      console.error('Error fetching period transaction count:', e);
+      setPeriodTxCount(0);
+    }
+  };
+
+  const handleDownloadCSV = async () => {
+    if (!activeOrg || !activeClient) return;
+    try {
+      let query = supabase
+        .from('transactions')
+        .select('*')
+        .eq('organization_id', activeOrg.id)
+        .eq('client_id', activeClient.id)
+        .order('transaction_date', { ascending: false });
+
+      if (reportFromDate) {
+        query = query.gte('transaction_date', reportFromDate);
+      }
+      if (reportToDate) {
+        query = query.lte('transaction_date', reportToDate);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        toast('No transactions found in this period', 'error');
+        return;
+      }
+
+      // Generate CSV
+      const headers = ['Date', 'Description', 'Amount (INR)', 'Type', 'Category', 'Source', 'Review Status'];
+      const rows = data.map(tx => [
+        tx.transaction_date?.split('T')[0] || '',
+        `"${(tx.description || '').replace(/"/g, '""')}"`,
+        tx.amount,
+        tx.type,
+        tx.category || 'Uncategorized',
+        tx.source_provider || 'Manual',
+        tx.review_status || 'new'
+      ]);
+
+      const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `kaeo_accountant_pack_${activeClient.name.replace(/\s+/g, '_')}_${reportFromDate || 'all'}_to_${reportToDate || 'all'}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      if (user) {
+        await supabase.from('audit_events').insert({
+          organization_id: activeOrg.id,
+          client_id: activeClient.id,
+          user_id: user.id,
+          action: 'accountant_pack_exported',
+          resource_type: 'report',
+          resource_id: 'csv',
+          metadata_json: { rows: data.length, period_start: reportFromDate || null, period_end: reportToDate || null }
+        });
+      }
+      
+      toast('Accountant Pack CSV downloaded successfully', 'success');
+    } catch (err: any) {
+      toast(err.message, 'error');
+    }
+  };
 
   const fetchReadinessProjections = async () => {
     if (!activeOrg || !activeClient) return;
@@ -131,8 +245,16 @@ export default function Reports() {
       }
 
       // 1. Fetch all required data
+      let txQuery = supabase.from('transactions').select('*').eq('organization_id', activeOrg.id).eq('client_id', activeClient.id);
+      if (reportFromDate) {
+        txQuery = txQuery.gte('transaction_date', reportFromDate);
+      }
+      if (reportToDate) {
+        txQuery = txQuery.lte('transaction_date', reportToDate);
+      }
+
       const [txRes, vendorRes, riskRes, noteRes, fileRes, importRes] = await Promise.all([
-        supabase.from('transactions').select('*').eq('organization_id', activeOrg.id).eq('client_id', activeClient.id),
+        txQuery,
         supabase.from('vendors').select('*').eq('organization_id', activeOrg.id).eq('client_id', activeClient.id),
         supabase.from('risk_events').select('*').eq('organization_id', activeOrg.id).eq('client_id', activeClient.id),
         supabase.from('notes').select('*').eq('organization_id', activeOrg.id).eq('client_id', activeClient.id),
@@ -147,16 +269,51 @@ export default function Reports() {
       if (fileRes.error) throw fileRes.error;
       if (importRes.error) throw importRes.error;
 
+      const txs = txRes.data || [];
+      const txIdsInPeriod = new Set(txs.map(tx => tx.id));
+
+      const filteredRiskEvents = (riskRes.data || []).filter(r => {
+        const linkedTxIds = [
+          r.transaction_id,
+          ...(r.evidence_json?.transaction_ids || []),
+          ...(r.evidence_json?.transaction_id ? [r.evidence_json.transaction_id] : []),
+          ...(r.evidence_json?.tx_id ? [r.evidence_json.tx_id] : []),
+          ...(r.related_transaction_ids || [])
+        ].filter(Boolean);
+
+        if (linkedTxIds.length > 0) {
+          return linkedTxIds.some(id => txIdsInPeriod.has(id));
+        }
+
+        // Fallback: check if risk event created_at is within range
+        const riskDateStr = r.created_at?.split('T')[0];
+        if (reportFromDate && riskDateStr && riskDateStr < reportFromDate) return false;
+        if (reportToDate && riskDateStr && riskDateStr > reportToDate) return false;
+        return true;
+      });
+
+      const filteredNotes = (noteRes.data || []).filter(n => {
+        if (n.entity_type === 'risk_event') {
+          return filteredRiskEvents.some(r => r.id === n.entity_id);
+        }
+        const noteDateStr = n.created_at?.split('T')[0];
+        if (reportFromDate && noteDateStr && noteDateStr < reportFromDate) return false;
+        if (reportToDate && noteDateStr && noteDateStr > reportToDate) return false;
+        return true;
+      });
+
       // 2. Generate report data
       const generatedData = await generateCFOReport({
         organization: activeOrg,
         client: activeClient,
-        transactions: txRes.data || [],
+        transactions: txs,
         vendors: vendorRes.data || [],
-        riskEvents: riskRes.data || [],
-        notes: noteRes.data || [],
+        riskEvents: filteredRiskEvents,
+        notes: filteredNotes,
         uploadedFiles: fileRes.data || [],
         imports: importRes.data || [],
+        periodStart: reportFromDate || undefined,
+        periodEnd: reportToDate || undefined,
         generatedBy: user.id
       });
 
@@ -168,8 +325,8 @@ export default function Reports() {
           client_id: activeClient.id,
           title: generatedData.title,
           report_type: generatedData.report_type,
-          period_start: generatedData.period_start,
-          period_end: generatedData.period_end,
+          period_start: reportFromDate || null,
+          period_end: reportToDate || null,
           summary_json: generatedData.summary_json,
           sections_json: generatedData.sections_json,
           source_json: generatedData.source_json,
@@ -341,83 +498,146 @@ export default function Reports() {
             <strong>Accountant Pack:</strong> Includes cleaned transactions, vendor summary, risk summary, and month-end readiness.
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={async () => {
-              if (!activeOrg || !activeClient) return;
-              try {
-                const { data, error } = await supabase
-                  .from('transactions')
-                  .select('*')
-                  .eq('organization_id', activeOrg.id)
-                  .eq('client_id', activeClient.id)
-                  .order('transaction_date', { ascending: false });
+      </div>
 
-                if (error) throw error;
-                if (!data || data.length === 0) {
-                  toast('No transactions found', 'error');
-                  return;
-                }
-
-                // Generate CSV
-                const headers = ['Date', 'Description', 'Amount (INR)', 'Type', 'Category', 'Source', 'Review Status'];
-                const rows = data.map(tx => [
-                  tx.transaction_date?.split('T')[0] || '',
-                  `"${(tx.description || '').replace(/"/g, '""')}"`,
-                  tx.amount,
-                  tx.type,
-                  tx.category || 'Uncategorized',
-                  tx.source_provider || 'Manual',
-                  tx.review_status || 'new'
-                ]);
-
-                const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-                
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.setAttribute('href', url);
-                link.setAttribute('download', `kaeo_accountant_pack_${activeClient.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                if (user) {
-                  await supabase.from('audit_events').insert({
-                    organization_id: activeOrg.id,
-                    client_id: activeClient.id,
-                    user_id: user.id,
-                    action: 'accountant_pack_exported',
-                    resource_type: 'report',
-                    resource_id: 'csv',
-                    metadata_json: { rows: data.length }
-                  });
-                }
-                
-                toast('Accountant Pack downloaded successfully', 'success');
-              } catch (err: any) {
-                toast(err.message, 'error');
-              }
-            }}
-            disabled={transactionCount === 0}
-            className="bg-muted text-foreground px-4 py-2.5 rounded-xl font-bold text-xs flex items-center hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-border cursor-pointer"
-          >
-            <DownloadCloud className="h-4 w-4 mr-2" />
-            Accountant Pack (CSV)
-          </button>
-          <button
-            onClick={handleGenerateReport}
-            disabled={generating || transactionCount === 0}
-            className="bg-primary text-primary-foreground px-4 py-2.5 rounded-xl font-bold text-xs flex items-center hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
-          >
-            {generating ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4 mr-2" />
-            )}
-            {generating ? 'Generating...' : 'Generate Accountant Pack'}
-          </button>
+      {/* Configure Report Period Card */}
+      <div className="kaeo-card p-6 bg-card/45 border-border/30 backdrop-blur-md rounded-2xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/15 pb-3">
+          <div>
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-primary" />
+              Configure Report Period
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5 font-medium">Select a date range to filter transaction summaries and risks in the generated report.</p>
+          </div>
+          <div className="text-xs font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-lg shrink-0">
+            Period: {formatDateRangeLabel(reportFromDate, reportToDate)}
+          </div>
         </div>
+
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-black uppercase text-muted-foreground pl-0.5">From Date</label>
+              <input 
+                type="date"
+                value={reportFromDate}
+                onChange={(e) => setReportFromDate(e.target.value)}
+                className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer"
+                style={{ width: '135px' }}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-black uppercase text-muted-foreground pl-0.5">To Date</label>
+              <input 
+                type="date"
+                value={reportToDate}
+                onChange={(e) => setReportToDate(e.target.value)}
+                className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer"
+                style={{ width: '135px' }}
+              />
+            </div>
+            
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-black uppercase text-muted-foreground pl-0.5">Quick Ranges</label>
+              <div className="flex flex-wrap items-center gap-1 bg-background/50 border border-border/30 rounded-lg p-1 min-h-[34px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const r = getThisMonthRange();
+                    setReportFromDate(r.from);
+                    setReportToDate(r.to);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                    reportFromDate === thisMonth.from && reportToDate === thisMonth.to ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  This Month
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const r = getLastMonthRange();
+                    setReportFromDate(r.from);
+                    setReportToDate(r.to);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                    reportFromDate === lastMonth.from && reportToDate === lastMonth.to ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Last Month
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const r = getLast30DaysRange();
+                    setReportFromDate(r.from);
+                    setReportToDate(r.to);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                    reportFromDate === last30.from && reportToDate === last30.to ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Last 30d
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const r = getCurrentFinancialYearRange();
+                    setReportFromDate(r.from);
+                    setReportToDate(r.to);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                    reportFromDate === fy.from && reportToDate === fy.to ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Current FY
+                </button>
+                {(reportFromDate || reportToDate) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReportFromDate('');
+                      setReportToDate('');
+                    }}
+                    className="px-1.5 py-0.5 text-[10px] font-bold text-danger hover:bg-danger/10 rounded transition-all cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleDownloadCSV}
+              disabled={transactionCount === 0 || periodTxCount === 0}
+              className="bg-muted text-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-border cursor-pointer h-[34px]"
+            >
+              <DownloadCloud className="h-4 w-4 mr-2" />
+              Accountant Pack (CSV)
+            </button>
+            <button
+              onClick={handleGenerateReport}
+              disabled={generating || transactionCount === 0 || periodTxCount === 0}
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer h-[34px]"
+            >
+              {generating ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4 mr-2" />
+              )}
+              {generating ? 'Generating...' : 'Generate Accountant Pack'}
+            </button>
+          </div>
+        </div>
+        
+        {periodTxCount === 0 && (reportFromDate || reportToDate) && (
+          <p className="text-xs text-[var(--danger)] font-semibold animate-in fade-in">
+            No transactions found for the selected period. Report generation is disabled.
+          </p>
+        )}
       </div>
 
       {error && (
@@ -498,7 +718,7 @@ export default function Reports() {
               ) : (
                 <p className="text-sm text-muted-foreground flex items-center mb-4">
                   <Calendar className="h-3 w-3 mr-1.5" />
-                  All time
+                  All imported data
                 </p>
               )}
 
