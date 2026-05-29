@@ -36,11 +36,13 @@ import { Sparkles } from 'lucide-react';
 import { formatCurrency, formatSignedCurrency } from '../lib/formatters';
 import { useWorkspaceRefresh } from '../hooks/useWorkspaceRefresh';
 import {
+  isWithinDateRange,
   getThisMonthRange,
   getLastMonthRange,
   getLast30DaysRange,
-  isWithinDateRange
+  getCurrentFinancialYearRange
 } from '../lib/dateRanges';
+import { DateRangeFilter } from '../components/ui/DateRangeFilter';
 
 // ── Sort types ────────────────────────────────────────────────────────────────
 type SortKey = 'transaction_date' | 'description' | 'category' | 'amount' | 'type' | 'source_provider' | 'review_status' | 'counterparty_name';
@@ -84,14 +86,6 @@ const Transactions: React.FC = () => {
   const [filterTransactionIds, setFilterTransactionIds] = useState<string[] | null>(null);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
 
-  const thisMonth = useMemo(() => getThisMonthRange(), []);
-  const lastMonth = useMemo(() => getLastMonthRange(), []);
-  const last30 = useMemo(() => getLast30DaysRange(), []);
-
-  const isThisMonthActive = fromDate === thisMonth.from && toDate === thisMonth.to;
-  const isLastMonthActive = fromDate === lastMonth.from && toDate === lastMonth.to;
-  const isLast30Active = fromDate === last30.from && toDate === last30.to;
-
   const handleFromDateChange = (val: string) => {
     const params = new URLSearchParams(searchParams);
     if (val) params.set('from', val);
@@ -106,15 +100,17 @@ const Transactions: React.FC = () => {
     setSearchParams(params);
   };
 
-  const applyQuickRange = (rangeType: 'this_month' | 'last_month' | 'last_30') => {
+  const applyQuickRange = (rangeType: 'this_month' | 'last_month' | 'last_30' | 'fy') => {
     const params = new URLSearchParams(searchParams);
     let range: { from: string; to: string };
     if (rangeType === 'this_month') {
-      range = thisMonth;
+      range = getThisMonthRange();
     } else if (rangeType === 'last_month') {
-      range = lastMonth;
+      range = getLastMonthRange();
+    } else if (rangeType === 'last_30') {
+      range = getLast30DaysRange();
     } else {
-      range = last30;
+      range = getCurrentFinancialYearRange();
     }
     params.set('from', range.from);
     params.set('to', range.to);
@@ -688,61 +684,7 @@ const Transactions: React.FC = () => {
             ))}
           </select>
 
-          {/* Custom Date Range Picker Container */}
-          <div className="flex items-center gap-1.5 bg-background/50 border border-border/30 rounded-lg px-2 py-1 select-none">
-            <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => handleFromDateChange(e.target.value)}
-              className="bg-transparent border-none text-[11px] font-semibold text-foreground focus:outline-none focus:ring-0 p-0 cursor-pointer"
-              style={{ width: '105px' }}
-            />
-            <span className="text-[10px] text-muted-foreground font-bold uppercase shrink-0">to</span>
-            <input
-              type="date"
-              value={toDate}
-              onChange={(e) => handleToDateChange(e.target.value)}
-              className="bg-transparent border-none text-[11px] font-semibold text-foreground focus:outline-none focus:ring-0 p-0 cursor-pointer"
-              style={{ width: '105px' }}
-            />
-          </div>
 
-          {/* Quick Date Range Buttons */}
-          <div className="flex items-center gap-1 bg-background/50 border border-border/30 rounded-lg p-1">
-            <button
-              onClick={() => applyQuickRange('this_month')}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                isThisMonthActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              This Month
-            </button>
-            <button
-              onClick={() => applyQuickRange('last_month')}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                isLastMonthActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Last Month
-            </button>
-            <button
-              onClick={() => applyQuickRange('last_30')}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                isLast30Active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Last 30d
-            </button>
-            {(fromDate || toDate) && (
-              <button
-                onClick={clearDates}
-                className="px-1.5 py-0.5 text-[10px] font-bold text-[var(--danger)] hover:bg-[rgba(194,65,58,0.1)] rounded transition-all cursor-pointer"
-              >
-                Clear
-              </button>
-            )}
-          </div>
 
           {/* Toggle More Filters */}
           <button
@@ -792,13 +734,18 @@ const Transactions: React.FC = () => {
             </button>
           )}
         </div>
-      </div>
 
-      {(fromDate || toDate) && (
-        <div className="text-xs font-semibold text-muted-foreground pl-1 -mb-2 animate-kaeo-fade">
-          Showing transactions {fromDate && `from ${fromDate}`} {toDate && `to ${toDate}`}
-        </div>
-      )}
+        <DateRangeFilter
+          fromDate={fromDate}
+          toDate={toDate}
+          onFromDateChange={handleFromDateChange}
+          onToDateChange={handleToDateChange}
+          onQuickRangeSelect={applyQuickRange}
+          onClear={clearDates}
+          variant="transactions"
+          showFinancialYear={true}
+        />
+      </div>
 
       {/* ── Summary strip ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -15,9 +15,9 @@ import {
   getThisMonthRange,
   getLastMonthRange,
   getLast30DaysRange,
-  getCurrentFinancialYearRange,
-  formatDateRangeLabel
+  getCurrentFinancialYearRange
 } from '../lib/dateRanges';
+import { DateRangeFilter } from '../components/ui/DateRangeFilter';
 
 const getReportStatus = (rep: any) => {
   if (rep.summary_json?.openRisksCount > 0) return 'needs_review';
@@ -46,10 +46,27 @@ export default function Reports() {
   const [reportToDate, setReportToDate] = useState('');
   const [periodTxCount, setPeriodTxCount] = useState<number | null>(null);
 
-  const thisMonth = React.useMemo(() => getThisMonthRange(), []);
-  const lastMonth = React.useMemo(() => getLastMonthRange(), []);
-  const last30 = React.useMemo(() => getLast30DaysRange(), []);
-  const fy = React.useMemo(() => getCurrentFinancialYearRange(), []);
+
+
+  const handleQuickRangeSelect = (rangeType: 'this_month' | 'last_month' | 'last_30' | 'fy') => {
+    let range;
+    if (rangeType === 'this_month') {
+      range = getThisMonthRange();
+    } else if (rangeType === 'last_month') {
+      range = getLastMonthRange();
+    } else if (rangeType === 'last_30') {
+      range = getLast30DaysRange();
+    } else {
+      range = getCurrentFinancialYearRange();
+    }
+    setReportFromDate(range.from);
+    setReportToDate(range.to);
+  };
+
+  const handleClearDates = () => {
+    setReportFromDate('');
+    setReportToDate('');
+  };
 
   const filteredReports = React.useMemo(() => {
     if (!searchVal) return reports;
@@ -502,138 +519,50 @@ export default function Reports() {
 
       {/* Configure Report Period Card */}
       <div className="kaeo-card p-6 bg-card/45 border-border/30 backdrop-blur-md rounded-2xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/15 pb-3">
-          <div>
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-primary" />
-              Configure Report Period
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5 font-medium">Select a date range to filter transaction summaries and risks in the generated report.</p>
-          </div>
-          <div className="text-xs font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-lg shrink-0">
-            Period: {formatDateRangeLabel(reportFromDate, reportToDate)}
-          </div>
+        <div>
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-primary" />
+            Configure Report Period
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5 font-medium">Select a date range to filter transaction summaries and risks in the generated report.</p>
         </div>
 
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black uppercase text-muted-foreground pl-0.5">From Date</label>
-              <input 
-                type="date"
-                value={reportFromDate}
-                onChange={(e) => setReportFromDate(e.target.value)}
-                className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer"
-                style={{ width: '135px' }}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black uppercase text-muted-foreground pl-0.5">To Date</label>
-              <input 
-                type="date"
-                value={reportToDate}
-                onChange={(e) => setReportToDate(e.target.value)}
-                className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer"
-                style={{ width: '135px' }}
-              />
-            </div>
-            
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black uppercase text-muted-foreground pl-0.5">Quick Ranges</label>
-              <div className="flex flex-wrap items-center gap-1 bg-background/50 border border-border/30 rounded-lg p-1 min-h-[34px]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const r = getThisMonthRange();
-                    setReportFromDate(r.from);
-                    setReportToDate(r.to);
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                    reportFromDate === thisMonth.from && reportToDate === thisMonth.to ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  This Month
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const r = getLastMonthRange();
-                    setReportFromDate(r.from);
-                    setReportToDate(r.to);
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                    reportFromDate === lastMonth.from && reportToDate === lastMonth.to ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Last Month
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const r = getLast30DaysRange();
-                    setReportFromDate(r.from);
-                    setReportToDate(r.to);
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                    reportFromDate === last30.from && reportToDate === last30.to ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Last 30d
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const r = getCurrentFinancialYearRange();
-                    setReportFromDate(r.from);
-                    setReportToDate(r.to);
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                    reportFromDate === fy.from && reportToDate === fy.to ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Current FY
-                </button>
-                {(reportFromDate || reportToDate) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setReportFromDate('');
-                      setReportToDate('');
-                    }}
-                    className="px-1.5 py-0.5 text-[10px] font-bold text-danger hover:bg-danger/10 rounded transition-all cursor-pointer"
-                  >
-                    Clear
-                  </button>
+        <DateRangeFilter
+          fromDate={reportFromDate}
+          toDate={reportToDate}
+          onFromDateChange={setReportFromDate}
+          onToDateChange={setReportToDate}
+          onQuickRangeSelect={handleQuickRangeSelect}
+          onClear={handleClearDates}
+          variant="transactions"
+          showFinancialYear={true}
+          actions={
+            <div className="flex gap-2">
+              <button
+                onClick={handleDownloadCSV}
+                disabled={transactionCount === 0 || periodTxCount === 0 || (!!reportFromDate && !!reportToDate && reportFromDate > reportToDate)}
+                className="bg-muted text-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-border cursor-pointer h-[34px]"
+              >
+                <DownloadCloud className="h-4 w-4 mr-2" />
+                Accountant Pack (CSV)
+              </button>
+              <button
+                onClick={handleGenerateReport}
+                disabled={generating || transactionCount === 0 || periodTxCount === 0 || (!!reportFromDate && !!reportToDate && reportFromDate > reportToDate)}
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer h-[34px]"
+              >
+                {generating ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4 mr-2" />
                 )}
-              </div>
+                {generating ? 'Generating...' : 'Generate Accountant Pack'}
+              </button>
             </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={handleDownloadCSV}
-              disabled={transactionCount === 0 || periodTxCount === 0}
-              className="bg-muted text-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-border cursor-pointer h-[34px]"
-            >
-              <DownloadCloud className="h-4 w-4 mr-2" />
-              Accountant Pack (CSV)
-            </button>
-            <button
-              onClick={handleGenerateReport}
-              disabled={generating || transactionCount === 0 || periodTxCount === 0}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer h-[34px]"
-            >
-              {generating ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Plus className="h-4 w-4 mr-2" />
-              )}
-              {generating ? 'Generating...' : 'Generate Accountant Pack'}
-            </button>
-          </div>
-        </div>
+          }
+        />
         
-        {periodTxCount === 0 && (reportFromDate || reportToDate) && (
+        {periodTxCount === 0 && (reportFromDate || reportToDate) && !(reportFromDate && reportToDate && reportFromDate > reportToDate) && (
           <p className="text-xs text-[var(--danger)] font-semibold animate-in fade-in">
             No transactions found for the selected period. Report generation is disabled.
           </p>

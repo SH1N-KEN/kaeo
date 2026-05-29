@@ -71,3 +71,18 @@ export function formatDateRangeLabel(from: string | null, to: string | null): st
   if (!from && to) return `Up to ${to}`;
   return `${from} to ${to}`;
 }
+
+export function formatDateFriendly(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const year = parts[0];
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const monthName = months[monthIdx] || '';
+  return `${day} ${monthName} ${year}`;
+}

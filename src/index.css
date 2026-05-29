@@ -892,3 +892,21 @@
   text-transform: none;
 }
 
+/* Custom Date Picker Premium Styles */
+input[type="date"] {
+  color-scheme: light;
+}
+.dark input[type="date"] {
+  color-scheme: dark;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.8;
+  transform: scale(1.1);
+}
+
