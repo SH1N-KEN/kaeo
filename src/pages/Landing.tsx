@@ -1193,10 +1193,12 @@ const InteractiveRiskCards: React.FC = () => {
           const isActive = activeCard === idx;
           const accent = card.accentColor;
           
-          const bg = isActive ? card.mutedBg : '#121514';
-          const border = isActive ? accent : 'rgba(140, 150, 148, 0.10)';
+          const bg = isActive ? 'rgba(255, 255, 255, 0.03)' : '#121514';
+          const border = isActive ? 'rgba(140, 150, 148, 0.35)' : 'rgba(140, 150, 148, 0.10)';
           const dotColor = isActive ? accent : 'rgba(140, 150, 148, 0.20)';
-          const previewTextColor = isActive ? accent : 'rgba(232, 240, 238, 0.50)';
+          const previewTextColor = isActive ? 'rgba(232, 240, 238, 0.80)' : 'rgba(232, 240, 238, 0.50)';
+          const titleColor = isActive ? '#E8F0EE' : 'rgba(232, 240, 238, 0.85)';
+          const descColor = isActive ? 'rgba(232, 240, 238, 0.65)' : 'rgba(232, 240, 238, 0.45)';
 
           return (
             <div
@@ -1224,7 +1226,7 @@ const InteractiveRiskCards: React.FC = () => {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#E8F0EE', margin: 0 }}>{card.title}</h4>
+                <h4 style={{ fontSize: '15px', fontWeight: 700, color: titleColor, margin: 0 }}>{card.title}</h4>
                 <span style={{ 
                   width: '6px', 
                   height: '6px', 
@@ -1234,7 +1236,7 @@ const InteractiveRiskCards: React.FC = () => {
                   transition: 'all 0.2s ease',
                 }} />
               </div>
-              <p style={{ fontSize: '13px', color: 'rgba(232,240,238,0.50)', lineHeight: 1.5, margin: 0 }}>{card.description}</p>
+              <p style={{ fontSize: '13px', color: descColor, lineHeight: 1.5, margin: 0 }}>{card.description}</p>
               
               <div style={{
                 fontFamily: 'ui-monospace, monospace',
@@ -1293,24 +1295,26 @@ const InteractiveRiskCards: React.FC = () => {
           const accent = card.accentColor;
 
           const bg = isSelected 
-            ? card.mutedBg 
+            ? 'rgba(255, 255, 255, 0.03)' 
             : isHovered 
               ? 'rgba(255, 255, 255, 0.015)' 
               : '#121514';
 
           const border = isSelected 
-            ? accent 
+            ? 'rgba(140, 150, 148, 0.35)' 
             : isHovered 
-              ? card.borderTint 
+              ? 'rgba(140, 150, 148, 0.22)' 
               : 'rgba(140, 150, 148, 0.10)';
 
           const dotColor = isSelected 
             ? accent 
             : isHovered 
-              ? `${accent}80` 
+              ? `${accent}b0` 
               : 'rgba(140, 150, 148, 0.20)';
 
-          const previewTextColor = isActive ? accent : 'rgba(232, 240, 238, 0.50)';
+          const titleColor = isActive ? '#E8F0EE' : 'rgba(232, 240, 238, 0.85)';
+          const descColor = isActive ? 'rgba(232, 240, 238, 0.65)' : 'rgba(232, 240, 238, 0.45)';
+          const previewTextColor = isActive ? 'rgba(232, 240, 238, 0.80)' : 'rgba(232, 240, 238, 0.50)';
 
           return (
             <div
@@ -1352,7 +1356,7 @@ const InteractiveRiskCards: React.FC = () => {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#E8F0EE', margin: 0, letterSpacing: '-0.01em' }}>{card.title}</h4>
+                <h4 style={{ fontSize: '15px', fontWeight: 700, color: titleColor, margin: 0, letterSpacing: '-0.01em' }}>{card.title}</h4>
                 <span style={{ 
                   width: '6px', 
                   height: '6px', 
@@ -1362,7 +1366,7 @@ const InteractiveRiskCards: React.FC = () => {
                   transition: 'all 0.2s ease',
                 }} />
               </div>
-              <p style={{ fontSize: '12.5px', color: 'rgba(232,240,238,0.45)', lineHeight: 1.5, margin: 0 }}>{card.description}</p>
+              <p style={{ fontSize: '12.5px', color: descColor, lineHeight: 1.5, margin: 0 }}>{card.description}</p>
               <div style={{
                 fontFamily: 'ui-monospace, monospace',
                 fontSize: '10.5px',
@@ -1388,14 +1392,13 @@ const InteractiveRiskCards: React.FC = () => {
       {activeCardObj && (
         <div style={{ 
           background: '#121514', 
-          border: '1.5px solid', 
-          borderColor: `${activeCardObj.accentColor}20`,
+          border: '1.5px solid rgba(140, 150, 148, 0.12)', 
           borderRadius: '16px', 
           padding: '28px',
           display: 'flex',
           flexDirection: 'column',
           gap: '24px',
-          boxShadow: `0 24px 60px rgba(0,0,0,0.5), 0 0 40px ${activeCardObj.accentColor}05`,
+          boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
           height: '100%',
           justifyContent: 'center',
           position: 'relative',
@@ -1406,8 +1409,8 @@ const InteractiveRiskCards: React.FC = () => {
               <span style={{ 
                 fontSize: '10px', 
                 color: activeCardObj.accentColor, 
-                background: `${activeCardObj.accentColor}15`, 
-                border: `1px solid ${activeCardObj.accentColor}30`, 
+                background: `${activeCardObj.accentColor}12`, 
+                border: `1px solid ${activeCardObj.accentColor}25`, 
                 padding: '3px 8px', 
                 borderRadius: '4px', 
                 fontWeight: 700, 
