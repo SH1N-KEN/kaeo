@@ -86,22 +86,35 @@ const Transactions: React.FC = () => {
   const [filterTransactionIds, setFilterTransactionIds] = useState<string[] | null>(null);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
 
-  const handleFromDateChange = (val: string) => {
+  const updateFilterParams = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
-    if (val) params.set('from', val);
-    else params.delete('from');
+    Object.entries(updates).forEach(([key, val]) => {
+      if (val && val !== 'all') {
+        params.set(key, val);
+      } else {
+        params.delete(key);
+      }
+    });
+    
+    // Clear deep-link transaction overrides on any normal filter changes
+    const keys = Object.keys(updates);
+    if (!keys.includes('transactionId') && !keys.includes('transactionIds')) {
+      params.delete('transactionId');
+      params.delete('txId');
+      params.delete('transactionIds');
+    }
     setSearchParams(params);
+  };
+
+  const handleFromDateChange = (val: string) => {
+    updateFilterParams({ from: val });
   };
 
   const handleToDateChange = (val: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (val) params.set('to', val);
-    else params.delete('to');
-    setSearchParams(params);
+    updateFilterParams({ to: val });
   };
 
   const applyQuickRange = (rangeType: 'this_month' | 'last_month' | 'last_30' | 'fy') => {
-    const params = new URLSearchParams(searchParams);
     let range: { from: string; to: string };
     if (rangeType === 'this_month') {
       range = getThisMonthRange();
@@ -112,21 +125,51 @@ const Transactions: React.FC = () => {
     } else {
       range = getCurrentFinancialYearRange();
     }
-    params.set('from', range.from);
-    params.set('to', range.to);
-    setSearchParams(params);
+    updateFilterParams({ from: range.from, to: range.to });
   };
 
   const clearDates = () => {
-    const params = new URLSearchParams(searchParams);
-    params.delete('from');
-    params.delete('to');
-    setSearchParams(params);
+    updateFilterParams({ from: null, to: null });
+  };
+
+  const searchTimeoutRef = useRef<number | null>(null);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSearchTerm(val);
+    if (searchTimeoutRef.current) {
+      window.clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = window.setTimeout(() => {
+      const params = new URLSearchParams(searchParams);
+      if (val) params.set('search', val);
+      else params.delete('search');
+      params.delete('transactionId');
+      params.delete('txId');
+      params.delete('transactionIds');
+      setSearchParams(params);
+    }, 350);
   };
 
   // ── Sort state ────────────────────────────────────────────────────────────
   const [sortKey, setSortKey] = useState<SortKey>('transaction_date');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  const handleSort = useCallback(
+    (key: SortKey) => {
+      const params = new URLSearchParams(searchParams);
+      let dir: SortDir = 'asc';
+      if (sortKey === key) {
+        dir = sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        dir = key === 'transaction_date' ? 'desc' : 'asc';
+      }
+      params.set('sort', key);
+      params.set('sortDir', dir);
+      setSearchParams(params);
+    },
+    [sortKey, sortDir, searchParams]
+  );
 
   // ── Context menu state ────────────────────────────────────────────────────
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -160,6 +203,14 @@ const Transactions: React.FC = () => {
   const lastSearchRef = useRef<string | null>(null);
 
   useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        window.clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const currentSearch = searchParams.toString();
     if (lastSearchRef.current !== null && currentSearch === lastSearchRef.current) {
       return;
@@ -172,6 +223,9 @@ const Transactions: React.FC = () => {
     const typeParam = searchParams.get('type');
     const sourceParam = searchParams.get('source');
     const searchParamVal = searchParams.get('search');
+    const amountRangeParam = searchParams.get('amountRange') || 'all';
+    const sortParam = searchParams.get('sort') as SortKey || 'transaction_date';
+    const sortDirParam = searchParams.get('sortDir') as SortDir || 'desc';
 
     if (searchParamVal) {
       setSearchTerm(searchParamVal);
@@ -192,6 +246,10 @@ const Transactions: React.FC = () => {
       setFilterReview('ignored');
     } else if (reviewStatusParam === 'resolved') {
       setFilterReview('resolved');
+    } else if (reviewStatusParam === 'high_value') {
+      setFilterReview('high_value');
+    } else if (reviewStatusParam === 'ai_suggested') {
+      setFilterReview('ai_suggested');
     } else if (categoryParam === 'uncategorized') {
       setFilterReview('uncategorized');
     } else if (typeParam === 'unknown') {
@@ -211,7 +269,7 @@ const Transactions: React.FC = () => {
 
     // 3. Type mapping
     if (typeParam) {
-      if (['income', 'expense', 'refund', 'unknown'].includes(typeParam)) {
+      if (['income', 'expense', 'refund', 'transfer', 'unknown'].includes(typeParam)) {
         setFilterType(typeParam);
       }
     } else {
@@ -225,7 +283,14 @@ const Transactions: React.FC = () => {
       setFilterSource('all');
     }
 
-    // 5. Transaction ID mapping
+    // 5. Amount Range mapping
+    setFilterAmountRange(amountRangeParam as AmountRange);
+
+    // 6. Sort mapping
+    setSortKey(sortParam);
+    setSortDir(sortDirParam);
+
+    // 7. Transaction ID mapping
     const transactionIdParam = searchParams.get('transactionId') || searchParams.get('txId');
     const transactionIdsParam = searchParams.get('transactionIds');
 
@@ -241,7 +306,7 @@ const Transactions: React.FC = () => {
       setFilterTransactionIds(null);
     }
 
-    // 6. Custom Date range mapping
+    // 8. Custom Date range mapping
     const fromParam = searchParams.get('from') || '';
     const toParam = searchParams.get('to') || '';
     setFromDate(fromParam);
@@ -414,6 +479,12 @@ const Transactions: React.FC = () => {
         if (filterReview === 'pending' && revStatus !== 'new' && revStatus !== 'needs_review') return false;
         if (filterReview === 'uncategorized' && tx._displayCategory !== 'Uncategorized') return false;
         if (filterReview === 'unknown' && tx.type !== 'unknown') return false;
+        if (filterReview === 'high_value') {
+          const amtVal = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+            ? Number(tx.amount_in_base_currency) : Number(tx.amount);
+          const isHighValue = Math.abs(amtVal) >= 50000 && ['expense', 'vendor_payment', 'subscription'].includes(tx.type);
+          if (!isHighValue) return false;
+        }
         if (filterReview === 'ai_suggested') {
           const hasSug = suggestions.some(s => s.entity_type === 'transaction' && s.entity_id === tx.id);
           if (!hasSug) return false;
@@ -482,18 +553,7 @@ const Transactions: React.FC = () => {
     return { inflow, outflow, net: inflow - outflow };
   }, [filteredTransactions]);
 
-  // ── Sort click handler ────────────────────────────────────────────────────
-  const handleSort = useCallback(
-    (key: SortKey) => {
-      if (sortKey === key) {
-        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-      } else {
-        setSortKey(key);
-        setSortDir(key === 'transaction_date' ? 'desc' : 'asc');
-      }
-    },
-    [sortKey]
-  );
+
 
   // ── Clear all filters ─────────────────────────────────────────────────────
   const hasActiveFilters =
@@ -620,7 +680,7 @@ const Transactions: React.FC = () => {
               className="kaeo-input text-xs py-2 bg-background/50 border-border/30 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 rounded-lg"
               style={{ paddingLeft: '2.5rem' }}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
             />
           </div>
 
@@ -629,7 +689,7 @@ const Transactions: React.FC = () => {
             {(['all', 'income', 'expense', 'refund', 'transfer', 'unknown'] as const).map((t) => (
               <button
                 key={t}
-                onClick={() => setFilterType(t)}
+                onClick={() => updateFilterParams({ type: t })}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold capitalize transition-all border cursor-pointer ${
                   filterType === t
                     ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm'
@@ -650,7 +710,7 @@ const Transactions: React.FC = () => {
             className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
             style={{ width: 'auto' }}
             value={filterReview}
-            onChange={(e) => setFilterReview(e.target.value as ReviewFilter)}
+            onChange={(e) => updateFilterParams({ review_status: e.target.value })}
           >
             <option value="all">All review statuses</option>
             <option value="pending">Pending Review</option>
@@ -660,15 +720,9 @@ const Transactions: React.FC = () => {
             <option value="ignored">Ignored</option>
             <option value="resolved">Resolved</option>
             <option value="ai_suggested">AI Suggested</option>
-            {filterReview === 'uncategorized' && (
-              <option value="uncategorized">Uncategorized</option>
-            )}
-            {filterReview === 'unknown' && (
-              <option value="unknown">Unknown Rows</option>
-            )}
-            {filterReview === 'high_value' && (
-              <option value="high_value">High-value expenses</option>
-            )}
+            <option value="uncategorized">Uncategorized</option>
+            <option value="unknown">Unknown Rows</option>
+            <option value="high_value">High-value expenses</option>
           </select>
 
           {/* Category */}
@@ -676,7 +730,7 @@ const Transactions: React.FC = () => {
             className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
             style={{ width: 'auto' }}
             value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
+            onChange={(e) => updateFilterParams({ category: e.target.value })}
           >
             <option value="all">All Categories</option>
             {availableCategories.map((c) => (
@@ -704,7 +758,7 @@ const Transactions: React.FC = () => {
                   className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
                   style={{ width: 'auto' }}
                   value={filterSource}
-                  onChange={(e) => setFilterSource(e.target.value)}
+                  onChange={(e) => updateFilterParams({ source: e.target.value })}
                 >
                   <option value="all">All Sources</option>
                   {availableSources.map((s) => (
@@ -716,7 +770,7 @@ const Transactions: React.FC = () => {
                 className="kaeo-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
                 style={{ width: 'auto' }}
                 value={filterAmountRange}
-                onChange={(e) => setFilterAmountRange(e.target.value as AmountRange)}
+                onChange={(e) => updateFilterParams({ amountRange: e.target.value })}
               >
                 <option value="all">All amounts</option>
                 <option value="under_10k">Under ₹10k</option>
@@ -806,8 +860,23 @@ const Transactions: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="kaeo-card rounded-xl border-border/30 overflow-hidden shadow-sm bg-card/30 backdrop-blur-md">
-          <div className="overflow-x-auto">
+        <div className="space-y-4">
+          {(filterTransactionId || (filterTransactionIds && filterTransactionIds.length > 0)) && (
+            <div className="p-3.5 rounded-xl border flex items-center justify-between gap-3 text-xs animate-kaeo-fade" style={{ background: 'rgba(15,118,110,0.06)', border: '1px solid rgba(15,118,110,0.20)', color: 'var(--primary)' }}>
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4.5 h-4.5 flex-shrink-0" />
+                <span>Viewing specific transactions linked to a selected risk event. Other filters are temporarily bypassed.</span>
+              </div>
+              <button 
+                onClick={clearFilters}
+                className="px-2.5 py-1 bg-primary text-primary-foreground rounded-lg font-bold hover:opacity-90 transition-all shadow-xl cursor-pointer whitespace-nowrap"
+              >
+                Show All Transactions
+              </button>
+            </div>
+          )}
+          <div className="kaeo-card rounded-xl border-border/30 overflow-hidden shadow-sm bg-card/30 backdrop-blur-md">
+            <div className="overflow-x-auto">
             <table className="kaeo-table min-w-[860px]">
               <thead>
                 <tr className="bg-muted/30">
@@ -1080,7 +1149,7 @@ const Transactions: React.FC = () => {
                           >
                             {[
                               { icon: <Copy className="w-3.5 h-3.5" />, label: 'Copy description', onClick: () => { navigator.clipboard.writeText(tx.description); toast('Copied', 'success'); setOpenMenuId(null); } },
-                              { icon: <Tag className="w-3.5 h-3.5" />, label: 'Filter by category', onClick: () => { setFilterCategory(tx._displayCategory); setOpenMenuId(null); } },
+                              { icon: <Tag className="w-3.5 h-3.5" />, label: 'Filter by category', onClick: () => { updateFilterParams({ category: tx._displayCategory }); setOpenMenuId(null); } },
                             ].map(action => (
                               <button key={action.label}
                                 className="w-full text-left px-3 py-2 rounded-lg text-[12px] font-medium flex items-center gap-2 cursor-pointer transition-all"
@@ -1119,7 +1188,8 @@ const Transactions: React.FC = () => {
             </table>
           </div>
         </div>
-      )}
+      </div>
+    )}
       <AIReviewQueueModal 
         isOpen={isAIQueueOpen} 
         onClose={() => setIsAIQueueOpen(false)} 
