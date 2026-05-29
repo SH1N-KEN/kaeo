@@ -53,6 +53,8 @@ const FilePreview: React.FC<FilePreviewProps> = ({
       const mediumConfidenceCount = txs.filter(tx => tx.raw_row_json?.intelligence?.intelligence_confidence === 'medium').length;
       const needsReviewCount = txs.filter(tx => tx.review_status === 'needs_review').length;
 
+      const totalParsedSpend = txs.reduce((sum, tx) => sum + Math.abs(tx.amount || 0), 0);
+
       return {
         totalDetected: result.rowCount,
         incomeRows,
@@ -63,7 +65,8 @@ const FilePreview: React.FC<FilePreviewProps> = ({
         recommendedAction: autoMapping.status === 'ready_to_import' ? 'Ready to Import' : 'Review column mappings',
         highConfidenceCount,
         mediumConfidenceCount,
-        needsReviewCount
+        needsReviewCount,
+        totalParsedSpend
       };
     } catch (e) {
       console.error(e);
@@ -231,7 +234,9 @@ const FilePreview: React.FC<FilePreviewProps> = ({
               <div>
                 <h4 className="text-xs font-bold text-foreground">Import Preview Summary</h4>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  {result.metadata?.isHDFC 
+                  {result.provider === 'Expense Ledger'
+                    ? "Detected expense ledger. Detailed breakdown of purchase entries and amount consistency checks."
+                    : result.metadata?.isHDFC 
                     ? "Breakdown of HDFC bank statement transactions, merged continuation narrations, and balance verification."
                     : "Breakdown of detected rows based on the current column mapping."
                   }
@@ -284,7 +289,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({
                 <div className="pt-3 border-t border-border/15 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/20 p-4 rounded-xl border border-border/20">
                   <div>
                     <h5 className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Categorization Intelligence</h5>
-                    <p className="text-[9px] text-muted-foreground mt-0.5">Automated classification confidence for HDFC statements.</p>
+                    <p className="text-[9px] text-muted-foreground mt-0.5">Automated classification classification confidence for HDFC statements.</p>
                   </div>
                   <div className="flex flex-wrap gap-4">
                     <div className="flex items-center gap-1.5">
@@ -303,6 +308,27 @@ const FilePreview: React.FC<FilePreviewProps> = ({
                       <span className="text-[10px] font-black text-foreground">{previewStats.needsReviewCount} rows</span>
                     </div>
                   </div>
+                </div>
+              </div>
+            ) : result.provider === 'Expense Ledger' ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
+                  <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Detected File Type</span>
+                  <span className="text-base font-black text-foreground">Expense Ledger</span>
+                </div>
+                <div className="bg-white/5 p-3 rounded-xl border border-border/20 text-center">
+                  <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider block">Expense Rows Found</span>
+                  <span className="text-base font-black text-foreground">{previewStats.expenseRows}</span>
+                </div>
+                <div className="bg-risk/5 p-3 rounded-xl border border-risk/15 text-center">
+                  <span className="text-[9px] text-risk/70 font-black uppercase tracking-wider block">Total Parsed Spend</span>
+                  <span className="text-sm font-black text-risk truncate block">
+                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(previewStats.totalParsedSpend)}
+                  </span>
+                </div>
+                <div className="bg-primary/5 p-3 rounded-xl border border-primary/15 text-center flex flex-col justify-center">
+                  <span className="text-[9px] text-primary/70 font-black uppercase tracking-wider block">Recommended</span>
+                  <span className="text-[10px] font-black text-foreground truncate">{previewStats.recommendedAction}</span>
                 </div>
               </div>
             ) : (

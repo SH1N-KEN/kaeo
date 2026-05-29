@@ -133,6 +133,12 @@ const isHDFCSheet = (headers: string[]): boolean => {
   return normalizedHdfc.every(h => normalized.includes(h));
 };
 
+const isExpenseLedgerSheet = (headers: string[]): boolean => {
+  const normalized = headers.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
+  const keywords = ['invoiceno', 'invoicenumber', 'supplierdetails', 'supplier', 'item', 'qty', 'quantity', 'amountinrs', 'amountrs', 'paymentdate', 'orderdate'];
+  return keywords.some(k => normalized.includes(k));
+};
+
 const parseExcelSerialDate = (serial: any): string | null => {
   if (serial === null || serial === undefined || serial === '') return null;
   if (serial instanceof Date) {
@@ -351,7 +357,7 @@ export const parseXLSXFile = (file: File): Promise<ParsedFinancialFile> => {
           }
 
           // Run smart header detection per sheet using the display grid for string matching
-          const { headerRowIndex, headers, skippedRowCount, warnings: headerWarnings } = detectHeaderRow(displayGrid);
+          const { headerRowIndex, headers, skippedRowCount, warnings: headerWarnings, headerRowsCount = 1 } = detectHeaderRow(displayGrid);
 
           if (headers.length === 0) {
             return; // Skip if no columns found
@@ -362,6 +368,7 @@ export const parseXLSXFile = (file: File): Promise<ParsedFinancialFile> => {
           let totalSkipped = skippedRowCount;
           let hdfcStats: any = null;
           const isHdfc = isHDFCSheet(headers);
+          const isExpenseLedger = isExpenseLedgerSheet(headers);
 
           if (isHdfc) {
             const hdfcRes = processHDFCSheet(displayGrid, rawGrid, headers, headerRowIndex);
@@ -369,9 +376,77 @@ export const parseXLSXFile = (file: File): Promise<ParsedFinancialFile> => {
             allWarnings = [...allWarnings, ...hdfcRes.warnings];
             totalSkipped += hdfcRes.skippedCount;
             hdfcStats = hdfcRes.hdfcStats;
+          } else if (isExpenseLedger) {
+            let parsedTotal = 0;
+            let sheetTotalRowValue = null;
+            
+            const dataGrid = rawGrid.slice(headerRowIndex + headerRowsCount);
+
+            const amountIdx = findColumnIndex(headers, ['amount (in rs.)', 'amount in rs', 'amount', 'value', 'total']);
+            const dateIdx = findColumnIndex(headers, ['payment date', 'order date', 'date']);
+            const descIdx = findColumnIndex(headers, ['item', 'supplier details', 'supplier', 'invoice no']);
+
+            cleanRows = [];
+
+            for (let r = 0; r < dataGrid.length; r++) {
+              const rawRow = dataGrid[r];
+              if (!rawRow || rawRow.length === 0) continue;
+
+              const isBlank = rawRow.every(val => val === null || val === undefined || String(val).trim() === '');
+              if (isBlank) continue;
+
+              const isTotal = rawRow.some(val => val !== null && val !== undefined && String(val).toUpperCase().includes('TOTAL'));
+              if (isTotal) {
+                if (amountIdx !== -1 && rawRow[amountIdx] !== undefined && rawRow[amountIdx] !== null) {
+                  const amtStr = String(rawRow[amountIdx]).replace(/,/g, '').replace(/[^\d.-]/g, '');
+                  const amtNum = parseFloat(amtStr);
+                  if (!isNaN(amtNum)) {
+                    sheetTotalRowValue = amtNum;
+                  }
+                }
+                continue;
+              }
+
+              let rowAmount = 0;
+              if (amountIdx !== -1 && rawRow[amountIdx] !== undefined && rawRow[amountIdx] !== null) {
+                const amtStr = String(rawRow[amountIdx]).replace(/,/g, '').replace(/[^\d.-]/g, '');
+                const amtNum = parseFloat(amtStr);
+                if (!isNaN(amtNum) && amtNum > 0) {
+                  rowAmount = amtNum;
+                }
+              }
+
+              const hasDate = dateIdx !== -1 && rawRow[dateIdx] !== undefined && rawRow[dateIdx] !== null && String(rawRow[dateIdx]).trim() !== '';
+              const hasDesc = descIdx !== -1 && rawRow[descIdx] !== undefined && rawRow[descIdx] !== null && String(rawRow[descIdx]).trim() !== '';
+
+              if (rowAmount <= 0 || !hasDate || !hasDesc) {
+                totalSkipped++;
+                continue;
+              }
+
+              parsedTotal += rowAmount;
+
+              const obj: Record<string, any> = {};
+              headers.forEach((header, idx) => {
+                let cellVal = rawRow[idx];
+                if (cellVal instanceof Date) {
+                  cellVal = cellVal.toISOString().split('T')[0];
+                }
+                obj[header] = cellVal !== undefined ? cellVal : null;
+              });
+
+              cleanRows.push(obj);
+            }
+
+            if (sheetTotalRowValue !== null) {
+              const diff = Math.abs(sheetTotalRowValue - parsedTotal);
+              if (diff > 0.01) {
+                allWarnings.push(`Parsed ${cleanRows.length} expense rows. The sheet total differs from parsed numeric rows by ₹${diff.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`);
+              }
+            }
           } else {
             // Map rows to key-value objects using the raw grid for precise numeric values
-            const dataGrid = rawGrid.slice(headerRowIndex + 1);
+            const dataGrid = rawGrid.slice(headerRowIndex + headerRowsCount);
             const mappedRows: Record<string, any>[] = dataGrid.map((row) => {
               const obj: Record<string, any> = {};
               headers.forEach((header, idx) => {
@@ -403,8 +478,8 @@ export const parseXLSXFile = (file: File): Promise<ParsedFinancialFile> => {
           const hasRequiredColumns = dateIdx !== -1 && descIdx !== -1 && amtIndexes.length > 0;
           
           let validTransactionRowsCount = 0;
-          if (hasRequiredColumns && !isHdfc) {
-            const dataGrid = rawGrid.slice(headerRowIndex + 1);
+          if (hasRequiredColumns && !isHdfc && !isExpenseLedger) {
+            const dataGrid = rawGrid.slice(headerRowIndex + headerRowsCount);
             dataGrid.forEach((row) => {
               if (!row || !Array.isArray(row)) return;
               const dateVal = row[dateIdx];
@@ -425,7 +500,7 @@ export const parseXLSXFile = (file: File): Promise<ParsedFinancialFile> => {
             });
           }
 
-          const isValidTransactionSheet = isHdfc || (hasRequiredColumns && validTransactionRowsCount >= 3);
+          const isValidTransactionSheet = isHdfc || isExpenseLedger || (hasRequiredColumns && validTransactionRowsCount >= 3);
           const isNonFinancial = suggestsNonFinancial && !isValidTransactionSheet;
 
           // Generate mapping suggestion to verify suitability

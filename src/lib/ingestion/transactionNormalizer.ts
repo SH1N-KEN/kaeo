@@ -125,14 +125,28 @@ export const cleanAmount = (val: any): { amount: number; isExpense: boolean; isI
  * Returns { date: Date; ambiguous: boolean; error: boolean }
  */
 export const parseIngestedDate = (val: any): { date: Date; ambiguous: boolean; error: boolean } => {
-  if (!val) return { date: new Date(), ambiguous: false, error: true };
+  if (val === null || val === undefined || val === '') return { date: new Date(), ambiguous: false, error: true };
 
-  // If already parsed as a Date object or numeric Excel serial
+  // If already parsed as a Date object
   if (val instanceof Date) {
     return { date: val, ambiguous: false, error: false };
   }
 
+  // Handle Excel serial date (numeric or string matching 5 digits)
+  if (typeof val === 'number') {
+    const num = Number(val);
+    if (!isNaN(num) && num > 0) {
+      const d = new Date(Math.round((num - 25569) * 86400 * 1000));
+      return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
+    }
+  }
+
   const str = val.toString().trim();
+  if (/^\d{5}$/.test(str)) {
+    const num = Number(str);
+    const d = new Date(Math.round((num - 25569) * 86400 * 1000));
+    return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
+  }
   
   // 1. Check if ISO-like YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
@@ -140,12 +154,15 @@ export const parseIngestedDate = (val: any): { date: Date; ambiguous: boolean; e
     return { date: isNaN(d.getTime()) ? new Date() : d, ambiguous: false, error: isNaN(d.getTime()) };
   }
 
-  // 2. Check for DD/MM/YYYY or DD-MM-YYYY or MM/DD/YYYY
-  const delimiterMatch = str.match(/^(\d{1,2})([-/])(\d{1,2})[-/](\d{4})/);
+  // 2. Check for DD/MM/YYYY or DD-MM-YYYY or MM/DD/YYYY or 2-digit year variants
+  const delimiterMatch = str.match(/^(\d{1,2})([-/])(\d{1,2})[-/](\d{2,4})/);
   if (delimiterMatch) {
     const p1 = parseInt(delimiterMatch[1], 10);
     const p2 = parseInt(delimiterMatch[3], 10);
-    const year = parseInt(delimiterMatch[4], 10);
+    let year = parseInt(delimiterMatch[4], 10);
+    if (year < 100) {
+      year = year < 50 ? 2000 + year : 1900 + year;
+    }
 
     if (p1 > 12) {
       const d = new Date(year, p2 - 1, p1);
@@ -162,12 +179,15 @@ export const parseIngestedDate = (val: any): { date: Date; ambiguous: boolean; e
     return { date: d, ambiguous: true, error: isNaN(d.getTime()) };
   }
 
-  // 3. Check for word months: e.g. "12 May 2026" or "12-May-2026"
-  const wordMonthMatch = str.match(/^(\d{1,2})[- ]([A-Za-z]{3,9})[- ](\d{4})/);
+  // 3. Check for word months: e.g. "12 May 2026" or "12-May-2026" or 2-digit years
+  const wordMonthMatch = str.match(/^(\d{1,2})[- ]([A-Za-z]{3,9})[- ](\d{2,4})/);
   if (wordMonthMatch) {
     const day = parseInt(wordMonthMatch[1], 10);
     const monthStr = wordMonthMatch[2];
-    const year = parseInt(wordMonthMatch[3], 10);
+    let year = parseInt(wordMonthMatch[3], 10);
+    if (year < 100) {
+      year = year < 50 ? 2000 + year : 1900 + year;
+    }
 
     const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
     const monthIdx = monthNames.findIndex(m => monthStr.toLowerCase().startsWith(m));
@@ -201,6 +221,121 @@ export const normalizeIngestedRows = (
   const transactions: any[] = [];
   let dateAmbiguityCount = 0;
   let prevBalance: number | null = null;
+
+  if (context.provider === 'Expense Ledger') {
+    rows.forEach((row, index) => {
+      let rawDate = null;
+      const paymentDateKey = Object.keys(row).find(k => k.toLowerCase().includes('payment date'));
+      const orderDateKey = Object.keys(row).find(k => k.toLowerCase().includes('order date'));
+
+      if (paymentDateKey && row[paymentDateKey] !== undefined && row[paymentDateKey] !== null && String(row[paymentDateKey]).trim() !== '') {
+        rawDate = row[paymentDateKey];
+      } else if (orderDateKey && row[orderDateKey] !== undefined && row[orderDateKey] !== null && String(row[orderDateKey]).trim() !== '') {
+        rawDate = row[orderDateKey];
+      } else {
+        rawDate = row[mapping['transaction_date']];
+      }
+
+      const { date, ambiguous, error: dateError } = parseIngestedDate(rawDate);
+
+      if (dateError) {
+        warnings.push(`Row ${index + 1}: Skipping due to unparseable transaction date.`);
+        return;
+      }
+
+      if (ambiguous) {
+        dateAmbiguityCount++;
+      }
+
+      const amountCol = mapping['amount'];
+      const rawAmtVal = row[amountCol];
+      const { amount: parsedAmt } = cleanAmount(rawAmtVal);
+      const amount = -Math.abs(parsedAmt); // negative for expense
+
+      if (amount === 0) {
+        warnings.push(`Row ${index + 1}: Skipping due to zero or missing amount.`);
+        return;
+      }
+
+      let itemVal = '';
+      let supplierVal = '';
+      let invoiceVal = '';
+
+      const itemKey = Object.keys(row).find(k => k.toLowerCase().includes('item') || k.toLowerCase().includes('description'));
+      const supplierKey = Object.keys(row).find(k => k.toLowerCase().includes('supplier') || k.toLowerCase().includes('vendor'));
+      const invoiceKey = Object.keys(row).find(k => k.toLowerCase().includes('invoice no') || k.toLowerCase().includes('invoice number'));
+
+      if (itemKey) itemVal = String(row[itemKey] || '').trim();
+      if (supplierKey) supplierVal = String(row[supplierKey] || '').trim();
+      if (invoiceKey) invoiceVal = String(row[invoiceKey] || '').trim();
+
+      const parts = [];
+      if (itemVal) parts.push(itemVal);
+      if (supplierVal) parts.push(supplierVal);
+      if (invoiceVal) parts.push(invoiceVal);
+
+      const formattedDesc = parts.length > 0 ? parts.join(' — ') : (row[mapping['description']] || 'Expense Row');
+      const extractedCounterparty = supplierVal || row[mapping['counterparty_name']] || null;
+      const category = row[mapping['category']] || 'Uncategorized Expense';
+
+      const qtyKey = Object.keys(row).find(k => k.toLowerCase().includes('qty') || k.toLowerCase().includes('quantity'));
+      const quantity = qtyKey ? row[qtyKey] : null;
+
+      let confidenceLevel: 'high' | 'medium' | 'low' = 'high';
+      if (!rawDate || amount === 0) {
+        confidenceLevel = 'low';
+      } else if (!invoiceVal) {
+        confidenceLevel = 'medium';
+      }
+
+      const originalCurrency = detectCurrency(row, mapping, context.currency);
+      const exchangeRate = needsConversion(originalCurrency, context.currency)
+        ? getFallbackRate(originalCurrency, context.currency)
+        : 1;
+      const amountInBaseCurrency = convertToBaseCurrency(amount, originalCurrency, context.currency, exchangeRate);
+
+      const txObj: any = {
+        transaction_date: date.toISOString(),
+        description: formattedDesc,
+        amount: amount,
+        original_amount: amount,
+        original_currency: originalCurrency,
+        currency: originalCurrency,
+        exchange_rate: exchangeRate,
+        amount_in_base_currency: amountInBaseCurrency,
+        fx_date: date.toISOString().split('T')[0],
+        fx_source: needsConversion(originalCurrency, context.currency) ? 'fallback_static' : null,
+        fx_metadata: {},
+        type: 'expense',
+        category: category,
+        counterparty_name: extractedCounterparty,
+        source_provider: context.provider,
+        reference: invoiceVal || null,
+        review_status: 'pending',
+        source_type: 'expense_ledger',
+        raw_row_json: {
+          ...row,
+          invoice_number: invoiceVal || null,
+          quantity: quantity || null,
+          confidence_level: confidenceLevel,
+          direction_derived: 'outflow',
+          raw_debit: Math.abs(amount),
+          raw_credit: 0
+        }
+      };
+
+      transactions.push(txObj);
+    });
+
+    if (dateAmbiguityCount > 0) {
+      warnings.push(`Detected ${dateAmbiguityCount} rows with ambiguous date format (e.g. DD/MM vs MM/DD). Assumed Indian standard (DD/MM/YYYY).`);
+    }
+
+    return {
+      transactions,
+      warnings
+    };
+  }
 
   rows.forEach((row, index) => {
     // 1. Resolve date

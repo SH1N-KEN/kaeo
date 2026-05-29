@@ -12,87 +12,153 @@ export interface HeaderDetectionResult {
   headers: string[];
   skippedRowCount: number;
   warnings: string[];
+  headerRowsCount?: number;
 }
 
 export const detectHeaderRow = (grid: any[][]): HeaderDetectionResult => {
   const warnings: string[] = [];
   
   if (!grid || grid.length === 0) {
-    return { headerRowIndex: 0, headers: [], skippedRowCount: 0, warnings: ['Empty data grid.'] };
+    return { headerRowIndex: 0, headers: [], skippedRowCount: 0, warnings: ['Empty data grid.'], headerRowsCount: 1 };
   }
 
   let bestRowIndex = 0;
   let maxScore = 0;
+  let isBestCombined = false;
+  let bestHeaders: string[] = [];
 
-  // Scan first 30 rows
+  const DATE_KEYWORDS_DETECTOR = [...DATE_KEYWORDS, 'order', 'payment', 'invoice'];
+  const DESC_KEYWORDS_DETECTOR = [...DESC_KEYWORDS, 'supplier', 'item', 'category'];
+  const AMT_KEYWORDS_DETECTOR = [...AMT_KEYWORDS, 'qty', 'quantity', 'rs.'];
+
+  // Helper to combine two header rows
+  const combineHeaders = (row1: any[], row2: any[]): string[] => {
+    const length = Math.max(row1.length, row2.length);
+    const combined: string[] = [];
+    for (let c = 0; c < length; c++) {
+      const val1 = row1[c] !== undefined && row1[c] !== null ? String(row1[c]).trim() : '';
+      const val2 = row2[c] !== undefined && row2[c] !== null ? String(row2[c]).trim() : '';
+
+      if (val1 && val2) {
+        const l1 = val1.toLowerCase();
+        const l2 = val2.toLowerCase();
+        if (l1 === l2) {
+          combined.push(val1);
+        } else if (l1.includes(l2)) {
+          combined.push(val1);
+        } else if (l2.includes(l1)) {
+          combined.push(val2);
+        } else {
+          combined.push(`${val1} ${val2}`);
+        }
+      } else if (val1) {
+        combined.push(val1);
+      } else if (val2) {
+        combined.push(val2);
+      } else {
+        combined.push('');
+      }
+    }
+    return combined;
+  };
+
+  const getScore = (headersList: string[]) => {
+    let hasDate = false;
+    let hasDesc = false;
+    let hasAmt = false;
+    let matchCount = 0;
+
+    headersList.forEach(cell => {
+      if (!cell) return;
+      const strVal = cell.toLowerCase().trim();
+
+      if (!hasDate && DATE_KEYWORDS_DETECTOR.some(k => strVal === k || strVal.includes(k))) {
+        hasDate = true;
+        matchCount++;
+      }
+      if (!hasDesc && DESC_KEYWORDS_DETECTOR.some(k => strVal === k || strVal.includes(k))) {
+        hasDesc = true;
+        matchCount++;
+      }
+      if (!hasAmt && AMT_KEYWORDS_DETECTOR.some(k => strVal === k || strVal.includes(k))) {
+        hasAmt = true;
+        matchCount++;
+      }
+    });
+
+    let score = 0;
+    if (hasDate) score += 2;
+    if (hasDesc) score += 2;
+    if (hasAmt) score += 2;
+    if (matchCount >= 3) score += 1;
+    return { score, matchCount };
+  };
+
   const rowsToScan = Math.min(30, grid.length);
 
   for (let i = 0; i < rowsToScan; i++) {
     const row = grid[i];
     if (!row || !Array.isArray(row) || row.length === 0) continue;
 
-    let hasDate = false;
-    let hasDesc = false;
-    let hasAmt = false;
-    let matchCount = 0;
+    // Evaluate single row
+    const singleHeaders = row.map(c => c !== null && c !== undefined ? String(c).trim() : '');
+    const { score: singleScore } = getScore(singleHeaders);
 
-    row.forEach(cell => {
-      if (cell === null || cell === undefined) return;
-      const strVal = cell.toString().toLowerCase().trim();
-
-      if (!hasDate && DATE_KEYWORDS.some(k => strVal === k || strVal.includes(k))) {
-        hasDate = true;
-        matchCount++;
-      }
-      if (!hasDesc && DESC_KEYWORDS.some(k => strVal === k || strVal.includes(k))) {
-        hasDesc = true;
-        matchCount++;
-      }
-      if (!hasAmt && AMT_KEYWORDS.some(k => strVal === k || strVal.includes(k))) {
-        hasAmt = true;
-        matchCount++;
-      }
-    });
-
-    // Score is number of unique standard finance components discovered in this single row
-    let score = 0;
-    if (hasDate) score += 2; // Date is highly significant
-    if (hasDesc) score += 2; // Description is highly significant
-    if (hasAmt) score += 2;  // Amount is highly significant
-
-    // Bonus for high match density
-    if (matchCount >= 3) score += 1;
-
-    if (score > maxScore) {
-      maxScore = score;
+    if (singleScore > maxScore) {
+      maxScore = singleScore;
       bestRowIndex = i;
+      isBestCombined = false;
+      bestHeaders = singleHeaders;
+    }
+
+    // Evaluate combined row (i and i+1)
+    if (i + 1 < grid.length) {
+      const nextRow = grid[i + 1];
+      if (nextRow && Array.isArray(nextRow) && nextRow.length > 0) {
+        const combined = combineHeaders(row, nextRow);
+        const { score: combinedScore } = getScore(combined);
+
+        if (combinedScore > maxScore) {
+          maxScore = combinedScore;
+          bestRowIndex = i;
+          isBestCombined = true;
+          bestHeaders = combined;
+        }
+      }
     }
   }
 
-  // If maxScore is very low (less than 4, i.e., we didn't match at least 2 major headers), fallback to row 0
   if (maxScore < 4) {
     bestRowIndex = 0;
+    isBestCombined = false;
+    bestHeaders = (grid[0] || []).map(c => c !== null && c !== undefined ? String(c).trim() : '');
     warnings.push('No obvious header row discovered. Assuming row 1 contains column titles.');
   }
 
-  // Extract and clean headers
-  const rawHeaderRow = grid[bestRowIndex] || [];
-  const headers: string[] = rawHeaderRow.map((cell, idx) => {
-    if (cell === null || cell === undefined || cell.toString().trim() === '') {
+  // Clean empty headers
+  const headers = bestHeaders.map((h, idx) => {
+    if (!h) {
       return `Column_${String.fromCharCode(65 + (idx % 26))}${idx >= 26 ? Math.floor(idx / 26) : ''}`;
     }
-    return cell.toString().trim();
+    return h;
   });
+
+  const headerRowsCount = isBestCombined ? 2 : 1;
 
   if (bestRowIndex > 0) {
     warnings.push(`Skipped ${bestRowIndex} title/meta rows at the top of the file.`);
   }
 
+  if (isBestCombined) {
+    warnings.push('Detected and merged a two-row header block.');
+  }
+
   return {
     headerRowIndex: bestRowIndex,
     headers,
-    skippedRowCount: bestRowIndex,
-    warnings
+    skippedRowCount: bestRowIndex + (isBestCombined ? 1 : 0),
+    warnings,
+    headerRowsCount
   };
 };
 
