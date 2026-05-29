@@ -47,7 +47,7 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
 
   const summaryText = useMemo(() => {
     if (!fromDate && !toDate) {
-      return variant === 'transactions' ? 'Showing all imported data' : 'All imported data';
+      return 'Showing all imported data';
     }
     const friendlyFrom = fromDate ? formatDateFriendly(fromDate) : '...';
     const friendlyTo = toDate ? formatDateFriendly(toDate) : '...';
@@ -55,53 +55,58 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
     if (variant === 'transactions') {
       return `Showing transactions from ${friendlyFrom} to ${friendlyTo}`;
     } else {
-      return `Report period: ${friendlyFrom} to ${friendlyTo}`;
+      return `Report period: ${friendlyFrom} – ${friendlyTo}`;
     }
   }, [fromDate, toDate, variant]);
 
-  const containerClasses = variant === 'reports'
-    ? 'bg-card border border-border/40 rounded-2xl p-5 shadow-sm backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-4'
-    : 'flex flex-col lg:flex-row lg:items-center justify-between gap-4';
-
   return (
-    <div className="space-y-2 w-full">
-      <div className={containerClasses}>
+    <div className="w-full space-y-4">
+      {/* Controls Container */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
         
-        {/* Left side / Date controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3.5 flex-1 min-w-0">
-          {/* Label */}
-          <div className="flex items-center gap-2 shrink-0">
-            <Calendar className="w-4 h-4 text-primary shrink-0" />
-            <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Period</span>
+        {/* Group A: Period Controls */}
+        <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1 min-w-0">
+          
+          {/* Label + Inputs */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3.5 w-full md:w-auto">
+            {/* Label */}
+            <div className="flex items-center gap-2 shrink-0 select-none">
+              <Calendar className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Period</span>
+            </div>
+
+            {/* Date Inputs */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex items-center bg-muted/40 hover:bg-muted/70 border border-border/30 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 rounded-xl px-3 py-1.5 transition-all w-full sm:w-[140px]">
+                <span className="text-[10px] text-muted-foreground mr-2 sm:hidden uppercase font-bold shrink-0">From</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => onFromDateChange(e.target.value)}
+                  className="bg-transparent border-none text-[12px] font-bold text-foreground focus:outline-none focus:ring-0 p-0 cursor-pointer w-full"
+                />
+              </div>
+              
+              <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 self-center hidden sm:block" />
+              
+              <div className="relative flex items-center bg-muted/40 hover:bg-muted/70 border border-border/30 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 rounded-xl px-3 py-1.5 transition-all w-full sm:w-[140px]">
+                <span className="text-[10px] text-muted-foreground mr-2 sm:hidden uppercase font-bold shrink-0">To</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => onToDateChange(e.target.value)}
+                  className="bg-transparent border-none text-[12px] font-bold text-foreground focus:outline-none focus:ring-0 p-0 cursor-pointer w-full"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Inputs */}
-          <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-            <div className="relative flex items-center bg-muted/40 hover:bg-muted/70 border border-border/30 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 rounded-xl px-3 py-1.5 transition-all">
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => onFromDateChange(e.target.value)}
-                className="bg-transparent border-none text-[12px] font-bold text-foreground focus:outline-none focus:ring-0 p-0 cursor-pointer w-[120px]"
-              />
-            </div>
-            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
-            <div className="relative flex items-center bg-muted/40 hover:bg-muted/70 border border-border/30 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 rounded-xl px-3 py-1.5 transition-all">
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => onToDateChange(e.target.value)}
-                className="bg-transparent border-none text-[12px] font-bold text-foreground focus:outline-none focus:ring-0 p-0 cursor-pointer w-[120px]"
-              />
-            </div>
-          </div>
-
-          {/* Segmented pills */}
-          <div className="flex items-center gap-1 flex-wrap bg-muted/50 border border-border/20 rounded-xl p-1 shrink-0">
+          {/* Quick Range Chips */}
+          <div className="flex flex-wrap items-center gap-1.5 bg-muted/50 border border-border/20 rounded-xl p-1 shrink-0 w-fit">
             <button
               type="button"
               onClick={() => onQuickRangeSelect('this_month')}
-              className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer select-none ${
+              className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer select-none whitespace-nowrap ${
                 isThisMonthActive 
                   ? 'bg-primary text-primary-foreground shadow-sm' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
@@ -112,7 +117,7 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
             <button
               type="button"
               onClick={() => onQuickRangeSelect('last_month')}
-              className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer select-none ${
+              className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer select-none whitespace-nowrap ${
                 isLastMonthActive 
                   ? 'bg-primary text-primary-foreground shadow-sm' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
@@ -123,19 +128,19 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
             <button
               type="button"
               onClick={() => onQuickRangeSelect('last_30')}
-              className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer select-none ${
+              className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer select-none whitespace-nowrap ${
                 isLast30Active 
                   ? 'bg-primary text-primary-foreground shadow-sm' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
               }`}
             >
-              Last 30d
+              Last 30 Days
             </button>
             {showFinancialYear && (
               <button
                 type="button"
                 onClick={() => onQuickRangeSelect('fy')}
-                className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer select-none ${
+                className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer select-none whitespace-nowrap ${
                   isFyActive 
                     ? 'bg-primary text-primary-foreground shadow-sm' 
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
@@ -157,15 +162,15 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
           </div>
         </div>
 
-        {/* Actions section */}
+        {/* Group B: Action buttons */}
         {actions && (
-          <div className="flex items-center gap-2 self-start lg:self-auto shrink-0">
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full lg:w-auto shrink-0 justify-start lg:justify-end">
             {actions}
           </div>
         )}
       </div>
 
-      {/* Info / Warnings */}
+      {/* Info / Warnings / Summary Text */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 text-[11px]">
         {isInvalidRange ? (
           <span className="text-danger font-semibold animate-kaeo-fade">

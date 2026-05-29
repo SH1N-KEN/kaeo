@@ -534,29 +534,29 @@ export default function Reports() {
           onToDateChange={setReportToDate}
           onQuickRangeSelect={handleQuickRangeSelect}
           onClear={handleClearDates}
-          variant="transactions"
+          variant="reports"
           showFinancialYear={true}
           actions={
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <button
                 onClick={handleDownloadCSV}
                 disabled={transactionCount === 0 || periodTxCount === 0 || (!!reportFromDate && !!reportToDate && reportFromDate > reportToDate)}
-                className="bg-muted text-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-border cursor-pointer h-[34px]"
+                className="bg-muted text-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-border cursor-pointer h-[38px] w-full sm:w-auto shrink-0"
               >
-                <DownloadCloud className="h-4 w-4 mr-2" />
-                Accountant Pack (CSV)
+                <DownloadCloud className="h-4 w-4 mr-2 shrink-0" />
+                <span className="whitespace-nowrap">Accountant Pack (CSV)</span>
               </button>
               <button
                 onClick={handleGenerateReport}
                 disabled={generating || transactionCount === 0 || periodTxCount === 0 || (!!reportFromDate && !!reportToDate && reportFromDate > reportToDate)}
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer h-[34px]"
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer h-[38px] w-full sm:w-auto shrink-0"
               >
                 {generating ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin shrink-0" />
                 ) : (
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2 shrink-0" />
                 )}
-                {generating ? 'Generating...' : 'Generate Accountant Pack'}
+                <span className="whitespace-nowrap">{generating ? 'Generating...' : 'Generate Accountant Pack'}</span>
               </button>
             </div>
           }
