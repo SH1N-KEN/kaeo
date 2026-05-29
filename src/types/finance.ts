@@ -79,6 +79,7 @@ export interface RiskEvent {
   follow_up_at: string | null;
   created_at: string;
   updated_at: string;
+  related_transaction_ids?: string[] | null;
   // Computed fields for UI
   notes_count?: number;
 }
