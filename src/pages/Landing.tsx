@@ -3,6 +3,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../components/auth/AuthProvider';
 import { KaeoLandingHeader } from '../components/landing/KaeoLandingHeader';
 import { KaeoHero } from '../components/landing/KaeoHero';
+import { SlidingSegmentControl } from '../components/landing/SlidingSegmentControl';
 import aeLogo from '../assets/kaeo-ae-logo.png';
 
 /* ═══════════════════════════════════════════════
@@ -553,33 +554,16 @@ const BeforeAfterComparison: React.FC = () => {
             </p>
 
             {/* Sliding Toggle Control */}
-            <div className="relative inline-flex bg-[#0D1714] border border-[#138C7E]/15 p-1 rounded-full select-none w-[280px]">
-              {/* Sliding background pill */}
-              <div
-                className="absolute top-1 bottom-1 left-1 rounded-full transition-all duration-300 ease-out"
-                style={{
-                  width: 'calc(50% - 4px)',
-                  transform: mode === 'after' ? 'translateX(100%)' : 'translateX(0%)',
-                  background: mode === 'before' ? '#E05450' : '#138C7E',
-                }}
-              />
-              <button
-                onClick={() => toggleMode('before')}
-                className={`relative z-10 flex-1 py-2 text-center rounded-full text-xs font-bold transition-colors duration-200 cursor-pointer ${
-                  mode === 'before' ? 'text-[#050F0D] font-extrabold' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Before Kaeo
-              </button>
-              <button
-                onClick={() => toggleMode('after')}
-                className={`relative z-10 flex-1 py-2 text-center rounded-full text-xs font-bold transition-colors duration-200 cursor-pointer ${
-                  mode === 'after' ? 'text-[#050F0D] font-extrabold' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Review-ready
-              </button>
-            </div>
+            <SlidingSegmentControl
+              options={[
+                { value: 'before', label: 'Before Kaeo' },
+                { value: 'after', label: 'Review-ready' },
+              ]}
+              activeValue={mode}
+              onChange={toggleMode}
+              activeColor={mode === 'before' ? '#E05450' : '#138C7E'}
+              className="w-[280px]"
+            />
           </div>
 
           {/* Right Column: Morphing Cards Container */}
@@ -836,28 +820,16 @@ const InteractiveReportMock: React.FC = () => {
         </div>
         
         {/* Toggle switch between report subsections */}
-        <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(19,140,126,0.15)', padding: '3px', borderRadius: '8px', gap: '3px' }}>
-          {(['summary', 'risks', 'vendors'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setReportTab(tab)}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '6px',
-                border: 'none',
-                background: reportTab === tab ? '#138C7E' : 'transparent',
-                color: reportTab === tab ? '#050F0D' : 'rgba(232,240,238,0.5)',
-                fontWeight: 700,
-                fontSize: '11px',
-                cursor: 'pointer',
-                textTransform: 'uppercase',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+        <SlidingSegmentControl
+          options={[
+            { value: 'summary', label: 'Summary' },
+            { value: 'risks', label: 'Risks' },
+            { value: 'vendors', label: 'Vendors' },
+          ]}
+          activeValue={reportTab}
+          onChange={(val) => setReportTab(val as 'summary' | 'risks' | 'vendors')}
+          className="w-full sm:w-[320px]"
+        />
       </div>
 
       {/* Dynamic Content based on tab */}
