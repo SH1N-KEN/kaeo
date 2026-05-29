@@ -602,6 +602,8 @@
  ───────────────────────────────────────────────────────────── */
 
 .sidebar-base {
+  background: var(--sidebar);
+  border-right: 1px solid var(--sidebar-border);
   height: 100vh;
   position: sticky;
   top: 0;
@@ -610,6 +612,8 @@
   flex-shrink: 0;
   z-index: 50;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .sidebar-toggle-btn {
@@ -979,6 +983,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   backdrop-filter: blur(18px) saturate(135%);
   -webkit-backdrop-filter: blur(18px) saturate(135%);
+  border-radius: 1.25rem;
 }
 
 .frosted-card {
@@ -1030,11 +1035,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .dark .frosted-sidebar {
-  background: rgba(7, 14, 12, 0.78);
-  backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 14px 0 40px rgba(0, 0, 0, 0.18);
+  background: rgba(6, 8, 7, 0.75);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 14px 0 40px rgba(0, 0, 0, 0.22);
 }
 
 .frosted-topbar {
