@@ -1027,10 +1027,18 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .frosted-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  min-height: 64px;
+  padding: 0 1.75rem;
   background: rgba(246, 248, 245, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .dark .frosted-topbar {
