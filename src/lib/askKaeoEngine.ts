@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { formatINR } from './formatters';
+import { formatINR, formatCurrency, formatSignedCurrency } from './formatters';
 import { summarizeVendors } from './reportEngine';
 import { askKaeoAi } from './ai/aiClient';
 import type { AIStructuredContext } from './ai/aiClient';
@@ -193,6 +193,204 @@ export async function categorizeQuestion(query: string): Promise<AskKaeoCategory
 
 const isDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
 
+export const findMatchingVendor = (q: string, vendorList: any[]) => {
+  const queryLower = q.toLowerCase();
+  
+  // Ignore matching generic words as vendors unless query is exactly that vendor
+  const genericWords = ['plan', 'report', 'dashboard', 'vendor', 'billing', 'cfo', 'summary'];
+  
+  return vendorList.find(v => {
+    const vName = v.normalized_name.toLowerCase();
+    
+    // If the vendor name itself is a generic word, only match if it is an exact word match or specific query context
+    if (genericWords.includes(vName)) {
+      // Look for exact word boundary match
+      const regex = new RegExp(`\\b${vName}\\b`, 'i');
+      // And make sure the query isn't just one of the general phrases like "my plan" or "the report"
+      if (vName === 'plan' && (queryLower.includes('my plan') || queryLower.includes('billing plan'))) {
+        return false;
+      }
+      return regex.test(queryLower);
+    }
+    
+    // For non-generic names, check word boundary to prevent partial matches like "plan" in "planet"
+    const regex = new RegExp(`\\b${vName}\\b`, 'i');
+    return regex.test(queryLower);
+  });
+};
+
+export function getCoreFinancialAnswer(query: string, context: any): { intent: AskKaeoCategory; text: string; sourceJson: any } | null {
+  const q = query.toLowerCase().trim().replace(/[?.]/g, '');
+
+  // 1. Net Cash
+  if (q === 'what is my net cash' || q === 'net cash' || q === 'my net cash' || q.includes('net cash movement')) {
+    const text = `Your net cash movement is ${formatSignedCurrency(context.netCash)}. This is calculated as ${formatCurrency(context.income)} in revenue/inflows${context.refunds > 0 ? ` and ${formatCurrency(context.refunds)} in refunds` : ''}, minus ${formatCurrency(context.expenses)} in outflows and vendor expenses.`;
+    return {
+      intent: 'finance_summary',
+      text,
+      sourceJson: { income: context.income, expenses: context.expenses, refunds: context.refunds, netCash: context.netCash }
+    };
+  }
+
+  // 2. Money Came In (Inflow)
+  if (q === 'how much money came in' || q === 'money came in' || q === 'revenue' || q === 'income' || q.includes('how much money came in')) {
+    const text = `Your imported statements show a total of ${formatCurrency(context.income)} came in${context.refunds > 0 ? ` (plus ${formatCurrency(context.refunds)} in refunds and recoveries)` : ''} during this period.`;
+    return {
+      intent: 'finance_summary',
+      text,
+      sourceJson: { income: context.income, refunds: context.refunds }
+    };
+  }
+
+  // 3. Money Went Out (Outflow)
+  if (q === 'how much money went out' || q === 'money went out' || q === 'expenses' || q.includes('how much money went out')) {
+    const text = `Your imported statements show a total of ${formatCurrency(context.expenses)} went out in expenses, subscription fees, and vendor payments during this period.`;
+    return {
+      intent: 'finance_summary',
+      text,
+      sourceJson: { expenses: context.expenses }
+    };
+  }
+
+  // 4. Top Expenses / Vendors spent most on
+  if (
+    q === 'what are my top expenses' || 
+    q === 'what vendors did i spend most on' || 
+    q.includes('top expenses') || 
+    q.includes('vendors did i spend most on') ||
+    q.includes('spend most on')
+  ) {
+    const topVendorsList = context.vendorSummary.topVendors.slice(0, 5);
+    let text = '';
+    if (topVendorsList.length > 0) {
+      text = `Your top expenses by vendor are:\n` +
+        topVendorsList.map((v: any, index: number) => `${index + 1}. ${v.normalized_name}: ${formatCurrency(v.totalSpend)} (${v.category || 'Vendor'})`).join('\n');
+      
+      // Also add category breakdown if available
+      const categorySpends: Record<string, number> = {};
+      context.transactions.forEach((t: any) => {
+        if (['expense', 'vendor_payment', 'subscription'].includes(t.type)) {
+          const cat = t.category || 'Uncategorized';
+          const getTxAmount = (tx: any) => tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined ? Number(tx.amount_in_base_currency) : Number(tx.amount);
+          categorySpends[cat] = (categorySpends[cat] || 0) + Math.abs(getTxAmount(t));
+        }
+      });
+      const topCategories = Object.entries(categorySpends)
+        .map(([name, spend]) => ({ name, spend }))
+        .sort((a, b) => b.spend - a.spend)
+        .slice(0, 3);
+      
+      if (topCategories.length > 0) {
+        text += `\n\nTop categories by spend:\n` +
+          topCategories.map((c: any, index: number) => `${index + 1}. ${c.name}: ${formatCurrency(c.spend)}`).join('\n');
+      }
+    } else {
+      text = `No vendor spend has been recorded in the current data period.`;
+    }
+    return {
+      intent: 'vendor_analysis',
+      text,
+      sourceJson: { topVendors: topVendorsList }
+    };
+  }
+
+  // 5. Risks / Needs review before exporting
+  if (
+    q === 'what risks need review' || 
+    q === 'what needs review before exporting' || 
+    q.includes('risks need review') || 
+    q.includes('needs review before exporting') ||
+    q.includes('what risks should i review')
+  ) {
+    const openRisks = context.risks;
+    let text = '';
+    if (openRisks.length > 0) {
+      text = `You have ${openRisks.length} open risk${openRisks.length === 1 ? '' : 's'} that need review before exporting:\n\n` +
+        openRisks.map((r: any) => {
+          const amtStr = r.amount_at_risk ? ` (${formatCurrency(r.amount_at_risk)} at risk)` : '';
+          return `• [${r.severity.toUpperCase()}] ${r.title}${amtStr}`;
+        }).join('\n') + `\n\nI recommend resolving these in the Risk Inbox before exporting.`;
+    } else {
+      text = `No open risks were found. Your books are ready for export.`;
+    }
+    return {
+      intent: 'risk_review',
+      text,
+      sourceJson: { risks: openRisks.length }
+    };
+  }
+
+  // 6. Staff proof / missing proof
+  if (
+    q === 'which staff/petty expenses need proof' || 
+    q === 'which transactions are missing proof' || 
+    q.includes('staff/petty expenses need proof') ||
+    q.includes('transactions are missing proof') ||
+    q.includes('missing proof')
+  ) {
+    let text = '';
+    if (context.staff_spend_summary.has_staff_expenses) {
+      const missingCount = context.staffMissingProof.length;
+      text = `There are ${missingCount} staff/petty expenses missing proof (receipts or invoices) out of ${context.staff_spend_summary.count} total staff transactions.\n\n` +
+        (missingCount > 0 
+          ? `Summary of missing proof items:\n` + context.staffMissingProof.slice(0, 5).map((tx: any) => {
+              const getTxAmount = (t: any) => t.amount_in_base_currency !== null && t.amount_in_base_currency !== undefined ? Number(t.amount_in_base_currency) : Number(t.amount);
+              return `• ${tx.description || 'Staff Spend'}: ${formatCurrency(Math.abs(getTxAmount(tx)))} on ${tx.transaction_date || 'unknown date'}`;
+            }).join('\n')
+          : `All staff expenses have supporting proof.`);
+    } else {
+      text = `No staff or petty expense transactions with missing proof were found in the current workspace.`;
+    }
+    return {
+      intent: 'risk_review',
+      text,
+      sourceJson: { staffMissingProof: context.staffMissingProof.length }
+    };
+  }
+
+  // 7. Unknown payment method
+  if (
+    q === 'which transactions have unknown payment method' || 
+    q.includes('unknown payment method')
+  ) {
+    let text = '';
+    if (context.staff_spend_summary.has_staff_expenses) {
+      const unknownCount = context.staffUnknownMethod.length;
+      text = `There are ${unknownCount} transactions with an unknown payment method.\n\n` +
+        (unknownCount > 0 
+          ? `Summary of unknown payment method items:\n` + context.staffUnknownMethod.slice(0, 5).map((tx: any) => {
+              const getTxAmount = (t: any) => t.amount_in_base_currency !== null && t.amount_in_base_currency !== undefined ? Number(t.amount_in_base_currency) : Number(t.amount);
+              return `• ${tx.description || 'Transaction'}: ${formatCurrency(Math.abs(getTxAmount(tx)))}`;
+            }).join('\n')
+          : `All transactions have a known payment method.`);
+    } else {
+      text = `No transactions with unknown payment methods were found in the current workspace.`;
+    }
+    return {
+      intent: 'risk_review',
+      text,
+      sourceJson: { unknownPaymentMethods: context.staffUnknownMethod.length }
+    };
+  }
+
+  // 8. Plan / Billing queries
+  if (q === 'tell me about my plan' || q === 'what is my plan' || q.includes('about my plan') || q.includes('what is my plan')) {
+    let text = '';
+    if (context.billingDataExists) {
+      text = `You are currently on the ${context.currentPlanName} plan (${context.billingCycle} billing, status: ${context.subscriptionStatus}). You can manage your plans and limits in the Billing settings.`;
+    } else {
+      text = `I couldn't find details about your product plan. Could you clarify if you mean your active billing plan or something else?`;
+    }
+    return {
+      intent: 'unknown_general',
+      text,
+      sourceJson: { planName: context.currentPlanName, billingCycle: context.billingCycle }
+    };
+  }
+
+  return null;
+}
+
 function sanitizeTextNumbers(text: string, context: {
   income: number;
   expenses: number;
@@ -213,8 +411,8 @@ function sanitizeTextNumbers(text: string, context: {
 }): { sanitizedText: string; repairedCount: number; hasUnrepairable: boolean } {
   let repairedCount = 0;
 
-  // Pattern captures optional negative sign before/after optional currency symbols
-  const numRegex = /(-)?\s*([₹$]|Rs\.?|INR)?\s*(-)?\s*(\d[\d,.]*)\b/gi;
+  // Pattern captures optional negative sign before/after optional currency symbols, supporting unicode minus −
+  const numRegex = /([-−])?\s*([₹$]|Rs\.?|INR)?\s*([-−])?\s*(\d[\d,.]*)\b/gi;
 
   let lastIndex = 0;
   let resultText = "";
@@ -276,17 +474,11 @@ function sanitizeTextNumbers(text: string, context: {
       replacementStr = formatINR(context.income);
     } else if (contextSnippet.includes("expense") || contextSnippet.includes("spend") || contextSnippet.includes("outflow")) {
       keywordMatched = true;
-      let foundVendorSpend = null;
-      for (const vendor of context.vendorsList) {
-        if (contextSnippet.includes(vendor.normalized_name.toLowerCase())) {
-          const spend = context.vendorSummary.topVendors.find((tv: any) => tv.normalized_name === vendor.normalized_name)?.totalSpend || vendor.total_spend || vendor.spend || 0;
-          foundVendorSpend = spend;
-          break;
-        }
-      }
-      if (foundVendorSpend !== null) {
-        expectedVal = foundVendorSpend;
-        replacementStr = formatINR(foundVendorSpend);
+      const matchedV = findMatchingVendor(contextSnippet, context.vendorsList);
+      if (matchedV) {
+        const spend = context.vendorSummary.topVendors.find((tv: any) => tv.normalized_name === matchedV.normalized_name)?.totalSpend || matchedV.total_spend || matchedV.spend || 0;
+        expectedVal = spend;
+        replacementStr = formatINR(spend);
       } else {
         expectedVal = context.expenses;
         replacementStr = formatINR(context.expenses);
@@ -551,7 +743,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
   });
 
   // Extract matching vendor details
-  const matchingVendor = vendors.find(v => query.toLowerCase().includes(v.normalized_name.toLowerCase()));
+  const matchingVendor = findMatchingVendor(query, vendors);
   const matching_vendor = matchingVendor ? {
     name: matchingVendor.normalized_name,
     display_name: matchingVendor.display_name || matchingVendor.name,
@@ -624,6 +816,76 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
       return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name, spend]) => ({ name, spend: formatReportCurrency(spend) }));
     })()
   };
+
+  // 1. Check for empty data
+  if (transactions.length === 0 && invoices.length === 0) {
+    return {
+      intent: 'unknown_general',
+      text: "Upload a statement first so I can answer from your Kaeo data.",
+      source_json: {
+        mode: 'deterministic',
+        intent: 'unknown_general',
+        grounding_status: 'general'
+      }
+    };
+  }
+
+  // 2. Fetch subscription billing details
+  let billingDataExists = false;
+  let currentPlanName = '';
+  let billingCycle = '';
+  let subscriptionStatus = '';
+  if (_orgId) {
+    try {
+      const { data: sub } = await supabase
+        .from('subscriptions')
+        .select('*, billing_plans(*)')
+        .eq('organization_id', _orgId)
+        .maybeSingle();
+      if (sub) {
+        billingDataExists = true;
+        currentPlanName = sub.billing_plans?.name || sub.plan_id;
+        billingCycle = sub.billing_cycle || 'monthly';
+        subscriptionStatus = sub.status || 'active';
+      }
+    } catch (err) {
+      console.warn('Error fetching subscription details for Libby:', err);
+    }
+  }
+
+  // 3. Check for core financial query intercept
+  const coreAnswer = getCoreFinancialAnswer(query, {
+    income,
+    refunds,
+    expenses,
+    netCash,
+    transactions,
+    vendors,
+    risks,
+    invoices,
+    vendorSummary,
+    staff_spend_summary,
+    staffMissingProof,
+    staffUnknownMethod,
+    billingDataExists,
+    currentPlanName,
+    billingCycle,
+    subscriptionStatus,
+    baseCurrency
+  });
+
+  if (coreAnswer) {
+    return {
+      intent: coreAnswer.intent,
+      text: coreAnswer.text,
+      source_json: {
+        mode: 'deterministic',
+        intent: coreAnswer.intent,
+        grounding_status: 'based_on_data',
+        ...coreAnswer.sourceJson
+      }
+    };
+  }
 
   // BUILD STRUCTURED CONTEXT FOR AI
   const structuredContext: AIStructuredContext = {
@@ -766,7 +1028,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
         const ansRep = sanitizeTextNumbers(aiResult.answer, sanitizeContext);
         const reasonRep = sanitizeTextNumbers(aiResult.reasoning_summary, sanitizeContext);
 
-        if (ansRep.repairedCount > 0 || reasonRep.repairedCount > 0) {
+        if (ansRep.sanitizedText !== aiResult.answer || reasonRep.sanitizedText !== aiResult.reasoning_summary) {
           isSanitized = true;
           sanitizedAnswer = ansRep.sanitizedText;
           sanitizedReasoning = reasonRep.sanitizedText;
@@ -775,7 +1037,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
         if (aiResult.recommended_actions) {
           aiResult.recommended_actions = aiResult.recommended_actions.map(act => {
             const rep = sanitizeTextNumbers(act, sanitizeContext);
-            if (rep.repairedCount > 0) {
+            if (rep.sanitizedText !== act) {
               isSanitized = true;
             }
             return rep.sanitizedText;
@@ -784,7 +1046,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
         if (aiResult.caveats) {
           aiResult.caveats = aiResult.caveats.map(cav => {
             const rep = sanitizeTextNumbers(cav, sanitizeContext);
-            if (rep.repairedCount > 0) {
+            if (rep.sanitizedText !== cav) {
               isSanitized = true;
             }
             return rep.sanitizedText;
@@ -995,7 +1257,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     }
 
     case 'service_alternatives': {
-      const mentionedVendor = vendors.find(v => query.toLowerCase().includes(v.normalized_name.toLowerCase()));
+      const mentionedVendor = findMatchingVendor(query, vendors);
       if (mentionedVendor) {
         const spend = mentionedVendor.monthly_average || vendorSummary.topVendors.find(tv => tv.normalized_name === mentionedVendor.normalized_name)?.totalSpend || 0;
         responseText = `You are currently spending ${formatReportCurrency(spend, baseCurrency)} on ${mentionedVendor.display_name || mentionedVendor.name}.\n\n` +
@@ -1015,7 +1277,7 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     }
     
     case 'vendor_analysis': {
-      const mentionedVendor = vendors.find(v => query.toLowerCase().includes(v.normalized_name.toLowerCase()));
+      const mentionedVendor = findMatchingVendor(query, vendors);
       if (mentionedVendor) {
         const spend = vendorSummary.topVendors.find(tv => tv.normalized_name === mentionedVendor.normalized_name)?.totalSpend || 0;
         responseText = `Your recorded spend with ${mentionedVendor.display_name || mentionedVendor.name} is ${formatReportCurrency(spend, baseCurrency)}.\n\n` +
@@ -1082,7 +1344,11 @@ export async function askKaeo(query: string, clientId: string, _orgId: string): 
     }
   }
 
-  let grounding_status: 'verified' | 'based_on_data' | 'general' = 'verified';
+  if (!aiResult && intent !== 'ai_review') {
+    responseText = `I can still summarize your imported Kaeo data, but the AI model is unavailable right now.\n\n${responseText}`;
+  }
+
+  let grounding_status: 'verified' | 'based_on_data' | 'general' = 'based_on_data';
   const isGeneralIntent = ['unknown_general', 'tax_or_legal_sensitive', 'unsupported_needs_ai_or_web', 'casual_check_in'].includes(intent);
   if (isGeneralIntent) {
     grounding_status = 'general';

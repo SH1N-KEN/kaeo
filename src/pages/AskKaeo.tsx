@@ -412,9 +412,11 @@ const AskKaeo = () => {
                         <div className="mt-2.5 pt-2.5 border-t border-border/10 text-[9px] text-muted-foreground/85 flex items-center gap-1.5 font-medium animate-in fade-in">
                           <Sparkles className="w-2.5 h-2.5" style={{ color: 'var(--primary)' }} />
                           {(() => {
+                            const mode = msg.source_json?.mode;
                             const status = msg.source_json?.grounding_status;
-                            if (status === 'verified') return 'Verified from Kaeo data';
                             if (status === 'general') return 'General recommendation';
+                            if (mode === 'deterministic') return 'Based on Kaeo data';
+                            if (mode && mode.startsWith('ai_')) return 'AI-assisted · Grounded in Kaeo data';
                             return 'Based on Kaeo data';
                           })()}
                         </div>
