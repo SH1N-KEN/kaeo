@@ -252,7 +252,8 @@ const Topbar: React.FC = () => {
           {/* Search trigger */}
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] text-[var(--muted-foreground)] w-48 md:w-56 cursor-pointer transition-all frosted-input border-border/30"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] text-[var(--muted-foreground)] cursor-pointer transition-all frosted-input border-border/30"
+            style={{ width: '320px', maxWidth: '36vw' }}
           >
             <Search className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="flex-1 text-left truncate">Search…</span>
