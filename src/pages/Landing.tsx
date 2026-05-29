@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../components/auth/AuthProvider';
 import { KaeoLandingHeader } from '../components/landing/KaeoLandingHeader';
@@ -478,69 +478,132 @@ const InteractiveWorkflowSection: React.FC = () => {
 ═══════════════════════════════════════════════ */
 const BeforeAfterComparison: React.FC = () => {
   const [mode, setMode] = useState<'before' | 'after'>('after');
+  const lastManualChange = useRef<number>(0);
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReducedMotion(mediaQuery.matches);
+    const listener = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mediaQuery.addEventListener('change', listener);
+    return () => mediaQuery.removeEventListener('change', listener);
+  }, []);
+
+  const toggleMode = (newMode: 'before' | 'after') => {
+    setMode(newMode);
+    lastManualChange.current = Date.now();
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || reducedMotion) return;
+
+    const handleScroll = () => {
+      // Ignore scroll-driven changes for 1.5s after a manual click
+      if (Date.now() - lastManualChange.current < 1500) {
+        return;
+      }
+
+      if (!sectionRef.current) return;
+      const rect = sectionRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      
+      // Trigger transition when the center of the section crosses the viewport center
+      const sectionCenter = rect.top + rect.height / 2;
+      const viewportCenter = viewportHeight / 2;
+      
+      if (sectionCenter < viewportCenter) {
+        setMode('after');
+      } else {
+        setMode('before');
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [reducedMotion]);
 
   return (
-    <section style={{ padding: '80px 48px', background: '#070F0D', borderTop: '1px solid rgba(19,140,126,0.08)' }}>
-      <div style={{ maxWidth: '1280px', margin: '0 auto', width: '100%' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{ color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '16px', textTransform: 'uppercase', fontWeight: 500 }}>
-            002B — THE DIFFERENCE
-          </div>
-          <h2 style={{ fontWeight: 700, fontSize: 'clamp(28px, 3.5vw, 48px)', letterSpacing: '-0.03em', lineHeight: 1.1, margin: '0 0 16px', color: '#E8F0EE' }}>
-            Before Kaeo vs. <span style={{ fontFamily: '"Instrument Serif", serif', fontStyle: 'italic', fontWeight: 400, color: '#138C7E', textTransform: 'none' }}>Review-ready.</span>
-          </h2>
-          <p style={{ fontSize: '16px', color: 'rgba(232,240,238,0.45)', maxWidth: '520px', lineHeight: 1.6, margin: '0 0 24px' }}>
-            Stop wasting hours untangling narrations and searching for invoices. Toggle below to see how Kaeo transforms raw data.
-          </p>
+    <section 
+      ref={sectionRef}
+      style={{ 
+        padding: '100px 24px', 
+        background: '#070F0D', 
+        borderTop: '1px solid rgba(19,140,126,0.08)',
+        overflow: 'hidden'
+      }}
+    >
+      <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+        {/* Two-column container */}
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+          
+          {/* Left Column: Copy + Toggle */}
+          <div className="w-full lg:w-[45%] flex flex-col items-center lg:items-start text-center lg:text-left shrink-0">
+            <div style={{ color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '16px', textTransform: 'uppercase', fontWeight: 500 }}>
+              002B — THE DIFFERENCE
+            </div>
+            <h2 style={{ fontWeight: 700, fontSize: 'clamp(28px, 3.5vw, 44px)', letterSpacing: '-0.03em', lineHeight: 1.1, margin: '0 0 16px', color: '#E8F0EE' }}>
+              Before Kaeo vs. <span style={{ fontFamily: '"Instrument Serif", serif', fontStyle: 'italic', fontWeight: 400, color: '#138C7E', textTransform: 'none' }}>Review-ready.</span>
+            </h2>
+            <p style={{ fontSize: '15px', color: 'rgba(232,240,238,0.45)', lineHeight: 1.6, margin: '0 0 32px' }}>
+              Stop wasting hours untangling raw narrations, matching receipts, and searching for invoice files. Toggle below or scroll down to see how Kaeo transforms raw statement data into a clean, audited ledger.
+            </p>
 
-          {/* Toggle Switch */}
-          <div style={{ display: 'flex', background: '#0D1714', border: '1px solid rgba(19, 140, 126, 0.15)', padding: '4px', borderRadius: '999px', gap: '4px' }}>
-            <button
-              onClick={() => setMode('before')}
+            {/* Sliding Toggle Control */}
+            <div className="relative inline-flex bg-[#0D1714] border border-[#138C7E]/15 p-1 rounded-full select-none w-[280px]">
+              {/* Sliding background pill */}
+              <div
+                className="absolute top-1 bottom-1 left-1 rounded-full transition-all duration-300 ease-out"
+                style={{
+                  width: 'calc(50% - 4px)',
+                  transform: mode === 'after' ? 'translateX(100%)' : 'translateX(0%)',
+                  background: mode === 'before' ? '#E05450' : '#138C7E',
+                }}
+              />
+              <button
+                onClick={() => toggleMode('before')}
+                className={`relative z-10 flex-1 py-2 text-center rounded-full text-xs font-bold transition-colors duration-200 cursor-pointer ${
+                  mode === 'before' ? 'text-[#050F0D] font-extrabold' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Before Kaeo
+              </button>
+              <button
+                onClick={() => toggleMode('after')}
+                className={`relative z-10 flex-1 py-2 text-center rounded-full text-xs font-bold transition-colors duration-200 cursor-pointer ${
+                  mode === 'after' ? 'text-[#050F0D] font-extrabold' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Review-ready
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column: Morphing Cards Container */}
+          <div className="w-full lg:flex-1 relative min-h-[410px]">
+            {/* Before Card */}
+            <div
               style={{
-                padding: '8px 20px',
-                borderRadius: '999px',
-                border: 'none',
-                background: mode === 'before' ? '#E05450' : 'transparent',
-                color: mode === 'before' ? '#050F0D' : 'rgba(232,240,238,0.5)',
-                fontWeight: 700,
-                fontSize: '12px',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
+                position: mode === 'before' ? 'relative' : 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                opacity: mode === 'before' ? 1 : 0,
+                transform: mode === 'before' ? 'translateY(0) scale(1)' : 'translateY(15px) scale(0.96)',
+                pointerEvents: mode === 'before' ? 'auto' : 'none',
+                transition: reducedMotion 
+                  ? 'opacity 0.15s' 
+                  : 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                background: '#0D1714',
+                border: '1.5px solid rgba(224, 84, 80, 0.25)',
+                borderRadius: '16px',
+                padding: '24px',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
               }}
             >
-              Messy input (Before)
-            </button>
-            <button
-              onClick={() => setMode('after')}
-              style={{
-                padding: '8px 20px',
-                borderRadius: '999px',
-                border: 'none',
-                background: mode === 'after' ? '#138C7E' : 'transparent',
-                color: mode === 'after' ? '#050F0D' : 'rgba(232,240,238,0.5)',
-                fontWeight: 700,
-                fontSize: '12px',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              Review-ready output (After)
-            </button>
-          </div>
-        </div>
-
-        {/* Comparison card container */}
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <div style={{
-            background: '#0D1714',
-            border: `1.5px solid ${mode === 'before' ? 'rgba(224, 84, 80, 0.25)' : 'rgba(19, 140, 126, 0.25)'}`,
-            borderRadius: '16px',
-            padding: '24px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-            transition: 'border-color 0.2s ease',
-          }}>
-            {mode === 'before' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ fontSize: '11px', color: '#E05450', fontWeight: 700, letterSpacing: '0.05em' }}>❌ CRYPTIC BANK STATEMENT ROWS & UNRECONCILED SHEETS</div>
                 {[
@@ -550,10 +613,10 @@ const BeforeAfterComparison: React.FC = () => {
                 ].map((row, i) => (
                   <div key={i} style={{ padding: '12px', background: 'rgba(224, 84, 80, 0.02)', borderRadius: '8px', border: '1px solid rgba(224, 84, 80, 0.12)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(232,240,238,0.35)', marginBottom: '4px', fontFamily: 'ui-monospace, monospace' }}>
-                      <span>{row.date} · {row.narr}</span>
-                      <span style={{ color: '#E05450', fontWeight: 600 }}>{row.amt}</span>
+                      <span className="truncate mr-2">{row.date} · {row.narr}</span>
+                      <span style={{ color: '#E05450', fontWeight: 600 }} className="shrink-0">{row.amt}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', flexWrap: 'wrap', gap: '4px' }}>
                       <span style={{ color: '#E05450', fontWeight: 700 }}>{row.cat}</span>
                       <span style={{ color: 'rgba(232,240,238,0.4)', fontStyle: 'italic' }}>❓ {row.note}</span>
                     </div>
@@ -563,7 +626,28 @@ const BeforeAfterComparison: React.FC = () => {
                   <strong>Issues:</strong> Messy statement rows, unclear UPI narrations, uncategorized payments, and missing invoice context.
                 </div>
               </div>
-            ) : (
+            </div>
+
+            {/* Review-ready Card */}
+            <div
+              style={{
+                position: mode === 'after' ? 'relative' : 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                opacity: mode === 'after' ? 1 : 0,
+                transform: mode === 'after' ? 'translateY(0) scale(1)' : 'translateY(15px) scale(0.96)',
+                pointerEvents: mode === 'after' ? 'auto' : 'none',
+                transition: reducedMotion 
+                  ? 'opacity 0.15s' 
+                  : 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                background: '#0D1714',
+                border: '1.5px solid rgba(19, 140, 126, 0.25)',
+                borderRadius: '16px',
+                padding: '24px',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+              }}
+            >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ fontSize: '11px', color: '#138C7E', fontWeight: 700, letterSpacing: '0.05em' }}>⚡ CLEAN, RECONCILED KAEO LEDGER ROWS</div>
                 {[
@@ -573,12 +657,12 @@ const BeforeAfterComparison: React.FC = () => {
                 ].map((row, i) => (
                   <div key={i} style={{ padding: '12px', background: 'rgba(19, 140, 126, 0.02)', borderRadius: '8px', border: '1px solid rgba(19, 140, 126, 0.12)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(232,240,238,0.4)', marginBottom: '4px' }}>
-                      <span><strong style={{ color: '#E8F0EE' }}>{row.vendor}</strong> · {row.date}</span>
-                      <span style={{ color: '#E8F0EE', fontWeight: 700, fontFamily: 'ui-monospace, monospace' }}>{row.amt}</span>
+                      <span className="truncate mr-2"><strong style={{ color: '#E8F0EE' }}>{row.vendor}</strong> · {row.date}</span>
+                      <span style={{ color: '#E8F0EE', fontWeight: 700, fontFamily: 'ui-monospace, monospace' }} className="shrink-0">{row.amt}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
                       <span style={{ fontSize: '10px', background: 'rgba(19,140,126,0.08)', color: '#138C7E', border: '1px solid rgba(19,140,126,0.15)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>{row.cat}</span>
-                      <span style={{ fontSize: '10.5px', color: row.bColor, fontWeight: 600 }}>⚠ {row.badge}</span>
+                      <span style={{ fontSize: '10.5px', color: row.bColor, fontWeight: 600 }} className="whitespace-nowrap">⚠ {row.badge}</span>
                     </div>
                   </div>
                 ))}
@@ -586,8 +670,9 @@ const BeforeAfterComparison: React.FC = () => {
                   <strong>Benefits:</strong> Categorized transactions, clean review queue, automated risk snapshot, and accountant-ready reports.
                 </div>
               </div>
-            )}
+            </div>
           </div>
+
         </div>
       </div>
     </section>
