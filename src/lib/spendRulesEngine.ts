@@ -45,7 +45,28 @@ export const DEFAULT_RULES: SpendRule[] = [
     enabled: true,
     threshold_amount: null,
     threshold_days: null,
-  }
+  },
+  {
+    rule_type: 'staff_expense_proof_threshold',
+    name: 'Staff Expense Proof Threshold',
+    enabled: true,
+    threshold_amount: 1000, // ₹1,000 default
+    threshold_days: null,
+  },
+  {
+    rule_type: 'flag_unknown_payment_method',
+    name: 'Flag Unknown Payment Method',
+    enabled: true,
+    threshold_amount: null,
+    threshold_days: null,
+  },
+  {
+    rule_type: 'flag_mixed_payment_method',
+    name: 'Flag Mixed Payment Method Spend',
+    enabled: true,
+    threshold_amount: null,
+    threshold_days: null,
+  },
 ];
 
 export const getSpendRules = async (organizationId: string): Promise<SpendRule[]> => {

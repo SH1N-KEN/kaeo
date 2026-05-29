@@ -475,7 +475,152 @@ export const analyzeRisksForClient = async (orgId: string, clientId: string) => 
     }
   }
 
-  // Sync to database
+  // --- 7. Staff Expense Missing Proof ---
+  const staffProofRule = getRule('staff_expense_proof_threshold');
+  const unknownMethodRule = getRule('flag_unknown_payment_method');
+
+  if (staffProofRule || unknownMethodRule) {
+    const proofThreshold = staffProofRule?.threshold_amount ?? 1000;
+
+    // Resolve staff/petty fields from top-level or raw_row_json fallback
+    const resolveField = (tx: any, field: string) =>
+      tx[field] !== undefined && tx[field] !== null
+        ? tx[field]
+        : tx.raw_row_json?.[field] ?? tx.raw_row_json?.metadata?.[field];
+
+    const staffTxs = txs.filter(tx => {
+      const isStaff = resolveField(tx, 'is_staff_expense') === true ||
+                      resolveField(tx, 'is_staff_expense') === 'true';
+      const cat = getDisplayCategory(tx);
+      const isStaffCat = cat === 'Staff / Petty Expenses';
+      return isStaff || isStaffCat;
+    });
+
+    // Group by vendor/category to avoid per-row risks
+    type StaffGroup = { txs: any[]; key: string };
+    const staffGroups: Record<string, StaffGroup> = {};
+
+    staffTxs.forEach(tx => {
+      const { normalized } = normalizeVendorName(tx.description);
+      const cat = getDisplayCategory(tx);
+      const key = normalized || cat || 'misc';
+      if (!staffGroups[key]) staffGroups[key] = { txs: [], key };
+      staffGroups[key].txs.push(tx);
+    });
+
+    Object.values(staffGroups).forEach(group => {
+      const needsProof = group.txs.filter(tx => {
+        const proofStatus = resolveField(tx, 'proof_status');
+        const paymentMethod = resolveField(tx, 'payment_method') || 'unknown';
+        const amt = Math.abs(getTxAmount(tx));
+        const proofMissing = !proofStatus || proofStatus === 'missing' || proofStatus === 'needs_review';
+        const aboveThreshold = amt >= proofThreshold;
+        const unknownMethod = paymentMethod === 'unknown';
+        const flagUnknown = unknownMethodRule?.enabled ?? true;
+
+        return proofMissing && (aboveThreshold || (flagUnknown && unknownMethod));
+      });
+
+      if (needsProof.length === 0) return;
+
+      const totalAmt = needsProof.reduce((acc, tx) => acc + Math.abs(getTxAmount(tx)), 0);
+      const sampleTx = needsProof[0];
+      const paymentMethod = resolveField(sampleTx, 'payment_method') || 'unknown';
+      const paidBy = resolveField(sampleTx, 'paid_by');
+      const cat = getDisplayCategory(sampleTx);
+
+      risks.push({
+        organization_id: orgId,
+        client_id: clientId,
+        title: `Staff expense needs proof: ${group.key}`,
+        severity: 'medium',
+        risk_type: 'staff_expense_missing_proof',
+        amount_at_risk: totalAmt,
+        description: 'This staff/petty expense may need a receipt or invoice before export.',
+        evidence_json: {
+          transaction_ids: needsProof.map(tx => tx.id),
+          transaction_count: needsProof.length,
+          vendor_name: group.key,
+          category: cat,
+          payment_method: paymentMethod,
+          paid_by: paidBy || null,
+          proof_threshold: fmtCurrency(proofThreshold),
+          reason: needsProof.some(tx => {
+            const pm = resolveField(tx, 'payment_method') || 'unknown';
+            return pm === 'unknown';
+          })
+            ? 'Payment method unknown — proof required regardless of amount.'
+            : `Amount exceeds ₹${proofThreshold.toLocaleString('en-IN')} proof threshold.`,
+        },
+        suggested_action: 'Attach or confirm a receipt/invoice. Set payment method if unknown. Mark reviewed once verified.',
+        status: 'open',
+        related_transaction_ids: needsProof.map(tx => tx.id),
+      });
+    });
+  }
+
+  // --- 8. Mixed Payment Method Spend ---
+  const mixedMethodRule = getRule('flag_mixed_payment_method');
+
+  if (mixedMethodRule) {
+    const resolveField = (tx: any, field: string) =>
+      tx[field] !== undefined && tx[field] !== null
+        ? tx[field]
+        : tx.raw_row_json?.[field] ?? tx.raw_row_json?.metadata?.[field];
+
+    // Build groups: all expense-like txs grouped by vendor/category
+    type MixedGroup = { methods: Set<string>; txs: any[] };
+    const mixedGroups: Record<string, MixedGroup> = {};
+
+    txs
+      .filter(tx => ['expense', 'vendor_payment', 'subscription'].includes(tx.type) || getTxAmount(tx) < 0)
+      .forEach(tx => {
+        const { normalized } = normalizeVendorName(tx.description);
+        const cat = getDisplayCategory(tx);
+        const key = normalized || cat || 'misc';
+        const method = resolveField(tx, 'payment_method') || 'unknown';
+        if (!mixedGroups[key]) mixedGroups[key] = { methods: new Set(), txs: [] };
+        mixedGroups[key].methods.add(method);
+        mixedGroups[key].txs.push(tx);
+      });
+
+    let mixedCount = 0;
+    const MAX_MIXED_RISKS = 10;
+
+    Object.entries(mixedGroups).forEach(([vendor, group]) => {
+      if (mixedCount >= MAX_MIXED_RISKS) return;
+      // Only flag if 2+ distinct non-unknown methods, or unknown + 1 real method
+      const knownMethods = [...group.methods].filter(m => m !== 'unknown');
+      if (knownMethods.length < 2) return;
+
+      const totalAmt = group.txs.reduce((acc, tx) => acc + Math.abs(getTxAmount(tx)), 0);
+      const methodList = [...group.methods].join(', ');
+
+      risks.push({
+        organization_id: orgId,
+        client_id: clientId,
+        title: `Spend split across payment methods: ${vendor}`,
+        severity: 'low',
+        risk_type: 'mixed_payment_method_spend',
+        amount_at_risk: totalAmt,
+        description: 'Spend for this vendor/category appears across multiple payment methods. Review before month-end.',
+        evidence_json: {
+          transaction_ids: group.txs.map(tx => tx.id),
+          transaction_count: group.txs.length,
+          vendor_name: vendor,
+          methods_found: methodList,
+          reason: `Payment methods detected: ${methodList}.`,
+        },
+        suggested_action: 'Verify whether mixed payment methods are intentional. Consolidate or document the reason for split payment.',
+        status: 'open',
+        related_transaction_ids: group.txs.map(tx => tx.id),
+      });
+
+      mixedCount++;
+    });
+  }
+
+
   // Delete existing open risks to prevent accumulation
   await supabase
     .from('risk_events')

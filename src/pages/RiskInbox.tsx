@@ -41,7 +41,9 @@ const getFriendlyRiskType = (type: string): string => {
     invoice_mismatch: 'Invoice mismatch',
     unknown_vendor: 'Unknown vendor',
     recurring_spend: 'Recurring spend',
-    recurring: 'Recurring spend'
+    recurring: 'Recurring spend',
+    staff_expense_missing_proof: 'Staff expense needs proof',
+    mixed_payment_method_spend: 'Mixed payment methods',
   };
   return mapping[type.toLowerCase()] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 };
@@ -601,6 +603,20 @@ const RiskInbox: React.FC = () => {
                             {selectedRisk.evidence_json.reason && <p className="opacity-70">• {selectedRisk.evidence_json.reason}</p>}
                             {selectedRisk.evidence_json.vendor_name && <p className="opacity-70">• Vendor: {selectedRisk.evidence_json.vendor_name}</p>}
                             {selectedRisk.evidence_json.transaction_count && <p className="opacity-70">• Occurrences: {selectedRisk.evidence_json.transaction_count}</p>}
+                            {/* Staff expense specific fields */}
+                            {selectedRisk.evidence_json.payment_method && (
+                              <p className="opacity-70">• Payment method: <span className="font-semibold capitalize">{selectedRisk.evidence_json.payment_method.replace(/_/g, ' ')}</span></p>
+                            )}
+                            {selectedRisk.evidence_json.paid_by && (
+                              <p className="opacity-70">• Paid by: <span className="font-semibold">{selectedRisk.evidence_json.paid_by}</span></p>
+                            )}
+                            {selectedRisk.evidence_json.proof_threshold && (
+                              <p className="opacity-70">• Proof threshold: {selectedRisk.evidence_json.proof_threshold}</p>
+                            )}
+                            {/* Mixed payment method specific fields */}
+                            {selectedRisk.evidence_json.methods_found && (
+                              <p className="opacity-70">• Methods seen: <span className="font-semibold capitalize">{selectedRisk.evidence_json.methods_found.replace(/_/g, ' ')}</span></p>
+                            )}
                           </div>
                         </div>
                       )}
@@ -739,6 +755,15 @@ const RiskInbox: React.FC = () => {
                               className="px-3 py-2 rounded-lg text-[10px] font-bold border bg-[var(--surface-muted)] border-border/40 hover:border-primary/40 text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
                             >
                               <span>Review Invoice</span>
+                              <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                            </button>
+                          )}
+                          {(selectedRisk.risk_type === 'staff_expense_missing_proof' || selectedRisk.risk_type === 'mixed_payment_method_spend') && (
+                            <button 
+                              onClick={() => navigate('/transactions?filter=staff_petty')}
+                              className="px-3 py-2 rounded-lg text-[10px] font-bold border bg-amber-500/5 border-amber-500/20 hover:border-amber-500/40 text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
+                            >
+                              <span>Review Staff Transactions</span>
                               <ArrowRight className="w-3 h-3 text-muted-foreground" />
                             </button>
                           )}

@@ -73,6 +73,10 @@ const Settings: React.FC = () => {
   const [subscriptionEnabled, setSubscriptionEnabled] = useState(true);
   const [unknownVendorEnabled, setUnknownVendorEnabled] = useState(true);
   const [uncategorizedEnabled, setUncategorizedEnabled] = useState(true);
+  const [staffProofThreshold, setStaffProofThreshold] = useState<number>(1000);
+  const [staffProofEnabled, setStaffProofEnabled] = useState(true);
+  const [flagUnknownPaymentMethod, setFlagUnknownPaymentMethod] = useState(true);
+  const [flagMixedPaymentMethod, setFlagMixedPaymentMethod] = useState(true);
 
   // Accountant Firm Profile editing states
   const [isEditingFirm, setIsEditingFirm] = useState(false);
@@ -190,6 +194,15 @@ const Settings: React.FC = () => {
       if (uk) setUnknownVendorEnabled(uk.enabled);
       const uc = data.find(r => r.rule_type === 'uncategorized_transaction');
       if (uc) setUncategorizedEnabled(uc.enabled);
+      const spt = data.find(r => r.rule_type === 'staff_expense_proof_threshold');
+      if (spt) {
+        setStaffProofThreshold(spt.threshold_amount ?? 1000);
+        setStaffProofEnabled(spt.enabled);
+      }
+      const fup = data.find(r => r.rule_type === 'flag_unknown_payment_method');
+      if (fup) setFlagUnknownPaymentMethod(fup.enabled);
+      const fmp = data.find(r => r.rule_type === 'flag_mixed_payment_method');
+      if (fmp) setFlagMixedPaymentMethod(fmp.enabled);
     } catch (err: any) {
       toast('Failed to load spend rules: ' + err.message, 'error');
     } finally {
@@ -201,7 +214,7 @@ const Settings: React.FC = () => {
     e.preventDefault();
     if (!activeOrg) return;
 
-    if (duplicateDays < 0 || highValueAmount < 0 || subscriptionAmount < 0) {
+    if (duplicateDays < 0 || highValueAmount < 0 || subscriptionAmount < 0 || staffProofThreshold < 0) {
       toast('Rule threshold limits or days cannot be negative', 'error');
       return;
     }
@@ -248,6 +261,30 @@ const Settings: React.FC = () => {
           threshold_amount: null,
           threshold_days: null,
           id: rules.find(r => r.rule_type === 'uncategorized_transaction')?.id
+        },
+        {
+          rule_type: 'staff_expense_proof_threshold',
+          name: 'Staff Expense Proof Threshold',
+          enabled: staffProofEnabled,
+          threshold_amount: staffProofThreshold,
+          threshold_days: null,
+          id: rules.find(r => r.rule_type === 'staff_expense_proof_threshold')?.id
+        },
+        {
+          rule_type: 'flag_unknown_payment_method',
+          name: 'Flag Unknown Payment Method',
+          enabled: flagUnknownPaymentMethod,
+          threshold_amount: null,
+          threshold_days: null,
+          id: rules.find(r => r.rule_type === 'flag_unknown_payment_method')?.id
+        },
+        {
+          rule_type: 'flag_mixed_payment_method',
+          name: 'Flag Mixed Payment Method Spend',
+          enabled: flagMixedPaymentMethod,
+          threshold_amount: null,
+          threshold_days: null,
+          id: rules.find(r => r.rule_type === 'flag_mixed_payment_method')?.id
         }
       ];
 
@@ -694,6 +731,79 @@ const Settings: React.FC = () => {
                           className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${uncategorizedEnabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
                         >
                           <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${uncategorizedEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 6. Staff & Petty Expense Review */}
+                    <div className="frosted-card rounded-2xl border border-border/40 p-5 space-y-4">
+                      <div className="flex items-start gap-3 pb-3 border-b border-border/20">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                          <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-foreground text-sm">Staff &amp; Petty Expense Review</h3>
+                          <p className="text-xs text-muted-foreground leading-relaxed font-medium mt-0.5">
+                            Flag staff or petty expenses that may need receipts, invoices, or payment method review.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Proof threshold toggle + amount */}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-0.5 flex-1">
+                          <p className="text-xs font-semibold text-foreground">Proof required above</p>
+                          <p className="text-[11px] text-muted-foreground">Staff expenses above this amount must have a receipt or invoice attached.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setStaffProofEnabled(!staffProofEnabled)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${staffProofEnabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                        >
+                          <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${staffProofEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+                      {staffProofEnabled && (
+                        <div className="max-w-xs space-y-1.5 animate-in fade-in duration-200">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1">Amount Threshold (₹)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            required
+                            className="w-full bg-muted/30 border border-border rounded-xl px-4 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-foreground"
+                            value={staffProofThreshold}
+                            onChange={e => setStaffProofThreshold(Math.max(0, Number(e.target.value)))}
+                          />
+                        </div>
+                      )}
+
+                      {/* Flag unknown payment method */}
+                      <div className="flex items-start justify-between gap-4 pt-3 border-t border-border/20">
+                        <div className="space-y-0.5 flex-1">
+                          <p className="text-xs font-semibold text-foreground">Flag unknown payment method</p>
+                          <p className="text-[11px] text-muted-foreground">Staff expenses with an unidentified payment method are flagged for proof.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setFlagUnknownPaymentMethod(!flagUnknownPaymentMethod)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${flagUnknownPaymentMethod ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                        >
+                          <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${flagUnknownPaymentMethod ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+
+                      {/* Flag mixed payment method */}
+                      <div className="flex items-start justify-between gap-4 pt-3 border-t border-border/20">
+                        <div className="space-y-0.5 flex-1">
+                          <p className="text-xs font-semibold text-foreground">Flag mixed payment method spend</p>
+                          <p className="text-[11px] text-muted-foreground">Flag when the same vendor or category shows spend across multiple payment methods.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setFlagMixedPaymentMethod(!flagMixedPaymentMethod)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${flagMixedPaymentMethod ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                        >
+                          <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${flagMixedPaymentMethod ? 'translate-x-5' : 'translate-x-0'}`} />
                         </button>
                       </div>
                     </div>
