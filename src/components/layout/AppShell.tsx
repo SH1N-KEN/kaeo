@@ -37,15 +37,15 @@ const AppShell: React.FC = () => {
   return (
     <AskKaeoChatProvider>
       <div
-        className="flex min-h-screen transition-colors duration-300 print:block print:min-h-0"
+        className="flex h-screen overflow-hidden transition-colors duration-300 print:block print:min-h-0"
         style={{ background: 'var(--background)' }}
       >
         <Sidebar />
-        <div className="flex-1 flex flex-col min-w-0 print:block">
+        <div className="flex-1 flex flex-col min-w-0 relative print:block">
+          <Topbar />
           <main className="flex-1 overflow-y-auto print:overflow-visible print:block">
-            <Topbar />
             <div
-              className="mx-auto px-7 pt-4 pb-7 print:max-w-none print:mx-0 print:p-0"
+              className="mx-auto px-7 pt-20 pb-7 print:max-w-none print:mx-0 print:p-0"
               style={{ maxWidth: 1320 }}
             >
               <Outlet />

@@ -43,11 +43,7 @@ export const KaeoLandingHeader: React.FC = () => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-[#080A09]/90 backdrop-blur-xl border-b border-[rgba(140,150,148,0.08)]'
-          : 'bg-transparent border-b border-transparent'
-      }`}
+      className={`frosted-landing-nav ${isScrolled ? '' : 'transparent'}`}
       style={{ padding: '0 0' }}
     >
       <div
