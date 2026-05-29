@@ -7,6 +7,8 @@ import {
   needsConversion 
 } from '../currency';
 import { parseIndianNarration } from '../transactionIntelligence';
+import { detectPaymentMethod, shouldSuggestStaffCategory, inferStaffExpense } from '../staffReview';
+
 
 /**
  * Detects currency from row mappings, cell values, and row headers/keys.
@@ -294,6 +296,14 @@ export const normalizeIngestedRows = (
         : 1;
       const amountInBaseCurrency = convertToBaseCurrency(amount, originalCurrency, context.currency, exchangeRate);
 
+      const detectedPM = detectPaymentMethod(formattedDesc);
+      const inferredStaff = inferStaffExpense(formattedDesc, category);
+
+      const rowPaidBy = row.paid_by !== undefined ? row.paid_by : (row.paidBy !== undefined ? row.paidBy : null);
+      const rowPM = row.payment_method !== undefined ? row.payment_method : (row.paymentMethod !== undefined ? row.paymentMethod : detectedPM);
+      const rowProof = row.proof_status !== undefined ? row.proof_status : (row.proofStatus !== undefined ? row.proofStatus : 'not_required');
+      const rowIsStaff = row.is_staff_expense !== undefined ? !!row.is_staff_expense : (row.isStaffExpense !== undefined ? !!row.isStaffExpense : inferredStaff);
+
       const txObj: any = {
         transaction_date: date.toISOString(),
         description: formattedDesc,
@@ -313,6 +323,10 @@ export const normalizeIngestedRows = (
         reference: invoiceVal || null,
         review_status: 'pending',
         source_type: 'expense_ledger',
+        paid_by: rowPaidBy,
+        payment_method: rowPM,
+        proof_status: rowProof,
+        is_staff_expense: rowIsStaff,
         raw_row_json: {
           ...row,
           invoice_number: invoiceVal || null,
@@ -320,7 +334,11 @@ export const normalizeIngestedRows = (
           confidence_level: confidenceLevel,
           direction_derived: 'outflow',
           raw_debit: Math.abs(amount),
-          raw_credit: 0
+          raw_credit: 0,
+          paid_by: rowPaidBy,
+          payment_method: rowPM,
+          proof_status: rowProof,
+          is_staff_expense: rowIsStaff
         }
       };
 
@@ -500,6 +518,11 @@ export const normalizeIngestedRows = (
     let finalCategory = inferredCategory;
     let reviewStatus = 'new';
 
+    if (shouldSuggestStaffCategory(rawDesc) && isCatMissing) {
+      finalCategory = 'Staff / Petty Expenses';
+      reviewStatus = 'needs_review';
+    }
+
     const isInternalTransfer = intelligenceMetadata.is_internal_transfer === true;
 
     if (isInternalTransfer && finalType !== 'failed_payment') {
@@ -578,6 +601,14 @@ export const normalizeIngestedRows = (
       reviewStatus = 'needs_review';
     }
 
+    const detectedPM = detectPaymentMethod(rawDesc);
+    const inferredStaff = inferStaffExpense(rawDesc, finalCategory);
+
+    const rowPaidBy = row.paid_by !== undefined ? row.paid_by : (row.paidBy !== undefined ? row.paidBy : null);
+    const rowPM = row.payment_method !== undefined ? row.payment_method : (row.paymentMethod !== undefined ? row.paymentMethod : detectedPM);
+    const rowProof = row.proof_status !== undefined ? row.proof_status : (row.proofStatus !== undefined ? row.proofStatus : 'not_required');
+    const rowIsStaff = row.is_staff_expense !== undefined ? !!row.is_staff_expense : (row.isStaffExpense !== undefined ? !!row.isStaffExpense : inferredStaff);
+
     // 7. Build standardized transaction schema
     const txObj: any = {
       transaction_date: date.toISOString(),
@@ -599,12 +630,20 @@ export const normalizeIngestedRows = (
       source_provider: context.provider,
       reference: reference,
       review_status: reviewStatus,
+      paid_by: rowPaidBy,
+      payment_method: rowPM,
+      proof_status: rowProof,
+      is_staff_expense: rowIsStaff,
       raw_row_json: {
         ...row,
         intelligence: intelligenceMetadata,
         direction_derived: direction,
         raw_debit: rawDebit,
-        raw_credit: rawCredit
+        raw_credit: rawCredit,
+        paid_by: rowPaidBy,
+        payment_method: rowPM,
+        proof_status: rowProof,
+        is_staff_expense: rowIsStaff
       }
     };
 

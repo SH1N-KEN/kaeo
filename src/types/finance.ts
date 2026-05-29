@@ -15,6 +15,10 @@ export interface NormalizedTransaction {
   source_provider: string | null;
   raw_row_json: any;
   created_at?: string;
+  paid_by?: string | null;
+  payment_method?: 'bank_transfer' | 'upi' | 'card' | 'prepaid_card' | 'cash' | 'payment_gateway' | 'unknown' | 'other';
+  proof_status?: 'not_required' | 'missing' | 'attached' | 'needs_review';
+  is_staff_expense?: boolean;
 }
 
 export interface ImportMapping {

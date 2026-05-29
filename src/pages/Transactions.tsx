@@ -53,7 +53,7 @@ type SortDir = 'asc' | 'desc';
 type AmountRange = 'all' | 'under_10k' | '10k_50k' | 'above_50k';
 
 // ── Review filter ─────────────────────────────────────────────────────────────
-type ReviewFilter = 'all' | 'pending' | 'new' | 'needs_review' | 'reviewed' | 'ignored' | 'resolved' | 'uncategorized' | 'unknown' | 'high_value' | 'ai_suggested';
+type ReviewFilter = 'all' | 'pending' | 'new' | 'needs_review' | 'reviewed' | 'ignored' | 'resolved' | 'uncategorized' | 'unknown' | 'high_value' | 'ai_suggested' | 'staff_petty' | 'missing_proof' | 'unknown_payment' | 'paid_by_staff';
 
 const Transactions: React.FC = () => {
   const { 
@@ -72,6 +72,11 @@ const Transactions: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [editPaidBy, setEditPaidBy] = useState<Record<string, string>>({});
+  const [editPM, setEditPM] = useState<Record<string, string>>({});
+  const [editProof, setEditProof] = useState<Record<string, string>>({});
+  const [editIsStaff, setEditIsStaff] = useState<Record<string, boolean>>({});
 
   // ── Filter state ──────────────────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState('');
@@ -234,22 +239,10 @@ const Transactions: React.FC = () => {
     }
 
     // 1. Review status query param mapping
-    if (reviewStatusParam === 'needs_review') {
-      setFilterReview('needs_review');
-    } else if (reviewStatusParam === 'new') {
-      setFilterReview('new');
-    } else if (reviewStatusParam === 'pending' || reviewParam === 'pending') {
+    if (['needs_review', 'new', 'pending', 'reviewed', 'ignored', 'resolved', 'high_value', 'ai_suggested', 'staff_petty', 'missing_proof', 'unknown_payment', 'paid_by_staff'].includes(reviewStatusParam || '')) {
+      setFilterReview(reviewStatusParam as ReviewFilter);
+    } else if (reviewParam === 'pending') {
       setFilterReview('pending');
-    } else if (reviewStatusParam === 'reviewed') {
-      setFilterReview('reviewed');
-    } else if (reviewStatusParam === 'ignored') {
-      setFilterReview('ignored');
-    } else if (reviewStatusParam === 'resolved') {
-      setFilterReview('resolved');
-    } else if (reviewStatusParam === 'high_value') {
-      setFilterReview('high_value');
-    } else if (reviewStatusParam === 'ai_suggested') {
-      setFilterReview('ai_suggested');
     } else if (categoryParam === 'uncategorized') {
       setFilterReview('uncategorized');
     } else if (typeParam === 'unknown') {
@@ -388,21 +381,98 @@ const Transactions: React.FC = () => {
     }
   };
 
+  const updateTransactionFields = async (txId: string, fields: {
+    paid_by?: string | null;
+    payment_method?: string;
+    proof_status?: string;
+    is_staff_expense?: boolean;
+    review_status?: string;
+    category?: string | null;
+  }) => {
+    if (!activeOrg) return;
+    try {
+      const currentTx = transactions.find(t => t.id === txId);
+      if (!currentTx) return;
+
+      const raw = currentTx.raw_row_json || {};
+      const updatedRawJson = {
+        ...raw,
+        ...fields
+      };
+
+      const dbUpdates: any = {
+        raw_row_json: updatedRawJson
+      };
+
+      if (fields.review_status !== undefined) {
+        dbUpdates.review_status = fields.review_status;
+        if (fields.review_status === 'reviewed') {
+          dbUpdates.reviewed_at = new Date().toISOString();
+        }
+      }
+      if (fields.category !== undefined) {
+        dbUpdates.category = fields.category;
+      }
+
+      const { error } = await supabase
+        .from('transactions')
+        .update(dbUpdates)
+        .eq('id', txId);
+
+      if (error) throw error;
+
+      setTransactions(prev => prev.map(t => {
+        if (t.id === txId) {
+          return {
+            ...t,
+            ...dbUpdates,
+            ...fields
+          };
+        }
+        return t;
+      }));
+
+      toast('Transaction updated successfully', 'success');
+
+      await trackAuditEvent(
+        activeOrg.id,
+        'transaction_updated' as any,
+        'transaction',
+        txId,
+        fields
+      );
+    } catch (err: any) {
+      toast(err.message || 'Update failed', 'error');
+    }
+  };
+
   // ── Derive display transactions (category inference) ─────────────────────
   const displayTransactions = useMemo(() => {
     const cleanTxs = getCleanTransactions(transactions);
     const metadataCount = transactions.length - cleanTxs.length;
     console.log('metadataRowsFiltered =', metadataCount);
 
-    return cleanTxs.map((tx) => ({
-      ...tx,
-      _displayCategory: getDisplayCategory({
-        category: tx.category,
-        description: tx.description,
-        counterparty_name: tx.counterparty_name,
-        type: tx.type,
-      }),
-    }));
+    return cleanTxs.map((tx) => {
+      const raw = tx.raw_row_json || {};
+      const paidBy = tx.paid_by !== undefined && tx.paid_by !== null ? tx.paid_by : (raw.paid_by !== undefined ? raw.paid_by : null);
+      const paymentMethod = tx.payment_method !== undefined && tx.payment_method !== null ? tx.payment_method : (raw.payment_method !== undefined ? raw.payment_method : 'unknown');
+      const proofStatus = tx.proof_status !== undefined && tx.proof_status !== null ? tx.proof_status : (raw.proof_status !== undefined ? raw.proof_status : 'not_required');
+      const isStaffExpense = tx.is_staff_expense !== undefined && tx.is_staff_expense !== null ? tx.is_staff_expense : (raw.is_staff_expense !== undefined ? !!raw.is_staff_expense : false);
+
+      return {
+        ...tx,
+        paid_by: paidBy,
+        payment_method: paymentMethod,
+        proof_status: proofStatus,
+        is_staff_expense: isStaffExpense,
+        _displayCategory: getDisplayCategory({
+          category: tx.category,
+          description: tx.description,
+          counterparty_name: tx.counterparty_name,
+          type: tx.type,
+        }),
+      };
+    });
   }, [transactions]);
 
   // ── Derive filter options ─────────────────────────────────────────────────
@@ -472,7 +542,10 @@ const Transactions: React.FC = () => {
       if (filterReview !== 'all') {
         const revStatus = tx.review_status || 'new';
         if (filterReview === 'new' && revStatus !== 'new') return false;
-        if (filterReview === 'needs_review' && revStatus !== 'needs_review') return false;
+        if (filterReview === 'needs_review') {
+          const needsRev = revStatus === 'needs_review' || tx.proof_status === 'needs_review';
+          if (!needsRev) return false;
+        }
         if (filterReview === 'reviewed' && revStatus !== 'reviewed') return false;
         if (filterReview === 'ignored' && revStatus !== 'ignored') return false;
         if (filterReview === 'resolved' && revStatus !== 'resolved') return false;
@@ -488,6 +561,16 @@ const Transactions: React.FC = () => {
         if (filterReview === 'ai_suggested') {
           const hasSug = suggestions.some(s => s.entity_type === 'transaction' && s.entity_id === tx.id);
           if (!hasSug) return false;
+        }
+        if (filterReview === 'staff_petty') {
+          const isStaffOrPetty = tx.is_staff_expense || tx._displayCategory === 'Staff / Petty Expenses';
+          if (!isStaffOrPetty) return false;
+        }
+        if (filterReview === 'missing_proof' && tx.proof_status !== 'missing') return false;
+        if (filterReview === 'unknown_payment' && tx.payment_method !== 'unknown') return false;
+        if (filterReview === 'paid_by_staff') {
+          const hasPaidByStaff = tx.paid_by && tx.paid_by.trim() !== '';
+          if (!hasPaidByStaff) return false;
         }
       }
 
@@ -721,6 +804,10 @@ const Transactions: React.FC = () => {
             <option value="uncategorized">Uncategorized</option>
             <option value="unknown">Unknown Rows</option>
             <option value="high_value">High-value expenses</option>
+            <option value="staff_petty">Staff / Petty</option>
+            <option value="missing_proof">Missing proof</option>
+            <option value="unknown_payment">Payment method unknown</option>
+            <option value="paid_by_staff">Paid by staff</option>
           </select>
 
           {/* Category */}
@@ -848,6 +935,13 @@ const Transactions: React.FC = () => {
               description="No transactions found in this date range."
               action={{ label: 'Clear date filter', onClick: clearDates }}
             />
+          ) : filterReview === 'staff_petty' ? (
+            <EmptyState
+              icon={<FileText className="w-8 h-8 text-muted-foreground/50" />}
+              title="No staff expenses detected yet."
+              description="Transactions will appear here when they match staff/petty keywords or are manually marked."
+              action={{ label: 'Clear filters', onClick: clearFilters }}
+            />
           ) : (
             <EmptyState
               icon={<FileText className="w-8 h-8 text-muted-foreground/50" />}
@@ -878,6 +972,7 @@ const Transactions: React.FC = () => {
             <table className="kaeo-table min-w-[860px]">
               <thead>
                 <tr className="bg-muted/30">
+                  <th className="w-8 border-b border-border/50" />
                   <th
                     className={thClass}
                     onClick={() => handleSort('transaction_date')}
@@ -953,233 +1048,446 @@ const Transactions: React.FC = () => {
                   const cat = tx._displayCategory as TransactionCategory;
                   const badge = getCategoryBadgeStyle(cat);
                   const isMenuOpen = openMenuId === tx.id;
- 
+
                   const isHighlighted = tx.id === filterTransactionId || (filterTransactionIds && filterTransactionIds.includes(tx.id));
- 
+
                   return (
-                    <tr
-                      key={tx.id}
-                      id={`tx-row-${tx.id}`}
-                      className={`group relative border-b border-border/10 hover:bg-muted/20 transition-colors duration-150 ${isHighlighted ? 'bg-primary/5' : ''}`}
-                      style={isHighlighted ? { borderLeft: '3px solid #138C7E' } : {}}
-                      onClick={() => { if (isMenuOpen) setOpenMenuId(null); }}
-                    >
-                      {/* Date */}
-                      <td className="whitespace-nowrap td-muted px-4 py-3.5 text-xs text-muted-foreground font-medium">
-                        {tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                      </td>
- 
-                      {/* Counterparty + Description */}
-                      <td className="max-w-[280px] px-4 py-3.5">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-[13px] font-bold block truncate text-[var(--foreground)]">
-                            {tx.counterparty_name && tx.counterparty_name !== 'No counterparty' ? tx.counterparty_name : (tx.description?.split(' ')[0] || 'Unknown Vendor')}
-                          </span>
-                          <span className="text-[11px] block truncate text-[var(--muted-foreground)] font-normal" title={tx.description}>
-                            {tx.description}
-                          </span>
-                        </div>
-                      </td>
- 
-                      {/* Category badge */}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        {(() => {
-                          const categorySuggestion = suggestions.find(
-                            s => s.entity_type === 'transaction' && 
-                            s.entity_id === tx.id && 
-                            s.suggestion_type === 'categorize_transaction'
-                          );
- 
-                          if (categorySuggestion) {
-                            return (
-                              <div className="flex flex-col gap-1.5">
-                                <span
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
-                                >
-                                  {cat}
-                                </span>
-                                <div className="text-[10px] bg-primary/5 text-primary border border-primary/20 p-2 rounded-lg mt-1 flex flex-col gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedSuggestion(categorySuggestion);
-                                    }}
-                                    className="flex items-center justify-between gap-1 w-full text-left font-bold cursor-pointer hover:underline text-primary bg-transparent border-none p-0"
+                    <React.Fragment key={tx.id}>
+                      <tr
+                        id={`tx-row-${tx.id}`}
+                        className={`group relative border-b border-border/10 hover:bg-muted/20 transition-colors duration-150 ${isHighlighted ? 'bg-primary/5' : ''}`}
+                        style={isHighlighted ? { borderLeft: '3px solid #138C7E' } : {}}
+                        onClick={() => { if (isMenuOpen) setOpenMenuId(null); }}
+                      >
+                        {/* Chevron column */}
+                        <td className="w-8 pl-4 py-3.5 text-center">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedRowId(expandedRowId === tx.id ? null : tx.id);
+                            }}
+                            className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-all cursor-pointer bg-transparent border-none"
+                          >
+                            {expandedRowId === tx.id ? (
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </td>
+
+                        {/* Date */}
+                        <td className="whitespace-nowrap td-muted px-4 py-3.5 text-xs text-muted-foreground font-medium">
+                          {tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        </td>
+
+                        {/* Counterparty + Description */}
+                        <td className="max-w-[280px] px-4 py-3.5">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[13px] font-bold block truncate text-[var(--foreground)]">
+                              {tx.counterparty_name && tx.counterparty_name !== 'No counterparty' ? tx.counterparty_name : (tx.description?.split(' ')[0] || 'Unknown Vendor')}
+                            </span>
+                            <span className="text-[11px] block truncate text-[var(--muted-foreground)] font-normal" title={tx.description}>
+                              {tx.description}
+                            </span>
+                            {/* Compact metadata badges */}
+                            {(tx.is_staff_expense || tx.payment_method !== 'unknown' || tx.proof_status !== 'not_required' || tx.paid_by) && (
+                              <div className="flex flex-wrap gap-1 mt-1.5 items-center">
+                                {tx.is_staff_expense && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-muted/65 border border-border/20 text-muted-foreground">
+                                    Staff / Petty
+                                  </span>
+                                )}
+                                {tx.payment_method !== 'unknown' && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-muted/40 border border-border/10 text-muted-foreground capitalize">
+                                    {tx.payment_method?.replace('_', ' ')}
+                                  </span>
+                                )}
+                                {tx.proof_status !== 'not_required' && (
+                                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+                                    tx.proof_status === 'attached' ? 'bg-success/5 border-success/20 text-success' :
+                                    tx.proof_status === 'missing' ? 'bg-danger/5 border-danger/20 text-danger' :
+                                    'bg-warning/5 border-warning/20 text-warning'
+                                  }`}>
+                                    {tx.proof_status === 'attached' ? 'Proof attached' : 
+                                     tx.proof_status === 'missing' ? 'Needs receipt/invoice' : 
+                                     'Receipt needs review'}
+                                  </span>
+                                )}
+                                {tx.paid_by && (
+                                  <span className="text-[9px] text-muted-foreground/80 font-medium">
+                                    Paid by: {tx.paid_by}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Category badge */}
+                        <td className="px-4 py-3.5 whitespace-nowrap">
+                          {(() => {
+                            const categorySuggestion = suggestions.find(
+                              s => s.entity_type === 'transaction' && 
+                              s.entity_id === tx.id && 
+                              s.suggestion_type === 'categorize_transaction'
+                            );
+
+                            if (categorySuggestion) {
+                              return (
+                                <div className="flex flex-col gap-1.5">
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
                                   >
-                                    <span className="flex items-center gap-1">
-                                      <Sparkles className="w-3 h-3 text-primary animate-pulse" />
-                                      Suggested: {categorySuggestion.proposed_value.category}
-                                    </span>
-                                    <span className="text-[9px] underline opacity-80 shrink-0">View</span>
-                                  </button>
-                                  <div className="flex items-center gap-2">
+                                    {cat}
+                                  </span>
+                                  <div className="text-[10px] bg-primary/5 text-primary border border-primary/20 p-2 rounded-lg mt-1 flex flex-col gap-1.5">
                                     <button
+                                      type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleApproveSuggestion(categorySuggestion);
+                                        setSelectedSuggestion(categorySuggestion);
                                       }}
-                                      className="px-2 py-0.5 bg-[var(--success)] text-white text-[9px] font-black rounded hover:bg-success/80 transition-all cursor-pointer"
+                                      className="flex items-center justify-between gap-1 w-full text-left font-bold cursor-pointer hover:underline text-primary bg-transparent border-none p-0"
                                     >
-                                      Approve
+                                      <span className="flex items-center gap-1">
+                                        <Sparkles className="w-3 h-3 text-primary animate-pulse" />
+                                        Suggested: {categorySuggestion.proposed_value.category}
+                                      </span>
+                                      <span className="text-[9px] underline opacity-80 shrink-0">View</span>
                                     </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRejectSuggestion(categorySuggestion);
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleApproveSuggestion(categorySuggestion);
+                                        }}
+                                        className="px-2 py-0.5 bg-[var(--success)] text-white text-[9px] font-black rounded hover:bg-success/80 transition-all cursor-pointer"
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRejectSuggestion(categorySuggestion);
+                                        }}
+                                        className="px-2 py-0.5 bg-[var(--danger)] text-white text-[9px] font-black rounded hover:bg-risk/80 transition-all cursor-pointer"
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
+                              >
+                                {cat}
+                              </span>
+                            );
+                          })()}
+                        </td>
+
+                        {/* Amount */}
+                        <td className="td-amount whitespace-nowrap px-4 py-3.5 text-right font-semibold text-[13px]">
+                          {(() => {
+                            const displayAmt = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+                              ? tx.amount_in_base_currency : tx.amount;
+                            const dirDerived = tx.raw_row_json?.direction_derived;
+                            const isOutflow = dirDerived === 'outflow' || (!dirDerived && Number(displayAmt) < 0);
+                            const isTransfer = tx.type === 'transfer';
+                            const isRefund = tx.type === 'refund';
+                            const amtColor = isTransfer ? '#2563EB' : isRefund ? 'var(--accent)' : isOutflow ? 'var(--danger)' : 'var(--success)';
+                            const signedAmt = displayAmt === 0 ? 0 : (isOutflow ? -Math.abs(Number(displayAmt)) : Math.abs(Number(displayAmt)));
+                            return (
+                              <span className="text-[13px] font-semibold" style={{ color: amtColor }}>
+                                {formatSignedCurrency(signedAmt)}
+                              </span>
+                            );
+                          })()}
+                        </td>
+
+                        {/* Confidence */}
+                        <td className="text-center whitespace-nowrap px-4 py-3.5">
+                          {(() => {
+                            const conf = tx.raw_row_json?.intelligence?.intelligence_confidence || (tx.review_status === 'reviewed' ? 'high' : 'medium');
+                            const confCfg: Record<string, { label: string; style?: React.CSSProperties }> = {
+                              high:   { label: 'High',   style: { background: 'rgba(22, 138, 91, 0.06)', color: 'var(--success)', borderColor: 'rgba(22, 138, 91, 0.15)' } },
+                              medium: { label: 'Medium', style: { background: 'rgba(183, 121, 31, 0.06)', color: 'var(--warning)', borderColor: 'rgba(183, 121, 31, 0.15)' } },
+                              low:    { label: 'Low',    style: { background: 'rgba(194, 65, 58, 0.06)',  color: 'var(--danger)',  borderColor: 'rgba(194, 65, 58, 0.15)' } },
+                            };
+                            const cfg = confCfg[conf] || confCfg.medium;
+                            return (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border" style={cfg.style}>
+                                {cfg.label}
+                              </span>
+                            );
+                          })()}
+                        </td>
+
+                        {/* Risk */}
+                        <td className="text-center whitespace-nowrap px-4 py-3.5">
+                          {(() => {
+                            const amtVal = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
+                              ? Number(tx.amount_in_base_currency) : Number(tx.amount);
+                            const isHighValue = Math.abs(amtVal) >= 50000 && ['expense', 'vendor_payment', 'subscription'].includes(tx.type);
+                            const isMismatch = !!tx.raw_row_json?.metadata?.balance_mismatch;
+                            const isUncategorized = cat === 'Uncategorized';
+                            
+                            let riskLabel = 'Clear';
+                            let riskStyle: React.CSSProperties = { background: 'rgba(22, 138, 91, 0.06)', color: 'var(--success)', borderColor: 'rgba(22, 138, 91, 0.15)' };
+                            
+                            if (isMismatch) {
+                              riskLabel = 'Balance Mismatch';
+                              riskStyle = { background: 'rgba(194, 65, 58, 0.08)', color: 'var(--danger)', borderColor: 'rgba(194, 65, 58, 0.18)' };
+                            } else if (isHighValue) {
+                              riskLabel = 'High-Value';
+                              riskStyle = { background: 'rgba(183, 121, 31, 0.08)', color: 'var(--warning)', borderColor: 'rgba(183, 121, 31, 0.18)' };
+                            } else if (isUncategorized) {
+                              riskLabel = 'Uncategorized';
+                              riskStyle = { background: 'rgba(93, 107, 102, 0.08)', color: 'var(--muted-foreground)', borderColor: 'rgba(93, 107, 102, 0.18)' };
+                            }
+                            
+                            return (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border" style={riskStyle}>
+                                {riskLabel}
+                              </span>
+                            );
+                          })()}
+                        </td>
+
+                        {/* Review Status */}
+                        <td className="whitespace-nowrap px-4 py-3.5 text-center">
+                          <ReviewBadge status={tx.review_status || 'new'} />
+                        </td>
+
+                        {/* Row actions */}
+                        <td className="text-right relative px-4 py-3.5 w-10">
+                          <button
+                            className="p-1.5 rounded-lg transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+                            style={{ color: 'var(--muted-foreground)' }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--muted)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(isMenuOpen ? null : tx.id);
+                            }}
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <circle cx="4" cy="10" r="1.5" />
+                              <circle cx="10" cy="10" r="1.5" />
+                              <circle cx="16" cy="10" r="1.5" />
+                            </svg>
+                          </button>
+
+                          {isMenuOpen && (
+                            <div
+                              className="absolute right-4 top-full mt-1 w-48 kaeo-popover z-50 animate-kaeo-scale"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {[
+                                { icon: <Copy className="w-3.5 h-3.5" />, label: 'Copy description', onClick: () => { navigator.clipboard.writeText(tx.description); toast('Copied', 'success'); setOpenMenuId(null); } },
+                                { icon: <Tag className="w-3.5 h-3.5" />, label: 'Filter by category', onClick: () => { updateFilterParams({ category: tx._displayCategory }); setOpenMenuId(null); } },
+                              ].map(action => (
+                                <button key={action.label}
+                                  className="w-full text-left px-3 py-2 rounded-lg text-[12px] font-medium flex items-center gap-2 cursor-pointer transition-all"
+                                  style={{ color: 'var(--muted-foreground)' }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--muted)'; e.currentTarget.style.color = 'var(--foreground)'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; }}
+                                  onClick={action.onClick}
+                                >
+                                  {action.icon} {action.label}
+                                </button>
+                              ))}
+                              <div className="h-px mx-1 my-1" style={{ background: 'var(--border)' }} />
+                              {[
+                                { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: 'Mark Reviewed', status: 'reviewed', hoverColor: '#168A5B' },
+                                { icon: <CircleDashed className="w-3.5 h-3.5" />, label: 'Needs Review', status: 'needs_review', hoverColor: '#B7791F' },
+                                { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: 'Resolve', status: 'resolved', hoverColor: '#0F766E' },
+                                { icon: <EyeOff className="w-3.5 h-3.5" />, label: 'Ignore', status: 'ignored', hoverColor: '#5D6B66' },
+                              ].map(action => (
+                                <button key={action.status}
+                                  className="w-full text-left px-3 py-2 rounded-lg text-[12px] font-medium flex items-center gap-2 cursor-pointer transition-all"
+                                  style={{ color: 'var(--muted-foreground)' }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--muted)'; e.currentTarget.style.color = action.hoverColor; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; }}
+                                  onClick={() => { updateReviewStatus(tx.id, action.status); setOpenMenuId(null); }}
+                                >
+                                  {action.icon} {action.label}
+                                </button>
+                              ))}
+                              <div className="h-px mx-1 my-1" style={{ background: 'var(--border)' }} />
+                              {[
+                                { icon: <Tag className="w-3.5 h-3.5" />, label: 'Mark Staff/Petty', onClick: () => { updateTransactionFields(tx.id, { is_staff_expense: true }); setOpenMenuId(null); } },
+                                { icon: <FileText className="w-3.5 h-3.5" />, label: 'Proof Attached', onClick: () => { updateTransactionFields(tx.id, { proof_status: 'attached' }); setOpenMenuId(null); } },
+                                { icon: <AlertCircle className="w-3.5 h-3.5" />, label: 'Proof Missing', onClick: () => { updateTransactionFields(tx.id, { proof_status: 'missing' }); setOpenMenuId(null); } },
+                              ].map(action => (
+                                <button key={action.label}
+                                  className="w-full text-left px-3 py-2 rounded-lg text-[12px] font-medium flex items-center gap-2 cursor-pointer transition-all"
+                                  style={{ color: 'var(--muted-foreground)' }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--muted)'; e.currentTarget.style.color = 'var(--foreground)'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; }}
+                                  onClick={action.onClick}
+                                >
+                                  {action.icon} {action.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+
+                      {expandedRowId === tx.id && (
+                        <tr className="bg-muted/5 border-b border-border/10">
+                          <td colSpan={9} className="px-6 py-4">
+                            <div className="frosted-card bg-background/25 border-border/20 p-5 rounded-xl space-y-4 max-w-3xl animate-kaeo-scale">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-xs font-bold text-foreground tracking-wider uppercase">Staff Spend & Expense Details</h4>
+                                {tx.is_staff_expense && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-primary/10 border border-primary/20 text-primary">
+                                    Staff / Petty Expense
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Left Column: Form Fields */}
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Paid By Staff member</label>
+                                    <input
+                                      type="text"
+                                      placeholder="e.g. Rahul Sharma"
+                                      className="frosted-input text-xs py-1.5 bg-background/50 border-border/30 rounded-lg w-full"
+                                      value={editPaidBy[tx.id] ?? tx.paid_by ?? ''}
+                                      onChange={(e) => {
+                                        setEditPaidBy(prev => ({ ...prev, [tx.id]: e.target.value }));
                                       }}
-                                      className="px-2 py-0.5 bg-[var(--danger)] text-white text-[9px] font-black rounded hover:bg-risk/80 transition-all cursor-pointer"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Payment Method</label>
+                                    <select
+                                      className="frosted-input text-xs py-1.5 bg-background/50 border-border/30 rounded-lg cursor-pointer w-full"
+                                      value={editPM[tx.id] ?? tx.payment_method ?? 'unknown'}
+                                      onChange={(e) => {
+                                        setEditPM(prev => ({ ...prev, [tx.id]: e.target.value }));
+                                      }}
                                     >
-                                      Reject
-                                    </button>
+                                      <option value="unknown">Payment method unknown</option>
+                                      <option value="bank_transfer">Bank Transfer</option>
+                                      <option value="upi">UPI</option>
+                                      <option value="card">Card</option>
+                                      <option value="prepaid_card">Prepaid Card</option>
+                                      <option value="cash">Cash</option>
+                                      <option value="payment_gateway">Payment Gateway</option>
+                                      <option value="other">Other</option>
+                                    </select>
+                                  </div>
+                                </div>
+
+                                {/* Right Column: Status & Toggle */}
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Proof / Receipt Status</label>
+                                    <select
+                                      className="frosted-input text-xs py-1.5 bg-background/50 border-border/30 rounded-lg cursor-pointer w-full"
+                                      value={editProof[tx.id] ?? tx.proof_status ?? 'not_required'}
+                                      onChange={(e) => {
+                                        setEditProof(prev => ({ ...prev, [tx.id]: e.target.value }));
+                                      }}
+                                    >
+                                      <option value="not_required">Proof not required</option>
+                                      <option value="missing">Needs receipt/invoice (Missing)</option>
+                                      <option value="attached">Proof attached</option>
+                                      <option value="needs_review">Needs review</option>
+                                    </select>
+                                  </div>
+
+                                  <div className="flex items-center gap-2.5 pt-2">
+                                    <input
+                                      type="checkbox"
+                                      id={`staff-expense-${tx.id}`}
+                                      className="rounded border-border/30 text-primary focus:ring-primary/20 bg-background/50 w-4 h-4 cursor-pointer"
+                                      checked={editIsStaff[tx.id] ?? tx.is_staff_expense ?? false}
+                                      onChange={(e) => {
+                                        setEditIsStaff(prev => ({ ...prev, [tx.id]: e.target.checked }));
+                                      }}
+                                    />
+                                    <label htmlFor={`staff-expense-${tx.id}`} className="text-xs font-bold text-foreground cursor-pointer select-none">
+                                      Is Staff / Petty Expense
+                                    </label>
                                   </div>
                                 </div>
                               </div>
-                            );
-                          }
- 
-                          return (
-                            <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
-                            >
-                              {cat}
-                            </span>
-                          );
-                        })()}
-                      </td>
- 
-                      {/* Amount */}
-                      <td className="td-amount whitespace-nowrap px-4 py-3.5 text-right font-semibold text-[13px]">
-                        {(() => {
-                          const displayAmt = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
-                            ? tx.amount_in_base_currency : tx.amount;
-                          const dirDerived = tx.raw_row_json?.direction_derived;
-                          const isOutflow = dirDerived === 'outflow' || (!dirDerived && Number(displayAmt) < 0);
-                          const isTransfer = tx.type === 'transfer';
-                          const isRefund = tx.type === 'refund';
-                          const amtColor = isTransfer ? '#2563EB' : isRefund ? 'var(--accent)' : isOutflow ? 'var(--danger)' : 'var(--success)';
-                          const signedAmt = displayAmt === 0 ? 0 : (isOutflow ? -Math.abs(Number(displayAmt)) : Math.abs(Number(displayAmt)));
-                          return (
-                            <span className="text-[13px] font-semibold" style={{ color: amtColor }}>
-                              {formatSignedCurrency(signedAmt)}
-                            </span>
-                          );
-                        })()}
-                      </td>
- 
-                      {/* Confidence */}
-                      <td className="text-center whitespace-nowrap px-4 py-3.5">
-                        {(() => {
-                          const conf = tx.raw_row_json?.intelligence?.intelligence_confidence || (tx.review_status === 'reviewed' ? 'high' : 'medium');
-                          const confCfg: Record<string, { label: string; style?: React.CSSProperties }> = {
-                            high:   { label: 'High',   style: { background: 'rgba(22, 138, 91, 0.06)', color: 'var(--success)', borderColor: 'rgba(22, 138, 91, 0.15)' } },
-                            medium: { label: 'Medium', style: { background: 'rgba(183, 121, 31, 0.06)', color: 'var(--warning)', borderColor: 'rgba(183, 121, 31, 0.15)' } },
-                            low:    { label: 'Low',    style: { background: 'rgba(194, 65, 58, 0.06)',  color: 'var(--danger)',  borderColor: 'rgba(194, 65, 58, 0.15)' } },
-                          };
-                          const cfg = confCfg[conf] || confCfg.medium;
-                          return (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border" style={cfg.style}>
-                              {cfg.label}
-                            </span>
-                          );
-                        })()}
-                      </td>
- 
-                      {/* Risk */}
-                      <td className="text-center whitespace-nowrap px-4 py-3.5">
-                        {(() => {
-                          const amtVal = tx.amount_in_base_currency !== null && tx.amount_in_base_currency !== undefined
-                            ? Number(tx.amount_in_base_currency) : Number(tx.amount);
-                          const isHighValue = Math.abs(amtVal) >= 50000 && ['expense', 'vendor_payment', 'subscription'].includes(tx.type);
-                          const isMismatch = !!tx.raw_row_json?.metadata?.balance_mismatch;
-                          const isUncategorized = cat === 'Uncategorized';
-                          
-                          let riskLabel = 'Clear';
-                          let riskStyle: React.CSSProperties = { background: 'rgba(22, 138, 91, 0.06)', color: 'var(--success)', borderColor: 'rgba(22, 138, 91, 0.15)' };
-                          
-                          if (isMismatch) {
-                            riskLabel = 'Balance Mismatch';
-                            riskStyle = { background: 'rgba(194, 65, 58, 0.08)', color: 'var(--danger)', borderColor: 'rgba(194, 65, 58, 0.18)' };
-                          } else if (isHighValue) {
-                            riskLabel = 'High-Value';
-                            riskStyle = { background: 'rgba(183, 121, 31, 0.08)', color: 'var(--warning)', borderColor: 'rgba(183, 121, 31, 0.18)' };
-                          } else if (isUncategorized) {
-                            riskLabel = 'Uncategorized';
-                            riskStyle = { background: 'rgba(93, 107, 102, 0.08)', color: 'var(--muted-foreground)', borderColor: 'rgba(93, 107, 102, 0.18)' };
-                          }
-                          
-                          return (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border" style={riskStyle}>
-                              {riskLabel}
-                            </span>
-                          );
-                        })()}
-                      </td>
- 
-                      {/* Review Status */}
-                      <td className="whitespace-nowrap px-4 py-3.5 text-center">
-                        <ReviewBadge status={tx.review_status || 'new'} />
-                      </td>
- 
-                      {/* Row actions */}
-                      <td className="text-right relative px-4 py-3.5 w-10">
-                        <button
-                          className="p-1.5 rounded-lg transition-all cursor-pointer opacity-0 group-hover:opacity-100"
-                          style={{ color: 'var(--muted-foreground)' }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--muted)')}
-                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenMenuId(isMenuOpen ? null : tx.id);
-                          }}
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <circle cx="4" cy="10" r="1.5" />
-                            <circle cx="10" cy="10" r="1.5" />
-                            <circle cx="16" cy="10" r="1.5" />
-                          </svg>
-                        </button>
- 
-                        {isMenuOpen && (
-                          <div
-                            className="absolute right-4 top-full mt-1 w-48 kaeo-popover z-50 animate-kaeo-scale"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {[
-                              { icon: <Copy className="w-3.5 h-3.5" />, label: 'Copy description', onClick: () => { navigator.clipboard.writeText(tx.description); toast('Copied', 'success'); setOpenMenuId(null); } },
-                              { icon: <Tag className="w-3.5 h-3.5" />, label: 'Filter by category', onClick: () => { updateFilterParams({ category: tx._displayCategory }); setOpenMenuId(null); } },
-                            ].map(action => (
-                              <button key={action.label}
-                                className="w-full text-left px-3 py-2 rounded-lg text-[12px] font-medium flex items-center gap-2 cursor-pointer transition-all"
-                                style={{ color: 'var(--muted-foreground)' }}
-                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--muted)'; e.currentTarget.style.color = 'var(--foreground)'; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; }}
-                                onClick={action.onClick}
-                              >
-                                {action.icon} {action.label}
-                              </button>
-                            ))}
-                            <div className="h-px mx-1 my-1" style={{ background: 'var(--border)' }} />
-                            {[
-                              { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: 'Mark Reviewed', status: 'reviewed', hoverColor: '#168A5B' },
-                              { icon: <CircleDashed className="w-3.5 h-3.5" />, label: 'Needs Review', status: 'needs_review', hoverColor: '#B7791F' },
-                              { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: 'Resolve', status: 'resolved', hoverColor: '#0F766E' },
-                              { icon: <EyeOff className="w-3.5 h-3.5" />, label: 'Ignore', status: 'ignored', hoverColor: '#5D6B66' },
-                            ].map(action => (
-                              <button key={action.status}
-                                className="w-full text-left px-3 py-2 rounded-lg text-[12px] font-medium flex items-center gap-2 cursor-pointer transition-all"
-                                style={{ color: 'var(--muted-foreground)' }}
-                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--muted)'; e.currentTarget.style.color = action.hoverColor; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; }}
-                                onClick={() => { updateReviewStatus(tx.id, action.status); setOpenMenuId(null); }}
-                              >
-                                {action.icon} {action.label}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
+
+                              {/* Quick Actions & Save Button */}
+                              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/10">
+                                <div className="flex gap-2 flex-wrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      updateTransactionFields(tx.id, { is_staff_expense: true });
+                                      setEditIsStaff(prev => ({ ...prev, [tx.id]: true }));
+                                    }}
+                                    className="px-2.5 py-1 bg-muted/65 hover:bg-muted text-foreground text-[10px] font-bold rounded-lg transition-colors cursor-pointer border border-border/30"
+                                  >
+                                    Mark Staff Expense
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      updateTransactionFields(tx.id, { proof_status: 'attached' });
+                                      setEditProof(prev => ({ ...prev, [tx.id]: 'attached' }));
+                                    }}
+                                    className="px-2.5 py-1 bg-muted/65 hover:bg-muted text-foreground text-[10px] font-bold rounded-lg transition-colors cursor-pointer border border-border/30"
+                                  >
+                                    Mark Proof Attached
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      updateTransactionFields(tx.id, { proof_status: 'missing' });
+                                      setEditProof(prev => ({ ...prev, [tx.id]: 'missing' }));
+                                    }}
+                                    className="px-2.5 py-1 bg-muted/65 hover:bg-muted text-foreground text-[10px] font-bold rounded-lg transition-colors cursor-pointer border border-border/30"
+                                  >
+                                    Mark Proof Missing
+                                  </button>
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const paid_by = editPaidBy[tx.id] !== undefined ? editPaidBy[tx.id] : (tx.paid_by ?? null);
+                                      const payment_method = editPM[tx.id] !== undefined ? editPM[tx.id] : (tx.payment_method ?? 'unknown');
+                                      const proof_status = editProof[tx.id] !== undefined ? editProof[tx.id] : (tx.proof_status ?? 'not_required');
+                                      const is_staff_expense = editIsStaff[tx.id] !== undefined ? editIsStaff[tx.id] : (tx.is_staff_expense ?? false);
+                                      
+                                      updateTransactionFields(tx.id, {
+                                        paid_by: paid_by || null,
+                                        payment_method,
+                                        proof_status,
+                                        is_staff_expense
+                                      });
+                                    }}
+                                    className="px-3.5 py-1.5 bg-primary text-primary-foreground text-[11px] font-bold rounded-lg shadow-sm hover:opacity-90 transition-all cursor-pointer"
+                                  >
+                                    Save Details
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
