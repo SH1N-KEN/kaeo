@@ -368,12 +368,15 @@ const InteractiveWorkflowSection: React.FC = () => {
       if (!container) return;
 
       const rect = container.getBoundingClientRect();
-      const scrollableHeight = rect.height - window.innerHeight;
+      const navHeight = 72;
+      const stickyHeight = window.innerHeight - navHeight;
+      const totalScrollRange = rect.height - stickyHeight;
 
-      if (scrollableHeight <= 0) return;
+      if (totalScrollRange <= 0) return;
 
-      const scrolled = -rect.top;
-      const progress = Math.max(0, Math.min(1, scrolled / scrollableHeight));
+      // Pin range is exactly rect.top from navHeight (72px) down to (navHeight - totalScrollRange)
+      const currentScroll = navHeight - rect.top;
+      const progress = Math.max(0, Math.min(1, currentScroll / totalScrollRange));
       
       const stepIndex = Math.min(4, Math.floor(progress * 5));
       setActiveStep(stepIndex);
@@ -396,10 +399,12 @@ const InteractiveWorkflowSection: React.FC = () => {
 
     const rect = container.getBoundingClientRect();
     const scrollTop = window.scrollY + rect.top;
-    const scrollableHeight = rect.height - window.innerHeight;
+    const navHeight = 72;
+    const stickyHeight = window.innerHeight - navHeight;
+    const totalScrollRange = rect.height - stickyHeight;
 
     const targetProgress = (idx + 0.5) / 5;
-    const targetScrollY = scrollTop + targetProgress * scrollableHeight;
+    const targetScrollY = scrollTop - navHeight + targetProgress * totalScrollRange;
 
     window.scrollTo({
       top: targetScrollY,
@@ -410,12 +415,14 @@ const InteractiveWorkflowSection: React.FC = () => {
   const useStickyScroll = isDesktop && !prefersReduced;
 
   return (
-    <div 
+    <section 
+      id="how-it-works"
       ref={containerRef}
       style={{
         position: 'relative',
-        height: useStickyScroll ? '450vh' : 'auto',
-        marginTop: useStickyScroll ? '40px' : '0px',
+        height: useStickyScroll ? '500vh' : 'auto',
+        background: 'transparent',
+        padding: 0,
       }}
     >
       <div
@@ -433,124 +440,147 @@ const InteractiveWorkflowSection: React.FC = () => {
         <div 
           style={{
             display: 'grid',
-            gridTemplateColumns: isDesktop ? '38% 62%' : '1fr',
+            gridTemplateColumns: isDesktop ? '40% 60%' : '1fr',
             gap: isDesktop ? '48px' : '24px',
             alignItems: 'center',
             width: '100%',
             maxWidth: '1440px',
             margin: '0 auto',
-            padding: isDesktop ? '0 48px' : '0 24px',
+            padding: isDesktop ? '0 48px' : '72px 24px',
           }}
           className="workflow-grid"
         >
-          {/* Left side steps list */}
+          {/* Left Column: Header + Steps List */}
           <div 
             style={{ 
               display: 'flex', 
               flexDirection: 'column', 
-              gap: isDesktop ? '16px' : '12px',
-              paddingBottom: isDesktop ? '0' : '40px',
+              gap: '32px',
               width: '100%',
             }} 
           >
-            {steps.map((step, idx) => {
-              const isActive = idx === activeStep;
-              return (
-                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div
-                    onClick={() => handleStepClick(idx)}
-                    style={{
-                      padding: isDesktop ? '20px 24px' : '16px 20px',
-                      background: isActive ? 'rgba(19, 140, 126, 0.06)' : 'rgba(255, 255, 255, 0.01)',
-                      border: '1px solid',
-                      borderColor: isActive ? 'rgba(19, 140, 126, 0.25)' : 'rgba(255, 255, 255, 0.03)',
-                      borderRadius: '16px',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                      backdropFilter: isActive ? 'blur(12px)' : 'none',
-                      WebkitBackdropFilter: isActive ? 'blur(12px)' : 'none',
-                      boxShadow: isActive ? '0 12px 30px rgba(0,0,0,0.2), inset 0 1px 0 0 rgba(255,255,255,0.05)' : 'none',
-                    }}
-                    className={`workflow-step-card ${isActive ? 'active' : 'inactive'}`}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '8px' }}>
-                      <span style={{
-                        fontStyle: 'italic',
-                        color: isActive ? '#138C7E' : 'rgba(232, 240, 238, 0.2)',
-                        fontSize: '24px',
-                        lineHeight: '1',
-                        letterSpacing: '-0.04em',
-                        fontWeight: 700,
-                        transition: 'color 0.3s',
-                      }}>{step.num}</span>
-                      <span style={{
-                        color: isActive ? '#138C7E' : 'rgba(232, 240, 238, 0.3)',
-                        fontFamily: 'ui-monospace, monospace',
-                        fontSize: '9.5px',
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase',
-                        fontWeight: 600,
-                        transition: 'color 0.3s',
-                      }}>{step.label}</span>
-                    </div>
-                    <h3 style={{ 
-                      fontSize: '17px', 
-                      fontWeight: 700, 
-                      color: isActive ? '#E8F0EE' : 'rgba(232,240,238,0.5)', 
-                      letterSpacing: '-0.01em', 
-                      margin: '0 0 6px 0', 
-                      transition: 'color 0.3s' 
-                    }}>{step.title}</h3>
-                    <p style={{ 
-                      fontSize: '13px', 
-                      color: isActive ? 'rgba(232,240,238,0.6)' : 'rgba(232,240,238,0.3)', 
-                      lineHeight: 1.5, 
-                      margin: 0, 
-                      transition: 'color 0.3s' 
-                    }}>{step.description}</p>
-                  </div>
+            <div>
+              <SectionLabel code="002" label="HOW IT WORKS" />
+              <h2 style={{
+                fontWeight: 700,
+                fontSize: 'clamp(28px, 3.5vw, 44px)',
+                letterSpacing: '-0.02em',
+                lineHeight: 1.15,
+                margin: '0 0 16px',
+                color: '#E8F0EE',
+              }}>
+                How Kaeo reviews your books
+              </h2>
+              <p style={{
+                fontSize: '15px',
+                color: 'rgba(232, 240, 238, 0.45)',
+                lineHeight: 1.5,
+                margin: 0,
+              }}>
+                No formatting, no pivot tables, no manual categorization. Kaeo handles the cleanup so you can focus on the review.
+              </p>
+            </div>
 
-                  {/* Mobile-only Preview mock right below the active card */}
-                  {!isDesktop && isActive && (
-                    <div 
-                      style={{ 
-                        background: '#121514',
-                        border: '1px solid rgba(140, 150, 148, 0.12)',
+            <div style={{ display: 'flex', flexDirection: 'column', gap: isDesktop ? '14px' : '12px', width: '100%' }}>
+              {steps.map((step, idx) => {
+                const isActive = idx === activeStep;
+                return (
+                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div
+                      onClick={() => handleStepClick(idx)}
+                      style={{
+                        padding: isDesktop ? '18px 22px' : '16px 20px',
+                        background: isActive ? 'rgba(19, 140, 126, 0.06)' : 'rgba(255, 255, 255, 0.01)',
+                        border: '1px solid',
+                        borderColor: isActive ? 'rgba(19, 140, 126, 0.25)' : 'rgba(255, 255, 255, 0.03)',
                         borderRadius: '16px',
-                        padding: '20px',
-                        boxShadow: '0 16px 40px rgba(0,0,0,0.4)',
-                        width: '100%',
-                        transition: 'all 0.3s ease',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                        backdropFilter: isActive ? 'blur(12px)' : 'none',
+                        WebkitBackdropFilter: isActive ? 'blur(12px)' : 'none',
+                        boxShadow: isActive ? '0 12px 30px rgba(0,0,0,0.2), inset 0 1px 0 0 rgba(255,255,255,0.05)' : 'none',
                       }}
-                      className="workflow-mock-panel animate-kaeo-fade"
+                      className={`workflow-step-card ${isActive ? 'active' : 'inactive'}`}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '13px' }}>💻</span>
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(232, 240, 238, 0.45)', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.05em' }}>KAEO VIEW</span>
-                        </div>
-                        <span style={{ 
-                          fontSize: '9px', 
-                          fontFamily: 'ui-monospace, monospace', 
-                          letterSpacing: '0.08em', 
-                          padding: '2px 6px', 
-                          background: 'rgba(140,150,148,0.08)', 
-                          color: 'rgba(232, 240, 238, 0.65)', 
-                          borderRadius: '4px', 
-                          fontWeight: 700, 
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '8px' }}>
+                        <span style={{
+                          fontStyle: 'italic',
+                          color: isActive ? '#138C7E' : 'rgba(232, 240, 238, 0.2)',
+                          fontSize: '20px',
+                          lineHeight: '1',
+                          letterSpacing: '-0.04em',
+                          fontWeight: 700,
+                          transition: 'color 0.3s',
+                        }}>{step.num}</span>
+                        <span style={{
+                          color: isActive ? '#138C7E' : 'rgba(232, 240, 238, 0.3)',
+                          fontFamily: 'ui-monospace, monospace',
+                          fontSize: '9.5px',
+                          letterSpacing: '0.08em',
                           textTransform: 'uppercase',
-                        }}>
-                          {step.label}
-                        </span>
+                          fontWeight: 600,
+                          transition: 'color 0.3s',
+                        }}>{step.label}</span>
                       </div>
-                      <div className="workflow-mock-content">
-                        {step.visual(false)}
-                      </div>
+                      <h3 style={{ 
+                        fontSize: '16px', 
+                        fontWeight: 700, 
+                        color: isActive ? '#E8F0EE' : 'rgba(232,240,238,0.5)', 
+                        letterSpacing: '-0.01em', 
+                        margin: '0 0 6px 0', 
+                        transition: 'color 0.3s' 
+                      }}>{step.title}</h3>
+                      <p style={{ 
+                        fontSize: '12.5px', 
+                        color: isActive ? 'rgba(232,240,238,0.6)' : 'rgba(232,240,238,0.3)', 
+                        lineHeight: 1.5, 
+                        margin: 0, 
+                        transition: 'color 0.3s' 
+                      }}>{step.description}</p>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+
+                    {/* Mobile-only Preview mock right below the active card */}
+                    {!isDesktop && isActive && (
+                      <div 
+                        style={{ 
+                          background: '#121514',
+                          border: '1px solid rgba(140, 150, 148, 0.12)',
+                          borderRadius: '16px',
+                          padding: '20px',
+                          boxShadow: '0 16px 40px rgba(0,0,0,0.4)',
+                          width: '100%',
+                          transition: 'all 0.3s ease',
+                        }}
+                        className="workflow-mock-panel animate-kaeo-fade"
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '13px' }}>💻</span>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(232, 240, 238, 0.45)', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.05em' }}>KAEO VIEW</span>
+                          </div>
+                          <span style={{ 
+                            fontSize: '9px', 
+                            fontFamily: 'ui-monospace, monospace', 
+                            letterSpacing: '0.08em', 
+                            padding: '2px 6px', 
+                            background: 'rgba(140,150,148,0.08)', 
+                            color: 'rgba(232, 240, 238, 0.65)', 
+                            borderRadius: '4px', 
+                            fontWeight: 700, 
+                            textTransform: 'uppercase',
+                          }}>
+                            {step.label}
+                          </span>
+                        </div>
+                        <div className="workflow-mock-content">
+                          {step.visual(false)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Right side mock display (Desktop only) */}
@@ -602,7 +632,7 @@ const InteractiveWorkflowSection: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 
@@ -1206,18 +1236,7 @@ export const Landing: React.FC = () => {
       </div>
 
       {/* ═══════ 002 — HOW IT WORKS ═══════ */}
-      <section id="how-it-works" style={S.section('#080A09')}>
-        <div style={S.inner}>
-          <SectionLabel code="002" label="HOW IT WORKS" />
-          <h2 style={S.h2}>
-            How Kaeo reviews your books
-          </h2>
-          <p style={{ fontSize: '17px', color: 'rgba(232,240,238,0.45)', maxWidth: '540px', marginBottom: '60px', lineHeight: 1.6 }}>
-            No formatting, no pivot tables, no manual categorization. Kaeo handles the cleanup so you can focus on the review.
-          </p>
-          <InteractiveWorkflowSection />
-        </div>
-      </section>
+      <InteractiveWorkflowSection />
 
       {/* ═══════ 002B — BEFORE AFTER TOGGLE COMPARISON ═══════ */}
       <BeforeAfterComparison />
