@@ -63,14 +63,14 @@ const TransactionCard = () => (
     </div>
     {[
       { date: '28 Apr', narr: 'UPI/Razorpay/Vendor', dr: '−₹84,200', tag: 'vendor', risk: false },
-      { date: '26 Apr', narr: 'NEFT/Mumbai Supplies', dr: '−₹1,24,000', tag: 'high-value', risk: true },
-      { date: '25 Apr', narr: 'UPI/Paytm/Unknown', dr: '−₹18,500', tag: 'uncategorized', risk: true },
+      { date: '26 Apr', narr: 'NEFT/Mumbai Supplies', dr: '−₹1,24,000', tag: 'high', risk: true },
+      { date: '25 Apr', narr: 'UPI/Paytm/Unknown', dr: '−₹18,500', tag: 'uncat.', risk: true },
       { date: '22 Apr', narr: 'RTGS/Client Inflow', dr: '+₹4,80,000', tag: 'inflow', risk: false },
     ].map((row, i) => (
       <div key={i} style={{
         display: 'grid',
-        gridTemplateColumns: '52px 1fr 76px 70px',
-        gap: '8px',
+        gridTemplateColumns: '38px minmax(0, 1fr) 58px 48px',
+        gap: '6px',
         padding: '7px 0',
         borderBottom: '1px solid rgba(255,255,255,0.04)',
         alignItems: 'center',
@@ -80,16 +80,19 @@ const TransactionCard = () => (
         <span style={{ color: '#E8F0EE', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.narr}</span>
         <span style={{ color: row.dr.startsWith('+') ? '#22B573' : '#E05450', fontWeight: 600, textAlign: 'right', fontFamily: 'ui-monospace, monospace', fontSize: '10px' }}>{row.dr}</span>
         <span style={{
-          padding: '2px 6px',
+          padding: '2px 4px',
           borderRadius: '4px',
           fontSize: '9px',
           fontWeight: 600,
-          letterSpacing: '0.04em',
+          letterSpacing: '0.02em',
           textTransform: 'uppercase',
           textAlign: 'center',
           background: row.risk ? 'rgba(224, 84, 80, 0.12)' : row.tag === 'inflow' ? 'rgba(34, 181, 115, 0.12)' : 'rgba(140, 150, 148, 0.08)',
           color: row.risk ? '#E05450' : row.tag === 'inflow' ? '#22B573' : 'rgba(232, 240, 238, 0.65)',
           border: `1px solid ${row.risk ? 'rgba(224,84,80,0.20)' : row.tag === 'inflow' ? 'rgba(34,181,115,0.20)' : 'rgba(140,150,148,0.12)'}`,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
         }}>{row.tag}</span>
       </div>
     ))}
@@ -149,7 +152,7 @@ export const KaeoHero: React.FC = () => {
     <section
       id="product"
       style={{
-        background: '#080A09',
+        background: 'transparent',
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
@@ -371,7 +374,7 @@ export const KaeoHero: React.FC = () => {
               </div>
 
               {/* 3 panels */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gap: '12px' }}>
+              <div className="hero-mock-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr 1fr', gap: '12px' }}>
                 <UploadCard />
                 <TransactionCard />
                 <RiskCard />
@@ -426,6 +429,12 @@ export const KaeoHero: React.FC = () => {
           .hero-grid {
             grid-template-columns: 1fr !important;
             gap: 48px !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .hero-mock-grid {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
           }
         }
         @media (max-width: 600px) {

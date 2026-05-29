@@ -532,8 +532,7 @@ const BeforeAfterComparison: React.FC = () => {
       ref={sectionRef}
       style={{ 
         padding: '100px 24px', 
-        background: '#080A09', 
-        borderTop: '1px solid rgba(140,150,148,0.06)',
+        background: 'transparent', 
         overflow: 'hidden'
       }}
     >
@@ -1015,7 +1014,8 @@ export const Landing: React.FC = () => {
   const S = {
     // Page wrapper
     page: {
-      background: '#080A09',
+      background: 'radial-gradient(circle at top, #141817 0%, #070908 100%)',
+      backgroundAttachment: 'fixed',
       color: '#E8F0EE',
       fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
       minHeight: '100vh',
@@ -1024,8 +1024,7 @@ export const Landing: React.FC = () => {
     // Section container
     section: (bg?: string): React.CSSProperties => ({
       padding: '100px 48px',
-      background: bg ?? '#080A09',
-      borderTop: '1px solid rgba(140,150,148,0.06)',
+      background: bg ? `radial-gradient(circle at center, ${bg}22 0%, transparent 80%)` : 'transparent',
     }),
 
     // Inner max-width wrapper
@@ -1407,7 +1406,7 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* ═══════ FOOTER ═══════ */}
-      <footer style={{ borderTop: '1px solid rgba(140,150,148,0.06)', padding: '40px 48px', background: '#080A09' }}>
+      <footer style={{ padding: '40px 48px', background: 'transparent' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
             <img src={aeLogo} alt="Kaeo" style={{ width: 22, height: 22, objectFit: 'contain', filter: 'drop-shadow(0 0 6px rgba(19,140,126,0.35))', flexShrink: 0 }} />
