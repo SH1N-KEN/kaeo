@@ -107,7 +107,7 @@ const Sidebar: React.FC = () => {
 
   return (
     <aside
-      className="frosted-sidebar flex-shrink-0"
+      className="sidebar-base flex-shrink-0"
       style={{ width: sidebarWidth }}
     >
       {/* ── Logo ── */}
@@ -122,7 +122,7 @@ const Sidebar: React.FC = () => {
             style={{ width: 40, height: 40 }}
             title="Expand sidebar"
           >
-            <img src={aeLogo} alt="Kaeo" style={{ width: 26, height: 26, objectFit: 'contain', filter: 'drop-shadow(0 0 4px rgba(19,140,126,0.15))' }} />
+            <img src={aeLogo} alt="Kaeo" style={{ width: 26, height: 26, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(19,140,126,0.4))' }} />
           </button>
         ) : (
           <div className="flex items-center justify-between w-full">
@@ -130,7 +130,7 @@ const Sidebar: React.FC = () => {
               <img
                 src={aeLogo}
                 alt="Kaeo"
-                style={{ width: 28, height: 28, objectFit: 'contain', filter: 'drop-shadow(0 0 4px rgba(19,140,126,0.15))', flexShrink: 0 }}
+                style={{ width: 28, height: 28, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(19,140,126,0.35))', flexShrink: 0 }}
               />
               <span
                 style={{
@@ -213,9 +213,9 @@ const Sidebar: React.FC = () => {
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold flex-shrink-0"
             style={{
-              background: 'var(--secondary)',
+              background: 'rgba(15,118,110,0.12)',
               color: 'var(--primary)',
-              border: '1px solid var(--border)',
+              border: '1px solid rgba(15,118,110,0.20)',
             }}
           >
             {userInitial}
