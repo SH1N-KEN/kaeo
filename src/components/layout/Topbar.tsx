@@ -417,7 +417,7 @@ const Topbar: React.FC = () => {
                       { label: 'Open Risk Inbox',     route: '/risk-inbox',                dotColor: '#C2413A' },
                       { label: 'Review Transactions',  route: '/transactions?review=pending', dotColor: '#0F766E' },
                       { label: 'Upload Files',         route: '/files',                      dotColor: '#2563EB' },
-                      { label: 'Ask Libby',             route: '/libby',                      dotColor: '#2FB8A6' },
+                      { label: 'Ask Libby',             route: '/libby',                      dotColor: '#138C7E' },
                     ].map(q => (
                       <button
                         key={q.route}

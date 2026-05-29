@@ -10,7 +10,7 @@ const UploadCard = () => (
   <div
     style={{
       background: '#0D1714',
-      border: '1px solid rgba(47, 184, 166, 0.18)',
+      border: '1px solid rgba(19, 140, 126, 0.18)',
       borderRadius: '14px',
       padding: '20px',
       fontFamily: 'inherit',
@@ -21,16 +21,16 @@ const UploadCard = () => (
     </div>
     <div
       style={{
-        border: '1.5px dashed rgba(47, 184, 166, 0.30)',
+        border: '1.5px dashed rgba(19, 140, 126, 0.30)',
         borderRadius: '10px',
         padding: '18px 14px',
         textAlign: 'center',
         marginBottom: '12px',
-        background: 'rgba(47, 184, 166, 0.04)',
+        background: 'rgba(19, 140, 126, 0.04)',
       }}
     >
       <div style={{ fontSize: '20px', marginBottom: '4px' }}>↑</div>
-      <div style={{ fontSize: '12px', color: '#2FB8A6', fontWeight: 600 }}>Drop your statement</div>
+      <div style={{ fontSize: '12px', color: '#138C7E', fontWeight: 600 }}>Drop your statement</div>
       <div style={{ fontSize: '10px', color: 'rgba(232,240,238,0.35)', marginTop: '2px' }}>CSV · XLSX · PDF</div>
     </div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -40,7 +40,7 @@ const UploadCard = () => (
           background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '8px 10px',
         }}>
           <span style={{ fontSize: '12px', color: '#E8F0EE', fontWeight: 500 }}>{f}</span>
-          <span style={{ fontSize: '10px', color: '#2FB8A6', fontFamily: 'ui-monospace, monospace' }}>● parsed</span>
+          <span style={{ fontSize: '10px', color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>● parsed</span>
         </div>
       ))}
     </div>
@@ -51,7 +51,7 @@ const TransactionCard = () => (
   <div
     style={{
       background: '#080E0C',
-      border: '1px solid rgba(47, 184, 166, 0.12)',
+      border: '1px solid rgba(19, 140, 126, 0.12)',
       borderRadius: '14px',
       padding: '16px',
       fontFamily: 'inherit',
@@ -59,7 +59,7 @@ const TransactionCard = () => (
   >
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
       <span style={{ fontSize: '11px', fontWeight: 700, color: '#E8F0EE', letterSpacing: '0.02em' }}>Transactions</span>
-      <span style={{ fontSize: '10px', color: '#2FB8A6', fontFamily: 'ui-monospace, monospace' }}>Apr 2026 · 142 rows</span>
+      <span style={{ fontSize: '10px', color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>Apr 2026 · 142 rows</span>
     </div>
     {[
       { date: '28 Apr', narr: 'UPI/Razorpay/Vendor', dr: '−₹84,200', tag: 'vendor', risk: false },
@@ -87,9 +87,9 @@ const TransactionCard = () => (
           letterSpacing: '0.04em',
           textTransform: 'uppercase',
           textAlign: 'center',
-          background: row.risk ? 'rgba(224, 84, 80, 0.12)' : row.tag === 'inflow' ? 'rgba(34, 181, 115, 0.12)' : 'rgba(47, 184, 166, 0.10)',
-          color: row.risk ? '#E05450' : row.tag === 'inflow' ? '#22B573' : '#2FB8A6',
-          border: `1px solid ${row.risk ? 'rgba(224,84,80,0.20)' : row.tag === 'inflow' ? 'rgba(34,181,115,0.20)' : 'rgba(47,184,166,0.18)'}`,
+          background: row.risk ? 'rgba(224, 84, 80, 0.12)' : row.tag === 'inflow' ? 'rgba(34, 181, 115, 0.12)' : 'rgba(19, 140, 126, 0.10)',
+          color: row.risk ? '#E05450' : row.tag === 'inflow' ? '#22B573' : '#138C7E',
+          border: `1px solid ${row.risk ? 'rgba(224,84,80,0.20)' : row.tag === 'inflow' ? 'rgba(34,181,115,0.20)' : 'rgba(19,140,126,0.18)'}`,
         }}>{row.tag}</span>
       </div>
     ))}
@@ -100,7 +100,7 @@ const RiskCard = () => (
   <div
     style={{
       background: '#0D1714',
-      border: '1px solid rgba(47, 184, 166, 0.14)',
+      border: '1px solid rgba(19, 140, 126, 0.14)',
       borderRadius: '14px',
       padding: '18px',
       fontFamily: 'inherit',
@@ -128,13 +128,13 @@ const RiskCard = () => (
         </div>
       ))}
     </div>
-    <div style={{ marginTop: '14px', padding: '10px 12px', background: 'rgba(47, 184, 166, 0.08)', borderRadius: '8px', border: '1px solid rgba(47, 184, 166, 0.18)' }}>
-      <div style={{ fontSize: '11px', color: '#2FB8A6', fontWeight: 600, marginBottom: '2px' }}>Report readiness</div>
+    <div style={{ marginTop: '14px', padding: '10px 12px', background: 'rgba(19, 140, 126, 0.08)', borderRadius: '8px', border: '1px solid rgba(19, 140, 126, 0.18)' }}>
+      <div style={{ fontSize: '11px', color: '#138C7E', fontWeight: 600, marginBottom: '2px' }}>Report readiness</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ width: '74%', height: '100%', background: '#2FB8A6', borderRadius: '2px' }} />
+          <div style={{ width: '74%', height: '100%', background: '#138C7E', borderRadius: '2px' }} />
         </div>
-        <span style={{ fontSize: '11px', color: '#2FB8A6', fontFamily: 'ui-monospace, monospace', fontWeight: 700 }}>74%</span>
+        <span style={{ fontSize: '11px', color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontWeight: 700 }}>74%</span>
       </div>
     </div>
   </div>
@@ -168,7 +168,7 @@ export const KaeoHero: React.FC = () => {
           right: '-120px',
           width: '700px',
           height: '700px',
-          background: 'radial-gradient(circle, rgba(47, 184, 166, 0.10) 0%, transparent 65%)',
+          background: 'radial-gradient(circle, rgba(19, 140, 126, 0.10) 0%, transparent 65%)',
           pointerEvents: 'none',
         }}
       />
@@ -180,7 +180,7 @@ export const KaeoHero: React.FC = () => {
           left: '-80px',
           width: '500px',
           height: '500px',
-          background: 'radial-gradient(circle, rgba(47, 184, 166, 0.05) 0%, transparent 60%)',
+          background: 'radial-gradient(circle, rgba(19, 140, 126, 0.05) 0%, transparent 60%)',
           pointerEvents: 'none',
         }}
       />
@@ -206,7 +206,7 @@ export const KaeoHero: React.FC = () => {
             {/* Eyebrow */}
             <div
               style={{
-                color: '#2FB8A6',
+                color: '#138C7E',
                 fontFamily: 'ui-monospace, monospace',
                 fontSize: '11px',
                 letterSpacing: '0.10em',
@@ -231,7 +231,7 @@ export const KaeoHero: React.FC = () => {
               Your statements,<br />
               your vendors,<br />
               your risks,<br />
-              <span className="editorial-accent" style={{ color: '#2FB8A6' }}>reviewed.</span>
+              <span className="editorial-accent" style={{ color: '#138C7E' }}>reviewed.</span>
             </h1>
 
             {/* Subheadline */}
@@ -253,7 +253,7 @@ export const KaeoHero: React.FC = () => {
               <Link
                 to={user ? '/dashboard' : '/signup'}
                 style={{
-                  background: '#2FB8A6',
+                  background: '#138C7E',
                   color: '#050F0D',
                   border: 'none',
                   padding: '14px 28px',
@@ -281,12 +281,12 @@ export const KaeoHero: React.FC = () => {
                   fontWeight: 500,
                   textDecoration: 'none',
                   padding: '14px 24px',
-                  border: '1px solid rgba(47, 184, 166, 0.18)',
+                  border: '1px solid rgba(19, 140, 126, 0.18)',
                   borderRadius: '999px',
                   display: 'inline-block',
                   transition: 'all 0.15s ease',
                 }}
-                className="hover:border-[#2FB8A6]/40 hover:text-[#E8F0EE]"
+                className="hover:border-[#138C7E]/40 hover:text-[#E8F0EE]"
               >
                 View demo
               </a>
@@ -313,7 +313,7 @@ export const KaeoHero: React.FC = () => {
                 'Accountant-ready reports',
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#2FB8A6', display: 'inline-block', flexShrink: 0 }} />
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#138C7E', display: 'inline-block', flexShrink: 0 }} />
                   <span style={{ fontSize: '12px', color: 'rgba(232, 240, 238, 0.45)', fontWeight: 500 }}>{item}</span>
                 </div>
               ))}
@@ -331,10 +331,10 @@ export const KaeoHero: React.FC = () => {
             <div
               style={{
                 background: '#080E0C',
-                border: '1px solid rgba(47, 184, 166, 0.15)',
+                border: '1px solid rgba(19, 140, 126, 0.15)',
                 borderRadius: '18px',
                 padding: '20px',
-                boxShadow: '0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(47, 184, 166, 0.08)',
+                boxShadow: '0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(19, 140, 126, 0.08)',
               }}
             >
               {/* Browser chrome */}
@@ -349,7 +349,7 @@ export const KaeoHero: React.FC = () => {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <img src={aeLogo} alt="Kaeo" style={{ width: 22, height: 22, objectFit: 'contain', filter: 'drop-shadow(0 0 6px rgba(47,184,166,0.4))', flexShrink: 0 }} />
+                  <img src={aeLogo} alt="Kaeo" style={{ width: 22, height: 22, objectFit: 'contain', filter: 'drop-shadow(0 0 6px rgba(19,140,126,0.4))', flexShrink: 0 }} />
                   <span style={{ fontSize: '13px', fontWeight: 600, color: '#E8F0EE' }}>Kaeo Finance Review</span>
                 </div>
                 <span
@@ -358,9 +358,9 @@ export const KaeoHero: React.FC = () => {
                     fontFamily: 'ui-monospace, monospace',
                     letterSpacing: '0.08em',
                     padding: '3px 8px',
-                    background: 'rgba(47, 184, 166, 0.10)',
-                    color: '#2FB8A6',
-                    border: '1px solid rgba(47, 184, 166, 0.20)',
+                    background: 'rgba(19, 140, 126, 0.10)',
+                    color: '#138C7E',
+                    border: '1px solid rgba(19, 140, 126, 0.20)',
                     borderRadius: '4px',
                     fontWeight: 700,
                     textTransform: 'uppercase',

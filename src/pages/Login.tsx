@@ -70,7 +70,7 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen bg-background flex font-sans">
       {/* Left Side: Brand Promise Banner */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#070908] relative overflow-hidden flex-col justify-between p-12 border-r border-[#2fb8a6]/10 text-white">
+      <div className="hidden lg:flex lg:w-1/2 bg-[#070908] relative overflow-hidden flex-col justify-between p-12 border-r border-[#138C7E]/10 text-white">
         {/* Glow Effects */}
         <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-[300px] h-[300px] bg-teal-500/5 rounded-full blur-[95px] pointer-events-none" />
@@ -79,7 +79,7 @@ const Login: React.FC = () => {
           <img
             src={aeLogo}
             alt="Kaeo"
-            style={{ width: 28, height: 28, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(47,184,166,0.35))', flexShrink: 0 }}
+            style={{ width: 28, height: 28, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(19,140,126,0.35))', flexShrink: 0 }}
           />
           <span className="text-xl font-black tracking-tight text-white leading-none">
             Kaeo
@@ -89,7 +89,7 @@ const Login: React.FC = () => {
         {/* Core Value Statement & Illustrative Card */}
         <div className="my-auto space-y-10 z-10 max-w-lg">
           <div className="space-y-4">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#2fb8a6]">India's SME CFO Suite</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#138C7E]">India's SME CFO Suite</span>
             <h2 className="text-4xl font-black tracking-tight leading-[1.15]">
               Real-time audit trailing & cash leak detection.
             </h2>
@@ -101,7 +101,7 @@ const Login: React.FC = () => {
           {/* Mini Mock Dashboard Widget (Risk Alert) */}
           <div className="p-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-wider text-[#2fb8a6] flex items-center gap-1.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-[#138C7E] flex items-center gap-1.5">
                 <Brain className="w-3.5 h-3.5" />
                 Live Risk Screening
               </span>
@@ -138,7 +138,7 @@ const Login: React.FC = () => {
               <img
                 src={aeLogo}
                 alt="Kaeo"
-                style={{ width: 28, height: 28, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(47,184,166,0.35))', flexShrink: 0 }}
+                style={{ width: 28, height: 28, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(19,140,126,0.35))', flexShrink: 0 }}
               />
               <span className="text-xl font-black tracking-tight text-foreground leading-none">
                 Kaeo

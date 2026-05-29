@@ -45,7 +45,7 @@ export const KaeoLandingHeader: React.FC = () => {
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? 'bg-[#050F0D]/90 backdrop-blur-xl border-b border-[#2FB8A6]/10'
+          ? 'bg-[#050F0D]/90 backdrop-blur-xl border-b border-[#138C7E]/10'
           : 'bg-transparent border-b border-transparent'
       }`}
       style={{ padding: '0 0' }}
@@ -69,7 +69,7 @@ export const KaeoLandingHeader: React.FC = () => {
               width: '28px',
               height: '28px',
               objectFit: 'contain',
-              filter: 'drop-shadow(0 0 8px rgba(47, 184, 166, 0.35))',
+              filter: 'drop-shadow(0 0 8px rgba(19, 140, 126, 0.35))',
               flexShrink: 0,
             }}
           />
@@ -141,7 +141,7 @@ export const KaeoLandingHeader: React.FC = () => {
             <Link
               to="/dashboard"
               style={{
-                background: '#2FB8A6',
+                background: '#138C7E',
                 color: '#050F0D',
                 border: 'none',
                 padding: '10px 20px',
@@ -173,7 +173,7 @@ export const KaeoLandingHeader: React.FC = () => {
               <Link
                 to="/signup"
                 style={{
-                  background: '#2FB8A6',
+                  background: '#138C7E',
                   color: '#050F0D',
                   border: 'none',
                   padding: '10px 20px',
@@ -214,7 +214,7 @@ export const KaeoLandingHeader: React.FC = () => {
           style={{
             background: 'rgba(5, 15, 13, 0.98)',
             backdropFilter: 'blur(24px)',
-            borderBottom: '1px solid rgba(47, 184, 166, 0.12)',
+            borderBottom: '1px solid rgba(19, 140, 126, 0.12)',
             padding: '24px 24px 32px',
           }}
           className="md:hidden"
@@ -241,13 +241,13 @@ export const KaeoLandingHeader: React.FC = () => {
               </a>
             ))}
           </nav>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid rgba(47, 184, 166, 0.10)', paddingTop: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid rgba(19, 140, 126, 0.10)', paddingTop: '20px' }}>
             {user ? (
               <Link
                 to="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
                 style={{
-                  background: '#2FB8A6',
+                  background: '#138C7E',
                   color: '#050F0D',
                   padding: '14px 20px',
                   borderRadius: '12px',
@@ -266,7 +266,7 @@ export const KaeoLandingHeader: React.FC = () => {
                   to="/login"
                   onClick={() => setMobileMenuOpen(false)}
                   style={{
-                    border: '1px solid rgba(47, 184, 166, 0.20)',
+                    border: '1px solid rgba(19, 140, 126, 0.20)',
                     color: '#E8F0EE',
                     padding: '14px 20px',
                     borderRadius: '12px',
@@ -283,7 +283,7 @@ export const KaeoLandingHeader: React.FC = () => {
                   to="/signup"
                   onClick={() => setMobileMenuOpen(false)}
                   style={{
-                    background: '#2FB8A6',
+                    background: '#138C7E',
                     color: '#050F0D',
                     padding: '14px 20px',
                     borderRadius: '12px',

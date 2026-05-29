@@ -122,7 +122,7 @@ const Sidebar: React.FC = () => {
             style={{ width: 40, height: 40 }}
             title="Expand sidebar"
           >
-            <img src={aeLogo} alt="Kaeo" style={{ width: 26, height: 26, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(47,184,166,0.4))' }} />
+            <img src={aeLogo} alt="Kaeo" style={{ width: 26, height: 26, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(19,140,126,0.4))' }} />
           </button>
         ) : (
           <div className="flex items-center justify-between w-full">
@@ -130,7 +130,7 @@ const Sidebar: React.FC = () => {
               <img
                 src={aeLogo}
                 alt="Kaeo"
-                style={{ width: 28, height: 28, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(47,184,166,0.35))', flexShrink: 0 }}
+                style={{ width: 28, height: 28, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(19,140,126,0.35))', flexShrink: 0 }}
               />
               <span
                 style={{

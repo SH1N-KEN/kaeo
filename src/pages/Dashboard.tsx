@@ -900,8 +900,8 @@ const Dashboard: React.FC = () => {
               className="text-left px-3.5 py-3 rounded-xl border border-[var(--border)] transition-all cursor-pointer group"
               style={{ background: 'var(--muted)' }}
               onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(47,184,166,0.06)';
-                e.currentTarget.style.borderColor = 'rgba(47,184,166,0.20)';
+                e.currentTarget.style.background = 'rgba(19,140,126,0.06)';
+                e.currentTarget.style.borderColor = 'rgba(19,140,126,0.20)';
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.background = 'var(--muted)';

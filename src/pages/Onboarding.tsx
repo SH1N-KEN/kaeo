@@ -149,7 +149,7 @@ const Onboarding: React.FC = () => {
   const renderStep1 = () => (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="text-center space-y-2">
-        <span className="text-xs font-bold uppercase tracking-widest text-[#2fb8a6]">Step 1 of 3</span>
+        <span className="text-xs font-bold uppercase tracking-widest text-[#138C7E]">Step 1 of 3</span>
         <h1 className="text-3xl font-black tracking-tight text-white">How will you use Kaeo?</h1>
         <p className="text-sm text-muted-foreground max-w-sm mx-auto">
           We will tailor your analytics workspace based on your primary workflow.
@@ -226,7 +226,7 @@ const Onboarding: React.FC = () => {
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
         <div className="text-center space-y-2">
-          <span className="text-xs font-bold uppercase tracking-widest text-[#2fb8a6]">Step 2 of 3</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-[#138C7E]">Step 2 of 3</span>
           <h1 className="text-3xl font-black tracking-tight text-white">
             {isBusiness ? 'Tell us about your business' : 'Tell us about your practice'}
           </h1>
@@ -405,7 +405,7 @@ const Onboarding: React.FC = () => {
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
         <div className="text-center space-y-2">
-          <span className="text-xs font-bold uppercase tracking-widest text-[#2fb8a6]">Step 3 of 3</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-[#138C7E]">Step 3 of 3</span>
           <h1 className="text-3xl font-black tracking-tight text-white">Select your workflow</h1>
           <p className="text-sm text-muted-foreground">
             We will calibrate the Libby Advisor to prioritize these pain points.
@@ -512,7 +512,7 @@ const Onboarding: React.FC = () => {
           <img
             src={aeLogo}
             alt="Kaeo"
-            style={{ width: 26, height: 26, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(47,184,166,0.35))', flexShrink: 0 }}
+            style={{ width: 26, height: 26, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(19,140,126,0.35))', flexShrink: 0 }}
           />
           <span className="text-lg font-bold tracking-tight text-teal-400 leading-none">
             Kaeo

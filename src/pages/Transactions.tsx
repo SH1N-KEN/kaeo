@@ -961,7 +961,7 @@ const Transactions: React.FC = () => {
                       key={tx.id}
                       id={`tx-row-${tx.id}`}
                       className={`group relative border-b border-border/10 hover:bg-muted/20 transition-colors duration-150 ${isHighlighted ? 'bg-primary/5' : ''}`}
-                      style={isHighlighted ? { borderLeft: '3px solid #2FB8A6' } : {}}
+                      style={isHighlighted ? { borderLeft: '3px solid #138C7E' } : {}}
                       onClick={() => { if (isMenuOpen) setOpenMenuId(null); }}
                     >
                       {/* Date */}

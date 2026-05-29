@@ -9,7 +9,7 @@ import aeLogo from '../assets/kaeo-ae-logo.png';
    SECTION LABEL COMPONENT
 ═══════════════════════════════════════════════ */
 const SectionLabel = ({ code, label }: { code: string; label: string }) => (
-  <div style={{ color: '#2FB8A6', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '16px', textTransform: 'uppercase' as const, fontWeight: 500 }}>
+  <div style={{ color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '16px', textTransform: 'uppercase' as const, fontWeight: 500 }}>
     {code} — {label}
   </div>
 );
@@ -24,18 +24,18 @@ const UploadVisualInteractive = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <div 
         style={{ 
-          border: '2px dashed rgba(47, 184, 166, 0.2)', 
+          border: '2px dashed rgba(19, 140, 126, 0.2)', 
           borderRadius: '10px', 
           padding: '24px 16px', 
           textAlign: 'center', 
-          background: 'rgba(47, 184, 166, 0.02)', 
+          background: 'rgba(19, 140, 126, 0.02)', 
           cursor: 'pointer', 
           transition: 'all 0.2s ease' 
         }} 
         className="hover:border-teal-400/40 hover:bg-teal-950/10"
       >
         <span style={{ fontSize: '28px', display: 'block', marginBottom: '8px' }}>📁</span>
-        <span style={{ fontSize: '13px', color: '#2FB8A6', fontWeight: 600 }}>Click or drag statement file here</span>
+        <span style={{ fontSize: '13px', color: '#138C7E', fontWeight: 600 }}>Click or drag statement file here</span>
         <span style={{ fontSize: '11px', color: 'rgba(232, 240, 238, 0.35)', display: 'block', marginTop: '4px' }}>Supports CSV or XLSX statement sheets</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
@@ -52,9 +52,9 @@ const UploadVisualInteractive = () => {
               alignItems: 'center', 
               justifyContent: 'space-between', 
               padding: '10px 14px', 
-              background: hoveredFile === i ? 'rgba(47, 184, 166, 0.04)' : 'rgba(255,255,255,0.01)', 
+              background: hoveredFile === i ? 'rgba(19, 140, 126, 0.04)' : 'rgba(255,255,255,0.01)', 
               borderRadius: '8px', 
-              border: hoveredFile === i ? '1px solid rgba(47, 184, 166, 0.25)' : '1px solid rgba(255,255,255,0.05)',
+              border: hoveredFile === i ? '1px solid rgba(19, 140, 126, 0.25)' : '1px solid rgba(255,255,255,0.05)',
               transition: 'all 0.2s ease'
             }}
           >
@@ -65,7 +65,7 @@ const UploadVisualInteractive = () => {
                 <span style={{ fontSize: '10px', color: 'rgba(232,240,238,0.4)' }}>{f.size} · {f.type}</span>
               </div>
             </div>
-            <span style={{ fontSize: '11px', color: '#2FB8A6', fontWeight: 700 }}>✓ Uploaded</span>
+            <span style={{ fontSize: '11px', color: '#138C7E', fontWeight: 700 }}>✓ Uploaded</span>
           </div>
         ))}
       </div>
@@ -94,19 +94,19 @@ const MapVisualInteractive = () => {
             alignItems: 'center', 
             justifyContent: 'space-between', 
             padding: '10px 14px', 
-            background: hoveredRow === i ? 'rgba(47, 184, 166, 0.04)' : 'rgba(255,255,255,0.01)', 
+            background: hoveredRow === i ? 'rgba(19, 140, 126, 0.04)' : 'rgba(255,255,255,0.01)', 
             borderRadius: '8px', 
-            border: hoveredRow === i ? '1px solid rgba(47, 184, 166, 0.25)' : '1px solid rgba(255,255,255,0.05)',
+            border: hoveredRow === i ? '1px solid rgba(19, 140, 126, 0.25)' : '1px solid rgba(255,255,255,0.05)',
             transition: 'all 0.15s ease'
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <span style={{ fontSize: '12px', color: '#E8F0EE', fontWeight: 600 }}>{row.target}</span>
-            <span style={{ fontSize: '11px', color: '#2FB8A6', fontFamily: 'ui-monospace, monospace' }}>➔ Mapped to column: <span style={{ color: '#E8F0EE' }}>"{row.source}"</span></span>
+            <span style={{ fontSize: '11px', color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>➔ Mapped to column: <span style={{ color: '#E8F0EE' }}>"{row.source}"</span></span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '10px', color: 'rgba(232, 240, 238, 0.45)' }}>Conf: {row.confidence}</span>
-            <span style={{ fontSize: '9px', color: '#2FB8A6', background: 'rgba(47,184,166,0.08)', border: '1px solid rgba(47,184,166,0.18)', borderRadius: '4px', padding: '2px 6px', fontWeight: 700 }}>VERIFIED</span>
+            <span style={{ fontSize: '9px', color: '#138C7E', background: 'rgba(19,140,126,0.08)', border: '1px solid rgba(19,140,126,0.18)', borderRadius: '4px', padding: '2px 6px', fontWeight: 700 }}>VERIFIED</span>
           </div>
         </div>
       ))}
@@ -153,7 +153,7 @@ const ReviewVisualInteractive = () => {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
               <span style={{ fontSize: '10.5px', color: '#E05450', fontWeight: 500 }}>⚠ {item.label}</span>
-              <span style={{ fontSize: '9px', background: 'rgba(47,184,166,0.08)', color: '#2FB8A6', border: '1px solid rgba(47,184,166,0.15)', padding: '1px 5px', borderRadius: '4px' }}>{item.cat}</span>
+              <span style={{ fontSize: '9px', background: 'rgba(19,140,126,0.08)', color: '#138C7E', border: '1px solid rgba(19,140,126,0.15)', padding: '1px 5px', borderRadius: '4px' }}>{item.cat}</span>
             </div>
             {isSelected && (
               <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', fontSize: '11px', color: 'rgba(232,240,238,0.6)', lineHeight: 1.4 }}>
@@ -179,7 +179,7 @@ const UnderstandVendorsVisual = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
         <span style={{ fontSize: '11px', color: 'rgba(232, 240, 238, 0.4)', textTransform: 'uppercase', fontWeight: 600 }}>Active Merchant Accounts</span>
-        <span style={{ fontSize: '10.5px', color: '#2FB8A6', fontWeight: 600 }}>3 vendors tracked</span>
+        <span style={{ fontSize: '10.5px', color: '#138C7E', fontWeight: 600 }}>3 vendors tracked</span>
       </div>
       {vendors.map((v, i) => {
         const isActive = activeVendor === i;
@@ -189,9 +189,9 @@ const UnderstandVendorsVisual = () => {
             onClick={() => setActiveVendor(i)}
             style={{ 
               padding: '12px', 
-              background: isActive ? 'rgba(47, 184, 166, 0.04)' : 'rgba(255,255,255,0.01)', 
+              background: isActive ? 'rgba(19, 140, 126, 0.04)' : 'rgba(255,255,255,0.01)', 
               borderRadius: '8px', 
-              border: isActive ? '1px solid rgba(47, 184, 166, 0.25)' : '1px solid rgba(255,255,255,0.05)',
+              border: isActive ? '1px solid rgba(19, 140, 126, 0.25)' : '1px solid rgba(255,255,255,0.05)',
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
@@ -201,11 +201,11 @@ const UnderstandVendorsVisual = () => {
                 <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#E8F0EE' }}>{v.name}</span>
                 <span style={{ fontSize: '9px', background: 'rgba(255,255,255,0.05)', color: 'rgba(232,240,238,0.5)', padding: '1px 5px', borderRadius: '4px', marginLeft: '8px' }}>{v.type}</span>
               </div>
-              <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#2FB8A6', fontFamily: 'ui-monospace, monospace' }}>{v.total}</span>
+              <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>{v.total}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', fontSize: '11px', color: 'rgba(232,240,238,0.45)' }}>
               <span>{v.count} · Recurring monthly</span>
-              <span style={{ color: '#2FB8A6' }}>{v.share} of period spend</span>
+              <span style={{ color: '#138C7E' }}>{v.share} of period spend</span>
             </div>
           </div>
         );
@@ -219,7 +219,7 @@ const GenerateReportsVisual = () => {
   
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <div style={{ background: 'rgba(47, 184, 166, 0.03)', border: '1px solid rgba(47, 184, 166, 0.15)', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ background: 'rgba(19, 140, 126, 0.03)', border: '1px solid rgba(19, 140, 126, 0.15)', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: '13px', fontWeight: 700, color: '#E8F0EE' }}>Finance Review Pack · April 2026</span>
           <span style={{ fontSize: '10px', color: '#22B573', fontWeight: 700 }}>✓ Reconciled</span>
@@ -229,7 +229,7 @@ const GenerateReportsVisual = () => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div>
             <span style={{ fontSize: '9px', color: 'rgba(232,240,238,0.4)', display: 'block' }}>TOTAL REVIEWS</span>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#2FB8A6', fontFamily: 'ui-monospace, monospace' }}>142 items</span>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>142 items</span>
           </div>
           <div>
             <span style={{ fontSize: '9px', color: 'rgba(232,240,238,0.4)', display: 'block' }}>RISKS CLEARED</span>
@@ -245,7 +245,7 @@ const GenerateReportsVisual = () => {
         style={{ 
           width: '100%', 
           padding: '12px', 
-          background: downloaded ? 'rgba(34, 181, 115, 0.15)' : '#2FB8A6', 
+          background: downloaded ? 'rgba(34, 181, 115, 0.15)' : '#138C7E', 
           color: downloaded ? '#22B573' : '#050F0D', 
           border: downloaded ? '1px solid rgba(34, 181, 115, 0.3)' : 'none', 
           borderRadius: '8px', 
@@ -373,9 +373,9 @@ const InteractiveWorkflowSection: React.FC = () => {
               onClick={() => handleStepClick(idx)}
               style={{
                 padding: '24px',
-                background: isActive ? 'rgba(47, 184, 166, 0.05)' : 'rgba(255, 255, 255, 0.01)',
+                background: isActive ? 'rgba(19, 140, 126, 0.05)' : 'rgba(255, 255, 255, 0.01)',
                 border: '1px solid',
-                borderColor: isActive ? 'rgba(47, 184, 166, 0.22)' : 'rgba(255, 255, 255, 0.03)',
+                borderColor: isActive ? 'rgba(19, 140, 126, 0.22)' : 'rgba(255, 255, 255, 0.03)',
                 borderRadius: '16px',
                 cursor: 'pointer',
                 transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -388,7 +388,7 @@ const InteractiveWorkflowSection: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '8px' }}>
                 <span style={{
                   fontStyle: 'italic',
-                  color: isActive ? '#2FB8A6' : 'rgba(232, 240, 238, 0.2)',
+                  color: isActive ? '#138C7E' : 'rgba(232, 240, 238, 0.2)',
                   fontSize: '24px',
                   lineHeight: '1',
                   letterSpacing: '-0.04em',
@@ -396,7 +396,7 @@ const InteractiveWorkflowSection: React.FC = () => {
                   transition: 'color 0.3s',
                 }}>{step.num}</span>
                 <span style={{
-                  color: isActive ? '#2FB8A6' : 'rgba(232, 240, 238, 0.3)',
+                  color: isActive ? '#138C7E' : 'rgba(232, 240, 238, 0.3)',
                   fontFamily: 'ui-monospace, monospace',
                   fontSize: '9.5px',
                   letterSpacing: '0.08em',
@@ -429,7 +429,7 @@ const InteractiveWorkflowSection: React.FC = () => {
       <div 
         style={{
           background: '#0D1714',
-          border: '1px solid rgba(47,184,166,0.14)',
+          border: '1px solid rgba(19,140,126,0.14)',
           borderRadius: '16px',
           padding: '24px',
           position: 'sticky',
@@ -455,8 +455,8 @@ const InteractiveWorkflowSection: React.FC = () => {
             fontFamily: 'ui-monospace, monospace', 
             letterSpacing: '0.08em', 
             padding: '2px 6px', 
-            background: 'rgba(47,184,166,0.1)', 
-            color: '#2FB8A6', 
+            background: 'rgba(19,140,126,0.1)', 
+            color: '#138C7E', 
             borderRadius: '4px', 
             fontWeight: 700, 
             textTransform: 'uppercase',
@@ -480,21 +480,21 @@ const BeforeAfterComparison: React.FC = () => {
   const [mode, setMode] = useState<'before' | 'after'>('after');
 
   return (
-    <section style={{ padding: '80px 48px', background: '#070F0D', borderTop: '1px solid rgba(47,184,166,0.08)' }}>
+    <section style={{ padding: '80px 48px', background: '#070F0D', borderTop: '1px solid rgba(19,140,126,0.08)' }}>
       <div style={{ maxWidth: '1280px', margin: '0 auto', width: '100%' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{ color: '#2FB8A6', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '16px', textTransform: 'uppercase', fontWeight: 500 }}>
+          <div style={{ color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '16px', textTransform: 'uppercase', fontWeight: 500 }}>
             002B — THE DIFFERENCE
           </div>
           <h2 style={{ fontWeight: 700, fontSize: 'clamp(28px, 3.5vw, 48px)', letterSpacing: '-0.03em', lineHeight: 1.1, margin: '0 0 16px', color: '#E8F0EE' }}>
-            Before Kaeo vs. <span style={{ fontFamily: '"Instrument Serif", serif', fontStyle: 'italic', fontWeight: 400, color: '#2FB8A6', textTransform: 'none' }}>Review-ready.</span>
+            Before Kaeo vs. <span style={{ fontFamily: '"Instrument Serif", serif', fontStyle: 'italic', fontWeight: 400, color: '#138C7E', textTransform: 'none' }}>Review-ready.</span>
           </h2>
           <p style={{ fontSize: '16px', color: 'rgba(232,240,238,0.45)', maxWidth: '520px', lineHeight: 1.6, margin: '0 0 24px' }}>
             Stop wasting hours untangling narrations and searching for invoices. Toggle below to see how Kaeo transforms raw data.
           </p>
 
           {/* Toggle Switch */}
-          <div style={{ display: 'flex', background: '#0D1714', border: '1px solid rgba(47, 184, 166, 0.15)', padding: '4px', borderRadius: '999px', gap: '4px' }}>
+          <div style={{ display: 'flex', background: '#0D1714', border: '1px solid rgba(19, 140, 126, 0.15)', padding: '4px', borderRadius: '999px', gap: '4px' }}>
             <button
               onClick={() => setMode('before')}
               style={{
@@ -517,7 +517,7 @@ const BeforeAfterComparison: React.FC = () => {
                 padding: '8px 20px',
                 borderRadius: '999px',
                 border: 'none',
-                background: mode === 'after' ? '#2FB8A6' : 'transparent',
+                background: mode === 'after' ? '#138C7E' : 'transparent',
                 color: mode === 'after' ? '#050F0D' : 'rgba(232,240,238,0.5)',
                 fontWeight: 700,
                 fontSize: '12px',
@@ -534,7 +534,7 @@ const BeforeAfterComparison: React.FC = () => {
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <div style={{
             background: '#0D1714',
-            border: `1.5px solid ${mode === 'before' ? 'rgba(224, 84, 80, 0.25)' : 'rgba(47, 184, 166, 0.25)'}`,
+            border: `1.5px solid ${mode === 'before' ? 'rgba(224, 84, 80, 0.25)' : 'rgba(19, 140, 126, 0.25)'}`,
             borderRadius: '16px',
             padding: '24px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
@@ -565,24 +565,24 @@ const BeforeAfterComparison: React.FC = () => {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ fontSize: '11px', color: '#2FB8A6', fontWeight: 700, letterSpacing: '0.05em' }}>⚡ CLEAN, RECONCILED KAEO LEDGER ROWS</div>
+                <div style={{ fontSize: '11px', color: '#138C7E', fontWeight: 700, letterSpacing: '0.05em' }}>⚡ CLEAN, RECONCILED KAEO LEDGER ROWS</div>
                 {[
                   { date: '28 Apr 2026', vendor: 'Bombay Rent Ltd', cat: 'Rent & Utilities', amt: '−₹1,80,000', badge: 'Duplicate payment suspect', bColor: '#E05450' },
                   { date: '26 Apr 2026', vendor: 'Mumbai Supplies Pvt Ltd', cat: 'Capital Expense', amt: '−₹1,24,000', badge: 'High-Value Outflow (3.2x avg)', bColor: '#E05450' },
                   { date: '25 Apr 2026', vendor: 'UPI Payee / Rent', cat: 'Rent & Utilities', amt: '−₹18,500', badge: 'Review queue: confirm invoice link', bColor: '#D4922A' },
                 ].map((row, i) => (
-                  <div key={i} style={{ padding: '12px', background: 'rgba(47, 184, 166, 0.02)', borderRadius: '8px', border: '1px solid rgba(47, 184, 166, 0.12)' }}>
+                  <div key={i} style={{ padding: '12px', background: 'rgba(19, 140, 126, 0.02)', borderRadius: '8px', border: '1px solid rgba(19, 140, 126, 0.12)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(232,240,238,0.4)', marginBottom: '4px' }}>
                       <span><strong style={{ color: '#E8F0EE' }}>{row.vendor}</strong> · {row.date}</span>
                       <span style={{ color: '#E8F0EE', fontWeight: 700, fontFamily: 'ui-monospace, monospace' }}>{row.amt}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '10px', background: 'rgba(47,184,166,0.08)', color: '#2FB8A6', border: '1px solid rgba(47,184,166,0.15)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>{row.cat}</span>
+                      <span style={{ fontSize: '10px', background: 'rgba(19,140,126,0.08)', color: '#138C7E', border: '1px solid rgba(19,140,126,0.15)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>{row.cat}</span>
                       <span style={{ fontSize: '10.5px', color: row.bColor, fontWeight: 600 }}>⚠ {row.badge}</span>
                     </div>
                   </div>
                 ))}
-                <div style={{ background: 'rgba(47,184,166,0.06)', border: '1px solid rgba(47,184,166,0.20)', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#2FB8A6' }}>
+                <div style={{ background: 'rgba(19,140,126,0.06)', border: '1px solid rgba(19,140,126,0.20)', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#138C7E' }}>
                   <strong>Benefits:</strong> Categorized transactions, clean review queue, automated risk snapshot, and accountant-ready reports.
                 </div>
               </div>
@@ -661,7 +661,7 @@ const InteractiveRiskCards: React.FC = () => {
             onClick={() => setExpandedCard(isExpanded ? null : idx)}
             style={{
               background: '#0D1714',
-              border: `1.5px solid ${isExpanded ? 'rgba(47,184,166,0.35)' : 'rgba(47,184,166,0.10)'}`,
+              border: `1.5px solid ${isExpanded ? 'rgba(19,140,126,0.35)' : 'rgba(19,140,126,0.10)'}`,
               borderRadius: '14px',
               padding: '24px',
               cursor: 'pointer',
@@ -674,15 +674,15 @@ const InteractiveRiskCards: React.FC = () => {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#E8F0EE', margin: 0, letterSpacing: '-0.01em' }}>{card.title}</h4>
-              <span style={{ fontSize: '11px', color: '#2FB8A6', fontWeight: 'bold' }}>{isExpanded ? '▲ Collapse' : '▼ Expand'}</span>
+              <span style={{ fontSize: '11px', color: '#138C7E', fontWeight: 'bold' }}>{isExpanded ? '▲ Collapse' : '▼ Expand'}</span>
             </div>
             <p style={{ fontSize: '13.5px', color: 'rgba(232,240,238,0.50)', lineHeight: 1.55, margin: 0 }}>{card.description}</p>
             <div style={{
               fontFamily: 'ui-monospace, monospace',
               fontSize: '11px',
-              color: '#2FB8A6',
-              background: 'rgba(47,184,166,0.07)',
-              border: '1px solid rgba(47,184,166,0.14)',
+              color: '#138C7E',
+              background: 'rgba(19,140,126,0.07)',
+              border: '1px solid rgba(19,140,126,0.14)',
               borderRadius: '6px',
               padding: '6px 10px',
               marginTop: '2px',
@@ -704,13 +704,13 @@ const InteractiveRiskCards: React.FC = () => {
                 lineHeight: 1.5,
               }} className="animate-in fade-in duration-200">
                 <div>
-                  <strong style={{ color: '#2FB8A6' }}>Why it matters:</strong> {card.whyMatters}
+                  <strong style={{ color: '#138C7E' }}>Why it matters:</strong> {card.whyMatters}
                 </div>
                 <div>
-                  <strong style={{ color: '#2FB8A6' }}>What Kaeo shows:</strong> {card.whatKaeoShows}
+                  <strong style={{ color: '#138C7E' }}>What Kaeo shows:</strong> {card.whatKaeoShows}
                 </div>
                 <div>
-                  <strong style={{ color: '#2FB8A6' }}>What the user reviews next:</strong> {card.userReviews}
+                  <strong style={{ color: '#138C7E' }}>What the user reviews next:</strong> {card.userReviews}
                 </div>
               </div>
             )}
@@ -730,7 +730,7 @@ const InteractiveReportMock: React.FC = () => {
   return (
     <div style={{
       background: '#080E0C',
-      border: '1px solid rgba(47, 184, 166, 0.14)',
+      border: '1px solid rgba(19, 140, 126, 0.14)',
       borderRadius: '16px',
       overflow: 'hidden',
       fontFamily: 'inherit',
@@ -740,8 +740,8 @@ const InteractiveReportMock: React.FC = () => {
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         padding: '16px 20px',
-        background: 'rgba(47,184,166,0.06)',
-        borderBottom: '1px solid rgba(47, 184, 166, 0.10)',
+        background: 'rgba(19,140,126,0.06)',
+        borderBottom: '1px solid rgba(19, 140, 126, 0.10)',
         flexWrap: 'wrap',
         gap: '12px',
       }}>
@@ -751,7 +751,7 @@ const InteractiveReportMock: React.FC = () => {
         </div>
         
         {/* Toggle switch between report subsections */}
-        <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(47,184,166,0.15)', padding: '3px', borderRadius: '8px', gap: '3px' }}>
+        <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(19,140,126,0.15)', padding: '3px', borderRadius: '8px', gap: '3px' }}>
           {(['summary', 'risks', 'vendors'] as const).map((tab) => (
             <button
               key={tab}
@@ -760,7 +760,7 @@ const InteractiveReportMock: React.FC = () => {
                 padding: '6px 14px',
                 borderRadius: '6px',
                 border: 'none',
-                background: reportTab === tab ? '#2FB8A6' : 'transparent',
+                background: reportTab === tab ? '#138C7E' : 'transparent',
                 color: reportTab === tab ? '#050F0D' : 'rgba(232,240,238,0.5)',
                 fontWeight: 700,
                 fontSize: '11px',
@@ -812,7 +812,7 @@ const InteractiveReportMock: React.FC = () => {
                     <td style={{ padding: '9px 8px', color: 'rgba(232,240,238,0.40)', fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}>{row.date}</td>
                     <td style={{ padding: '9px 8px', color: '#E8F0EE', fontWeight: 500 }}>{row.desc}</td>
                     <td style={{ padding: '9px 8px' }}>
-                      <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(47,184,166,0.08)', color: '#2FB8A6', border: '1px solid rgba(47,184,166,0.14)', fontWeight: 600 }}>{row.cat}</span>
+                      <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(19,140,126,0.08)', color: '#138C7E', border: '1px solid rgba(19,140,126,0.14)', fontWeight: 600 }}>{row.cat}</span>
                     </td>
                     <td style={{ padding: '9px 8px', color: row.aColor, fontWeight: 700, fontFamily: 'ui-monospace, monospace', fontSize: '11px', textAlign: 'right' }}>{row.amount}</td>
                     <td style={{ padding: '9px 8px', textAlign: 'center' }}>
@@ -822,8 +822,8 @@ const InteractiveReportMock: React.FC = () => {
                 ))}
               </tbody>
             </table>
-            <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(47,184,166,0.06)', borderRadius: '8px', border: '1px solid rgba(47,184,166,0.12)', fontSize: '12px', color: 'rgba(232,240,238,0.55)' }}>
-              <span style={{ color: '#2FB8A6', fontWeight: 600 }}>Open Risks: 3 items pending</span> | <span style={{ color: '#D4922A', fontWeight: 600 }}>Uncategorized Rows: 11 items</span> | <span style={{ color: '#2FB8A6', fontWeight: 600 }}>Review Notes: Ready for CA</span>
+            <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(19,140,126,0.06)', borderRadius: '8px', border: '1px solid rgba(19,140,126,0.12)', fontSize: '12px', color: 'rgba(232,240,238,0.55)' }}>
+              <span style={{ color: '#138C7E', fontWeight: 600 }}>Open Risks: 3 items pending</span> | <span style={{ color: '#D4922A', fontWeight: 600 }}>Uncategorized Rows: 11 items</span> | <span style={{ color: '#138C7E', fontWeight: 600 }}>Review Notes: Ready for CA</span>
             </div>
           </div>
         </div>
@@ -863,10 +863,10 @@ const InteractiveReportMock: React.FC = () => {
               <div key={i} style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#E8F0EE' }}>{v.vendor}</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '6px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#2FB8A6', fontFamily: 'ui-monospace, monospace' }}>{v.spend}</span>
+                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>{v.spend}</span>
                   <span style={{ fontSize: '11px', color: 'rgba(232,240,238,0.4)' }}>{v.share} of outflow</span>
                 </div>
-                <div style={{ fontSize: '9px', textTransform: 'uppercase', fontWeight: 700, color: v.status.includes('anomaly') ? '#E05450' : '#2FB8A6', marginTop: '4px' }}>{v.status}</div>
+                <div style={{ fontSize: '9px', textTransform: 'uppercase', fontWeight: 700, color: v.status.includes('anomaly') ? '#E05450' : '#138C7E', marginTop: '4px' }}>{v.status}</div>
               </div>
             ))}
           </div>
@@ -882,7 +882,7 @@ const InteractiveReportMock: React.FC = () => {
 const LibbyChatMock = () => (
   <div style={{
     background: '#080E0C',
-    border: '1px solid rgba(47, 184, 166, 0.14)',
+    border: '1px solid rgba(19, 140, 126, 0.14)',
     borderRadius: '16px',
     padding: '20px',
     fontFamily: 'inherit',
@@ -890,42 +890,42 @@ const LibbyChatMock = () => (
   }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2FB8A6', boxShadow: '0 0 8px #2FB8A6' }} />
+        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#138C7E', boxShadow: '0 0 8px #138C7E' }} />
         <span style={{ fontSize: '13px', fontWeight: 600, color: '#E8F0EE' }}>Ask Libby</span>
       </div>
       <span style={{ fontSize: '9px', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.06em', color: 'rgba(232, 240, 238, 0.35)', textTransform: 'uppercase' as const, fontWeight: 600 }}>Your Kaeo data · Apr 2026</span>
     </div>
     <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '12px' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <div style={{ background: 'rgba(47,184,166,0.15)', borderRadius: '12px 12px 2px 12px', padding: '10px 14px', fontSize: '13px', color: '#E8F0EE', maxWidth: '80%', lineHeight: 1.5 }}>
+        <div style={{ background: 'rgba(19,140,126,0.15)', borderRadius: '12px 12px 2px 12px', padding: '10px 14px', fontSize: '13px', color: '#E8F0EE', maxWidth: '80%', lineHeight: 1.5 }}>
           Which vendor is taking most of my spend this month?
         </div>
       </div>
       <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(47,184,166,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
-          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2FB8A6', display: 'inline-block', boxShadow: '0 0 6px rgba(47,184,166,0.45)' }} />
+        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(19,140,126,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
+          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#138C7E', display: 'inline-block', boxShadow: '0 0 6px rgba(19,140,126,0.45)' }} />
         </div>
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '2px 12px 12px 12px', padding: '12px 14px', fontSize: '13px', color: 'rgba(232,240,238,0.65)', lineHeight: 1.6, flex: 1 }}>
           Based on your uploaded statements: <strong style={{ color: '#E8F0EE' }}>Mumbai Supplies Pvt Ltd</strong> accounts for <span style={{ color: '#D4922A', fontWeight: 700 }}>₹1,24,000</span> — your largest single vendor outflow this period. This is <span style={{ color: '#D4922A' }}>3.2× above</span> your April average.
           <br /><br />
-          <span style={{ color: '#2FB8A6' }}>2 other payments to this vendor in March</span> suggest a recurring relationship worth reviewing.
+          <span style={{ color: '#138C7E' }}>2 other payments to this vendor in March</span> suggest a recurring relationship worth reviewing.
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <div style={{ background: 'rgba(47,184,166,0.15)', borderRadius: '12px 12px 2px 12px', padding: '10px 14px', fontSize: '13px', color: '#E8F0EE', maxWidth: '80%', lineHeight: 1.5 }}>
+        <div style={{ background: 'rgba(19,140,126,0.15)', borderRadius: '12px 12px 2px 12px', padding: '10px 14px', fontSize: '13px', color: '#E8F0EE', maxWidth: '80%', lineHeight: 1.5 }}>
           Is my report ready to send to my CA?
         </div>
       </div>
       <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(47,184,166,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
-          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2FB8A6', display: 'inline-block', boxShadow: '0 0 6px rgba(47,184,166,0.45)' }} />
+        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(19,140,126,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
+          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#138C7E', display: 'inline-block', boxShadow: '0 0 6px rgba(19,140,126,0.45)' }} />
         </div>
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '2px 12px 12px 12px', padding: '12px 14px', fontSize: '13px', color: 'rgba(232,240,238,0.65)', lineHeight: 1.6, flex: 1 }}>
           Not yet — <span style={{ color: '#D4922A', fontWeight: 600 }}>11 rows are uncategorized</span> and <span style={{ color: '#E05450', fontWeight: 600 }}>1 duplicate payment needs your confirmation</span>. Once you resolve those, report readiness will reach 100%.
         </div>
       </div>
     </div>
-    <div style={{ marginTop: '16px', padding: '10px 14px', background: 'rgba(47,184,166,0.06)', border: '1px solid rgba(47,184,166,0.14)', borderRadius: '8px', fontSize: '11px', color: 'rgba(232,240,238,0.40)', lineHeight: 1.5, fontStyle: 'italic' }}>
+    <div style={{ marginTop: '16px', padding: '10px 14px', background: 'rgba(19,140,126,0.06)', border: '1px solid rgba(19,140,126,0.14)', borderRadius: '8px', fontSize: '11px', color: 'rgba(232,240,238,0.40)', lineHeight: 1.5, fontStyle: 'italic' }}>
       AI-assisted explanations are being built into the review workflow. Libby explains patterns from your data — it does not file returns or replace your CA.
     </div>
   </div>
@@ -968,7 +968,7 @@ export const Landing: React.FC = () => {
     section: (bg?: string): React.CSSProperties => ({
       padding: '100px 48px',
       background: bg ?? '#050F0D',
-      borderTop: '1px solid rgba(47,184,166,0.08)',
+      borderTop: '1px solid rgba(19,140,126,0.08)',
     }),
 
     // Inner max-width wrapper
@@ -993,7 +993,7 @@ export const Landing: React.FC = () => {
       fontFamily: '"Instrument Serif", serif',
       fontStyle: 'italic',
       fontWeight: 400,
-      color: '#2FB8A6',
+      color: '#138C7E',
       textTransform: 'none',
     } as React.CSSProperties,
   };
@@ -1059,8 +1059,8 @@ export const Landing: React.FC = () => {
                   { label: 'GST/reporting preparation', detail: 'Clean categorized ledgers for future GST and audit workflows' },
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(47,184,166,0.12)', border: '1px solid rgba(47,184,166,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
-                      <span style={{ color: '#2FB8A6', fontSize: '10px', fontWeight: 700 }}>✓</span>
+                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(19,140,126,0.12)', border: '1px solid rgba(19,140,126,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
+                      <span style={{ color: '#138C7E', fontSize: '10px', fontWeight: 700 }}>✓</span>
                     </div>
                     <div>
                       <div style={{ fontSize: '14px', fontWeight: 600, color: '#E8F0EE', marginBottom: '2px' }}>{item.label}</div>
@@ -1074,7 +1074,7 @@ export const Landing: React.FC = () => {
               {/* India-specific bank statement mock */}
               <div style={{
                 background: '#0D1714',
-                border: '1px solid rgba(47,184,166,0.14)',
+                border: '1px solid rgba(19,140,126,0.14)',
                 borderRadius: '16px',
                 padding: '20px',
                 fontFamily: 'ui-monospace, monospace',
@@ -1110,7 +1110,7 @@ export const Landing: React.FC = () => {
                 ))}
                 <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                   <span style={{ fontSize: '10px', color: 'rgba(232,240,238,0.35)' }}>↳ Kaeo parsed 142 rows · 11 uncategorized</span>
-                  <span style={{ fontSize: '10px', color: '#2FB8A6', fontWeight: 700 }}>● processed</span>
+                  <span style={{ fontSize: '10px', color: '#138C7E', fontWeight: 700 }}>● processed</span>
                 </div>
               </div>
             </div>
@@ -1130,8 +1130,8 @@ export const Landing: React.FC = () => {
               <p style={{ fontSize: '16px', color: 'rgba(232,240,238,0.50)', lineHeight: 1.65, marginBottom: '32px', maxWidth: '440px' }}>
                 Libby helps explain risks, vendors, transaction patterns, and report readiness using your Kaeo data — giving you context when something looks off.
               </p>
-              <div style={{ padding: '16px 18px', background: 'rgba(47,184,166,0.06)', border: '1px solid rgba(47,184,166,0.14)', borderRadius: '10px', fontSize: '13px', color: 'rgba(232,240,238,0.45)', lineHeight: 1.6, marginBottom: '24px' }}>
-                <span style={{ color: '#2FB8A6', fontWeight: 600 }}>Note:</span> AI-assisted explanations are being built into the review workflow. Libby helps you understand your data — it does not file returns, automate payments, or replace your CA.
+              <div style={{ padding: '16px 18px', background: 'rgba(19,140,126,0.06)', border: '1px solid rgba(19,140,126,0.14)', borderRadius: '10px', fontSize: '13px', color: 'rgba(232,240,238,0.45)', lineHeight: 1.6, marginBottom: '24px' }}>
+                <span style={{ color: '#138C7E', fontWeight: 600 }}>Note:</span> AI-assisted explanations are being built into the review workflow. Libby helps you understand your data — it does not file returns, automate payments, or replace your CA.
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '10px' }}>
                 {[
@@ -1141,7 +1141,7 @@ export const Landing: React.FC = () => {
                   'Spot recurring payments and subscription patterns',
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <span style={{ color: '#2FB8A6', fontSize: '12px', fontFamily: 'ui-monospace, monospace', fontWeight: 700, flexShrink: 0 }}>→</span>
+                    <span style={{ color: '#138C7E', fontSize: '12px', fontFamily: 'ui-monospace, monospace', fontWeight: 700, flexShrink: 0 }}>→</span>
                     <span style={{ fontSize: '14px', color: 'rgba(232,240,238,0.55)' }}>{item}</span>
                   </div>
                 ))}
@@ -1222,8 +1222,8 @@ export const Landing: React.FC = () => {
               <div
                 key={plan.name}
                 style={{
-                  background: plan.highlight ? 'rgba(47,184,166,0.08)' : '#0D1714',
-                  border: plan.highlight ? '1px solid rgba(47,184,166,0.30)' : '1px solid rgba(47,184,166,0.10)',
+                  background: plan.highlight ? 'rgba(19,140,126,0.08)' : '#0D1714',
+                  border: plan.highlight ? '1px solid rgba(19,140,126,0.30)' : '1px solid rgba(19,140,126,0.10)',
                   borderRadius: '14px',
                   padding: '24px',
                   display: 'flex',
@@ -1236,13 +1236,13 @@ export const Landing: React.FC = () => {
                 {plan.highlight && (
                   <div style={{
                     position: 'absolute' as const, top: '-11px', left: '50%', transform: 'translateX(-50%)',
-                    background: '#2FB8A6', color: '#050F0D',
+                    background: '#138C7E', color: '#050F0D',
                     fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const,
                     padding: '4px 12px', borderRadius: '999px',
                   }}>Most popular</div>
                 )}
                 <div>
-                  <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: plan.highlight ? '#2FB8A6' : 'rgba(232,240,238,0.40)', marginBottom: '8px' }}>{plan.name}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: plan.highlight ? '#138C7E' : 'rgba(232,240,238,0.40)', marginBottom: '8px' }}>{plan.name}</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                     <span style={{ fontSize: '30px', fontWeight: 700, color: '#E8F0EE', letterSpacing: '-0.02em', fontFamily: 'ui-monospace, monospace' }}>{plan.price}</span>
                     <span style={{ fontSize: '13px', color: 'rgba(232,240,238,0.35)' }}>{plan.period}</span>
@@ -1253,7 +1253,7 @@ export const Landing: React.FC = () => {
                 <ul style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px', listStyle: 'none', margin: 0, padding: 0, flex: 1 }}>
                   {plan.features.map((f) => (
                     <li key={f} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'rgba(232,240,238,0.60)', fontWeight: 500 }}>
-                      <span style={{ color: '#2FB8A6', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>✓</span>
+                      <span style={{ color: '#138C7E', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>✓</span>
                       {f}
                     </li>
                   ))}
@@ -1268,9 +1268,9 @@ export const Landing: React.FC = () => {
                     fontSize: '13px',
                     fontWeight: 600,
                     textDecoration: 'none',
-                    background: plan.highlight ? '#2FB8A6' : 'rgba(47,184,166,0.08)',
-                    color: plan.highlight ? '#050F0D' : '#2FB8A6',
-                    border: plan.highlight ? 'none' : '1px solid rgba(47,184,166,0.20)',
+                    background: plan.highlight ? '#138C7E' : 'rgba(19,140,126,0.08)',
+                    color: plan.highlight ? '#050F0D' : '#138C7E',
+                    border: plan.highlight ? 'none' : '1px solid rgba(19,140,126,0.20)',
                     transition: 'opacity 0.15s ease',
                   }}
                   className="hover:opacity-90"
@@ -1291,12 +1291,12 @@ export const Landing: React.FC = () => {
             position: 'absolute',
             top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
             width: '600px', height: '300px',
-            background: 'radial-gradient(ellipse, rgba(47, 184, 166, 0.12) 0%, transparent 65%)',
+            background: 'radial-gradient(ellipse, rgba(19, 140, 126, 0.12) 0%, transparent 65%)',
             pointerEvents: 'none',
           }}
         />
         <div style={{ ...S.inner, textAlign: 'center', position: 'relative' }}>
-          <div style={{ color: '#2FB8A6', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 500, marginBottom: '24px' }}>
+          <div style={{ color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 500, marginBottom: '24px' }}>
             008 — GET STARTED
           </div>
           <h2 style={{ ...S.h2, fontSize: 'clamp(36px, 5vw, 68px)', maxWidth: '640px', margin: '0 auto 20px' }}>
@@ -1309,7 +1309,7 @@ export const Landing: React.FC = () => {
             <Link
               to={user ? '/dashboard' : '/signup'}
               style={{
-                background: '#2FB8A6',
+                background: '#138C7E',
                 color: '#050F0D',
                 padding: '16px 36px',
                 borderRadius: '999px',
@@ -1333,7 +1333,7 @@ export const Landing: React.FC = () => {
                 fontWeight: 500,
                 textDecoration: 'none',
                 padding: '16px 28px',
-                border: '1px solid rgba(47,184,166,0.18)',
+                border: '1px solid rgba(19,140,126,0.18)',
                 borderRadius: '999px',
                 display: 'inline-block',
               }}
@@ -1349,10 +1349,10 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* ═══════ FOOTER ═══════ */}
-      <footer style={{ borderTop: '1px solid rgba(47,184,166,0.08)', padding: '40px 48px', background: '#050F0D' }}>
+      <footer style={{ borderTop: '1px solid rgba(19,140,126,0.08)', padding: '40px 48px', background: '#050F0D' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-            <img src={aeLogo} alt="Kaeo" style={{ width: 22, height: 22, objectFit: 'contain', filter: 'drop-shadow(0 0 6px rgba(47,184,166,0.35))', flexShrink: 0 }} />
+            <img src={aeLogo} alt="Kaeo" style={{ width: 22, height: 22, objectFit: 'contain', filter: 'drop-shadow(0 0 6px rgba(19,140,126,0.35))', flexShrink: 0 }} />
             <span style={{ fontSize: '16px', fontWeight: 700, color: '#E8F0EE', letterSpacing: '-0.02em' }}>Kaeo</span>
           </Link>
           <p style={{ fontSize: '13px', color: 'rgba(232,240,238,0.30)', margin: 0 }}>
@@ -1384,7 +1384,7 @@ export const Landing: React.FC = () => {
           footer { padding: 32px 24px !important; flex-direction: column !important; align-items: flex-start !important; }
         }
         .catch-card:hover {
-          border-color: rgba(47, 184, 166, 0.24) !important;
+          border-color: rgba(19, 140, 126, 0.24) !important;
         }
         .cta-btn {
           position: relative;
@@ -1392,14 +1392,14 @@ export const Landing: React.FC = () => {
         }
         .cta-primary:hover {
           transform: translateY(-2px);
-          box-shadow: 0 0 20px rgba(47, 184, 166, 0.25);
+          box-shadow: 0 0 20px rgba(19, 140, 126, 0.25);
           background: #3cd4c0 !important;
         }
         .cta-secondary:hover {
           transform: translateY(-2px);
-          border-color: rgba(47, 184, 166, 0.45) !important;
+          border-color: rgba(19, 140, 126, 0.45) !important;
           color: #E8F0EE !important;
-          box-shadow: 0 0 15px rgba(47, 184, 166, 0.1);
+          box-shadow: 0 0 15px rgba(19, 140, 126, 0.1);
         }
         .cta-btn:hover .cta-arrow {
           transform: translateX(4px);
