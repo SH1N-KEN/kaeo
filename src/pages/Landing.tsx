@@ -672,11 +672,13 @@ const InteractiveWorkflowSection: React.FC = () => {
           {/* Right Column: Hero Preview (Desktop only) */}
           <div 
             style={{
-              background: '#121514',
-              border: '1px solid rgba(140, 150, 148, 0.12)',
+              background: 'rgba(10, 18, 16, 0.78)',
+              backdropFilter: 'blur(18px) saturate(135%)',
+              WebkitBackdropFilter: 'blur(18px) saturate(135%)',
+              border: '1px solid rgba(255, 255, 255, 0.07)',
               borderRadius: '24px',
               padding: '32px',
-              boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+              boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
               height: 'calc(100vh - 180px)',
               width: '100%',
               maxWidth: '850px',
@@ -858,11 +860,13 @@ const BeforeAfterComparison: React.FC = () => {
                   transform: mode === 'before' ? 'translateY(0) scale(1)' : 'translateY(15px) scale(0.96)',
                   pointerEvents: mode === 'before' ? 'auto' : 'none',
                   transition: 'opacity 0.25s, transform 0.25s',
-                  background: '#121514',
-                  border: '1.5px solid rgba(224, 84, 80, 0.20)',
+                  background: 'rgba(10, 18, 16, 0.78)',
+                  backdropFilter: 'blur(18px) saturate(135%)',
+                  WebkitBackdropFilter: 'blur(18px) saturate(135%)',
+                  border: '1px solid rgba(255, 255, 255, 0.07)',
                   borderRadius: '16px',
                   padding: '24px',
-                  boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                  boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -900,11 +904,13 @@ const BeforeAfterComparison: React.FC = () => {
                   transform: mode === 'after' ? 'translateY(0) scale(1)' : 'translateY(15px) scale(0.96)',
                   pointerEvents: mode === 'after' ? 'auto' : 'none',
                   transition: 'opacity 0.25s, transform 0.25s',
-                  background: '#121514',
-                  border: '1.5px solid rgba(140, 150, 148, 0.15)',
+                  background: 'rgba(10, 18, 16, 0.78)',
+                  backdropFilter: 'blur(18px) saturate(135%)',
+                  WebkitBackdropFilter: 'blur(18px) saturate(135%)',
+                  border: '1px solid rgba(255, 255, 255, 0.07)',
                   borderRadius: '16px',
                   padding: '24px',
-                  boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                  boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1003,11 +1009,13 @@ const BeforeAfterComparison: React.FC = () => {
                   transition: reducedMotion 
                     ? 'opacity 0.15s' 
                     : 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                  background: '#121514',
-                  border: '1.5px solid rgba(224, 84, 80, 0.20)',
+                  background: 'rgba(10, 18, 16, 0.78)',
+                  backdropFilter: 'blur(18px) saturate(135%)',
+                  WebkitBackdropFilter: 'blur(18px) saturate(135%)',
+                  border: '1px solid rgba(255, 255, 255, 0.07)',
                   borderRadius: '16px',
                   padding: '24px',
-                  boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                  boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1047,11 +1055,13 @@ const BeforeAfterComparison: React.FC = () => {
                   transition: reducedMotion 
                     ? 'opacity 0.15s' 
                     : 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                  background: '#121514',
-                  border: '1.5px solid rgba(140, 150, 148, 0.15)',
+                  background: 'rgba(10, 18, 16, 0.78)',
+                  backdropFilter: 'blur(18px) saturate(135%)',
+                  WebkitBackdropFilter: 'blur(18px) saturate(135%)',
+                  border: '1px solid rgba(255, 255, 255, 0.07)',
                   borderRadius: '16px',
                   padding: '24px',
-                  boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                  boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1298,7 +1308,7 @@ const InteractiveRiskCards: React.FC = () => {
             ? 'rgba(255, 255, 255, 0.03)' 
             : isHovered 
               ? 'rgba(255, 255, 255, 0.015)' 
-              : '#121514';
+              : 'rgba(10, 18, 16, 0.78)';
 
           const border = isSelected 
             ? 'rgba(140, 150, 148, 0.35)' 
@@ -1333,7 +1343,9 @@ const InteractiveRiskCards: React.FC = () => {
               }}
               style={{
                 background: bg,
-                border: '1.5px solid',
+                backdropFilter: 'blur(18px) saturate(135%)',
+                WebkitBackdropFilter: 'blur(18px) saturate(135%)',
+                border: '1px solid',
                 borderColor: border,
                 borderRadius: '14px',
                 padding: '20px',
@@ -1391,14 +1403,16 @@ const InteractiveRiskCards: React.FC = () => {
       {/* Right Column: Detail preview panel */}
       {activeCardObj && (
         <div style={{ 
-          background: '#121514', 
-          border: '1.5px solid rgba(140, 150, 148, 0.12)', 
+          background: 'rgba(10, 18, 16, 0.78)', 
+          backdropFilter: 'blur(18px) saturate(135%)',
+          WebkitBackdropFilter: 'blur(18px) saturate(135%)',
+          border: '1px solid rgba(255, 255, 255, 0.07)', 
           borderRadius: '16px', 
           padding: '28px',
           display: 'flex',
           flexDirection: 'column',
           gap: '24px',
-          boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+          boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
           height: '100%',
           justifyContent: 'center',
           position: 'relative',
@@ -2117,12 +2131,14 @@ export const Landing: React.FC = () => {
             <div>
               {/* India-specific bank statement mock */}
               <div style={{
-                background: '#121514',
-                border: '1px solid rgba(140, 150, 148, 0.12)',
+                background: 'rgba(10, 18, 16, 0.78)',
+                backdropFilter: 'blur(18px) saturate(135%)',
+                WebkitBackdropFilter: 'blur(18px) saturate(135%)',
+                border: '1px solid rgba(255, 255, 255, 0.07)',
                 borderRadius: '16px',
                 padding: '20px',
                 fontFamily: 'ui-monospace, monospace',
-                boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+                boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
               }}>
                 <div style={{ fontSize: '10px', color: 'rgba(232,240,238,0.35)', letterSpacing: '0.08em', marginBottom: '12px', borderBottom: '1px solid rgba(140, 150, 148, 0.08)', paddingBottom: '10px' }}>
                   HDFC BANK · A/C •••4827 · April 2026 Statement

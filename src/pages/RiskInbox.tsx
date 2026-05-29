@@ -798,7 +798,7 @@ const RiskInbox: React.FC = () => {
                             value={newNote}
                             onChange={(e) => setNewNote(e.target.value)}
                             placeholder="Add strategic note..." 
-                            className="flex-1 bg-muted/50 border border-border rounded-xl px-4 py-2 text-xs focus:ring-1 ring-primary/30 outline-none"
+                            className="kaeo-input frosted-input text-xs flex-1"
                             onKeyDown={(e) => e.key === 'Enter' && addNote()}
                           />
                           <button 

@@ -95,7 +95,7 @@ export default function ReportDetail() {
       </div>
 
       {/* The Printable Report Container */}
-      <div className="print-container bg-card md:border rounded-lg shadow-sm max-w-5xl mx-auto overflow-hidden print:overflow-visible">
+      <div className="print-container frosted-card max-w-5xl mx-auto overflow-hidden print:overflow-visible">
         
         {/* HEADER */}
         <div className="p-8 md:p-12 border-b">

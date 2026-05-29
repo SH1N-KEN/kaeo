@@ -1304,7 +1304,7 @@ const Files: React.FC = () => {
                       name="vendorName"
                       required
                       defaultValue={selectedInvoice.vendor_name}
-                      className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                      className="kaeo-input frosted-input text-xs py-2"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1314,7 +1314,7 @@ const Files: React.FC = () => {
                       name="invoiceNumber"
                       required
                       defaultValue={selectedInvoice.invoice_number}
-                      className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                      className="kaeo-input frosted-input text-xs py-2"
                     />
                   </div>
                 </div>
@@ -1326,7 +1326,7 @@ const Files: React.FC = () => {
                       type="date" 
                       name="invoiceDate"
                       defaultValue={selectedInvoice.invoice_date || ''}
-                      className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                      className="kaeo-input frosted-input text-xs py-2"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1335,7 +1335,7 @@ const Files: React.FC = () => {
                       type="date" 
                       name="dueDate"
                       defaultValue={selectedInvoice.due_date || ''}
-                      className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                      className="kaeo-input frosted-input text-xs py-2"
                     />
                   </div>
                 </div>
@@ -1348,7 +1348,7 @@ const Files: React.FC = () => {
                       name="subtotal"
                       step="0.01"
                       defaultValue={selectedInvoice.subtotal || ''}
-                      className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                      className="kaeo-input frosted-input text-xs py-2"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1358,7 +1358,7 @@ const Files: React.FC = () => {
                       name="taxAmount"
                       step="0.01"
                       defaultValue={selectedInvoice.tax_amount || ''}
-                      className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                      className="kaeo-input frosted-input text-xs py-2"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1369,7 +1369,7 @@ const Files: React.FC = () => {
                       step="0.01"
                       required
                       defaultValue={selectedInvoice.total_amount || ''}
-                      className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all font-bold"
+                      className="kaeo-input frosted-input text-xs py-2 font-bold"
                     />
                   </div>
                 </div>
@@ -1381,7 +1381,7 @@ const Files: React.FC = () => {
                       type="text" 
                       name="gstin"
                       defaultValue={selectedInvoice.gstin || ''}
-                      className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary focus:bg-background transition-all"
+                      className="kaeo-input frosted-input text-xs py-2"
                     />
                   </div>
                   <input 
@@ -1394,7 +1394,7 @@ const Files: React.FC = () => {
                     <select
                       name="status"
                       defaultValue={selectedInvoice.status}
-                      className="w-full px-3 py-2 bg-[#161a18] border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary"
+                      className="kaeo-input frosted-input text-xs py-2"
                     >
                       <option value="uploaded">Uploaded</option>
                       <option value="needs_review">Needs Review</option>

@@ -758,7 +758,7 @@ const Transactions: React.FC = () => {
             <input
               type="text"
               placeholder="Search description, counterparty, category…"
-              className="frosted-input text-xs py-2 bg-background/50 border-border/30 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 rounded-lg"
+              className="frosted-input text-xs py-2 border-border/30 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 rounded-lg"
               style={{ paddingLeft: '2.5rem' }}
               value={searchTerm}
               onChange={handleSearchChange}
@@ -788,7 +788,7 @@ const Transactions: React.FC = () => {
         <div className="flex flex-wrap gap-2 items-center">
           {/* Review status */}
           <select
-            className="frosted-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
+            className="frosted-input text-xs py-1.5 px-3 border-border/30 rounded-lg cursor-pointer transition-colors"
             style={{ width: 'auto' }}
             value={filterReview}
             onChange={(e) => updateFilterParams({ review_status: e.target.value })}
@@ -812,7 +812,7 @@ const Transactions: React.FC = () => {
 
           {/* Category */}
           <select
-            className="frosted-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
+            className="frosted-input text-xs py-1.5 px-3 border-border/30 rounded-lg cursor-pointer transition-colors"
             style={{ width: 'auto' }}
             value={filterCategory}
             onChange={(e) => updateFilterParams({ category: e.target.value })}
@@ -840,7 +840,7 @@ const Transactions: React.FC = () => {
             <div className="flex flex-wrap gap-2 items-center animate-kaeo-fade">
               {availableSources.length > 1 && (
                 <select
-                  className="frosted-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
+                  className="frosted-input text-xs py-1.5 px-3 border-border/30 rounded-lg cursor-pointer transition-colors"
                   style={{ width: 'auto' }}
                   value={filterSource}
                   onChange={(e) => updateFilterParams({ source: e.target.value })}
@@ -852,7 +852,7 @@ const Transactions: React.FC = () => {
                 </select>
               )}
               <select
-                className="frosted-input text-xs py-1.5 px-3 bg-background/50 border-border/30 rounded-lg cursor-pointer hover:bg-background/80 transition-colors"
+                className="frosted-input text-xs py-1.5 px-3 border-border/30 rounded-lg cursor-pointer transition-colors"
                 style={{ width: 'auto' }}
                 value={filterAmountRange}
                 onChange={(e) => updateFilterParams({ amountRange: e.target.value })}

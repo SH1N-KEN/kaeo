@@ -319,7 +319,7 @@ const Vendors: React.FC = () => {
                 <div 
                   key={vendor.id} 
                   onClick={() => setSelectedVendor(vendor)}
-                  className="kaeo-card-clickable p-6 flex flex-col h-full"
+                  className="frosted-card-hover p-6 flex flex-col h-full"
                 >
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex items-center gap-4">
