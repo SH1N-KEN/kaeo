@@ -1142,3 +1142,28 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
+
+.pricing-card {
+  background: #121514 !important;
+  border: 1px solid rgba(140, 150, 148, 0.10) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.pricing-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(19, 140, 126, 0.22) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45) !important;
+}
+
+.pricing-card.highlighted {
+  background: rgba(19, 140, 126, 0.04) !important;
+  border-color: rgba(19, 140, 126, 0.25) !important;
+  box-shadow: 0 12px 30px rgba(19, 140, 126, 0.05) !important;
+}
+
+.pricing-card.highlighted:hover {
+  transform: translateY(-4px);
+  border-color: rgba(19, 140, 126, 0.45) !important;
+  box-shadow: 0 16px 36px rgba(19, 140, 126, 0.10), 0 20px 40px rgba(0, 0, 0, 0.45) !important;
+}
+

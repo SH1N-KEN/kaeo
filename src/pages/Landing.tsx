@@ -1277,9 +1277,8 @@ export const Landing: React.FC = () => {
             ].map((plan) => (
               <div
                 key={plan.name}
+                className={`pricing-card ${plan.highlight ? 'highlighted' : ''}`}
                 style={{
-                  background: plan.highlight ? 'rgba(19,140,126,0.06)' : '#121514',
-                  border: plan.highlight ? '1px solid rgba(19,140,126,0.25)' : '1px solid rgba(140, 150, 148, 0.10)',
                   borderRadius: '14px',
                   padding: '24px',
                   display: 'flex',
@@ -1287,7 +1286,6 @@ export const Landing: React.FC = () => {
                   gap: '16px',
                   position: 'relative' as const,
                   textAlign: 'left',
-                  boxShadow: plan.highlight ? '0 12px 30px rgba(19,140,126,0.06)' : 'var(--shadow-card)',
                 }}
               >
                 {plan.highlight && (

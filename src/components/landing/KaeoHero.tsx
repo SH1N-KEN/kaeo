@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { motion } from 'framer-motion';
@@ -6,60 +6,92 @@ import aeLogo from '../../assets/kaeo-ae-logo.png';
 
 /* ── Tiny product mock cards ─────────────────────────────── */
 
-const UploadCard = () => (
+interface CardProps {
+  isActive: boolean;
+  onHover: () => void;
+  onLeave: () => void;
+}
+
+const UploadCard: React.FC<CardProps> = ({ isActive, onHover, onLeave }) => (
   <div
+    onMouseEnter={onHover}
+    onMouseLeave={onLeave}
+    onClick={onHover}
     style={{
-      background: '#121514',
-      border: '1px solid rgba(140, 150, 148, 0.10)',
+      background: 'rgba(18, 21, 20, 0.7)',
+      border: isActive ? '1px solid rgba(19, 140, 126, 0.45)' : '1px solid rgba(140, 150, 148, 0.10)',
+      boxShadow: isActive ? '0 0 25px rgba(19, 140, 126, 0.15)' : 'none',
       borderRadius: '14px',
-      padding: '20px',
+      padding: '24px 20px',
       fontFamily: 'inherit',
+      cursor: 'pointer',
+      transform: isActive ? 'translateY(-3px)' : 'translateY(0)',
+      transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
     }}
   >
-    <div style={{ color: 'rgba(232,240,238,0.4)', fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', marginBottom: '12px' }}>
+    <div style={{ color: isActive ? '#138C7E' : 'rgba(232,240,238,0.4)', fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', marginBottom: '16px', fontWeight: 600, transition: 'color 0.2s' }}>
       Upload
     </div>
     <div
       style={{
-        border: '1.5px dashed rgba(140, 150, 148, 0.20)',
+        border: isActive ? '1.5px dashed rgba(19, 140, 126, 0.40)' : '1.5px dashed rgba(140, 150, 148, 0.20)',
         borderRadius: '10px',
-        padding: '18px 14px',
+        padding: '24px 14px',
         textAlign: 'center',
-        marginBottom: '12px',
-        background: 'rgba(140, 150, 148, 0.03)',
+        marginBottom: '16px',
+        background: isActive ? 'rgba(19, 140, 126, 0.04)' : 'rgba(140, 150, 148, 0.03)',
+        transition: 'all 0.2s ease',
       }}
     >
-      <div style={{ fontSize: '20px', marginBottom: '4px' }}>↑</div>
+      <div 
+        style={{ 
+          fontSize: '24px', 
+          marginBottom: '6px',
+          display: 'inline-block',
+          transform: isActive ? 'translateY(-4px)' : 'translateY(0)',
+          transition: 'transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+        }}
+      >
+        ↑
+      </div>
       <div style={{ fontSize: '12px', color: '#138C7E', fontWeight: 600 }}>Drop your statement</div>
-      <div style={{ fontSize: '10px', color: 'rgba(232,240,238,0.35)', marginTop: '2px' }}>CSV · XLSX · PDF</div>
+      <div style={{ fontSize: '10px', color: 'rgba(232,240,238,0.35)', marginTop: '4px' }}>CSV · XLSX · PDF</div>
     </div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       {['hdfc_apr_2026.xlsx', 'razorpay_q1.csv'].map((f, i) => (
         <div key={i} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '8px 10px',
+          border: '1px solid rgba(255,255,255,0.02)',
         }}>
           <span style={{ fontSize: '12px', color: '#E8F0EE', fontWeight: 500 }}>{f}</span>
-          <span style={{ fontSize: '10px', color: 'rgba(232, 240, 238, 0.45)', fontFamily: 'ui-monospace, monospace' }}>● parsed</span>
+          <span style={{ fontSize: '10px', color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontWeight: 700 }}>● parsed</span>
         </div>
       ))}
     </div>
   </div>
 );
 
-const TransactionCard = () => (
+const TransactionCard: React.FC<CardProps> = ({ isActive, onHover, onLeave }) => (
   <div
+    onMouseEnter={onHover}
+    onMouseLeave={onLeave}
+    onClick={onHover}
     style={{
-      background: '#121514',
-      border: '1px solid rgba(140, 150, 148, 0.10)',
+      background: 'rgba(18, 21, 20, 0.7)',
+      border: isActive ? '1px solid rgba(19, 140, 126, 0.45)' : '1px solid rgba(140, 150, 148, 0.10)',
+      boxShadow: isActive ? '0 0 25px rgba(19, 140, 126, 0.15)' : 'none',
       borderRadius: '14px',
-      padding: '16px',
+      padding: '20px 18px',
       fontFamily: 'inherit',
+      cursor: 'pointer',
+      transform: isActive ? 'translateY(-3px)' : 'translateY(0)',
+      transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
     }}
   >
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-      <span style={{ fontSize: '11px', fontWeight: 700, color: '#E8F0EE', letterSpacing: '0.02em' }}>Transactions</span>
-      <span style={{ fontSize: '10px', color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>Apr 2026 · 142 rows</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <span style={{ fontSize: '12px', fontWeight: 700, color: '#E8F0EE', letterSpacing: '0.02em' }}>Transactions</span>
+      <span style={{ fontSize: '10px', color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontWeight: 600 }}>Apr 2026 · 142 rows</span>
     </div>
     {[
       { date: '28 Apr', narr: 'UPI/Razorpay/Vendor', dr: '−₹84,200', tag: 'vendor', risk: false },
@@ -69,9 +101,9 @@ const TransactionCard = () => (
     ].map((row, i) => (
       <div key={i} style={{
         display: 'grid',
-        gridTemplateColumns: '38px minmax(0, 1fr) 58px 48px',
-        gap: '6px',
-        padding: '7px 0',
+        gridTemplateColumns: '38px minmax(0, 1fr) 62px 50px',
+        gap: '8px',
+        padding: '9px 0',
         borderBottom: '1px solid rgba(255,255,255,0.04)',
         alignItems: 'center',
         fontSize: '11px',
@@ -93,23 +125,32 @@ const TransactionCard = () => (
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
+          transition: 'transform 0.2s ease',
+          transform: isActive && row.risk ? 'scale(1.08)' : 'scale(1)',
         }}>{row.tag}</span>
       </div>
     ))}
   </div>
 );
 
-const RiskCard = () => (
+const RiskCard: React.FC<CardProps> = ({ isActive, onHover, onLeave }) => (
   <div
+    onMouseEnter={onHover}
+    onMouseLeave={onLeave}
+    onClick={onHover}
     style={{
-      background: '#121514',
-      border: '1px solid rgba(140, 150, 148, 0.10)',
+      background: 'rgba(18, 21, 20, 0.7)',
+      border: isActive ? '1px solid rgba(19, 140, 126, 0.45)' : '1px solid rgba(140, 150, 148, 0.10)',
+      boxShadow: isActive ? '0 0 25px rgba(19, 140, 126, 0.15)' : 'none',
       borderRadius: '14px',
-      padding: '18px',
+      padding: '20px 18px',
       fontFamily: 'inherit',
+      cursor: 'pointer',
+      transform: isActive ? 'translateY(-3px)' : 'translateY(0)',
+      transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
     }}
   >
-    <div style={{ color: 'rgba(232,240,238,0.4)', fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', marginBottom: '14px' }}>
+    <div style={{ color: isActive ? '#138C7E' : 'rgba(232,240,238,0.4)', fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', marginBottom: '16px', fontWeight: 600, transition: 'color 0.2s' }}>
       Risk Snapshot
     </div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -131,11 +172,17 @@ const RiskCard = () => (
         </div>
       ))}
     </div>
-    <div style={{ marginTop: '14px', padding: '10px 12px', background: 'rgba(140, 150, 148, 0.05)', borderRadius: '8px', border: '1px solid rgba(140, 150, 148, 0.10)' }}>
-      <div style={{ fontSize: '11px', color: '#138C7E', fontWeight: 600, marginBottom: '2px' }}>Report readiness</div>
+    <div style={{ marginTop: '16px', padding: '10px 12px', background: 'rgba(140, 150, 148, 0.05)', borderRadius: '8px', border: '1px solid rgba(140, 150, 148, 0.10)' }}>
+      <div style={{ fontSize: '11px', color: '#138C7E', fontWeight: 600, marginBottom: '4px' }}>Report readiness</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ width: '74%', height: '100%', background: '#138C7E', borderRadius: '2px' }} />
+          <div style={{
+            width: '74%',
+            height: '100%',
+            background: '#138C7E',
+            borderRadius: '2px',
+            animation: isActive ? 'pulse 1.5s infinite' : 'none',
+          }} />
         </div>
         <span style={{ fontSize: '11px', color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontWeight: 700 }}>74%</span>
       </div>
@@ -147,6 +194,7 @@ const RiskCard = () => (
 
 export const KaeoHero: React.FC = () => {
   const { user } = useAuth();
+  const [activePanel, setActivePanel] = useState<string | null>(null);
 
   return (
     <section
@@ -159,19 +207,19 @@ export const KaeoHero: React.FC = () => {
         justifyContent: 'center',
         position: 'relative',
         overflow: 'hidden',
-        padding: '120px 48px 96px',
+        padding: '140px 48px 96px', // increased top padding for spacing
       }}
     >
-      {/* Subtle radial glow */}
+      {/* Subtle radial glows */}
       <div
         aria-hidden="true"
         style={{
           position: 'absolute',
           top: '-180px',
           right: '-120px',
-          width: '700px',
-          height: '700px',
-          background: 'radial-gradient(circle, rgba(19, 140, 126, 0.04) 0%, transparent 65%)',
+          width: '800px',
+          height: '800px',
+          background: 'radial-gradient(circle, rgba(19, 140, 126, 0.05) 0%, transparent 65%)',
           pointerEvents: 'none',
         }}
       />
@@ -181,19 +229,19 @@ export const KaeoHero: React.FC = () => {
           position: 'absolute',
           bottom: '-200px',
           left: '-80px',
-          width: '500px',
-          height: '500px',
-          background: 'radial-gradient(circle, rgba(19, 140, 126, 0.02) 0%, transparent 60%)',
+          width: '600px',
+          height: '600px',
+          background: 'radial-gradient(circle, rgba(19, 140, 126, 0.03) 0%, transparent 60%)',
           pointerEvents: 'none',
         }}
       />
 
-      <div style={{ maxWidth: '1280px', margin: '0 auto', width: '100%', position: 'relative' }}>
+      <div style={{ maxWidth: '1440px', margin: '0 auto', width: '100%', position: 'relative' }}>
         {/* Two column layout */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+            gridTemplateColumns: '4.2fr 5.8fr', // larger product showcase (58% width)
             gap: '80px',
             alignItems: 'center',
           }}
@@ -224,8 +272,8 @@ export const KaeoHero: React.FC = () => {
             <h1
               style={{
                 fontWeight: 700,
-                fontSize: 'clamp(44px, 6vw, 80px)',
-                lineHeight: '1.0',
+                fontSize: 'clamp(44px, 5.5vw, 76px)',
+                lineHeight: '1.05',
                 letterSpacing: '-0.03em',
                 margin: 0,
                 color: '#E8F0EE',
@@ -266,11 +314,12 @@ export const KaeoHero: React.FC = () => {
                   cursor: 'pointer',
                   display: 'inline-block',
                   textDecoration: 'none',
-                  transition: 'opacity 0.15s ease',
+                  transition: 'background-color 0.2s ease, transform 0.2s ease',
                 }}
-                className="hover:opacity-90"
+                className="cta-btn cta-primary"
               >
-                {user ? 'Go to Dashboard' : 'Start reviewing →'}
+                {user ? 'Go to Dashboard' : 'Start reviewing'}{' '}
+                <span className="cta-arrow" style={{ display: 'inline-block', transition: 'transform 0.2s' }}>→</span>
               </Link>
               <a
                 href="#how-it-works"
@@ -289,7 +338,7 @@ export const KaeoHero: React.FC = () => {
                   display: 'inline-block',
                   transition: 'all 0.15s ease',
                 }}
-                className="hover:border-[#138C7E]/40 hover:text-[#E8F0EE]"
+                className="cta-btn cta-secondary"
               >
                 View demo
               </a>
@@ -328,16 +377,19 @@ export const KaeoHero: React.FC = () => {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            style={{ position: 'relative' }}
+            style={{ position: 'relative', width: '100%', maxWidth: '880px', justifySelf: 'end' }}
           >
             {/* Product mock frame */}
             <div
               style={{
-                background: '#121514',
+                background: 'rgba(18, 21, 20, 0.45)',
                 border: '1px solid rgba(140, 150, 148, 0.12)',
                 borderRadius: '18px',
-                padding: '20px',
-                boxShadow: '0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(140, 150, 148, 0.05)',
+                padding: '24px',
+                boxShadow: '0 32px 80px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.02)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                transition: 'all 0.3s ease',
               }}
             >
               {/* Browser chrome */}
@@ -346,8 +398,8 @@ export const KaeoHero: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  marginBottom: '16px',
-                  paddingBottom: '14px',
+                  marginBottom: '20px',
+                  paddingBottom: '16px',
                   borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
                 }}
               >
@@ -374,29 +426,34 @@ export const KaeoHero: React.FC = () => {
               </div>
 
               {/* 3 panels */}
-              <div className="hero-mock-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr 1fr', gap: '12px' }}>
-                <UploadCard />
-                <TransactionCard />
-                <RiskCard />
+              <div className="hero-mock-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr 1fr', gap: '14px' }}>
+                <UploadCard isActive={activePanel === 'upload'} onHover={() => setActivePanel('upload')} onLeave={() => setActivePanel(null)} />
+                <TransactionCard isActive={activePanel === 'transactions'} onHover={() => setActivePanel('transactions')} onLeave={() => setActivePanel(null)} />
+                <RiskCard isActive={activePanel === 'risks'} onHover={() => setActivePanel('risks')} onLeave={() => setActivePanel(null)} />
               </div>
             </div>
 
-            {/* Floating label */}
+            {/* Interactive Floating label */}
             <div
               style={{
                 position: 'absolute',
-                bottom: '-18px',
+                bottom: '-28px',
                 left: '50%',
                 transform: 'translateX(-50%)',
-                fontSize: '11px',
+                fontSize: '12px',
                 fontFamily: 'ui-monospace, monospace',
-                color: 'rgba(232, 240, 238, 0.35)',
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
+                color: activePanel ? '#138C7E' : 'rgba(232, 240, 238, 0.45)',
+                letterSpacing: '0.06em',
+                fontWeight: activePanel ? 600 : 400,
+                textAlign: 'center',
                 whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease',
               }}
             >
-              From messy statements → accountant-ready reports
+              {activePanel === 'upload' && '📁 Upload CSV/XLSX statements and invoices'}
+              {activePanel === 'transactions' && '⚡ Review mapped ledger rows, categories, and spend movement'}
+              {activePanel === 'risks' && '⚠ Catch duplicate suspects, high-value outflows, and uncategorized spend'}
+              {!activePanel && 'From messy statements → accountant-ready reports (hover panels to explore)'}
             </div>
           </motion.div>
         </div>
@@ -425,7 +482,7 @@ export const KaeoHero: React.FC = () => {
 
       {/* Responsive mobile styles */}
       <style>{`
-        @media (max-width: 900px) {
+        @media (max-width: 990px) {
           .hero-grid {
             grid-template-columns: 1fr !important;
             gap: 48px !important;
@@ -439,7 +496,7 @@ export const KaeoHero: React.FC = () => {
         }
         @media (max-width: 600px) {
           section#product {
-            padding: 100px 24px 80px !important;
+            padding: 120px 24px 80px !important;
           }
         }
       `}</style>
