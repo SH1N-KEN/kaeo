@@ -42,8 +42,8 @@ const AppShell: React.FC = () => {
       >
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0 print:block">
-          <Topbar />
           <main className="flex-1 overflow-y-auto print:overflow-visible print:block">
+            <Topbar />
             <div
               className="mx-auto px-7 pt-4 pb-7 print:max-w-none print:mx-0 print:p-0"
               style={{ maxWidth: 1320 }}

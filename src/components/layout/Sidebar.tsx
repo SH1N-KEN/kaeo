@@ -107,7 +107,7 @@ const Sidebar: React.FC = () => {
 
   return (
     <aside
-      className="sidebar-base flex-shrink-0"
+      className="frosted-sidebar flex-shrink-0"
       style={{ width: sidebarWidth }}
     >
       {/* ── Logo ── */}
