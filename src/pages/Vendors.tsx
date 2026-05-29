@@ -220,7 +220,7 @@ const Vendors: React.FC = () => {
         <button 
           onClick={handleAnalyze}
           disabled={analyzing}
-          className="px-6 py-3 bg-foreground text-background rounded-md font-bold flex items-center gap-2 hover:opacity-90 transition-all disabled:opacity-50 text-xs cursor-pointer"
+          className="btn-primary flex items-center gap-2"
         >
           {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <PieChart className="w-4 h-4" />}
           {vendors.length > 0 ? 'Refresh Intelligence' : 'Analyze Spend'}
@@ -257,36 +257,37 @@ const Vendors: React.FC = () => {
             <MetricCard 
               title="Total Portfolio Spend" 
               value={formatCurrency(stats.totalSpend)} 
-              valueClassName="text-risk"
+              valueClassName="text-[var(--danger)] text-2xl font-bold"
               description="Across all detected vendors"
-              icon={<TrendingUp className="w-4 h-4 text-risk" />} 
-              className="border border-border rounded-lg bg-card"
+              icon={<TrendingUp className="w-4 h-4" />}
+              accentColor="danger"
             />
             <MetricCard 
               title="Recurring Commitment" 
               value={formatCurrency(stats.recurringSpend)} 
-              valueClassName="text-warning"
+              valueClassName="text-[var(--warning)] text-2xl font-bold"
               description="Estimated monthly burn"
-              icon={<Zap className="w-4 h-4 text-warning" />} 
-              className="border border-border rounded-lg bg-card"
+              icon={<Zap className="w-4 h-4" />}
+              accentColor="warning"
             />
             <MetricCard 
               title="Action Required" 
               value={stats.needsReview.toString()} 
-              valueClassName="text-risk"
+              valueClassName="text-[var(--danger)] text-2xl font-bold"
               description="Vendors flagged for review"
-              icon={<AlertCircle className="w-4 h-4 text-risk" />} 
-              className="border border-border rounded-lg bg-card"
+              icon={<AlertCircle className="w-4 h-4" />}
+              accentColor="danger"
             />
           </div>
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
               <input 
                 type="text" 
                 placeholder="Search vendors or categories..." 
-                className="w-full bg-card border border-border rounded-md pl-12 pr-4 py-3 text-sm outline-none focus:border-neutral-500"
+                className="kaeo-input" 
+                style={{ paddingLeft: '2.75rem' }}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -318,7 +319,7 @@ const Vendors: React.FC = () => {
                 <div 
                   key={vendor.id} 
                   onClick={() => setSelectedVendor(vendor)}
-                  className="bg-card border border-border rounded-xl p-6 hover:border-muted-foreground transition-all group flex flex-col h-full cursor-pointer hover:shadow-md"
+                  className="kaeo-card-clickable p-6 flex flex-col h-full"
                 >
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex items-center gap-4">
@@ -409,11 +410,11 @@ const Vendors: React.FC = () => {
       {/* Selected Vendor Details Drawer/Modal */}
       {selectedVendor && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
+          className="kaeo-modal-overlay"
           onClick={() => setSelectedVendor(null)}
         >
           <div 
-            className="w-full max-w-3xl premium-glass rounded-3xl p-6 shadow-2xl relative my-8 animate-in zoom-in-95 duration-200 border border-border/40"
+            className="kaeo-modal w-full max-w-3xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button 

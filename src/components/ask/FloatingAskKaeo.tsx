@@ -167,13 +167,13 @@ const FloatingAskKaeo: React.FC = () => {
           >
             {/* Tooltip on hover */}
             <div
-              className="absolute bottom-full right-0 mb-2.5 px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200 pointer-events-none border"
+              className="absolute bottom-full right-0 mb-2.5 px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200 pointer-events-none"
               style={{
-                background: 'rgba(11, 15, 14, 0.95)',
-                borderColor: 'rgba(16, 185, 129, 0.25)',
-                color: '#10b981',
-                backdropFilter: 'blur(8px)',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.6)',
+                background: 'var(--card)',
+                border: '1px solid var(--border)',
+                color: 'var(--primary)',
+                backdropFilter: 'blur(12px)',
+                boxShadow: 'var(--shadow-popover)',
               }}
             >
               Ask Libby what to review
@@ -182,28 +182,32 @@ const FloatingAskKaeo: React.FC = () => {
             <button
               onClick={() => setIsOpen(true)}
               aria-label="Open Libby advisor"
-              className={`
-                flex items-center gap-2
-                h-9 px-3.5 rounded-full
-                bg-card/90 backdrop-blur-md
-                border border-emerald-500/20
-                shadow-md shadow-black/5
-                dark:shadow-black/20
-                text-foreground text-xs font-semibold
-                hover:border-emerald-400/40 hover:bg-card hover:shadow-lg
-                transition-all duration-200
-                cursor-pointer
-              `}
+              className="flex items-center gap-2 h-9 px-3.5 rounded-full cursor-pointer transition-all duration-200"
+              style={{
+                background: 'var(--card)',
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-card)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = 'rgba(15,118,110,0.35)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-popover)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-card)';
+              }}
             >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--primary)' }} />
 
               {/* Label */}
-              <span className="leading-none text-foreground font-semibold">Ask Libby</span>
+              <span className="leading-none font-semibold text-xs" style={{ color: 'var(--foreground)' }}>Ask Libby</span>
 
-              {/* Status dot — mint pulse */}
+              {/* Status dot — teal pulse */}
               <span className="relative flex h-1.5 w-1.5 ml-0.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-40" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400/70" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-40" style={{ background: 'var(--primary)' }} />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 opacity-70" style={{ background: 'var(--primary)' }} />
               </span>
             </button>
           </motion.div>
@@ -219,13 +223,20 @@ const FloatingAskKaeo: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-            className="fixed bottom-4 right-4 z-[100] w-[calc(100vw-2rem)] sm:w-[380px] max-h-[580px] flex flex-col rounded-2xl border border-border/60 bg-card/97 backdrop-blur-xl shadow-2xl shadow-black/10 dark:shadow-black/30 overflow-hidden"
+            className="fixed bottom-4 right-4 z-[100] w-[calc(100vw-2rem)] sm:w-[380px] max-h-[580px] flex flex-col rounded-2xl overflow-hidden"
+            style={{
+              background: 'var(--card)',
+              border: '1px solid var(--border)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              boxShadow: 'var(--shadow-modal)',
+            }}
           >
             {/* ── Header ── */}
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40 bg-card/80 backdrop-blur-md shrink-0">
+            <div className="flex items-center justify-between px-5 py-3.5 shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(15,118,110,0.10)', border: '1px solid rgba(15,118,110,0.18)' }}>
+                  <Sparkles className="w-4 h-4" style={{ color: 'var(--primary)' }} />
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-sm font-bold tracking-tight text-foreground leading-tight">
@@ -235,7 +246,7 @@ const FloatingAskKaeo: React.FC = () => {
                     <span className="text-[10px] text-muted-foreground font-semibold">
                       AI-assisted finance review
                     </span>
-                    <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(15,118,110,0.08)', color: 'var(--primary)', border: '1px solid rgba(15,118,110,0.18)' }}>
                       Grounded in Kaeo data
                     </span>
                   </div>
@@ -274,8 +285,8 @@ const FloatingAskKaeo: React.FC = () => {
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
               {!hasContext ? (
                 <div className="flex flex-col items-center justify-center text-center py-12 px-4 gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                    <UploadCloud className="w-5 h-5 text-emerald-400" />
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(15,118,110,0.08)', border: '1px solid rgba(15,118,110,0.18)' }}>
+                    <UploadCloud className="w-5 h-5" style={{ color: 'var(--primary)' }} />
                   </div>
                   <div>
                     <p className="text-sm font-bold text-foreground mb-1">
@@ -342,8 +353,8 @@ const FloatingAskKaeo: React.FC = () => {
                     >
                       {/* AI avatar — clean teal dot */}
                       {!isUser && (
-                        <div className="w-7 h-7 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" style={{ boxShadow: '0 0 6px rgba(52,211,153,0.5)' }} />
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: 'rgba(15,118,110,0.10)' }}>
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--primary)', boxShadow: '0 0 6px rgba(15,118,110,0.35)' }} />
                         </div>
                       )}
 
@@ -423,7 +434,10 @@ const FloatingAskKaeo: React.FC = () => {
                               onClick={async () => {
                                 await sendMessage("Review my transactions");
                               }}
-                              className="w-full text-left px-3 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-semibold rounded-lg border border-emerald-500/20 text-[10px] transition-all cursor-pointer flex items-center gap-1.5"
+                              className="w-full text-left px-3 py-2 font-semibold rounded-lg text-[10px] transition-all cursor-pointer flex items-center gap-1.5"
+                              style={{ background: 'rgba(15,118,110,0.08)', color: 'var(--primary)', border: '1px solid rgba(15,118,110,0.18)' }}
+                              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(15,118,110,0.14)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(15,118,110,0.08)'; }}
                             >
                               <Sparkles className="w-3 h-3" />
                               "Review my transactions"
@@ -434,7 +448,7 @@ const FloatingAskKaeo: React.FC = () => {
                         {/* Grounded badge */}
                         {!isUser && !isGreeting && !isLimitExceeded && !isError && (
                           <p className="text-[9px] text-muted-foreground mt-2 pt-2 border-t border-border/30 flex items-center gap-1 font-medium animate-in fade-in">
-                            <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                            <Sparkles className="w-2.5 h-2.5" style={{ color: 'var(--primary)' }} />
                             {(() => {
                               const status = msg.source_json?.grounding_status;
                               if (status === 'general') return 'General recommendation';
@@ -455,13 +469,13 @@ const FloatingAskKaeo: React.FC = () => {
               {/* Typing indicator */}
               {loading && (
                 <div className="flex gap-2.5 justify-start">
-                  <div className="w-7 h-7 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" style={{ boxShadow: '0 0 6px rgba(52,211,153,0.5)' }} />
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: 'rgba(15,118,110,0.10)' }}>
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--primary)', boxShadow: '0 0 6px rgba(15,118,110,0.35)' }} />
                   </div>
                   <div className="bg-muted/40 border border-border/40 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 bg-emerald-400/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1.5 h-1.5 bg-emerald-400/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1.5 h-1.5 bg-emerald-400/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'rgba(15,118,110,0.5)', animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'rgba(15,118,110,0.5)', animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'rgba(15,118,110,0.5)', animationDelay: '300ms' }} />
                     <span className="text-[10px] text-muted-foreground ml-1.5 font-semibold">
                       Thinking…
                     </span>
@@ -474,7 +488,7 @@ const FloatingAskKaeo: React.FC = () => {
 
             {/* ── Input Area ── */}
             {hasContext && (
-              <div className="px-4 py-3 border-t border-border/40 bg-card/80 backdrop-blur-md shrink-0">
+              <div className="px-4 py-3 shrink-0" style={{ borderTop: '1px solid var(--border)', background: 'var(--card)' }}>
                 <form onSubmit={handleSend} className="flex items-center gap-2">
                   <input
                     ref={inputRef}
@@ -500,7 +514,8 @@ const FloatingAskKaeo: React.FC = () => {
                   <Link
                     to="/libby"
                     onClick={() => setIsOpen(false)}
-                    className="text-[9px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1"
+                    className="text-[9px] font-bold transition-colors flex items-center gap-1"
+                    style={{ color: 'var(--primary)' }}
                   >
                     Open Libby
                     <ExternalLink className="w-2.5 h-2.5" />

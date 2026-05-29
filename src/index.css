@@ -780,8 +780,27 @@
 .premium-glass {
   background: var(--card);
   border: 1px solid var(--border);
+  border-radius: 1rem;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.dark .premium-glass {
+  background: rgba(15, 26, 24, 0.5);
+  border-color: rgba(47, 184, 166, 0.12);
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+}
+.premium-glass-hover {
+  transition: all 0.2s ease;
+}
+.premium-glass-hover:hover {
+  border-color: rgba(15, 118, 110, 0.25);
+  background: var(--muted);
+}
+.dark .premium-glass-hover:hover {
+  border-color: rgba(47, 184, 166, 0.22);
+  background: rgba(18, 30, 28, 0.6);
 }
 .premium-floating-panel {
   background: var(--card);

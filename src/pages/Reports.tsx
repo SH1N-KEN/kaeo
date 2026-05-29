@@ -426,7 +426,7 @@ export default function Reports() {
     <div className="space-y-6 max-w-5xl mx-auto pb-12 animate-in fade-in duration-500">
       {/* Month-End Readiness Checklist and Optimizer */}
       {readinessPlan && (
-        <div className="premium-glass rounded-2xl p-6 border border-border/20 shadow-xl space-y-4">
+        <div className="kaeo-card p-6 space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/15">
             <div>
               <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
@@ -590,41 +590,38 @@ export default function Reports() {
       )}
 
       {transactionCount === 0 ? (
-        <div className="bg-muted/30 border rounded-lg p-12 text-center flex flex-col items-center">
-          <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-medium mb-2">No data available</h3>
-          <p className="text-muted-foreground mb-6">Import transactions before generating reports.</p>
-          <button
-            onClick={() => navigate('/files')}
-            className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/80 font-medium"
-          >
+        <div className="kaeo-card py-12 flex flex-col items-center justify-center text-center gap-5">
+          <FileText className="h-12 w-12" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />
+          <div>
+            <h3 className="text-[16px] font-semibold mb-2">No data available</h3>
+            <p className="text-[13px]" style={{ color: 'var(--muted-foreground)' }}>Import transactions before generating reports.</p>
+          </div>
+          <button onClick={() => navigate('/files')} className="btn-primary">
             Go to File Imports
           </button>
         </div>
       ) : reports.length === 0 ? (
-        <div className="bg-muted/30 border rounded-lg p-12 text-center flex flex-col items-center">
-          <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-medium mb-2">No reports yet</h3>
-          <p className="text-muted-foreground mb-6">Generate your first CFO report for {activeClient.name} using the imported transaction data.</p>
-          <button
-            onClick={handleGenerateReport}
-            disabled={generating}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 font-medium flex items-center"
-          >
+        <div className="kaeo-card py-12 flex flex-col items-center justify-center text-center gap-5">
+          <FileText className="h-12 w-12" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />
+          <div>
+            <h3 className="text-[16px] font-semibold mb-2">No reports yet</h3>
+            <p className="text-[13px]" style={{ color: 'var(--muted-foreground)', maxWidth: 340, margin: '0 auto' }}>Generate your first CFO report for {activeClient.name} using the imported transaction data.</p>
+          </div>
+          <button onClick={handleGenerateReport} disabled={generating} className="btn-primary">
             {generating ? 'Generating...' : 'Generate First Report'}
           </button>
         </div>
       ) : filteredReports.length === 0 ? (
-        <div className="bg-card border rounded-2xl p-16 text-center text-muted-foreground">
-          <p className="text-sm font-semibold">No matching reports found for "{searchVal}"</p>
+        <div className="kaeo-card py-10 text-center" style={{ color: 'var(--muted-foreground)' }}>
+          <p className="text-[13px] font-semibold">No matching reports found for "{searchVal}"</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredReports.map((report) => (
-            <div key={report.id} className="bg-card border rounded-lg p-5 flex flex-col hover:border-primary/50 transition-colors">
+            <div key={report.id} className="kaeo-card p-5 flex flex-col">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <FileText className="h-5 w-5 text-primary" />
+                <div className="p-2 rounded-xl" style={{ background: 'rgba(15,118,110,0.08)' }}>
+                  <FileText className="h-5 w-5" style={{ color: 'var(--primary)' }} />
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
                   <span className="text-xs font-medium bg-muted px-2 py-1 rounded-full text-muted-foreground">
@@ -679,7 +676,7 @@ export default function Reports() {
               
               <button
                 onClick={() => navigate(`/reports/${report.id}`)}
-                className="w-full mt-4 bg-secondary/50 text-secondary-foreground hover:bg-secondary py-2 rounded-md font-medium text-sm transition-colors flex items-center justify-center"
+                className="btn-secondary w-full mt-4 flex items-center justify-center"
               >
                 <Eye className="h-4 w-4 mr-2" />
                 View Report

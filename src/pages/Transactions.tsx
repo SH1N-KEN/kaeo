@@ -599,21 +599,19 @@ const Transactions: React.FC = () => {
     if (clients && clients.length > 0) {
       return (
         <div className="h-[70vh] flex items-center justify-center animate-in fade-in">
-          <div className="premium-glass border border-border/40 rounded-3xl p-10 flex flex-col items-center justify-center text-center space-y-5 max-w-md shadow-xl animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-teal-500/10 rounded-2xl flex items-center justify-center border border-teal-500/20 shadow-inner">
-              <Plus className="w-8 h-8 text-teal-400" />
+        <div className="kaeo-card p-10 flex flex-col items-center justify-center text-center space-y-5 max-w-md">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(15,118,110,0.10)', border: '1px solid rgba(15,118,110,0.18)' }}>
+              <Plus className="w-8 h-8" style={{ color: 'var(--primary)' }} />
             </div>
             <div className="space-y-1">
               <h3 className="text-lg font-bold tracking-tight">We found your business but it was not selected.</h3>
-              <p className="text-xs text-muted-foreground font-medium">
+              <p className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
                 Click below to start using your business workspace.
               </p>
             </div>
             <button 
-              onClick={() => {
-                setActiveClient(clients[0]);
-              }}
-              className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 transition-all shadow-xl shadow-primary/20 cursor-pointer text-xs"
+              onClick={() => { setActiveClient(clients[0]); }}
+              className="btn-primary"
             >
               Use this business
             </button>
@@ -962,7 +960,7 @@ const Transactions: React.FC = () => {
                     <tr
                       key={tx.id}
                       id={`tx-row-${tx.id}`}
-                      className={`group relative border-b border-border/10 hover:bg-muted/20 transition-colors duration-150 ${isHighlighted ? 'bg-teal-500/5' : ''}`}
+                      className={`group relative border-b border-border/10 hover:bg-muted/20 transition-colors duration-150 ${isHighlighted ? 'bg-primary/5' : ''}`}
                       style={isHighlighted ? { borderLeft: '3px solid #2FB8A6' } : {}}
                       onClick={() => { if (isMenuOpen) setOpenMenuId(null); }}
                     >
