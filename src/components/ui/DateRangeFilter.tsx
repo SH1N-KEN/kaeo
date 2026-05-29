@@ -19,6 +19,7 @@ interface DateRangeFilterProps {
   showFinancialYear?: boolean;
   actions?: React.ReactNode;
   error?: string | null;
+  hideSummary?: boolean;
 }
 
 export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
@@ -32,6 +33,7 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
   showFinancialYear = false,
   actions,
   error,
+  hideSummary = false,
 }) => {
   const thisMonth = useMemo(() => getThisMonthRange(), []);
   const lastMonth = useMemo(() => getLastMonthRange(), []);
@@ -171,21 +173,23 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
       </div>
 
       {/* Info / Warnings / Summary Text */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 text-[11px]">
-        {isInvalidRange ? (
-          <span className="text-danger font-semibold animate-kaeo-fade">
-            Start date must be before end date.
-          </span>
-        ) : error ? (
-          <span className="text-danger font-semibold animate-kaeo-fade">
-            {error}
-          </span>
-        ) : (
-          <span className="text-muted-foreground/80 font-medium animate-kaeo-fade">
-            {summaryText}
-          </span>
-        )}
-      </div>
+      {!hideSummary && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 text-[11px]">
+          {isInvalidRange ? (
+            <span className="text-danger font-semibold animate-kaeo-fade">
+              Start date must be before end date.
+            </span>
+          ) : error ? (
+            <span className="text-danger font-semibold animate-kaeo-fade">
+              {error}
+            </span>
+          ) : (
+            <span className="text-muted-foreground/80 font-medium animate-kaeo-fade">
+              {summaryText}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -15,7 +15,8 @@ import {
   getThisMonthRange,
   getLastMonthRange,
   getLast30DaysRange,
-  getCurrentFinancialYearRange
+  getCurrentFinancialYearRange,
+  formatDateFriendly
 } from '../lib/dateRanges';
 import { DateRangeFilter } from '../components/ui/DateRangeFilter';
 
@@ -536,37 +537,51 @@ export default function Reports() {
           onClear={handleClearDates}
           variant="reports"
           showFinancialYear={true}
-          actions={
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <button
-                onClick={handleDownloadCSV}
-                disabled={transactionCount === 0 || periodTxCount === 0 || (!!reportFromDate && !!reportToDate && reportFromDate > reportToDate)}
-                className="bg-muted text-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-border cursor-pointer h-[38px] w-full sm:w-auto shrink-0"
-              >
-                <DownloadCloud className="h-4 w-4 mr-2 shrink-0" />
-                <span className="whitespace-nowrap">Accountant Pack (CSV)</span>
-              </button>
-              <button
-                onClick={handleGenerateReport}
-                disabled={generating || transactionCount === 0 || periodTxCount === 0 || (!!reportFromDate && !!reportToDate && reportFromDate > reportToDate)}
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer h-[38px] w-full sm:w-auto shrink-0"
-              >
-                {generating ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin shrink-0" />
-                ) : (
-                  <Plus className="h-4 w-4 mr-2 shrink-0" />
-                )}
-                <span className="whitespace-nowrap">{generating ? 'Generating...' : 'Generate Accountant Pack'}</span>
-              </button>
-            </div>
-          }
+          hideSummary={true}
         />
-        
-        {periodTxCount === 0 && (reportFromDate || reportToDate) && !(reportFromDate && reportToDate && reportFromDate > reportToDate) && (
-          <p className="text-xs text-[var(--danger)] font-semibold animate-in fade-in">
-            No transactions found for the selected period. Report generation is disabled.
-          </p>
-        )}
+
+        {/* Actions Row */}
+        <div className="flex flex-col sm:flex-row items-center justify-end gap-2 w-full pt-2">
+          <button
+            onClick={handleDownloadCSV}
+            disabled={transactionCount === 0 || periodTxCount === 0 || (!!reportFromDate && !!reportToDate && reportFromDate > reportToDate)}
+            className="bg-muted text-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-border cursor-pointer h-[38px] w-full sm:w-auto shrink-0"
+          >
+            <DownloadCloud className="h-4 w-4 mr-2 shrink-0" />
+            <span className="whitespace-nowrap">Accountant Pack (CSV)</span>
+          </button>
+          <button
+            onClick={handleGenerateReport}
+            disabled={generating || transactionCount === 0 || periodTxCount === 0 || (!!reportFromDate && !!reportToDate && reportFromDate > reportToDate)}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer h-[38px] w-full sm:w-auto shrink-0"
+          >
+            {generating ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin shrink-0" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2 shrink-0" />
+            )}
+            <span className="whitespace-nowrap">{generating ? 'Generating...' : 'Generate Accountant Pack'}</span>
+          </button>
+        </div>
+
+        {/* Summary & Warnings */}
+        <div className="text-[11px] font-medium text-muted-foreground/80 pt-1">
+          {!!reportFromDate && !!reportToDate && reportFromDate > reportToDate ? (
+            <span className="text-[var(--danger)] font-semibold animate-kaeo-fade">
+              Start date must be before end date.
+            </span>
+          ) : periodTxCount === 0 && (reportFromDate || reportToDate) ? (
+            <span className="text-[var(--danger)] font-semibold animate-in fade-in">
+              No transactions found for the selected period. Report generation is disabled.
+            </span>
+          ) : !reportFromDate && !reportToDate ? (
+            <span className="animate-kaeo-fade">Showing all imported data</span>
+          ) : (
+            <span className="animate-kaeo-fade">
+              Report period: {reportFromDate ? formatDateFriendly(reportFromDate) : '...'} – {reportToDate ? formatDateFriendly(reportToDate) : '...'}
+            </span>
+          )}
+        </div>
       </div>
 
       {error && (
