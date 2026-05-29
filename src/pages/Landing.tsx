@@ -414,22 +414,109 @@ const InteractiveWorkflowSection: React.FC = () => {
 
   const useStickyScroll = isDesktop && !prefersReduced;
 
+  if (!useStickyScroll) {
+    // Mobile / stacked layout fallback
+    return (
+      <section id="how-it-works" style={{ background: 'transparent', padding: '72px 24px' }}>
+        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '48px' }}>
+          <div>
+            <SectionLabel code="002" label="HOW IT WORKS" />
+            <h2 style={{
+              fontWeight: 700,
+              fontSize: 'clamp(28px, 6vw, 36px)',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.15,
+              margin: '0 0 16px',
+              color: '#E8F0EE',
+            }}>
+              How Kaeo reviews your books
+            </h2>
+            <p style={{
+              fontSize: '15px',
+              color: 'rgba(232, 240, 238, 0.45)',
+              lineHeight: 1.5,
+              margin: 0,
+            }}>
+              No formatting, no pivot tables, no manual categorization. Kaeo handles the cleanup so you can focus on the review.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            {steps.map((step, idx) => (
+              <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div
+                  style={{
+                    padding: '24px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.04)',
+                    borderRadius: '20px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '8px' }}>
+                    <span style={{
+                      fontStyle: 'italic',
+                      color: '#138C7E',
+                      fontSize: '20px',
+                      fontWeight: 700,
+                    }}>{step.num}</span>
+                    <span style={{
+                      color: 'rgba(232, 240, 238, 0.4)',
+                      fontFamily: 'ui-monospace, monospace',
+                      fontSize: '10px',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      fontWeight: 600,
+                    }}>{step.label}</span>
+                  </div>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    color: '#E8F0EE',
+                    marginBottom: '8px',
+                  }}>{step.title}</h3>
+                  <p style={{
+                    fontSize: '13.5px',
+                    color: 'rgba(232, 240, 238, 0.65)',
+                    lineHeight: 1.55,
+                    margin: 0,
+                  }}>{step.description}</p>
+                </div>
+                <div
+                  style={{
+                    background: '#121514',
+                    border: '1px solid rgba(140, 150, 148, 0.12)',
+                    borderRadius: '20px',
+                    padding: '20px',
+                    boxShadow: '0 16px 40px rgba(0,0,0,0.4)',
+                  }}
+                >
+                  {step.visual(false)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Desktop Pinned Scrollytelling (Approach A)
   return (
     <section 
       id="how-it-works"
       ref={containerRef}
       style={{
         position: 'relative',
-        height: useStickyScroll ? '500vh' : 'auto',
+        height: '500vh',
         background: 'transparent',
         padding: 0,
       }}
     >
       <div
         style={{
-          position: useStickyScroll ? 'sticky' : 'relative',
-          top: useStickyScroll ? '72px' : '0',
-          height: useStickyScroll ? 'calc(100vh - 72px)' : 'auto',
+          position: 'sticky',
+          top: '72px',
+          height: 'calc(100vh - 72px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -440,22 +527,22 @@ const InteractiveWorkflowSection: React.FC = () => {
         <div 
           style={{
             display: 'grid',
-            gridTemplateColumns: isDesktop ? '40% 60%' : '1fr',
-            gap: isDesktop ? '48px' : '24px',
+            gridTemplateColumns: '40% 60%',
+            gap: '64px',
             alignItems: 'center',
             width: '100%',
             maxWidth: '1440px',
             margin: '0 auto',
-            padding: isDesktop ? '0 48px' : '72px 24px',
+            padding: '0 64px',
           }}
           className="workflow-grid"
         >
-          {/* Left Column: Header + Steps List */}
+          {/* Left Column: Header + Active Step Card + Progress Rail */}
           <div 
             style={{ 
               display: 'flex', 
               flexDirection: 'column', 
-              gap: '32px',
+              gap: '40px',
               width: '100%',
             }} 
           >
@@ -481,155 +568,152 @@ const InteractiveWorkflowSection: React.FC = () => {
               </p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: isDesktop ? '14px' : '12px', width: '100%' }}>
+            {/* Hero Active Step Display */}
+            <div 
+              key={activeStep}
+              className="animate-kaeo-fade"
+              style={{
+                padding: '32px',
+                background: 'rgba(19, 140, 126, 0.04)',
+                border: '1px solid rgba(19, 140, 126, 0.15)',
+                borderRadius: '24px',
+                backdropFilter: 'blur(12px)',
+                minHeight: '220px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                gap: '16px',
+                boxShadow: '0 16px 40px rgba(0,0,0,0.3), inset 0 1px 0 0 rgba(255,255,255,0.05)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+                <span style={{
+                  fontStyle: 'italic',
+                  color: '#138C7E',
+                  fontSize: '32px',
+                  fontWeight: 800,
+                  letterSpacing: '-0.04em',
+                  lineHeight: '1',
+                }}>{steps[activeStep].num}</span>
+                <span style={{
+                  color: 'rgba(19, 140, 126, 0.85)',
+                  fontFamily: 'ui-monospace, monospace',
+                  fontSize: '11px',
+                  letterSpacing: '0.10em',
+                  textTransform: 'uppercase',
+                  fontWeight: 700,
+                }}>{steps[activeStep].label}</span>
+              </div>
+              <h3 style={{
+                fontSize: '22px',
+                fontWeight: 700,
+                color: '#E8F0EE',
+                letterSpacing: '-0.02em',
+                margin: 0,
+              }}>{steps[activeStep].title}</h3>
+              <p style={{
+                fontSize: '15px',
+                color: 'rgba(232, 240, 238, 0.65)',
+                lineHeight: 1.6,
+                margin: 0,
+              }}>{steps[activeStep].description}</p>
+            </div>
+
+            {/* Vertical Progress Rail */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', paddingLeft: '16px', borderLeft: '2px solid rgba(255,255,255,0.03)', marginTop: '8px' }}>
+              <div 
+                style={{
+                  position: 'absolute',
+                  left: '-2px',
+                  top: `${(activeStep / 5) * 100}%`,
+                  height: '20%',
+                  width: '2px',
+                  background: '#138C7E',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  boxShadow: '0 0 8px #138C7E',
+                }}
+              />
               {steps.map((step, idx) => {
                 const isActive = idx === activeStep;
                 return (
-                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div
-                      onClick={() => handleStepClick(idx)}
-                      style={{
-                        padding: isDesktop ? '18px 22px' : '16px 20px',
-                        background: isActive ? 'rgba(19, 140, 126, 0.06)' : 'rgba(255, 255, 255, 0.01)',
-                        border: '1px solid',
-                        borderColor: isActive ? 'rgba(19, 140, 126, 0.25)' : 'rgba(255, 255, 255, 0.03)',
-                        borderRadius: '16px',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                        backdropFilter: isActive ? 'blur(12px)' : 'none',
-                        WebkitBackdropFilter: isActive ? 'blur(12px)' : 'none',
-                        boxShadow: isActive ? '0 12px 30px rgba(0,0,0,0.2), inset 0 1px 0 0 rgba(255,255,255,0.05)' : 'none',
-                      }}
-                      className={`workflow-step-card ${isActive ? 'active' : 'inactive'}`}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '8px' }}>
-                        <span style={{
-                          fontStyle: 'italic',
-                          color: isActive ? '#138C7E' : 'rgba(232, 240, 238, 0.2)',
-                          fontSize: '20px',
-                          lineHeight: '1',
-                          letterSpacing: '-0.04em',
-                          fontWeight: 700,
-                          transition: 'color 0.3s',
-                        }}>{step.num}</span>
-                        <span style={{
-                          color: isActive ? '#138C7E' : 'rgba(232, 240, 238, 0.3)',
-                          fontFamily: 'ui-monospace, monospace',
-                          fontSize: '9.5px',
-                          letterSpacing: '0.08em',
-                          textTransform: 'uppercase',
-                          fontWeight: 600,
-                          transition: 'color 0.3s',
-                        }}>{step.label}</span>
-                      </div>
-                      <h3 style={{ 
-                        fontSize: '16px', 
-                        fontWeight: 700, 
-                        color: isActive ? '#E8F0EE' : 'rgba(232,240,238,0.5)', 
-                        letterSpacing: '-0.01em', 
-                        margin: '0 0 6px 0', 
-                        transition: 'color 0.3s' 
-                      }}>{step.title}</h3>
-                      <p style={{ 
-                        fontSize: '12.5px', 
-                        color: isActive ? 'rgba(232,240,238,0.6)' : 'rgba(232,240,238,0.3)', 
-                        lineHeight: 1.5, 
-                        margin: 0, 
-                        transition: 'color 0.3s' 
-                      }}>{step.description}</p>
-                    </div>
-
-                    {/* Mobile-only Preview mock right below the active card */}
-                    {!isDesktop && isActive && (
-                      <div 
-                        style={{ 
-                          background: '#121514',
-                          border: '1px solid rgba(140, 150, 148, 0.12)',
-                          borderRadius: '16px',
-                          padding: '20px',
-                          boxShadow: '0 16px 40px rgba(0,0,0,0.4)',
-                          width: '100%',
-                          transition: 'all 0.3s ease',
-                        }}
-                        className="workflow-mock-panel animate-kaeo-fade"
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '13px' }}>💻</span>
-                            <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(232, 240, 238, 0.45)', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.05em' }}>KAEO VIEW</span>
-                          </div>
-                          <span style={{ 
-                            fontSize: '9px', 
-                            fontFamily: 'ui-monospace, monospace', 
-                            letterSpacing: '0.08em', 
-                            padding: '2px 6px', 
-                            background: 'rgba(140,150,148,0.08)', 
-                            color: 'rgba(232, 240, 238, 0.65)', 
-                            borderRadius: '4px', 
-                            fontWeight: 700, 
-                            textTransform: 'uppercase',
-                          }}>
-                            {step.label}
-                          </span>
-                        </div>
-                        <div className="workflow-mock-content">
-                          {step.visual(false)}
-                        </div>
-                      </div>
-                    )}
+                  <div
+                    key={idx}
+                    onClick={() => handleStepClick(idx)}
+                    style={{
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      opacity: isActive ? 1 : 0.35,
+                      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                    }}
+                  >
+                    <span style={{
+                      fontFamily: 'ui-monospace, monospace',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: isActive ? '#138C7E' : '#E8F0EE',
+                    }}>
+                      {step.num}
+                    </span>
+                    <span style={{
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: '#E8F0EE',
+                    }}>
+                      {step.label}
+                    </span>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Right side mock display (Desktop only) */}
-          {isDesktop && (
-            <div 
-              style={{
-                background: '#121514',
-                border: '1px solid rgba(140, 150, 148, 0.12)',
-                borderRadius: '16px',
-                padding: '32px',
-                boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
-                height: 'calc(100vh - 180px)',
-                width: '100%',
-                maxWidth: '850px',
-                margin: '0 auto',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'all 0.3s ease',
-                overflowY: 'auto',
-                overflowX: 'hidden',
-              }} 
-              className="workflow-mock-panel no-scrollbar"
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px', flexShrink: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '13px' }}>💻</span>
-                  <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(232, 240, 238, 0.45)', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.05em' }}>KAEO WORKSPACE · ACTIVE VIEW</span>
-                </div>
-                <span style={{ 
-                  fontSize: '9px', 
-                  fontFamily: 'ui-monospace, monospace', 
-                  letterSpacing: '0.08em', 
-                  padding: '2px 6px', 
-                  background: 'rgba(140,150,148,0.08)', 
-                  color: 'rgba(232, 240, 238, 0.65)', 
-                  borderRadius: '4px', 
-                  fontWeight: 700, 
-                  textTransform: 'uppercase',
-                  transition: 'all 0.3s ease'
-                }}>
-                  {steps[activeStep].label}
-                </span>
+          {/* Right Column: Hero Preview (Desktop only) */}
+          <div 
+            style={{
+              background: '#121514',
+              border: '1px solid rgba(140, 150, 148, 0.12)',
+              borderRadius: '24px',
+              padding: '32px',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+              height: 'calc(100vh - 180px)',
+              width: '100%',
+              maxWidth: '850px',
+              margin: '0 auto',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              transition: 'all 0.3s ease',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+            }} 
+            className="workflow-mock-panel no-scrollbar"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px' }}>💻</span>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(232, 240, 238, 0.45)', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.05em' }}>KAEO WORKSPACE · ACTIVE VIEW</span>
               </div>
-              <div key={activeStep} className="workflow-mock-content animate-kaeo-scale" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                {steps[activeStep].visual(true)}
-              </div>
+              <span style={{ 
+                fontSize: '9px', 
+                fontFamily: 'ui-monospace, monospace', 
+                letterSpacing: '0.08em', 
+                padding: '2px 6px', 
+                background: 'rgba(140,150,148,0.08)', 
+                color: 'rgba(232, 240, 238, 0.65)', 
+                borderRadius: '4px', 
+                fontWeight: 700, 
+                textTransform: 'uppercase',
+                transition: 'all 0.3s ease'
+              }}>
+                {steps[activeStep].label}
+              </span>
             </div>
-          )}
+            <div key={activeStep} className="workflow-mock-content animate-kaeo-scale" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              {steps[activeStep].visual(true)}
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -644,6 +728,7 @@ const BeforeAfterComparison: React.FC = () => {
   const lastManualChange = useRef<number>(0);
   const sectionRef = useRef<HTMLDivElement>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -654,13 +739,43 @@ const BeforeAfterComparison: React.FC = () => {
     return () => mediaQuery.removeEventListener('change', listener);
   }, []);
 
+  useEffect(() => {
+    const checkMedia = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    checkMedia();
+    window.addEventListener('resize', checkMedia);
+    return () => window.removeEventListener('resize', checkMedia);
+  }, []);
+
+  const useStickyScroll = isDesktop && !reducedMotion;
+
   const toggleMode = (newMode: 'before' | 'after') => {
     setMode(newMode);
     lastManualChange.current = Date.now();
+
+    if (!useStickyScroll) return;
+
+    const container = sectionRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const scrollTop = window.scrollY + rect.top;
+    const navHeight = 72;
+    const stickyHeight = window.innerHeight - navHeight;
+    const totalScrollRange = rect.height - stickyHeight;
+
+    const targetProgress = newMode === 'before' ? 0.25 : 0.75;
+    const targetScrollY = scrollTop - navHeight + targetProgress * totalScrollRange;
+
+    window.scrollTo({
+      top: targetScrollY,
+      behavior: 'smooth'
+    });
   };
 
   useEffect(() => {
-    if (typeof window === 'undefined' || reducedMotion) return;
+    if (!useStickyScroll) return;
 
     const handleScroll = () => {
       // Ignore scroll-driven changes for 1.5s after a manual click
@@ -668,18 +783,22 @@ const BeforeAfterComparison: React.FC = () => {
         return;
       }
 
-      if (!sectionRef.current) return;
-      const rect = sectionRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
+      const container = sectionRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const navHeight = 72;
+      const stickyHeight = window.innerHeight - navHeight;
+      const totalScrollRange = rect.height - stickyHeight;
+
+      if (totalScrollRange <= 0) return;
+
+      const currentScroll = navHeight - rect.top;
+      const progress = Math.max(0, Math.min(1, currentScroll / totalScrollRange));
       
-      // Trigger transition when the center of the section crosses the viewport center
-      const sectionCenter = rect.top + rect.height / 2;
-      const viewportCenter = viewportHeight / 2;
-      
-      if (sectionCenter < viewportCenter) {
-        setMode('after');
-      } else {
+      if (progress < 0.5) {
         setMode('before');
+      } else {
+        setMode('after');
       }
     };
 
@@ -687,137 +806,280 @@ const BeforeAfterComparison: React.FC = () => {
     handleScroll();
 
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [reducedMotion]);
+  }, [useStickyScroll]);
+
+  if (!useStickyScroll) {
+    return (
+      <section 
+        ref={sectionRef}
+        style={{ 
+          padding: '72px 24px', 
+          background: 'transparent', 
+          overflow: 'hidden'
+        }}
+      >
+        <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+          <div className="flex flex-col items-center gap-12">
+            
+            {/* Copy + Toggle */}
+            <div className="w-full flex flex-col items-center text-center">
+              <div style={{ color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '16px', textTransform: 'uppercase', fontWeight: 500 }}>
+                002B — THE DIFFERENCE
+              </div>
+              <h2 style={{ fontWeight: 700, fontSize: 'clamp(28px, 5vw, 36px)', letterSpacing: '-0.03em', lineHeight: 1.1, margin: '0 0 16px', color: '#E8F0EE' }}>
+                Before Kaeo vs. <span style={{ fontFamily: '"Instrument Serif", serif', fontStyle: 'italic', fontWeight: 400, color: '#138C7E', textTransform: 'none' }}>Review-ready.</span>
+              </h2>
+              <p style={{ fontSize: '15px', color: 'rgba(232,240,238,0.45)', lineHeight: 1.6, margin: '0 0 24px', maxWidth: '580px' }}>
+                Stop wasting hours untangling raw narrations, matching receipts, and searching for invoice files. Toggle below to see how Kaeo transforms raw statement data into a clean, audited ledger.
+              </p>
+
+              <SlidingSegmentControl
+                options={[
+                  { value: 'before', label: 'Before Kaeo' },
+                  { value: 'after', label: 'Review-ready' },
+                ]}
+                activeValue={mode}
+                onChange={toggleMode}
+                activeColor={mode === 'before' ? '#E05450' : '#138C7E'}
+                className="w-[280px] mb-8"
+              />
+            </div>
+
+            {/* Mobile Cards rendering */}
+            <div className="w-full relative min-h-[410px]">
+              {/* Before Card */}
+              <div
+                style={{
+                  position: mode === 'before' ? 'relative' : 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  opacity: mode === 'before' ? 1 : 0,
+                  transform: mode === 'before' ? 'translateY(0) scale(1)' : 'translateY(15px) scale(0.96)',
+                  pointerEvents: mode === 'before' ? 'auto' : 'none',
+                  transition: 'opacity 0.25s, transform 0.25s',
+                  background: '#121514',
+                  border: '1.5px solid rgba(224, 84, 80, 0.20)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ fontSize: '11px', color: '#E05450', fontWeight: 700, letterSpacing: '0.05em' }}>❌ CRYPTIC BANK STATEMENT ROWS & UNRECONCILED SHEETS</div>
+                  {[
+                    { date: '28/04/26', narr: 'UPI/9820123456/Rent/Paytm', amt: '1,80,000.00 Dr', cat: '[Uncategorized]', note: 'Who was paid? Is there a rent receipt?' },
+                    { date: '26/04/26', narr: 'NEFT-MUM-SUP-23423-MUMBAI SUPPLIES PVT', amt: '1,24,000.00 Dr', cat: '[Uncategorized]', note: 'Is this invoice attached? Price looks higher than usual.' },
+                    { date: '25/04/26', narr: 'UPI/7839XXXXX/REF99213/ANON', amt: '18,500.00 Dr', cat: '[Uncategorized]', note: 'Completely unidentified transaction payee.' },
+                  ].map((row, i) => (
+                    <div key={i} style={{ padding: '12px', background: 'rgba(224, 84, 80, 0.02)', borderRadius: '8px', border: '1px solid rgba(224, 84, 80, 0.12)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(232,240,238,0.35)', marginBottom: '4px', fontFamily: 'ui-monospace, monospace' }}>
+                        <span className="truncate mr-2">{row.date} · {row.narr}</span>
+                        <span style={{ color: '#E05450', fontWeight: 600 }} className="shrink-0">{row.amt}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', flexWrap: 'wrap', gap: '4px' }}>
+                        <span style={{ color: '#E05450', fontWeight: 700 }}>{row.cat}</span>
+                        <span style={{ color: 'rgba(232,240,238,0.4)', fontStyle: 'italic' }}>❓ {row.note}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ background: 'rgba(224,84,80,0.06)', border: '1px solid rgba(224,84,80,0.20)', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#E05450' }}>
+                    <strong>Issues:</strong> Messy statement rows, unclear UPI narrations, uncategorized payments, and missing invoice context.
+                  </div>
+                </div>
+              </div>
+
+              {/* Review-ready Card */}
+              <div
+                style={{
+                  position: mode === 'after' ? 'relative' : 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  opacity: mode === 'after' ? 1 : 0,
+                  transform: mode === 'after' ? 'translateY(0) scale(1)' : 'translateY(15px) scale(0.96)',
+                  pointerEvents: mode === 'after' ? 'auto' : 'none',
+                  transition: 'opacity 0.25s, transform 0.25s',
+                  background: '#121514',
+                  border: '1.5px solid rgba(140, 150, 148, 0.15)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ fontSize: '11px', color: '#138C7E', fontWeight: 700, letterSpacing: '0.05em' }}>⚡ CLEAN, RECONCILED KAEO LEDGER ROWS</div>
+                  {[
+                    { date: '28 Apr 2026', vendor: 'Bombay Rent Ltd', cat: 'Rent & Utilities', amt: '−₹1,80,000', badge: 'Duplicate payment suspect', bColor: '#E05450' },
+                    { date: '26 Apr 2026', vendor: 'Mumbai Supplies Pvt Ltd', cat: 'Capital Expense', amt: '−₹1,24,000', badge: 'High-Value Outflow (3.2x avg)', bColor: '#E05450' },
+                    { date: '25 Apr 2026', vendor: 'UPI Payee / Rent', cat: 'Rent & Utilities', amt: '−₹18,500', badge: 'Review queue: confirm invoice link', bColor: '#D4922A' },
+                  ].map((row, i) => (
+                    <div key={i} style={{ padding: '12px', background: 'rgba(255, 255, 255, 0.01)', borderRadius: '8px', border: '1px solid rgba(140, 150, 148, 0.08)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(232,240,238,0.4)', marginBottom: '4px' }}>
+                        <span className="truncate mr-2"><strong style={{ color: '#E8F0EE' }}>{row.vendor}</strong> · {row.date}</span>
+                        <span style={{ color: '#E8F0EE', fontWeight: 700, fontFamily: 'ui-monospace, monospace' }} className="shrink-0">{row.amt}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                        <span style={{ fontSize: '10px', background: 'rgba(140, 150, 148, 0.06)', color: 'rgba(232, 240, 238, 0.65)', border: '1px solid rgba(140, 150, 148, 0.10)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>{row.cat}</span>
+                        <span style={{ fontSize: '10.5px', color: row.bColor, fontWeight: 600 }} className="whitespace-nowrap">⚠ {row.badge}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ background: 'rgba(140, 150, 148, 0.05)', border: '1px solid rgba(140, 150, 148, 0.10)', borderRadius: '8px', padding: '12px', fontSize: '12px', color: 'rgba(232, 240, 238, 0.60)' }}>
+                    <strong>Benefits:</strong> Categorized transactions, clean review queue, automated risk snapshot, and accountant-ready reports.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section 
       ref={sectionRef}
       style={{ 
-        padding: '100px 24px', 
-        background: 'transparent', 
-        overflow: 'hidden'
+        position: 'relative',
+        height: '200vh',
+        background: 'transparent',
       }}
     >
-      <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-        {/* Two-column container */}
-        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
-          
-          {/* Left Column: Copy + Toggle */}
-          <div className="w-full lg:w-[45%] flex flex-col items-center lg:items-start text-center lg:text-left shrink-0">
-            <div style={{ color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '16px', textTransform: 'uppercase', fontWeight: 500 }}>
-              002B — THE DIFFERENCE
+      <div 
+        style={{
+          position: 'sticky',
+          top: '72px',
+          height: 'calc(100vh - 72px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          width: '100%',
+        }}
+      >
+        <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', padding: '0 24px' }}>
+          {/* Two-column container */}
+          <div style={{ display: 'grid', gridTemplateColumns: '40% 60%', gap: '64px', alignItems: 'center' }}>
+            
+            {/* Left Column: Copy + Toggle */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 500 }}>
+                002B — THE DIFFERENCE
+              </div>
+              <h2 style={{ fontWeight: 700, fontSize: 'clamp(28px, 3.5vw, 44px)', letterSpacing: '-0.03em', lineHeight: 1.1, margin: 0, color: '#E8F0EE' }}>
+                Before Kaeo vs. <span style={{ fontFamily: '"Instrument Serif", serif', fontStyle: 'italic', fontWeight: 400, color: '#138C7E', textTransform: 'none' }}>Review-ready.</span>
+              </h2>
+              <p style={{ fontSize: '15px', color: 'rgba(232,240,238,0.45)', lineHeight: 1.6, margin: 0 }}>
+                Stop wasting hours untangling raw narrations, matching receipts, and searching for invoice files. Toggle below or scroll down to see how Kaeo transforms raw statement data into a clean, audited ledger.
+              </p>
+
+              {/* Sliding Toggle Control */}
+              <SlidingSegmentControl
+                options={[
+                  { value: 'before', label: 'Before Kaeo' },
+                  { value: 'after', label: 'Review-ready' },
+                ]}
+                activeValue={mode}
+                onChange={toggleMode}
+                activeColor={mode === 'before' ? '#E05450' : '#138C7E'}
+                className="w-[280px]"
+              />
             </div>
-            <h2 style={{ fontWeight: 700, fontSize: 'clamp(28px, 3.5vw, 44px)', letterSpacing: '-0.03em', lineHeight: 1.1, margin: '0 0 16px', color: '#E8F0EE' }}>
-              Before Kaeo vs. <span style={{ fontFamily: '"Instrument Serif", serif', fontStyle: 'italic', fontWeight: 400, color: '#138C7E', textTransform: 'none' }}>Review-ready.</span>
-            </h2>
-            <p style={{ fontSize: '15px', color: 'rgba(232,240,238,0.45)', lineHeight: 1.6, margin: '0 0 32px' }}>
-              Stop wasting hours untangling raw narrations, matching receipts, and searching for invoice files. Toggle below or scroll down to see how Kaeo transforms raw statement data into a clean, audited ledger.
-            </p>
 
-            {/* Sliding Toggle Control */}
-            <SlidingSegmentControl
-              options={[
-                { value: 'before', label: 'Before Kaeo' },
-                { value: 'after', label: 'Review-ready' },
-              ]}
-              activeValue={mode}
-              onChange={toggleMode}
-              activeColor={mode === 'before' ? '#E05450' : '#138C7E'}
-              className="w-[280px]"
-            />
-          </div>
-
-          {/* Right Column: Morphing Cards Container */}
-          <div className="w-full lg:flex-1 relative min-h-[410px]">
-            {/* Before Card */}
-            <div
-              style={{
-                position: mode === 'before' ? 'relative' : 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                opacity: mode === 'before' ? 1 : 0,
-                transform: mode === 'before' ? 'translateY(0) scale(1)' : 'translateY(15px) scale(0.96)',
-                pointerEvents: mode === 'before' ? 'auto' : 'none',
-                transition: reducedMotion 
-                  ? 'opacity 0.15s' 
-                  : 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                background: '#121514',
-                border: '1.5px solid rgba(224, 84, 80, 0.20)',
-                borderRadius: '16px',
-                padding: '24px',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ fontSize: '11px', color: '#E05450', fontWeight: 700, letterSpacing: '0.05em' }}>❌ CRYPTIC BANK STATEMENT ROWS & UNRECONCILED SHEETS</div>
-                {[
-                  { date: '28/04/26', narr: 'UPI/9820123456/Rent/Paytm', amt: '1,80,000.00 Dr', cat: '[Uncategorized]', note: 'Who was paid? Is there a rent receipt?' },
-                  { date: '26/04/26', narr: 'NEFT-MUM-SUP-23423-MUMBAI SUPPLIES PVT', amt: '1,24,000.00 Dr', cat: '[Uncategorized]', note: 'Is this invoice attached? Price looks higher than usual.' },
-                  { date: '25/04/26', narr: 'UPI/7839XXXXX/REF99213/ANON', amt: '18,500.00 Dr', cat: '[Uncategorized]', note: 'Completely unidentified transaction payee.' },
-                ].map((row, i) => (
-                  <div key={i} style={{ padding: '12px', background: 'rgba(224, 84, 80, 0.02)', borderRadius: '8px', border: '1px solid rgba(224, 84, 80, 0.12)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(232,240,238,0.35)', marginBottom: '4px', fontFamily: 'ui-monospace, monospace' }}>
-                      <span className="truncate mr-2">{row.date} · {row.narr}</span>
-                      <span style={{ color: '#E05450', fontWeight: 600 }} className="shrink-0">{row.amt}</span>
+            {/* Right Column: Morphing Cards Container */}
+            <div style={{ position: 'relative', width: '100%', minHeight: '410px' }}>
+              {/* Before Card */}
+              <div
+                style={{
+                  position: mode === 'before' ? 'relative' : 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  opacity: mode === 'before' ? 1 : 0,
+                  transform: mode === 'before' ? 'translateY(0) scale(1)' : 'translateY(15px) scale(0.96)',
+                  pointerEvents: mode === 'before' ? 'auto' : 'none',
+                  transition: reducedMotion 
+                    ? 'opacity 0.15s' 
+                    : 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                  background: '#121514',
+                  border: '1.5px solid rgba(224, 84, 80, 0.20)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ fontSize: '11px', color: '#E05450', fontWeight: 700, letterSpacing: '0.05em' }}>❌ CRYPTIC BANK STATEMENT ROWS & UNRECONCILED SHEETS</div>
+                  {[
+                    { date: '28/04/26', narr: 'UPI/9820123456/Rent/Paytm', amt: '1,80,000.00 Dr', cat: '[Uncategorized]', note: 'Who was paid? Is there a rent receipt?' },
+                    { date: '26/04/26', narr: 'NEFT-MUM-SUP-23423-MUMBAI SUPPLIES PVT', amt: '1,24,000.00 Dr', cat: '[Uncategorized]', note: 'Is this invoice attached? Price looks higher than usual.' },
+                    { date: '25/04/26', narr: 'UPI/7839XXXXX/REF99213/ANON', amt: '18,500.00 Dr', cat: '[Uncategorized]', note: 'Completely unidentified transaction payee.' },
+                  ].map((row, i) => (
+                    <div key={i} style={{ padding: '12px', background: 'rgba(224, 84, 80, 0.02)', borderRadius: '8px', border: '1px solid rgba(224, 84, 80, 0.12)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(232,240,238,0.35)', marginBottom: '4px', fontFamily: 'ui-monospace, monospace' }}>
+                        <span className="truncate mr-2">{row.date} · {row.narr}</span>
+                        <span style={{ color: '#E05450', fontWeight: 600 }} className="shrink-0">{row.amt}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', flexWrap: 'wrap', gap: '4px' }}>
+                        <span style={{ color: '#E05450', fontWeight: 700 }}>{row.cat}</span>
+                        <span style={{ color: 'rgba(232,240,238,0.4)', fontStyle: 'italic' }}>❓ {row.note}</span>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', flexWrap: 'wrap', gap: '4px' }}>
-                      <span style={{ color: '#E05450', fontWeight: 700 }}>{row.cat}</span>
-                      <span style={{ color: 'rgba(232,240,238,0.4)', fontStyle: 'italic' }}>❓ {row.note}</span>
-                    </div>
+                  ))}
+                  <div style={{ background: 'rgba(224,84,80,0.06)', border: '1px solid rgba(224,84,80,0.20)', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#E05450' }}>
+                    <strong>Issues:</strong> Messy statement rows, unclear UPI narrations, uncategorized payments, and missing invoice context.
                   </div>
-                ))}
-                <div style={{ background: 'rgba(224,84,80,0.06)', border: '1px solid rgba(224,84,80,0.20)', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#E05450' }}>
-                  <strong>Issues:</strong> Messy statement rows, unclear UPI narrations, uncategorized payments, and missing invoice context.
+                </div>
+              </div>
+
+              {/* Review-ready Card */}
+              <div
+                style={{
+                  position: mode === 'after' ? 'relative' : 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  opacity: mode === 'after' ? 1 : 0,
+                  transform: mode === 'after' ? 'translateY(0) scale(1)' : 'translateY(15px) scale(0.96)',
+                  pointerEvents: mode === 'after' ? 'auto' : 'none',
+                  transition: reducedMotion 
+                    ? 'opacity 0.15s' 
+                    : 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                  background: '#121514',
+                  border: '1.5px solid rgba(140, 150, 148, 0.15)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ fontSize: '11px', color: '#138C7E', fontWeight: 700, letterSpacing: '0.05em' }}>⚡ CLEAN, RECONCILED KAEO LEDGER ROWS</div>
+                  {[
+                    { date: '28 Apr 2026', vendor: 'Bombay Rent Ltd', cat: 'Rent & Utilities', amt: '−₹1,80,000', badge: 'Duplicate payment suspect', bColor: '#E05450' },
+                    { date: '26 Apr 2026', vendor: 'Mumbai Supplies Pvt Ltd', cat: 'Capital Expense', amt: '−₹1,24,000', badge: 'High-Value Outflow (3.2x avg)', bColor: '#E05450' },
+                    { date: '25 Apr 2026', vendor: 'UPI Payee / Rent', cat: 'Rent & Utilities', amt: '−₹18,500', badge: 'Review queue: confirm invoice link', bColor: '#D4922A' },
+                  ].map((row, i) => (
+                    <div key={i} style={{ padding: '12px', background: 'rgba(255, 255, 255, 0.01)', borderRadius: '8px', border: '1px solid rgba(140, 150, 148, 0.08)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(232,240,238,0.4)', marginBottom: '4px' }}>
+                        <span className="truncate mr-2"><strong style={{ color: '#E8F0EE' }}>{row.vendor}</strong> · {row.date}</span>
+                        <span style={{ color: '#E8F0EE', fontWeight: 700, fontFamily: 'ui-monospace, monospace' }} className="shrink-0">{row.amt}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                        <span style={{ fontSize: '10px', background: 'rgba(140, 150, 148, 0.06)', color: 'rgba(232, 240, 238, 0.65)', border: '1px solid rgba(140, 150, 148, 0.10)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>{row.cat}</span>
+                        <span style={{ fontSize: '10.5px', color: row.bColor, fontWeight: 600 }} className="whitespace-nowrap">⚠ {row.badge}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ background: 'rgba(140, 150, 148, 0.05)', border: '1px solid rgba(140, 150, 148, 0.10)', borderRadius: '8px', padding: '12px', fontSize: '12px', color: 'rgba(232, 240, 238, 0.60)' }}>
+                    <strong>Benefits:</strong> Categorized transactions, clean review queue, automated risk snapshot, and accountant-ready reports.
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Review-ready Card */}
-            <div
-              style={{
-                position: mode === 'after' ? 'relative' : 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                opacity: mode === 'after' ? 1 : 0,
-                transform: mode === 'after' ? 'translateY(0) scale(1)' : 'translateY(15px) scale(0.96)',
-                pointerEvents: mode === 'after' ? 'auto' : 'none',
-                transition: reducedMotion 
-                  ? 'opacity 0.15s' 
-                  : 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                background: '#121514',
-                border: '1.5px solid rgba(140, 150, 148, 0.15)',
-                borderRadius: '16px',
-                padding: '24px',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ fontSize: '11px', color: '#138C7E', fontWeight: 700, letterSpacing: '0.05em' }}>⚡ CLEAN, RECONCILED KAEO LEDGER ROWS</div>
-                {[
-                  { date: '28 Apr 2026', vendor: 'Bombay Rent Ltd', cat: 'Rent & Utilities', amt: '−₹1,80,000', badge: 'Duplicate payment suspect', bColor: '#E05450' },
-                  { date: '26 Apr 2026', vendor: 'Mumbai Supplies Pvt Ltd', cat: 'Capital Expense', amt: '−₹1,24,000', badge: 'High-Value Outflow (3.2x avg)', bColor: '#E05450' },
-                  { date: '25 Apr 2026', vendor: 'UPI Payee / Rent', cat: 'Rent & Utilities', amt: '−₹18,500', badge: 'Review queue: confirm invoice link', bColor: '#D4922A' },
-                ].map((row, i) => (
-                  <div key={i} style={{ padding: '12px', background: 'rgba(255, 255, 255, 0.01)', borderRadius: '8px', border: '1px solid rgba(140, 150, 148, 0.08)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(232,240,238,0.4)', marginBottom: '4px' }}>
-                      <span className="truncate mr-2"><strong style={{ color: '#E8F0EE' }}>{row.vendor}</strong> · {row.date}</span>
-                      <span style={{ color: '#E8F0EE', fontWeight: 700, fontFamily: 'ui-monospace, monospace' }} className="shrink-0">{row.amt}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
-                      <span style={{ fontSize: '10px', background: 'rgba(140, 150, 148, 0.06)', color: 'rgba(232, 240, 238, 0.65)', border: '1px solid rgba(140, 150, 148, 0.10)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>{row.cat}</span>
-                      <span style={{ fontSize: '10.5px', color: row.bColor, fontWeight: 600 }} className="whitespace-nowrap">⚠ {row.badge}</span>
-                    </div>
-                  </div>
-                ))}
-                <div style={{ background: 'rgba(140, 150, 148, 0.05)', border: '1px solid rgba(140, 150, 148, 0.10)', borderRadius: '8px', padding: '12px', fontSize: '12px', color: 'rgba(232, 240, 238, 0.60)' }}>
-                  <strong>Benefits:</strong> Categorized transactions, clean review queue, automated risk snapshot, and accountant-ready reports.
-                </div>
-              </div>
-            </div>
           </div>
-
         </div>
       </div>
     </section>
@@ -828,125 +1090,348 @@ const BeforeAfterComparison: React.FC = () => {
    3. INTERACTIVE RISK CARDS COMPONENT
 ═══════════════════════════════════════════════ */
 const InteractiveRiskCards: React.FC = () => {
-  const [expandedCard, setExpandedCard] = useState<number | null>(null);
+  const [activeCard, setActiveCard] = useState<number | null>(null); // mobile inline state
+  const [selectedCard, setSelectedCard] = useState<number>(0); // desktop click state
+  const [hoveredCard, setHoveredCard] = useState<number | null>(null); // desktop hover state
+  const [isDesktop, setIsDesktop] = useState(true);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReducedMotion(mediaQuery.matches);
+    const listener = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mediaQuery.addEventListener('change', listener);
+    return () => mediaQuery.removeEventListener('change', listener);
+  }, []);
+
+  useEffect(() => {
+    const checkMedia = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    checkMedia();
+    window.addEventListener('resize', checkMedia);
+    return () => window.removeEventListener('resize', checkMedia);
+  }, []);
 
   const cards = [
     {
       title: "High-value payments",
       description: "Single large debits that deviate significantly from your vendor payment patterns. Worth a second look before month close.",
       example: "₹1,24,000 → Mumbai Supplies · 3.2× above avg",
-      whyMatters: "Large atypical payments can indicate billing inflation or errors that affect run rate.",
-      whatKaeoShows: "Compares current transaction amount against the historical vendor payment baseline.",
-      userReviews: "Match with purchase order approval and check invoice breakdown."
+      whyMatters: "Large outflows can hide accidental or unauthorized spend.",
+      whatKaeoShows: "Amount, vendor, date, category, and review status.",
+      nextReview: "Confirm purpose and supporting invoice.",
+      accentColor: '#E05450',
+      mutedBg: 'rgba(224, 84, 80, 0.03)',
+      borderTint: 'rgba(224, 84, 80, 0.20)'
     },
     {
       title: "Duplicate suspects",
       description: "Same vendor, same amount, close date — often from double-clicking payment portals or failed gateway retries.",
       example: "₹75,000 × 2 → Slack Technologies · 12 Apr",
-      whyMatters: "Failed gateway retries or multiple invoicing cycles can silently drain cash reserves.",
-      whatKaeoShows: "Highlights identical amounts and counterparties within 7 days, referencing transaction dates.",
-      userReviews: "Check bank logs for a credit/refund or confirm double payment with vendor."
+      whyMatters: "Same amount/vendor close together may indicate double payment.",
+      whatKaeoShows: "Matching transactions and timing.",
+      nextReview: "Mark duplicate or clear if intentional.",
+      accentColor: '#E05450',
+      mutedBg: 'rgba(224, 84, 80, 0.03)',
+      borderTint: 'rgba(224, 84, 80, 0.20)'
     },
     {
       title: "Balance mismatch",
       description: "Closing balance from your statement doesn't match the running total from parsed transactions — missing rows or import errors.",
       example: "₹8,400 gap → closing balance vs. transaction sum",
-      whyMatters: "Unreconciled statements invalidate audit trials and hide missing records.",
-      whatKaeoShows: "Runs running total sum checks against printed statement bank balances.",
-      userReviews: "Locate missing statement pages or correct corrupt CSV rows."
+      whyMatters: "Ledger movement may not match expected balance.",
+      whatKaeoShows: "Period movement and mismatch amount.",
+      nextReview: "Check missing rows or import issues.",
+      accentColor: '#D4922A',
+      mutedBg: 'rgba(212, 146, 42, 0.03)',
+      borderTint: 'rgba(212, 146, 42, 0.20)'
     },
     {
       title: "Invoice mismatch",
       description: "Invoice amount doesn't match the bank debit for the same vendor — partial payments, rounding errors, or billing discrepancies.",
       example: "Invoice ₹48,200 vs. debit ₹50,610 · tax discrepancy",
-      whyMatters: "Discrepancies often hide wrong TDS deductions or extra billing items.",
-      whatKaeoShows: "Compares OCR-scanned invoice totals directly with statement debits.",
-      userReviews: "Verify TDS tax withholding amounts or contact vendor billing team."
+      whyMatters: "Invoice and payment records may not line up.",
+      whatKaeoShows: "Vendor, invoice, payment, and difference.",
+      nextReview: "Confirm invoice/payment pairing.",
+      accentColor: '#D4922A',
+      mutedBg: 'rgba(212, 146, 42, 0.03)',
+      borderTint: 'rgba(212, 146, 42, 0.20)'
     },
     {
       title: "Uncategorized spend",
       description: "Transactions with cryptic UPI narrations or generic NEFT descriptions that don't map to a known vendor or category.",
       example: "11 rows → UPI/Unknown/various · needs mapping",
-      whyMatters: "Cryptic rows block month close and prevent clean corporate tax deductions.",
-      whatKaeoShows: "Extracts UPI VPA details and phone numbers from raw statement strings to predict target vendors.",
-      userReviews: "Assign correct business category and upload related invoice or receipt."
+      whyMatters: "Reports are weaker when spend is unmapped.",
+      whatKaeoShows: "Rows needing category review.",
+      nextReview: "Assign category before export.",
+      accentColor: '#138C7E',
+      mutedBg: 'rgba(19, 140, 126, 0.03)',
+      borderTint: 'rgba(19, 140, 126, 0.20)'
     },
     {
       title: "Vendor concentration",
       description: "One vendor consuming a disproportionate share of your monthly outflow — a supply chain or negotiation flag.",
       example: "62% of Apr outflow → 3 vendor accounts",
-      whyMatters: "Heavy reliance on single suppliers limits pricing negotiation power.",
-      whatKaeoShows: "Pie charts and percentage aggregates of monthly spend per merchant.",
-      userReviews: "Check master agreements and seek quotes from alternative suppliers."
+      whyMatters: "Too much spend with one vendor can create dependency or leakage.",
+      whatKaeoShows: "Top vendor exposure and recurring spend.",
+      nextReview: "Review necessity and alternatives.",
+      accentColor: '#138C7E',
+      mutedBg: 'rgba(19, 140, 126, 0.03)',
+      borderTint: 'rgba(19, 140, 126, 0.20)'
     }
   ];
 
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-      {cards.map((card, idx) => {
-        const isExpanded = expandedCard === idx;
-        return (
-          <div
-            key={idx}
-            onClick={() => setExpandedCard(isExpanded ? null : idx)}
-            style={{
-              background: '#121514',
-              border: `1.5px solid ${isExpanded ? 'rgba(19,140,126,0.30)' : 'rgba(140, 150, 148, 0.10)'}`,
-              borderRadius: '14px',
-              padding: '24px',
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-              transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-            className="catch-card"
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#E8F0EE', margin: 0, letterSpacing: '-0.01em' }}>{card.title}</h4>
-              <span style={{ fontSize: '11px', color: '#138C7E', fontWeight: 'bold' }}>{isExpanded ? '▲ Collapse' : '▼ Expand'}</span>
-            </div>
-            <p style={{ fontSize: '13.5px', color: 'rgba(232,240,238,0.50)', lineHeight: 1.55, margin: 0 }}>{card.description}</p>
-            <div style={{
-              fontFamily: 'ui-monospace, monospace',
-              fontSize: '11px',
-              color: 'rgba(232, 240, 238, 0.65)',
-              background: 'rgba(140, 150, 148, 0.05)',
-              border: '1px solid rgba(140, 150, 148, 0.10)',
-              borderRadius: '6px',
-              padding: '6px 10px',
-              marginTop: '2px',
-            }}>
-              {card.example}
-            </div>
+  const activeIdx = isDesktop ? (hoveredCard !== null ? hoveredCard : selectedCard) : activeCard;
+  const activeCardObj = activeIdx !== null ? cards[activeIdx] : null;
 
-            {/* Expanded section */}
-            {isExpanded && (
+  if (!isDesktop) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {cards.map((card, idx) => {
+          const isActive = activeCard === idx;
+          const accent = card.accentColor;
+          return (
+            <div
+              key={idx}
+              tabIndex={0}
+              onClick={() => setActiveCard(isActive ? null : idx)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setActiveCard(isActive ? null : idx);
+                }
+              }}
+              style={{
+                background: isActive ? card.mutedBg : '#121514',
+                border: '1.5px solid',
+                borderColor: isActive ? accent : 'rgba(140, 150, 148, 0.10)',
+                borderRadius: '14px',
+                padding: '20px',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                outline: 'none',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#E8F0EE', margin: 0 }}>{card.title}</h4>
+                <span style={{ 
+                  fontSize: '10px', 
+                  color: accent, 
+                  transform: isActive ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.25s ease',
+                }}>
+                  ▼
+                </span>
+              </div>
+              <p style={{ fontSize: '13px', color: 'rgba(232,240,238,0.50)', lineHeight: 1.5, margin: 0 }}>{card.description}</p>
+              
               <div style={{
-                marginTop: '8px',
-                paddingTop: '12px',
-                borderTop: '1px solid rgba(255,255,255,0.06)',
+                fontFamily: 'ui-monospace, monospace',
+                fontSize: '11px',
+                color: 'rgba(232, 240, 238, 0.65)',
+                background: 'rgba(140, 150, 148, 0.04)',
+                border: '1px solid rgba(140, 150, 148, 0.08)',
+                borderRadius: '6px',
+                padding: '6px 10px',
+              }}>
+                {card.example}
+              </div>
+
+              {isActive && (
+                <div style={{
+                  marginTop: '4px',
+                  paddingTop: '16px',
+                  borderTop: '1px solid rgba(255,255,255,0.06)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  fontSize: '12.5px',
+                  color: 'rgba(232,240,238,0.65)',
+                  lineHeight: 1.5,
+                }} className="animate-kaeo-fade">
+                  <div>
+                    <strong style={{ color: accent, display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Why it matters:</strong>
+                    <span>{card.whyMatters}</span>
+                  </div>
+                  <div>
+                    <strong style={{ color: accent, display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>What Kaeo shows:</strong>
+                    <span>{card.whatKaeoShows}</span>
+                  </div>
+                  <div>
+                    <strong style={{ color: accent, display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>What to review next:</strong>
+                    <span style={{ color: '#E8F0EE', fontWeight: 500 }}>{card.nextReview}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '58% 42%', gap: '32px', alignItems: 'stretch' }}>
+      {/* Left Column: Grid of cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+        {cards.map((card, idx) => {
+          const isCurrentActive = activeIdx === idx;
+          const isCurrentHovered = hoveredCard === idx;
+          const isCurrentSelected = selectedCard === idx;
+          const accent = card.accentColor;
+          const bg = isCurrentActive ? card.mutedBg : '#121514';
+          const border = isCurrentSelected 
+            ? accent 
+            : isCurrentHovered 
+              ? card.borderTint 
+              : 'rgba(140, 150, 148, 0.10)';
+
+          return (
+            <div
+              key={idx}
+              tabIndex={0}
+              onMouseEnter={() => setHoveredCard(idx)}
+              onMouseLeave={() => setHoveredCard(null)}
+              onFocus={() => setHoveredCard(idx)}
+              onBlur={() => setHoveredCard(null)}
+              onClick={() => setSelectedCard(idx)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedCard(idx);
+                }
+              }}
+              style={{
+                background: bg,
+                border: '1.5px solid',
+                borderColor: border,
+                borderRadius: '14px',
+                padding: '20px',
+                cursor: 'pointer',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '8px',
-                fontSize: '12px',
-                color: 'rgba(232,240,238,0.65)',
-                lineHeight: 1.5,
-              }} className="animate-in fade-in duration-200">
-                <div>
-                  <strong style={{ color: '#138C7E' }}>Why it matters:</strong> {card.whyMatters}
-                </div>
-                <div>
-                  <strong style={{ color: '#138C7E' }}>What Kaeo shows:</strong> {card.whatKaeoShows}
-                </div>
-                <div>
-                  <strong style={{ color: '#138C7E' }}>What the user reviews next:</strong> {card.userReviews}
-                </div>
+                outline: 'none',
+                transform: isCurrentHovered ? 'translateY(-2px)' : 'translateY(0)',
+                boxShadow: isCurrentSelected 
+                  ? `0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)` 
+                  : isCurrentHovered 
+                    ? `0 4px 12px rgba(0, 0, 0, 0.20)` 
+                    : 'none',
+                transition: reducedMotion 
+                  ? 'border-color 0.15s, background-color 0.15s' 
+                  : 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                minHeight: '140px',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#E8F0EE', margin: 0, letterSpacing: '-0.01em' }}>{card.title}</h4>
+                <span style={{ 
+                  width: '6px', 
+                  height: '6px', 
+                  borderRadius: '50%', 
+                  background: isCurrentSelected ? accent : 'transparent',
+                  boxShadow: isCurrentSelected ? `0 0 6px ${accent}` : 'none',
+                  transition: 'all 0.2s ease',
+                }} />
               </div>
-            )}
+              <p style={{ fontSize: '12.5px', color: 'rgba(232,240,238,0.45)', lineHeight: 1.5, margin: 0 }}>{card.description}</p>
+              <div style={{
+                fontFamily: 'ui-monospace, monospace',
+                fontSize: '10.5px',
+                color: isCurrentSelected ? accent : 'rgba(232, 240, 238, 0.50)',
+                background: 'rgba(140, 150, 148, 0.03)',
+                border: '1px solid rgba(140, 150, 148, 0.06)',
+                borderRadius: '6px',
+                padding: '4px 8px',
+                marginTop: '4px',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+              }}>
+                {card.example}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Right Column: Detail preview panel */}
+      {activeCardObj && (
+        <div style={{ 
+          background: '#121514', 
+          border: '1.5px solid rgba(140, 150, 148, 0.12)', 
+          borderRadius: '16px', 
+          padding: '28px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '24px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+          height: '100%',
+          justifyContent: 'center',
+          position: 'relative',
+        }}>
+          <div key={activeIdx} className="animate-kaeo-fade" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div>
+              <span style={{ 
+                fontSize: '10px', 
+                color: activeCardObj.accentColor, 
+                background: `${activeCardObj.accentColor}15`, 
+                border: `1px solid ${activeCardObj.accentColor}30`, 
+                padding: '3px 8px', 
+                borderRadius: '4px', 
+                fontWeight: 700, 
+                fontFamily: 'ui-monospace, monospace',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                display: 'inline-block',
+                marginBottom: '10px'
+              }}>
+                Kaeo Risk Analysis
+              </span>
+              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#E8F0EE', margin: 0, letterSpacing: '-0.02em' }}>
+                {activeCardObj.title}
+              </h3>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px', color: 'rgba(232,240,238,0.70)', lineHeight: 1.6 }}>
+              <div>
+                <strong style={{ color: activeCardObj.accentColor, display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Why it matters</strong>
+                <span>{activeCardObj.whyMatters}</span>
+              </div>
+              <div style={{ height: '1px', background: 'rgba(255,255,255,0.04)' }} />
+              <div>
+                <strong style={{ color: activeCardObj.accentColor, display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>What Kaeo shows</strong>
+                <span>{activeCardObj.whatKaeoShows}</span>
+              </div>
+              <div style={{ height: '1px', background: 'rgba(255,255,255,0.04)' }} />
+              <div>
+                <strong style={{ color: activeCardObj.accentColor, display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>What to review next</strong>
+                <span style={{ color: '#E8F0EE', fontWeight: 500 }}>{activeCardObj.nextReview}</span>
+              </div>
+            </div>
+
+            <div style={{
+              fontFamily: 'ui-monospace, monospace',
+              fontSize: '11px',
+              color: activeCardObj.accentColor,
+              background: `${activeCardObj.accentColor}06`,
+              border: `1px solid ${activeCardObj.accentColor}18`,
+              borderRadius: '8px',
+              padding: '10px 14px',
+              marginTop: '6px',
+            }}>
+              <span style={{ color: 'rgba(232,240,238,0.35)', marginRight: '6px' }}>Example:</span>
+              {activeCardObj.example}
+            </div>
           </div>
-        );
-      })}
+        </div>
+      )}
     </div>
   );
 };
@@ -954,143 +1439,457 @@ const InteractiveRiskCards: React.FC = () => {
 /* ═══════════════════════════════════════════════
    4. DYNAMIC REPORT PREVIEW MOCK
 ═══════════════════════════════════════════════ */
-const InteractiveReportMock: React.FC = () => {
-  const [reportTab, setReportTab] = useState<'summary' | 'risks' | 'vendors'>('summary');
+const InteractiveReportsSection: React.FC = () => {
+  const [activeStep, setActiveStep] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDesktop, setIsDesktop] = useState(true);
+  const [prefersReduced, setPrefersReduced] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
 
-  return (
-    <div style={{
-      background: '#121514',
-      border: '1px solid rgba(140, 150, 148, 0.12)',
-      borderRadius: '16px',
-      overflow: 'hidden',
-      fontFamily: 'inherit',
-      boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
-    }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '16px 20px',
-        background: 'rgba(140, 150, 148, 0.05)',
-        borderBottom: '1px solid rgba(140, 150, 148, 0.08)',
-        flexWrap: 'wrap',
-        gap: '12px',
-      }}>
-        <div>
-          <div style={{ fontSize: '11px', color: 'rgba(232,240,238,0.40)', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.06em', marginBottom: '2px' }}>KAEO · FINANCE REVIEW PACK</div>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: '#E8F0EE', letterSpacing: '-0.02em', fontStyle: 'italic' }}>April 2026 Report Preview</div>
-        </div>
-        
-        {/* Toggle switch between report subsections */}
-        <SlidingSegmentControl
-          options={[
-            { value: 'summary', label: 'Summary' },
-            { value: 'risks', label: 'Risks' },
-            { value: 'vendors', label: 'Vendors' },
-          ]}
-          activeValue={reportTab}
-          onChange={(val) => setReportTab(val as 'summary' | 'risks' | 'vendors')}
-          className="w-full sm:w-[320px]"
-        />
-      </div>
+  useEffect(() => {
+    const checkMedia = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+      setPrefersReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    };
+    checkMedia();
+    window.addEventListener('resize', checkMedia);
+    return () => window.removeEventListener('resize', checkMedia);
+  }, []);
 
-      {/* Dynamic Content based on tab */}
-      {reportTab === 'summary' && (
-        <div>
-          {/* Summary stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'rgba(140, 150, 148, 0.08)' }}>
-            {[
-              { label: 'Money In', value: '+₹12,80,400', color: '#22B573' },
-              { label: 'Money Out', value: '−₹8,42,200', color: '#E05450' },
-              { label: 'Net Movement', value: '+₹4,38,200', color: '#22B573' },
-            ].map((stat, i) => (
-              <div key={i} style={{ padding: '16px 18px', background: '#121514' }}>
-                <div style={{ fontSize: '10px', color: 'rgba(232,240,238,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', marginBottom: '6px' }}>{stat.label}</div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: stat.color, letterSpacing: '-0.02em', fontFamily: 'ui-monospace, monospace' }}>{stat.value}</div>
-              </div>
-            ))}
-          </div>
-          
-          <div style={{ padding: '16px 20px' }}>
-            <div style={{ fontSize: '11px', color: 'rgba(232,240,238,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', marginBottom: '10px' }}>Summary Ledger View</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(140, 150, 148, 0.08)' }}>
-                  {['Date', 'Description', 'Category', 'Amount', 'Status'].map((h) => (
-                    <th key={h} style={{ padding: '6px 8px', textAlign: 'left', color: 'rgba(232,240,238,0.30)', fontSize: '10px', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', fontWeight: 600 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { date: '28 Apr', desc: 'Razorpay Settlement', cat: 'Inflow / Revenue', amount: '+₹4,80,000', status: 'Verified', sColor: '#22B573', aColor: '#22B573' },
-                  { date: '26 Apr', desc: 'Mumbai Supplies Pvt Ltd', cat: 'Vendor Payment', amount: '−₹1,24,000', status: 'Needs review', sColor: '#D4922A', aColor: '#E05450' },
-                  { date: '25 Apr', desc: 'UPI/Unknown Narration', cat: 'Uncategorized', amount: '−₹18,500', status: 'Flagged', sColor: '#E05450', aColor: '#E05450' },
-                ].map((row, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid rgba(140, 150, 148, 0.06)' }}>
-                    <td style={{ padding: '9px 8px', color: 'rgba(232,240,238,0.40)', fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}>{row.date}</td>
-                    <td style={{ padding: '9px 8px', color: '#E8F0EE', fontWeight: 500 }}>{row.desc}</td>
-                    <td style={{ padding: '9px 8px' }}>
-                      <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(140, 150, 148, 0.06)', color: 'rgba(232, 240, 238, 0.65)', border: '1px solid rgba(140, 150, 148, 0.10)', fontWeight: 600 }}>{row.cat}</span>
-                    </td>
-                    <td style={{ padding: '9px 8px', color: row.aColor, fontWeight: 700, fontFamily: 'ui-monospace, monospace', fontSize: '11px', textAlign: 'right' }}>{row.amount}</td>
-                    <td style={{ padding: '9px 8px', textAlign: 'center' }}>
-                      <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: `${row.sColor}18`, color: row.sColor, border: `1px solid ${row.sColor}28`, fontWeight: 700, fontFamily: 'ui-monospace, monospace', letterSpacing: '0.04em' }}>{row.status}</span>
-                    </td>
+  useEffect(() => {
+    if (!isDesktop || prefersReduced) return;
+
+    const handleScroll = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const navHeight = 72;
+      const stickyHeight = window.innerHeight - navHeight;
+      const totalScrollRange = rect.height - stickyHeight;
+
+      if (totalScrollRange <= 0) return;
+
+      const currentScroll = navHeight - rect.top;
+      const progress = Math.max(0, Math.min(1, currentScroll / totalScrollRange));
+      
+      const stepIndex = Math.min(3, Math.floor(progress * 4));
+      setActiveStep(stepIndex);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isDesktop, prefersReduced]);
+
+  const handleStepClick = (idx: number) => {
+    if (!isDesktop || prefersReduced) {
+      setActiveStep(idx);
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const scrollTop = window.scrollY + rect.top;
+    const navHeight = 72;
+    const stickyHeight = window.innerHeight - navHeight;
+    const totalScrollRange = rect.height - stickyHeight;
+
+    const targetProgress = (idx + 0.5) / 4;
+    const targetScrollY = scrollTop - navHeight + targetProgress * totalScrollRange;
+
+    window.scrollTo({
+      top: targetScrollY,
+      behavior: 'smooth'
+    });
+  };
+
+  const steps = [
+    {
+      label: "Summary",
+      title: "Summary Ledger Review",
+      description: "Get an instant, high-level summary of your month's cash flow. View total inflow, outflow, and net movement verified against statement balances."
+    },
+    {
+      label: "Risks",
+      title: "Automated Risk Audits",
+      description: "Review flagged duplicate payments, balance discrepancies, and high-value transactions. Clear risks with confidence before export."
+    },
+    {
+      label: "Vendors",
+      title: "Vendor Spend Analytics",
+      description: "Track where your money is concentrated. Spot top vendors, subscription patterns, and category distributions to prevent budget leakage."
+    },
+    {
+      label: "Pack",
+      title: "Export Accountant Pack",
+      description: "Download a structured review pack containing your verified transaction ledger as a clean CSV, plus all matched invoices zipped and ready for Zoho/Tally."
+    }
+  ];
+
+  const useStickyScroll = isDesktop && !prefersReduced;
+
+  // Render dynamic contents for right-side preview card
+  const renderPreviewContent = (stepIdx: number) => {
+    switch (stepIdx) {
+      case 0:
+        return (
+          <div key="summary" className="animate-kaeo-fade">
+            {/* Summary stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'rgba(140, 150, 148, 0.08)' }}>
+              {[
+                { label: 'Money In', value: '+₹12,80,400', color: '#22B573' },
+                { label: 'Money Out', value: '−₹8,42,200', color: '#E05450' },
+                { label: 'Net Movement', value: '+₹4,38,200', color: '#22B573' },
+              ].map((stat, i) => (
+                <div key={i} style={{ padding: '16px 18px', background: '#121514' }}>
+                  <div style={{ fontSize: '10px', color: 'rgba(232,240,238,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', marginBottom: '6px' }}>{stat.label}</div>
+                  <div style={{ fontSize: '17px', fontWeight: 700, color: stat.color, letterSpacing: '-0.02em', fontFamily: 'ui-monospace, monospace' }}>{stat.value}</div>
+                </div>
+              ))}
+            </div>
+            
+            <div style={{ padding: '16px 20px' }}>
+              <div style={{ fontSize: '10.5px', color: 'rgba(232,240,238,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', marginBottom: '10px' }}>Summary Ledger View</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(140, 150, 148, 0.08)' }}>
+                    {['Date', 'Description', 'Category', 'Amount', 'Status'].map((h) => (
+                      <th key={h} style={{ padding: '6px 8px', textAlign: 'left', color: 'rgba(232,240,238,0.30)', fontSize: '9px', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', fontWeight: 600 }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(140, 150, 148, 0.05)', borderRadius: '8px', border: '1px solid rgba(140, 150, 148, 0.08)', fontSize: '12px', color: 'rgba(232,240,238,0.55)' }}>
-              <span style={{ color: '#138C7E', fontWeight: 600 }}>Open Risks: 3 items pending</span> | <span style={{ color: '#D4922A', fontWeight: 600 }}>Uncategorized Rows: 11 items</span> | <span style={{ color: '#138C7E', fontWeight: 600 }}>Review Notes: Ready for CA</span>
+                </thead>
+                <tbody>
+                  {[
+                    { date: '28 Apr', desc: 'Razorpay Settlement', cat: 'Inflow / Revenue', amount: '+₹4,80,000', status: 'Verified', sColor: '#22B573', aColor: '#22B573' },
+                    { date: '26 Apr', desc: 'Mumbai Supplies Pvt Ltd', cat: 'Vendor Payment', amount: '−₹1,24,000', status: 'Needs review', sColor: '#D4922A', aColor: '#E05450' },
+                    { date: '25 Apr', desc: 'UPI/Unknown Narration', cat: 'Uncategorized', amount: '−₹18,500', status: 'Flagged', sColor: '#E05450', aColor: '#E05450' },
+                  ].map((row, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid rgba(140, 150, 148, 0.06)' }}>
+                      <td style={{ padding: '8px 8px', color: 'rgba(232,240,238,0.40)', fontFamily: 'ui-monospace, monospace', fontSize: '10.5px' }}>{row.date}</td>
+                      <td style={{ padding: '8px 8px', color: '#E8F0EE', fontWeight: 500 }}>{row.desc}</td>
+                      <td style={{ padding: '8px 8px' }}>
+                        <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(140, 150, 148, 0.06)', color: 'rgba(232, 240, 238, 0.65)', border: '1px solid rgba(140, 150, 148, 0.10)', fontWeight: 600 }}>{row.cat}</span>
+                      </td>
+                      <td style={{ padding: '8px 8px', color: row.aColor, fontWeight: 700, fontFamily: 'ui-monospace, monospace', fontSize: '10.5px', textAlign: 'right' }}>{row.amount}</td>
+                      <td style={{ padding: '8px 8px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '8.5px', padding: '2px 7px', borderRadius: '4px', background: `${row.sColor}18`, color: row.sColor, border: `1px solid ${row.sColor}28`, fontWeight: 700, fontFamily: 'ui-monospace, monospace', letterSpacing: '0.04em' }}>{row.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ marginTop: '12px', padding: '8px 12px', background: 'rgba(140, 150, 148, 0.04)', borderRadius: '8px', border: '1px solid rgba(140, 150, 148, 0.08)', fontSize: '11px', color: 'rgba(232,240,238,0.50)' }}>
+                <span style={{ color: '#138C7E', fontWeight: 600 }}>Reconciliation status: 97.4% complete</span> · <span style={{ color: '#D4922A', fontWeight: 600 }}>3 anomalies flagged</span>
+              </div>
+            </div>
+          </div>
+        );
+      case 1:
+        return (
+          <div key="risks" className="animate-kaeo-fade" style={{ padding: '20px 24px' }}>
+            <div style={{ fontSize: '10.5px', color: 'rgba(232,240,238,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', marginBottom: '14px' }}>Active Risk Flags & Audit Notes</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {[
+                { type: 'Duplicate suspect', desc: 'Bombay Rent Ltd', details: 'Matching amount ₹1,80,000 paid twice in 24 hours. Second transaction has duplicate reference.', action: 'Confirm gateway retry error.', color: '#E05450' },
+                { type: 'High-value outflow', desc: 'Mumbai Supplies Pvt Ltd', details: 'Single payment of ₹1,24,000. Deviates 3.2× from vendor average of ₹38,750.', action: 'Confirm invoice matches payout.', color: '#D4922A' },
+                { type: 'Balance Mismatch', desc: 'HDFC Statement Ledger', details: 'Running ledger totals mismatch HDFC closing balance sheet by ₹8,400.', action: 'Locate missing statement pages.', color: '#D4922A' }
+              ].map((risk, i) => (
+                <div key={i} style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', borderRadius: '8px', border: `1px solid ${risk.color}25` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '9px', textTransform: 'uppercase', fontWeight: 800, color: risk.color, background: `${risk.color}15`, border: `1px solid ${risk.color}25`, padding: '2px 6px', borderRadius: '4px' }}>{risk.type}</span>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#E8F0EE' }}>{risk.desc}</span>
+                  </div>
+                  <p style={{ fontSize: '11.5px', color: 'rgba(232,240,238,0.55)', margin: '0 0 6px 0', lineHeight: 1.4 }}>{risk.details}</p>
+                  <div style={{ fontSize: '10.5px', color: risk.color, fontWeight: 600 }}>Action: {risk.action}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      case 2:
+        return (
+          <div key="vendors" className="animate-kaeo-fade" style={{ padding: '20px 24px' }}>
+            <div style={{ fontSize: '10.5px', color: 'rgba(232,240,238,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', marginBottom: '14px' }}>Vendor Spend concentration Breakdown</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+              {[
+                { vendor: 'Mumbai Supplies', spend: '₹3,40,000', share: '62%', status: 'Flagged anomalies', sColor: '#E05450' },
+                { vendor: 'Bombay Rent Ltd', spend: '₹1,80,000', share: '32%', status: 'Regular / Monthly', sColor: 'rgba(232,240,238,0.40)' },
+                { vendor: 'Slack Technologies', spend: '₹30,000', share: '6%', status: 'Subscription', sColor: '#138C7E' }
+              ].map((v, i) => (
+                <div key={i} style={{ padding: '14px', background: 'rgba(255,255,255,0.01)', borderRadius: '10px', border: '1px solid rgba(140, 150, 148, 0.08)' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#E8F0EE' }}>{v.vendor}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '8px' }}>
+                    <span style={{ fontSize: '16px', fontWeight: 800, color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>{v.spend}</span>
+                    <span style={{ fontSize: '11px', color: 'rgba(232, 240, 238, 0.40)' }}>{v.share} of outflow</span>
+                  </div>
+                  <div style={{ fontSize: '9px', textTransform: 'uppercase', fontWeight: 700, color: v.sColor, marginTop: '8px' }}>{v.status}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ background: 'rgba(19, 140, 126, 0.03)', border: '1px solid rgba(19, 140, 126, 0.12)', borderRadius: '8px', padding: '10px 14px', fontSize: '11.5px', color: 'rgba(232,240,238,0.60)' }}>
+              <strong>Insight:</strong> 1 vendor consumes &gt;60% of outflows. This concentration was flagged for supply chain dependency audit.
+            </div>
+          </div>
+        );
+      case 3:
+        return (
+          <div key="pack" className="animate-kaeo-fade" style={{ padding: '24px 30px', display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', justifyContent: 'center' }}>
+            <div style={{ background: 'rgba(19, 140, 126, 0.03)', border: '1px solid rgba(19, 140, 126, 0.15)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#E8F0EE', display: 'block' }}>Finance Review Pack · April 2026</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(232,240,238,0.45)', display: 'block', marginTop: '2px' }}>Verified ledger CSV + Scanned invoice attachment ZIP</span>
+                </div>
+                <span style={{ fontSize: '10px', color: '#22B573', fontWeight: 700, background: 'rgba(34, 181, 115, 0.1)', border: '1px solid rgba(34, 181, 115, 0.2)', padding: '2px 8px', borderRadius: '4px' }}>✓ READY</span>
+              </div>
+              
+              <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <span style={{ fontSize: '10px', color: 'rgba(232,240,238,0.4)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Transactions</span>
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>142 verified</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: '10px', color: 'rgba(232,240,238,0.4)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Risks Cleared</span>
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#22B573', fontFamily: 'ui-monospace, monospace' }}>3 resolved</span>
+                </div>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => {
+                setDownloaded(true);
+                setTimeout(() => setDownloaded(false), 3000);
+              }}
+              style={{ 
+                width: '100%', 
+                padding: '16px', 
+                background: downloaded ? 'rgba(34, 181, 115, 0.15)' : '#138C7E', 
+                color: downloaded ? '#22B573' : '#050F0D', 
+                border: downloaded ? '1px solid rgba(34, 181, 115, 0.3)' : 'none', 
+                borderRadius: '10px', 
+                fontWeight: 700, 
+                fontSize: '13px', 
+                cursor: 'pointer', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '8px',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 4px 12px rgba(19, 140, 126, 0.15)'
+              }}
+            >
+              <span>{downloaded ? '✓ Downloaded accountant pack' : '📥 Download Accountant Export (ZIP)'}</span>
+            </button>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const activeStepObj = steps[activeStep];
+
+  if (!useStickyScroll) {
+    // Mobile / fallback layout: static layout with tab control to switch preview
+    return (
+      <section style={{ padding: '72px 24px', background: 'transparent' }}>
+        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div>
+            <SectionLabel code="006" label="REPORTS" />
+            <h2 style={{
+              fontWeight: 700,
+              fontSize: 'clamp(28px, 6vw, 36px)',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.15,
+              margin: '0 0 16px',
+              color: '#E8F0EE',
+            }}>
+              Reports your accountant <span style={{ fontFamily: '"Instrument Serif", serif', fontStyle: 'italic', fontWeight: 400, color: '#138C7E', textTransform: 'none' }}>can actually use.</span>
+            </h2>
+            <p style={{
+              fontSize: '15px',
+              color: 'rgba(232, 240, 238, 0.45)',
+              lineHeight: 1.5,
+              margin: '0 0 24px',
+            }}>
+              Not raw exports. Clean, structured finance review packs with period summary, open risks, uncategorized items, and vendor spend — ready to share.
+            </p>
+            
+            <SlidingSegmentControl
+              options={[
+                { value: '0', label: 'Summary' },
+                { value: '1', label: 'Risks' },
+                { value: '2', label: 'Vendors' },
+                { value: '3', label: 'Pack' },
+              ]}
+              activeValue={String(activeStep)}
+              onChange={(val) => setActiveStep(Number(val))}
+              activeColor="#138C7E"
+              className="w-full mb-8"
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ padding: '24px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.04)', borderRadius: '20px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#E8F0EE', marginBottom: '8px' }}>
+                {activeStepObj.title}
+              </h3>
+              <p style={{ fontSize: '13.5px', color: 'rgba(232, 240, 238, 0.65)', lineHeight: 1.55, margin: 0 }}>
+                {activeStepObj.description}
+              </p>
+            </div>
+            
+            <div style={{
+              background: '#121514',
+              border: '1px solid rgba(140, 150, 148, 0.12)',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.4)',
+              minHeight: '380px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+            }}>
+              {/* Card Header (stable) */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '16px 20px',
+                background: 'rgba(140, 150, 148, 0.05)',
+                borderBottom: '1px solid rgba(140, 150, 148, 0.08)',
+                flexWrap: 'wrap',
+                gap: '8px',
+              }}>
+                <div>
+                  <div style={{ fontSize: '10px', color: 'rgba(232,240,238,0.40)', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.06em', marginBottom: '2px' }}>KAEO · FINANCE REVIEW PACK</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#E8F0EE', letterSpacing: '-0.02em', fontStyle: 'italic' }}>April 2026 Report Preview</div>
+                </div>
+              </div>
+              {renderPreviewContent(activeStep)}
             </div>
           </div>
         </div>
-      )}
+      </section>
+    );
+  }
 
-      {reportTab === 'risks' && (
-        <div style={{ padding: '20px' }}>
-          <div style={{ fontSize: '11px', color: 'rgba(232,240,238,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', marginBottom: '10px' }}>Active Risk Flags & Audit Notes</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {[
-              { type: 'Duplicate suspect', desc: 'Bombay Rent Ltd', details: 'Matching amount ₹1,80,000 paid twice in 24 hours. Second transaction has duplicate reference.', action: 'Confirm gateway retry error.', color: '#E05450' },
-              { type: 'High-value outflow', desc: 'Mumbai Supplies Pvt Ltd', details: 'Single payment of ₹1,24,000. Deviates 3.2× from vendor average of ₹38,750.', action: 'Confirm invoice matches payout.', color: '#D4922A' },
-              { type: 'Balance Mismatch', desc: 'HDFC Statement Ledger', details: 'Running ledger totals mismatch HDFC closing balance sheet by ₹8,400.', action: 'Locate missing statement pages.', color: '#D4922A' }
-            ].map((risk, i) => (
-              <div key={i} style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', borderRadius: '8px', border: `1px solid ${risk.color}25` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 800, color: risk.color }}>{risk.type}</span>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#E8F0EE' }}>{risk.desc}</span>
-                </div>
-                <p style={{ fontSize: '12px', color: 'rgba(232,240,238,0.6)', margin: '0 0 6px 0', lineHeight: 1.4 }}>{risk.details}</p>
-                <div style={{ fontSize: '11px', color: risk.color, fontWeight: 600 }}>{risk.action}</div>
+  // Desktop Pinned Scrollytelling
+  return (
+    <section 
+      ref={containerRef}
+      style={{
+        position: 'relative',
+        height: '350vh',
+        background: 'transparent',
+        padding: 0,
+      }}
+    >
+      <div
+        style={{
+          position: 'sticky',
+          top: '72px',
+          height: 'calc(100vh - 72px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          width: '100%',
+        }}
+      >
+        <div 
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '40% 60%',
+            gap: '64px',
+            alignItems: 'center',
+            width: '100%',
+            maxWidth: '1440px',
+            margin: '0 auto',
+            padding: '0 64px',
+          }}
+          className="workflow-grid"
+        >
+          {/* Left Column: Segment toggles + Copy */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            <div>
+              <SectionLabel code="006" label="REPORTS" />
+              <h2 style={{
+                fontWeight: 700,
+                fontSize: 'clamp(32px, 3.5vw, 44px)',
+                letterSpacing: '-0.03em',
+                lineHeight: 1.1,
+                margin: 0,
+                color: '#E8F0EE',
+              }}>
+                Reports your accountant <span style={{ fontFamily: '"Instrument Serif", serif', fontStyle: 'italic', fontWeight: 400, color: '#138C7E', textTransform: 'none' }}>can actually use.</span>
+              </h2>
+            </div>
+
+            <div style={{ minHeight: '120px' }}>
+              <div key={activeStep} className="animate-kaeo-fade" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#E8F0EE', margin: 0 }}>
+                  {activeStepObj.title}
+                </h3>
+                <p style={{ fontSize: '14.5px', color: 'rgba(232, 240, 238, 0.45)', lineHeight: 1.6, margin: 0 }}>
+                  {activeStepObj.description}
+                </p>
               </div>
-            ))}
+            </div>
+
+            <SlidingSegmentControl
+              options={[
+                { value: '0', label: 'Summary' },
+                { value: '1', label: 'Risks' },
+                { value: '2', label: 'Vendors' },
+                { value: '3', label: 'Pack' },
+              ]}
+              activeValue={String(activeStep)}
+              onChange={(val) => handleStepClick(Number(val))}
+              activeColor="#138C7E"
+              className="w-full max-w-[360px]"
+            />
+          </div>
+
+          {/* Right Column: Preview window card */}
+          <div style={{
+            background: '#121514',
+            border: '1px solid rgba(140, 150, 148, 0.12)',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+            width: '100%',
+            minHeight: '440px',
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
+            {/* Card Header (stable) */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '16px 20px',
+              background: 'rgba(140, 150, 148, 0.05)',
+              borderBottom: '1px solid rgba(140, 150, 148, 0.08)',
+              flexWrap: 'wrap',
+              gap: '12px',
+            }}>
+              <div>
+                <div style={{ fontSize: '10px', color: 'rgba(232,240,238,0.40)', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.06em', marginBottom: '2px' }}>KAEO · FINANCE REVIEW PACK</div>
+                <div style={{ fontSize: '15px', fontWeight: 700, color: '#E8F0EE', letterSpacing: '-0.02em', fontStyle: 'italic' }}>April 2026 Report Preview</div>
+              </div>
+            </div>
+
+            {/* Render active content */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              {renderPreviewContent(activeStep)}
+            </div>
           </div>
         </div>
-      )}
-
-      {reportTab === 'vendors' && (
-        <div style={{ padding: '20px' }}>
-          <div style={{ fontSize: '11px', color: 'rgba(232,240,238,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace', marginBottom: '10px' }}>Vendor Spend concentration Breakdown</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-            {[
-              { vendor: 'Mumbai Supplies', spend: '₹3,40,000', share: '62%', status: 'Flagged anomalies' },
-              { vendor: 'Bombay Rent Ltd', spend: '₹1,80,000', share: '32%', status: 'Regular / Monthly' },
-              { vendor: 'Slack Technologies', spend: '₹30,000', share: '6%', status: 'Subscription' }
-            ].map((v, i) => (
-              <div key={i} style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', borderRadius: '8px', border: '1px solid rgba(140, 150, 148, 0.08)' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#E8F0EE' }}>{v.vendor}</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '6px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>{v.spend}</span>
-                  <span style={{ fontSize: '11px', color: 'rgba(232, 240, 238, 0.40)' }}>{v.share} of outflow</span>
-                </div>
-                <div style={{ fontSize: '9px', textTransform: 'uppercase', fontWeight: 700, color: v.status.includes('anomaly') ? '#E05450' : 'rgba(232, 240, 238, 0.65)', marginTop: '4px' }}>{v.status}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
+    </section>
   );
 };
 
@@ -1181,7 +1980,7 @@ export const Landing: React.FC = () => {
       fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
       minHeight: '100vh',
       position: 'relative',
-      overflowX: 'hidden',
+      overflowX: 'clip',
     } as React.CSSProperties,
 
     // Section container
@@ -1370,18 +2169,7 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* ═══════ 006 — REPORTS ═══════ */}
-      <section style={S.section('#080A09')}>
-        <div style={S.inner}>
-          <SectionLabel code="006" label="REPORTS" />
-          <h2 style={{ ...S.h2, maxWidth: '600px' }}>
-            Reports your accountant <span style={S.accent}>can actually use.</span>
-          </h2>
-          <p style={{ fontSize: '17px', color: 'rgba(232,240,238,0.45)', maxWidth: '520px', marginBottom: '52px', lineHeight: 1.6 }}>
-            Not raw exports. Clean, structured finance review packs with period summary, open risks, uncategorized items, and vendor spend — ready to share.
-          </p>
-          <InteractiveReportMock />
-        </div>
-      </section>
+      <InteractiveReportsSection />
 
       {/* ═══════ 007 — PRICING ═══════ */}
       <section id="pricing" style={S.section('#121514')}>
