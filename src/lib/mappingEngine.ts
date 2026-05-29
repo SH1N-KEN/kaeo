@@ -50,8 +50,8 @@ export const suggestMappingFromColumns = (headers: string[]): MappingSuggestion 
     }));
   };
 
-  mapping['transaction_date'] = findHeader(['date', 'txndate', 'posteddate', 'transactiondate']) || '';
-  mapping['description'] = findHeader(['description', 'narration', 'particulars', 'remarks', 'payee', 'vendor']) || '';
+  mapping['transaction_date'] = findHeader(['payment date', 'order date', 'date', 'txndate', 'posteddate', 'transactiondate']) || '';
+  mapping['description'] = findHeader(['item', 'description', 'narration', 'particulars', 'remarks', 'payee', 'vendor']) || '';
   
   // Look for separate debit/credit columns
   const debitCol = findHeader(['debit', 'withdrawal', 'outflow', 'out', 'payment', 'dr']);
@@ -61,11 +61,13 @@ export const suggestMappingFromColumns = (headers: string[]): MappingSuggestion 
     mapping['debit'] = debitCol;
     mapping['credit'] = creditCol;
   } else {
-    mapping['amount'] = findHeader(['amount', 'value', 'transactionamount', 'total']) || '';
+    mapping['amount'] = findHeader(['amount (in rs.)', 'amount in rs', 'amount', 'value', 'transactionamount', 'total']) || '';
   }
 
   mapping['currency'] = findHeader(['currency', 'ccy']) || '';
-  mapping['reference'] = findHeader(['reference', 'utr', 'refno', 'chequeno']) || '';
+  mapping['reference'] = findHeader(['invoice no', 'invoice number', 'reference', 'utr', 'refno', 'chequeno']) || '';
+  mapping['counterparty_name'] = findHeader(['supplier details', 'supplier', 'vendor']) || '';
+  mapping['category'] = findHeader(['category']) || '';
 
   const confidence = calculateMappingConfidence(mapping, headers);
   

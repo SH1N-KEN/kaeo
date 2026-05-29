@@ -39,6 +39,13 @@ export const detectProvider = (headers: string[], _firstRows: any[], fileName: s
     return { provider: 'Tally', sourceType: 'erp' };
   }
 
+  if (
+    h.some(x => ['invoice no', 'invoice number', 'supplier details', 'supplier', 'item', 'qty', 'quantity', 'amount (in rs.)', 'amount in rs', 'payment date', 'order date'].some(kw => x.includes(kw))) ||
+    name.includes('expense') || name.includes('ledger') || name.includes('purchase')
+  ) {
+    return { provider: 'Expense Ledger', sourceType: 'expense_ledger' };
+  }
+
   return { provider: 'Generic Finance File', sourceType: 'other' };
 };
 
