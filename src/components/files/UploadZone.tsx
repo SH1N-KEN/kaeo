@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Upload, Loader2, CheckCircle2 } from 'lucide-react';
+import { Upload, Loader2, CheckCircle2, Clock } from 'lucide-react';
 
 interface UploadZoneProps {
   onFileSelect: (file: File) => void;
@@ -52,7 +52,7 @@ const UploadZone: React.FC<UploadZoneProps> = ({ onFileSelect, loading }) => {
         type="file"
         id="file-upload"
         className="hidden"
-        accept=".csv,.xlsx,.xls,.pdf"
+        accept=".csv,.xlsx,.xls"
         onChange={handleChange}
       />
       
@@ -66,31 +66,31 @@ const UploadZone: React.FC<UploadZoneProps> = ({ onFileSelect, loading }) => {
         </div>
         
         <div>
-          <h3 className="text-xl font-bold mb-1">Upload Finance Files</h3>
+          <h3 className="text-xl font-bold mb-1">Upload CSV or XLSX Statements</h3>
           <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-            Drag and drop your bank statements or gateway reports here.
+            Drag and drop your bank statement or payment gateway export here.
           </p>
         </div>
 
         <label 
           htmlFor="file-upload"
-          className="px-6 py-2.5 bg-foreground text-background rounded-xl font-semibold hover:bg-foreground/90 transition-colors cursor-pointer"
+          className="btn-primary cursor-pointer"
         >
-          Select Files
+          Select File
         </label>
 
-        <div className="flex flex-wrap justify-center gap-4 text-[10px] text-muted-foreground font-bold uppercase tracking-widest pt-4">
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-teal-500/10 text-teal-400 rounded-full border border-teal-500/20">
-            <CheckCircle2 className="w-3 h-3 text-teal-400" />
-            <span>CSV Support</span>
+        <div className="flex flex-wrap justify-center gap-3 text-[10px] font-bold uppercase tracking-widest pt-4">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border" style={{ background: 'rgba(15,118,110,0.08)', color: 'var(--primary)', border: '1px solid rgba(15,118,110,0.20)' }}>
+            <CheckCircle2 className="w-3 h-3" />
+            <span>CSV</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-teal-500/10 text-teal-400 rounded-full border border-teal-500/20">
-            <CheckCircle2 className="w-3 h-3 text-teal-400" />
-            <span>XLSX Support</span>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border" style={{ background: 'rgba(15,118,110,0.08)', color: 'var(--primary)', border: '1px solid rgba(15,118,110,0.20)' }}>
+            <CheckCircle2 className="w-3 h-3" />
+            <span>XLSX / XLS</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-teal-500/10 text-teal-400 rounded-full border border-teal-500/20">
-            <CheckCircle2 className="w-3 h-3 text-teal-400" />
-            <span>PDF Support</span>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)', border: '1px solid var(--border)' }}>
+            <Clock className="w-3 h-3" />
+            <span>PDF statements — Coming soon</span>
           </div>
         </div>
       </div>

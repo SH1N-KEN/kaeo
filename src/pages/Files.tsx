@@ -276,9 +276,19 @@ const Files: React.FC = () => {
     setImportSummary(null);
     
     const ext = file.name.split('.').pop()?.toLowerCase();
-    const supportedTypes = ['csv', 'xlsx', 'xls', 'pdf'];
+    const supportedTypes = ['csv', 'xlsx', 'xls'];
+
+    // Block PDF bank statements explicitly — not supported yet
+    if (ext === 'pdf') {
+      setError({
+        message: 'PDF bank statement parsing is not available yet.',
+        subtext: 'Please upload a CSV or XLSX file exported from your bank. PDF statement support is coming soon.',
+      });
+      return;
+    }
+
     if (!ext || !supportedTypes.includes(ext)) {
-      setError({ message: `Format .${ext} is not supported.`, subtext: 'Kaeo supports CSV, XLSX, and PDF statement files.' });
+      setError({ message: `Format .${ext} is not supported.`, subtext: 'Please upload a CSV or XLSX bank statement.' });
       return;
     }
 
@@ -1041,7 +1051,7 @@ const Files: React.FC = () => {
                 <div className="flex items-start gap-2.5 px-3 text-[11px] text-muted-foreground">
                   <Sparkles className="w-3.5 h-3.5 text-teal-400 shrink-0 mt-0.5" />
                   <span>
-                    <strong>Smart upload guidance:</strong> Upload your bank statement or payment export. Kaeo will detect income, expenses, refunds, risks, and unknown rows.
+                    <strong>Supported formats:</strong> CSV and XLSX bank statements or payment gateway exports. Kaeo will detect income, expenses, refunds, risks, and unknown rows automatically.
                   </span>
                 </div>
               </div>
@@ -1103,24 +1113,24 @@ const Files: React.FC = () => {
               onChange={handleInvoiceUpload}
               disabled={uploadingInvoice}
             />
-            <div className="w-12 h-12 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(15,118,110,0.08)', border: '1px solid rgba(15,118,110,0.18)', color: 'var(--primary)' }}>
               {uploadingInvoice ? <Loader2 className="w-6 h-6 animate-spin" /> : <FileText className="w-6 h-6" />}
             </div>
             <div>
-              <h3 className="font-bold text-sm text-foreground">Upload Vendor Invoice</h3>
+              <h3 className="font-bold text-sm text-foreground">Upload Vendor Invoice PDF</h3>
               <p className="text-xs text-muted-foreground max-w-sm mt-1 leading-relaxed">
-                Kaeo will try to read invoice details. You can review and edit before saving.
+                Upload a PDF invoice to scan vendor details. Kaeo will extract amounts, dates, and tax info for you to review.
               </p>
             </div>
             <label
               htmlFor="invoice-file-upload"
-              className={`px-5 py-2 bg-primary text-primary-foreground font-semibold rounded-xl text-xs hover:bg-primary/95 transition-all cursor-pointer shadow-md ${
+              className={`btn-primary ${
                 uploadingInvoice ? 'opacity-50 pointer-events-none' : ''
-              }`}
+              } cursor-pointer`}
             >
-              {uploadingInvoice ? 'Processing Extraction...' : 'Select Invoice File'}
+              {uploadingInvoice ? 'Scanning Invoice...' : 'Select Invoice PDF'}
             </label>
-            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Supports PDF, PNG, JPG (Max 5MB)</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>PDF invoice scanning · PNG and JPG also accepted · Max 5MB</span>
           </div>
 
           {/* List of scanned invoices */}
@@ -1192,8 +1202,8 @@ const Files: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 max-w-[200px] truncate">
                             {tx ? (
-                              <div className="text-[11px] font-semibold text-teal-400 flex items-center gap-1">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+                              <div className="text-[11px] font-semibold flex items-center gap-1" style={{ color: 'var(--primary)' }}>
+                                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--primary)' }} />
                                 <span className="truncate">{tx.description}</span>
                               </div>
                             ) : (
