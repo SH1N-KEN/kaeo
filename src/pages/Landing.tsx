@@ -270,6 +270,7 @@ const GenerateReportsVisual = () => {
 ═══════════════════════════════════════════════ */
 const InteractiveWorkflowSection: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
+  const stepRefs = React.useRef<(HTMLDivElement | null)[]>([]);
 
   const steps = [
     {
@@ -309,75 +310,164 @@ const InteractiveWorkflowSection: React.FC = () => {
     }
   ];
 
+  useEffect(() => {
+    // Only apply IntersectionObserver on screens that support sticky (desktop)
+    const isDesktop = window.innerWidth >= 768;
+    if (!isDesktop) return;
+
+    const observerOptions = {
+      root: null,
+      rootMargin: '-35% 0px -35% 0px',
+      threshold: 0.2
+    };
+
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const index = stepRefs.current.indexOf(entry.target as HTMLDivElement);
+          if (index !== -1) {
+            setActiveStep(index);
+          }
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+    stepRefs.current.forEach((ref) => {
+      if (ref) observer.observe(ref);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const handleStepClick = (idx: number) => {
+    setActiveStep(idx);
+    const element = stepRefs.current[idx];
+    if (element) {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      element.scrollIntoView({
+        behavior: prefersReduced ? 'auto' : 'smooth',
+        block: 'center'
+      });
+    }
+  };
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '40px', alignItems: 'start' }} className="workflow-grid">
       {/* Left side tabs */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }} className="md:col-span-5 col-span-12">
+      <div 
+        style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '24px',
+          paddingBottom: '100px'
+        }} 
+        className="md:col-span-5 col-span-12"
+      >
         {steps.map((step, idx) => {
           const isActive = idx === activeStep;
           return (
             <div
               key={idx}
-              onClick={() => setActiveStep(idx)}
-              onMouseEnter={() => setActiveStep(idx)}
+              ref={(el) => { stepRefs.current[idx] = el; }}
+              onClick={() => handleStepClick(idx)}
               style={{
-                padding: '16px 20px',
-                background: isActive ? 'rgba(47, 184, 166, 0.04)' : 'transparent',
+                padding: '24px',
+                background: isActive ? 'rgba(47, 184, 166, 0.05)' : 'rgba(255, 255, 255, 0.01)',
                 border: '1px solid',
-                borderColor: isActive ? 'rgba(47, 184, 166, 0.15)' : 'transparent',
-                borderRadius: '12px',
+                borderColor: isActive ? 'rgba(47, 184, 166, 0.22)' : 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '16px',
                 cursor: 'pointer',
-                transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                backdropFilter: isActive ? 'blur(12px)' : 'none',
+                WebkitBackdropFilter: isActive ? 'blur(12px)' : 'none',
+                boxShadow: isActive ? '0 12px 30px rgba(0,0,0,0.2), inset 0 1px 0 0 rgba(255,255,255,0.05)' : 'none',
               }}
-              className="workflow-step-card"
+              className={`workflow-step-card ${isActive ? 'active' : 'inactive'}`}
             >
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '8px' }}>
                 <span style={{
                   fontStyle: 'italic',
-                  color: isActive ? '#2FB8A6' : 'rgba(232, 240, 238, 0.25)',
+                  color: isActive ? '#2FB8A6' : 'rgba(232, 240, 238, 0.2)',
                   fontSize: '24px',
                   lineHeight: '1',
                   letterSpacing: '-0.04em',
                   fontWeight: 700,
-                  transition: 'color 0.15s',
+                  transition: 'color 0.3s',
                 }}>{step.num}</span>
                 <span style={{
-                  color: isActive ? '#2FB8A6' : 'rgba(232, 240, 238, 0.35)',
+                  color: isActive ? '#2FB8A6' : 'rgba(232, 240, 238, 0.3)',
                   fontFamily: 'ui-monospace, monospace',
                   fontSize: '9.5px',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   fontWeight: 600,
-                  transition: 'color 0.15s',
+                  transition: 'color 0.3s',
                 }}>{step.label}</span>
               </div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: isActive ? '#E8F0EE' : 'rgba(232,240,238,0.55)', letterSpacing: '-0.01em', margin: '0 0 4px 0', transition: 'color 0.15s' }}>{step.title}</h3>
-              <p style={{ fontSize: '13px', color: isActive ? 'rgba(232,240,238,0.5)' : 'rgba(232,240,238,0.35)', lineHeight: 1.5, margin: 0, transition: 'color 0.15s' }}>{step.description}</p>
+              <h3 style={{ 
+                fontSize: '17px', 
+                fontWeight: 700, 
+                color: isActive ? '#E8F0EE' : 'rgba(232,240,238,0.5)', 
+                letterSpacing: '-0.01em', 
+                margin: '0 0 6px 0', 
+                transition: 'color 0.3s' 
+              }}>{step.title}</h3>
+              <p style={{ 
+                fontSize: '13px', 
+                color: isActive ? 'rgba(232,240,238,0.6)' : 'rgba(232,240,238,0.3)', 
+                lineHeight: 1.5, 
+                margin: 0, 
+                transition: 'color 0.3s' 
+              }}>{step.description}</p>
             </div>
           );
         })}
       </div>
       
       {/* Right side mock display */}
-      <div style={{
-        background: '#0D1714',
-        border: '1px solid rgba(47,184,166,0.14)',
-        borderRadius: '16px',
-        padding: '24px',
-        position: 'sticky',
-        top: '112px',
-        boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
-      }} className="md:col-span-7 col-span-12 workflow-mock-panel">
+      <div 
+        style={{
+          background: '#0D1714',
+          border: '1px solid rgba(47,184,166,0.14)',
+          borderRadius: '16px',
+          padding: '24px',
+          position: 'sticky',
+          top: '112px',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+          maxHeight: 'calc(100vh - 160px)',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          width: '100%',
+          maxWidth: '680px',
+          margin: '0 auto',
+          transition: 'all 0.3s ease',
+        }} 
+        className="md:col-span-7 col-span-12 workflow-mock-panel no-scrollbar"
+      >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '13px' }}>💻</span>
             <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(232, 240, 238, 0.45)', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.05em' }}>KAEO WORKSPACE · ACTIVE VIEW</span>
           </div>
-          <span style={{ fontSize: '9px', fontFamily: 'ui-monospace, monospace', letterSpacing: '0.08em', padding: '2px 6px', background: 'rgba(47,184,166,0.1)', color: '#2FB8A6', borderRadius: '4px', fontWeight: 700, textTransform: 'uppercase' }}>
+          <span style={{ 
+            fontSize: '9px', 
+            fontFamily: 'ui-monospace, monospace', 
+            letterSpacing: '0.08em', 
+            padding: '2px 6px', 
+            background: 'rgba(47,184,166,0.1)', 
+            color: '#2FB8A6', 
+            borderRadius: '4px', 
+            fontWeight: 700, 
+            textTransform: 'uppercase',
+            transition: 'all 0.3s ease'
+          }}>
             {steps[activeStep].label}
           </span>
         </div>
-        {steps[activeStep].visual}
+        <div key={activeStep} className="workflow-mock-content animate-kaeo-scale">
+          {steps[activeStep].visual}
+        </div>
       </div>
     </div>
   );

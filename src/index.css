@@ -929,3 +929,26 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   transform: scale(1.1);
 }
 
+/* ─────────────────────────────────────────────────────────────
+   LANDING PAGE WORKFLOW SECTION STYLES
+───────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .workflow-mock-panel {
+    position: relative !important;
+    top: 0 !important;
+    max-height: none !important;
+    margin-top: 20px !important;
+  }
+}
+
+.workflow-mock-panel::-webkit-scrollbar {
+  display: none !important;
+}
+
+.workflow-mock-panel {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+
