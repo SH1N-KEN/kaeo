@@ -602,8 +602,6 @@
  ───────────────────────────────────────────────────────────── */
 
 .sidebar-base {
-  background: var(--sidebar);
-  border-right: 1px solid var(--sidebar-border);
   height: 100vh;
   position: sticky;
   top: 0;
@@ -612,8 +610,6 @@
   flex-shrink: 0;
   z-index: 50;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
 }
 
 .sidebar-toggle-btn {
