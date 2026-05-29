@@ -223,17 +223,10 @@ const FloatingAskKaeo: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-            className="fixed bottom-4 right-4 z-[100] w-[calc(100vw-24px)] sm:w-[380px] max-h-[calc(100vh-32px)] sm:max-h-[580px] flex flex-col rounded-2xl overflow-hidden"
-            style={{
-              background: 'var(--card)',
-              border: '1px solid var(--border)',
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
-              boxShadow: '0 12px 40px -4px rgba(0, 0, 0, 0.12), 0 4px 20px -2px rgba(0, 0, 0, 0.08)',
-            }}
+            className="fixed bottom-4 right-4 z-[100] w-[calc(100vw-24px)] sm:w-[380px] max-h-[calc(100vh-32px)] sm:max-h-[580px] flex flex-col rounded-2xl overflow-hidden frosted-card shadow-2xl"
           >
             {/* ── Header ── */}
-            <div className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-[var(--border)] bg-card/65 backdrop-blur-md">
+            <div className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-[var(--border)] bg-transparent">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(15,118,110,0.08)', border: '1px solid rgba(15,118,110,0.18)' }}>
                   <Sparkles className="w-4 h-4" style={{ color: 'var(--primary)' }} />
@@ -486,7 +479,7 @@ const FloatingAskKaeo: React.FC = () => {
 
             {/* ── Input Area ── */}
             {hasContext && (
-              <div className="px-4 py-3.5 shrink-0 border-t border-[var(--border)] bg-card/65 backdrop-blur-md">
+              <div className="px-4 py-3.5 shrink-0 border-t border-[var(--border)] bg-transparent">
                 <form onSubmit={handleSend} className="flex items-center gap-2">
                   <input
                     ref={inputRef}
@@ -495,7 +488,7 @@ const FloatingAskKaeo: React.FC = () => {
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Ask Libby what to review…"
                     disabled={loading}
-                    className="flex-1 bg-muted/30 border border-border/40 rounded-xl px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all disabled:opacity-50"
+                    className="flex-1 frosted-input border-border/30 placeholder:text-muted-foreground/45"
                   />
                   <button
                     type="submit"

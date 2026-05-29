@@ -179,9 +179,9 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
       <div className="fixed inset-0 z-[100] flex flex-col items-center justify-start md:justify-center p-4 md:p-8 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
         <div className="absolute inset-0 z-0" onClick={onClose} />
         
-        <div className="relative z-10 bg-card border rounded-2xl w-full max-w-lg shadow-2xl animate-in zoom-in-95 fade-in duration-200 overflow-hidden flex flex-col my-auto border-border/55">
+        <div className="relative z-10 frosted-modal w-full max-w-lg shadow-2xl animate-in zoom-in-95 fade-in duration-200 overflow-hidden flex flex-col my-auto border-border/55">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-border/10 shrink-0 bg-card/85 backdrop-blur-md sticky top-0 z-20">
+          <div className="flex items-center justify-between p-6 border-b border-border/10 shrink-0 bg-transparent sticky top-0 z-20">
             <div className="flex items-center gap-2">
               {isBusiness ? (
                 <Building2 className="w-5 h-5 text-teal-400" />

@@ -252,19 +252,12 @@ const Topbar: React.FC = () => {
           {/* Search trigger */}
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] text-[var(--muted-foreground)] w-48 md:w-56 cursor-pointer transition-all"
-            style={{ background: 'var(--surface)' }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'var(--muted)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'var(--surface)';
-            }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] text-[var(--muted-foreground)] w-48 md:w-56 cursor-pointer transition-all frosted-input border-border/30"
           >
             <Search className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="flex-1 text-left truncate">Search…</span>
             <span className="text-[11px] px-1.5 py-0.5 rounded font-medium flex-shrink-0"
-              style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+              style={{ background: 'color-mix(in srgb, var(--primary) 12%, transparent)', color: 'var(--primary)' }}>
               ⌘K
             </span>
           </button>
@@ -282,14 +275,8 @@ const Topbar: React.FC = () => {
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => setIsNotifOpen(!isNotifOpen)}
-              className="relative p-2 rounded-lg cursor-pointer transition-all"
-              style={{ background: 'var(--surface)' }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'var(--muted)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'var(--surface)';
-              }}
+              className="relative p-2 rounded-lg cursor-pointer transition-all frosted-input border-border/30"
+              style={{ width: 'auto' }}
             >
               <Bell className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
               {priorityCount > 0 && (
@@ -304,7 +291,7 @@ const Topbar: React.FC = () => {
 
             {isNotifOpen && (
               <div
-                className="absolute right-0 mt-2 w-80 kaeo-popover shadow-xl z-[90] animate-kaeo-scale"
+                className="absolute right-0 mt-2 w-80 frosted-popover shadow-xl z-[90] animate-kaeo-scale"
                 style={{ padding: '4px' }}
               >
                 <div className="px-3 py-2.5 border-b border-[var(--border)] mb-1 flex items-center justify-between">
@@ -361,7 +348,7 @@ const Topbar: React.FC = () => {
           onClick={() => setIsSearchOpen(false)}
         >
           <div
-            className="w-full max-w-xl kaeo-modal animate-kaeo-scale"
+            className="w-full max-w-xl frosted-modal animate-kaeo-scale overflow-hidden"
             onClick={e => e.stopPropagation()}
             style={{ padding: '0' }}
           >

@@ -53,7 +53,7 @@ const ResetClientModal: React.FC<ResetClientModalProps> = ({
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
       
-      <div className="relative bg-card border border-border w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+      <div className="relative frosted-modal w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
         <div className="p-8 space-y-6">
           <div className="flex items-center justify-between">
             <div className="w-12 h-12 bg-risk/10 rounded-2xl flex items-center justify-center text-risk">

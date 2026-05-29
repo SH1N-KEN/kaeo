@@ -113,7 +113,7 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false
             onClick={() => setIsOpen(false)}
           />
           {accountMode === 'business_owner' ? (
-            <div className={collapsed ? "absolute left-full top-0 ml-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200" : "absolute top-full left-0 mt-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200"}>
+            <div className={collapsed ? "absolute left-full top-0 ml-2 w-64 frosted-popover shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200" : "absolute top-full left-0 mt-2 w-64 frosted-popover shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200"}>
               {/* Current Business Section */}
               <div className="px-3 py-1.5 border-b border-border/10 mb-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current Business</span>
@@ -175,7 +175,7 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ collapsed = false
               )}
             </div>
           ) : (
-            <div className={collapsed ? "absolute left-full top-0 ml-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200" : "absolute top-full left-0 mt-2 w-64 premium-floating-panel rounded-xl shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200"}>
+            <div className={collapsed ? "absolute left-full top-0 ml-2 w-64 frosted-popover shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200" : "absolute top-full left-0 mt-2 w-64 frosted-popover shadow-2xl z-[90] py-2 animate-in fade-in zoom-in-95 duration-200"}>
               {/* Workspace Section */}
               <div className="px-3 py-1.5 border-b border-border/10 mb-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Workspace</span>

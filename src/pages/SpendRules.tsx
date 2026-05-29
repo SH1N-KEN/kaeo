@@ -140,7 +140,7 @@ const SpendRules: React.FC = () => {
         </div>
       </div>
 
-      <div className="premium-glass p-6 rounded-2xl border border-border/50 flex flex-col md:flex-row gap-6 items-center">
+      <div className="frosted-panel p-6 rounded-2xl flex flex-col md:flex-row gap-6 items-center">
         <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
           <ShieldCheck className="w-6 h-6" />
         </div>
@@ -157,7 +157,7 @@ const SpendRules: React.FC = () => {
           const details = getRuleDetails(rule.rule_type);
           
           return (
-            <div key={rule.id} className={`premium-glass rounded-2xl border transition-all duration-300 ${rule.enabled ? 'border-primary/30 shadow-md shadow-primary/5' : 'border-border/40 opacity-75'}`}>
+            <div key={rule.id} className={`frosted-card rounded-2xl transition-all duration-300 ${rule.enabled ? 'border-primary/30 shadow-md shadow-primary/5' : 'border-border/40 opacity-75'}`}>
               <div className="p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1.5 flex-1">

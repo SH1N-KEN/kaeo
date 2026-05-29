@@ -17,10 +17,10 @@ const UploadCard: React.FC<CardProps> = ({ isActive, onHover, onLeave }) => (
     onMouseEnter={onHover}
     onMouseLeave={onLeave}
     onClick={onHover}
+    className="frosted-card"
     style={{
-      background: 'rgba(18, 21, 20, 0.7)',
-      border: isActive ? '1px solid rgba(19, 140, 126, 0.45)' : '1px solid rgba(140, 150, 148, 0.10)',
-      boxShadow: isActive ? '0 0 25px rgba(19, 140, 126, 0.15)' : 'none',
+      border: isActive ? '1px solid rgba(19, 140, 126, 0.45)' : undefined,
+      boxShadow: isActive ? '0 0 25px rgba(19, 140, 126, 0.15)' : undefined,
       borderRadius: '14px',
       padding: '24px 20px',
       fontFamily: 'inherit',
@@ -77,10 +77,10 @@ const TransactionCard: React.FC<CardProps> = ({ isActive, onHover, onLeave }) =>
     onMouseEnter={onHover}
     onMouseLeave={onLeave}
     onClick={onHover}
+    className="frosted-card"
     style={{
-      background: 'rgba(18, 21, 20, 0.7)',
-      border: isActive ? '1px solid rgba(19, 140, 126, 0.45)' : '1px solid rgba(140, 150, 148, 0.10)',
-      boxShadow: isActive ? '0 0 25px rgba(19, 140, 126, 0.15)' : 'none',
+      border: isActive ? '1px solid rgba(19, 140, 126, 0.45)' : undefined,
+      boxShadow: isActive ? '0 0 25px rgba(19, 140, 126, 0.15)' : undefined,
       borderRadius: '14px',
       padding: '20px 18px',
       fontFamily: 'inherit',
@@ -138,10 +138,10 @@ const RiskCard: React.FC<CardProps> = ({ isActive, onHover, onLeave }) => (
     onMouseEnter={onHover}
     onMouseLeave={onLeave}
     onClick={onHover}
+    className="frosted-card"
     style={{
-      background: 'rgba(18, 21, 20, 0.7)',
-      border: isActive ? '1px solid rgba(19, 140, 126, 0.45)' : '1px solid rgba(140, 150, 148, 0.10)',
-      boxShadow: isActive ? '0 0 25px rgba(19, 140, 126, 0.15)' : 'none',
+      border: isActive ? '1px solid rgba(19, 140, 126, 0.45)' : undefined,
+      boxShadow: isActive ? '0 0 25px rgba(19, 140, 126, 0.15)' : undefined,
       borderRadius: '14px',
       padding: '20px 18px',
       fontFamily: 'inherit',
@@ -381,14 +381,10 @@ export const KaeoHero: React.FC = () => {
           >
             {/* Product mock frame */}
             <div
+              className="frosted-card"
               style={{
-                background: 'rgba(18, 21, 20, 0.45)',
-                border: '1px solid rgba(140, 150, 148, 0.12)',
                 borderRadius: '18px',
                 padding: '24px',
-                boxShadow: '0 32px 80px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.02)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
                 transition: 'all 0.3s ease',
               }}
             >

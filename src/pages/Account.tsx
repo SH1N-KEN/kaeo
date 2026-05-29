@@ -139,7 +139,7 @@ const Account: React.FC = () => {
       </div>
 
       {/* ─── Profile Card ─── */}
-      <div className="premium-glass rounded-2xl border border-border/50 p-6">
+      <div className="frosted-card p-6">
         <div className="flex items-center gap-5">
           {/* Avatar */}
           <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black text-xl shrink-0 shadow-md shadow-primary/10">
@@ -175,7 +175,7 @@ const Account: React.FC = () => {
       </div>
 
       {/* ─── Personal Details ─── */}
-      <div className="premium-glass rounded-2xl border border-border/50 p-6 space-y-4">
+      <div className="frosted-card p-6 space-y-4">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-muted-foreground" />
@@ -248,7 +248,7 @@ const Account: React.FC = () => {
       </div>
 
       {/* ─── Security ─── */}
-      <div className="premium-glass rounded-2xl border border-border/50 p-6 space-y-5">
+      <div className="frosted-card p-6 space-y-5">
         <div className="flex items-center gap-2 mb-1">
           <Shield className="w-4 h-4 text-muted-foreground" />
           <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Security</h3>
@@ -311,7 +311,7 @@ const Account: React.FC = () => {
       </div>
 
       {/* ─── Preferences ─── */}
-      <div className="premium-glass rounded-2xl border border-border/50 p-6 space-y-4">
+      <div className="frosted-card p-6 space-y-4">
         <div className="flex items-center gap-2 mb-1">
           {theme === 'dark' ? <Moon className="w-4 h-4 text-muted-foreground" /> : <Sun className="w-4 h-4 text-muted-foreground" />}
           <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Preferences</h3>
@@ -333,7 +333,7 @@ const Account: React.FC = () => {
       </div>
 
       {/* ─── Danger Zone ─── */}
-      <div className="premium-glass rounded-2xl border border-border/50 p-6">
+      <div className="frosted-card p-6">
         <div className="flex items-center gap-2 mb-4">
           <LogOut className="w-4 h-4 text-muted-foreground" />
           <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Session</h3>

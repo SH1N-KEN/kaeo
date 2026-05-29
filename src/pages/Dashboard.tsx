@@ -529,7 +529,7 @@ const Dashboard: React.FC = () => {
     if (clients && clients.length > 0) {
       return (
         <div className="h-[70vh] flex items-center justify-center animate-kaeo-fade">
-          <div className="kaeo-card p-10 flex flex-col items-center text-center gap-5 max-w-sm">
+          <div className="frosted-card p-10 flex flex-col items-center text-center gap-5 max-w-sm">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-muted border border-border">
               <Plus className="w-7 h-7" style={{ color: 'var(--primary)' }} />
             </div>
@@ -611,7 +611,7 @@ const Dashboard: React.FC = () => {
 
       {/* ── Profile completion prompt ── */}
       {needsProfileCompletion && !isProfileCardDismissed && (
-        <div className="kaeo-card p-4 flex items-start justify-between gap-4"
+        <div className="frosted-card p-4 flex items-start justify-between gap-4"
           style={{ borderLeft: '3px solid var(--primary)' }}>
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-muted border border-border">

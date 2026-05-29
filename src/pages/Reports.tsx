@@ -528,7 +528,7 @@ export default function Reports() {
       </div>
 
       {/* Configure Report Period Card */}
-      <div className="frosted-card p-6 bg-card/45 border-border/30 backdrop-blur-md rounded-2xl space-y-4">
+      <div className="frosted-card p-6 rounded-2xl space-y-4">
         <div>
           <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-primary" />

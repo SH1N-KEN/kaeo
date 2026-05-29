@@ -77,9 +77,9 @@ const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
         />
         
         {/* Modal Content */}
-        <div className="relative z-10 bg-card border rounded-2xl w-full max-w-lg shadow-2xl animate-in zoom-in-95 fade-in duration-200 overflow-hidden flex flex-col my-auto">
+        <div className="relative z-10 frosted-modal w-full max-w-lg shadow-2xl animate-in zoom-in-95 fade-in duration-200 overflow-hidden flex flex-col my-auto">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b shrink-0 bg-card/80 backdrop-blur-md sticky top-0 z-20">
+          <div className="flex items-center justify-between p-6 border-b shrink-0 bg-transparent sticky top-0 z-20">
             <h2 className="text-xl font-bold">Create New Workspace</h2>
             <button 
               onClick={onClose} 

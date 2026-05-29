@@ -287,9 +287,9 @@ const AskKaeo = () => {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto items-start pb-12 animate-in fade-in duration-500">
       
       {/* Left/Center Column: Chat Box */}
-      <div className="lg:col-span-2 flex flex-col h-[calc(100vh-10rem)] bg-background rounded-2xl border overflow-hidden shadow-sm">
+      <div className="lg:col-span-2 flex flex-col h-[calc(100vh-10rem)] rounded-2xl overflow-hidden shadow-sm frosted-panel">
         {/* HEADER */}
-        <div className="p-4 border-b bg-card/65 backdrop-blur-md flex justify-between items-center z-10">
+        <div className="p-4 border-b bg-transparent flex justify-between items-center z-10">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[var(--primary)]/10 border border-[var(--primary)]/18 flex items-center justify-center shrink-0">
               <Sparkles className="w-4.5 h-4.5 text-[var(--primary)]" />
@@ -453,14 +453,14 @@ const AskKaeo = () => {
         </div>
 
         {/* INPUT AREA */}
-        <div className="p-4 border-t border-[var(--border)] bg-card/65 backdrop-blur-md shrink-0">
+        <div className="p-4 border-t border-[var(--border)] bg-transparent shrink-0">
           <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex items-center gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask Libby what to review…"
-              className="flex-1 bg-muted/30 border border-border/40 rounded-xl px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all disabled:opacity-50"
+              className="flex-1 frosted-input border-border/30 placeholder:text-muted-foreground/45"
               disabled={loading}
             />
             <button
@@ -478,7 +478,7 @@ const AskKaeo = () => {
       </div>
 
       {/* Right Column: Actions Sidebar */}
-      <div className="lg:col-span-1 bg-card border border-border/80 rounded-2xl p-5 shadow-sm space-y-4 max-h-[calc(100vh-10rem)] overflow-y-auto animate-in fade-in duration-300">
+      <div className="lg:col-span-1 frosted-card p-5 space-y-4 max-h-[calc(100vh-10rem)] overflow-y-auto animate-in fade-in duration-300">
         <div className="flex items-center justify-between pb-2 border-b border-border/40">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-teal-400" />
@@ -610,7 +610,7 @@ const AskKaeo = () => {
       {/* Libby Action Confirmation Modal */}
       {activeModalAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="premium-glass max-w-md w-full border border-border/40 rounded-2xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 text-left">
+          <div className="frosted-modal max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 text-left">
             <h3 className="text-lg font-bold text-foreground">Approve Libby action?</h3>
             
             <div className="space-y-3 bg-white/[0.02] border border-border/10 rounded-xl p-4">

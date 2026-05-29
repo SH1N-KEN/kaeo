@@ -749,7 +749,7 @@ const Transactions: React.FC = () => {
       )}
 
       {/* ── Filter bar ── */}
-      <div className="frosted-card p-4 space-y-3.5 bg-card/40 border-border/30 backdrop-blur-md rounded-xl">
+      <div className="frosted-card p-4 space-y-3.5 rounded-xl">
         {/* Row 1: search + type tabs */}
         <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
           {/* Search */}
@@ -894,7 +894,7 @@ const Transactions: React.FC = () => {
           { label: 'Outflow', value: formatCurrency(summary.outflow), color: 'var(--danger)' },
           { label: 'Net', value: formatSignedCurrency(summary.net), color: summary.net >= 0 ? 'var(--success)' : 'var(--danger)' },
         ].map(s => (
-          <div key={s.label} className="frosted-card p-4 rounded-xl bg-card/45 border-border/30 backdrop-blur-md flex flex-col items-center justify-center">
+          <div key={s.label} className="frosted-card p-4 rounded-xl flex flex-col items-center justify-center">
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase mb-1">{s.label}</span>
             <span className="text-lg font-bold tracking-tight" style={{ color: s.color }}>{s.value}</span>
           </div>
@@ -967,7 +967,7 @@ const Transactions: React.FC = () => {
               </button>
             </div>
           )}
-          <div className="frosted-card rounded-xl border-border/30 overflow-hidden shadow-sm bg-card/30 backdrop-blur-md">
+          <div className="frosted-card rounded-xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
             <table className="kaeo-table min-w-[860px]">
               <thead>
@@ -1505,7 +1505,7 @@ const Transactions: React.FC = () => {
       {/* Selected Suggestion Detail Modal */}
       {selectedSuggestion && (
         <div className="kaeo-modal-overlay" onClick={() => setSelectedSuggestion(null)}>
-          <div className="kaeo-modal max-w-md bg-card/95 border-border/50 backdrop-blur-xl rounded-2xl p-6" onClick={e => e.stopPropagation()}>
+          <div className="frosted-modal max-w-md p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-primary animate-pulse" />

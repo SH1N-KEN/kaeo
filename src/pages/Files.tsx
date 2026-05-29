@@ -928,7 +928,7 @@ const Files: React.FC = () => {
           </div>
 
           {loading && !parseResult && (
-            <div className="h-64 bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl flex flex-col items-center justify-center space-y-4">
+            <div className="h-64 frosted-panel rounded-2xl flex flex-col items-center justify-center space-y-4">
               <div className="relative">
                 <Loader2 className="w-10 h-10 animate-spin text-primary" />
                 <Zap className="w-4 h-4 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
@@ -1257,7 +1257,7 @@ const Files: React.FC = () => {
           onClick={() => setSelectedInvoice(null)}
         >
           <div 
-            className="w-full max-w-4xl kaeo-modal rounded-3xl p-6 shadow-2xl relative my-8 animate-in zoom-in-95 duration-200 grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="w-full max-w-4xl frosted-modal p-6 shadow-2xl relative my-8 animate-in zoom-in-95 duration-200 grid grid-cols-1 md:grid-cols-2 gap-6"
             onClick={(e) => e.stopPropagation()}
           >
             <button 

@@ -167,7 +167,7 @@ const Clients: React.FC<ClientsProps> = ({ embedMode = false }) => {
         )}
 
         {clients.length === 0 ? (
-          <div className="premium-glass border border-dashed border-border/40 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5 shadow-xl">
+          <div className="frosted-card border border-dashed border-border/40 rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-5 shadow-xl">
             <div className="w-16 h-16 bg-teal-500/10 rounded-2xl flex items-center justify-center border border-teal-500/20 shadow-inner">
               <Users className="w-8 h-8 text-teal-400/40" />
             </div>
@@ -205,7 +205,7 @@ const Clients: React.FC<ClientsProps> = ({ embedMode = false }) => {
               return (
                 <div 
                   key={client.id}
-                  className={`premium-glass rounded-2xl border transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-md relative ${
+                  className={`frosted-card transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-md relative ${
                     isActive 
                       ? 'border-primary bg-primary/[0.02] ring-1 ring-primary/20' 
                       : 'border-border/40 hover:border-border/80'

@@ -43,7 +43,7 @@ const FileHistory: React.FC<FileHistoryProps> = ({ history, activeClientName }) 
         {history.map((item) => (
           <div 
             key={item.id} 
-            className="group premium-glass premium-glass-hover rounded-xl p-4 flex items-center justify-between cursor-pointer"
+            className="group frosted-card-hover p-4 flex items-center justify-between cursor-pointer"
           >
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
