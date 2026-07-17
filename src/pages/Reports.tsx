@@ -11,6 +11,7 @@ import EmptyState from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
 import { generateMonthEndReviewPlan } from '../lib/aiReviewEngine';
 import StatusBadge from '../components/ui/StatusBadge';
+import AskLibbyButton from '../components/libby/AskLibbyButton';
 import {
   getThisMonthRange,
   getLastMonthRange,
@@ -517,7 +518,10 @@ export default function Reports() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pt-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
+            <AskLibbyButton query="Are we ready for month-end?" label="Ask Libby" variant="inline" />
+          </div>
           <p className="text-sm text-muted-foreground mt-1">
             Export clean summaries for your accountant or finance review for {activeClient.name}.
           </p>

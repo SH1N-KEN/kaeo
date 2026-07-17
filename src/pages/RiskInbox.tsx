@@ -28,6 +28,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { applyReviewSuggestion } from '../lib/reviewActions';
 import { useToast } from '../hooks/useToast';
 import { useWorkspaceRefresh } from '../hooks/useWorkspaceRefresh';
+import AskLibbyButton from '../components/libby/AskLibbyButton';
 
 const getFriendlyRiskType = (type: string): string => {
   const mapping: Record<string, string> = {
@@ -366,6 +367,7 @@ const RiskInbox: React.FC = () => {
           <div className="flex items-center gap-2.5 mb-1">
             <h1 className="page-title">Risk Inbox</h1>
             <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full" style={{ background: 'rgba(194,65,58,0.10)', color: '#C2413A', border: '1px solid rgba(194,65,58,0.20)' }}>Live Monitoring</span>
+            <AskLibbyButton query="What risks need review?" label="Ask Libby" variant="inline" />
           </div>
           <p className="page-subtitle">Duplicate payments, risky vendors, uncategorized rows, and month-end blockers for <span style={{ color: 'var(--foreground)', fontWeight: 600 }}>{activeClient.name}</span>.</p>
         </div>
@@ -503,11 +505,14 @@ const RiskInbox: React.FC = () => {
                       <div className="flex-1 space-y-3">
                         <div className="flex items-start justify-between gap-4">
                           <div className="space-y-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <h3 className="font-bold text-foreground text-[14px]">{risk.title}</h3>
                               <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${getSeverityColor(risk.severity)}`}>
                                 {risk.severity}
                               </span>
+                              {(risk.severity === 'critical' || risk.severity === 'high') && (
+                                <AskLibbyButton query={`Tell me about ${risk.title}`} variant="icon" />
+                              )}
                             </div>
                             <p className="text-[12px] text-[var(--foreground-muted)] leading-normal mt-1">{risk.description}</p>
                           </div>

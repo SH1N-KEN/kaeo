@@ -20,6 +20,7 @@ import { analyzeVendorsForClient } from '../lib/vendorEngine';
 import EmptyState from '../components/ui/EmptyState';
 import MetricCard from '../components/ui/MetricCard';
 import type { Vendor } from '../types/finance';
+import AskLibbyButton from '../components/libby/AskLibbyButton';
 
 interface EnrichedVendor extends Vendor {
   openRisksCount: number;
@@ -213,6 +214,7 @@ const Vendors: React.FC = () => {
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-3xl font-bold tracking-tight">Vendors</h1>
             <div className="px-2 py-0.5 bg-muted text-foreground text-[10px] font-black rounded-md border border-border uppercase tracking-tighter">CFO Intelligence</div>
+            <AskLibbyButton query="Which vendors need attention?" label="Ask Libby" variant="inline" />
           </div>
           <p className="text-sm text-muted-foreground">See where money is going and which vendors need attention for <span className="text-foreground font-semibold">{activeClient.name}</span>.</p>
         </div>
@@ -327,7 +329,10 @@ const Vendors: React.FC = () => {
                         <Building2 className="w-6 h-6 text-muted-foreground" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-foreground leading-tight">{vendor.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-foreground leading-tight">{vendor.name}</h3>
+                          <AskLibbyButton query={`How much do we spend on ${vendor.name}?`} variant="icon" />
+                        </div>
                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{vendor.category || 'Uncategorized'}</p>
                       </div>
                     </div>

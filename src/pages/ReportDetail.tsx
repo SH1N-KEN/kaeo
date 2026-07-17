@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { ArrowLeft, Printer, AlertTriangle, Info, CheckCircle2, FileText, AlertCircle, MessageSquare } from 'lucide-react';
 import { formatReportCurrency } from '../lib/reportEngine';
+import AskLibbyButton from '../components/libby/AskLibbyButton';
 
 export default function ReportDetail() {
   const { reportId } = useParams();
@@ -276,6 +277,7 @@ export default function ReportDetail() {
             <section className="print-section print:break-inside-auto">
               <h2 className="text-2xl font-bold border-b pb-2 mb-6 flex items-center gap-3">
                 Staff &amp; Petty Expense Review
+                <AskLibbyButton query="Which staff/petty expenses need proof?" label="Ask Libby" variant="inline" />
                 {sections.staffExpenseSummary.missingProofCount > 0 && (
                   <span className="text-xs font-medium bg-amber-500/10 text-amber-600 px-2 py-1 rounded-full flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />

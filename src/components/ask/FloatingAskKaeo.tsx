@@ -14,6 +14,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAskKaeoChat } from '../../hooks/useAskKaeoChat';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { Plus } from 'lucide-react';
+import WorkspaceBrief from '../libby/WorkspaceBrief';
+import QuickActions from '../libby/QuickActions';
+import { buildWorkspaceContext } from '../../lib/libby/contextEngine';
+import { buildWorkspaceBrief, type WorkspaceBriefData } from '../../lib/libby/workspaceBriefEngine';
 
 const shortenMessage = (content: string, userQuery: string): string => {
   if (!content) return content;
@@ -39,13 +43,29 @@ const shortenMessage = (content: string, userQuery: string): string => {
 
     const lower = cleanBlock.toLowerCase();
     
+    // Slice off "Summary:" label if it starts with it
+    if (lower.startsWith('summary:')) {
+      const remaining = cleanBlock.slice(8).trim();
+      shortBlocks.push(remaining);
+      continue;
+    }
+
     // Skip "Why:" section entirely to keep floating responses concise
     if (lower.startsWith('why:')) {
       continue;
     }
+
+    // Handle "Impact:" section by extracting its bullets
+    if (lower.startsWith('impact:')) {
+      const lines = cleanBlock.split('\n').slice(1);
+      if (lines.length > 0) {
+        shortBlocks.push(lines.join('\n'));
+      }
+      continue;
+    }
     
-    // Handle recommended actions ("Next:")
-    if (lower.startsWith('next:')) {
+    // Handle recommended actions ("Suggested Actions:" or "Next:")
+    if (lower.startsWith('suggested actions:') || lower.startsWith('next:')) {
       const lines = cleanBlock.split('\n').slice(1);
       if (lines.length > 0) {
         shortBlocks.push(lines.join('\n'));
@@ -98,17 +118,25 @@ const FloatingAskKaeo: React.FC = () => {
   const { 
     setModalMode, 
     setClientToEdit, 
-    setIsCreateModalOpen 
+    setIsCreateModalOpen,
+    activeClient,
+    activeOrg,
   } = useWorkspace();
 
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const [workspaceBrief, setWorkspaceBrief] = useState<WorkspaceBriefData | null>(null);
+  const [briefLoading, setBriefLoading] = useState(false);
+  const briefLoadedRef = useRef<string | null>(null);
 
   // Has any non-greeting messages
   const hasRealMessages = messages.some(
     (m) => m.source_json?.mode !== 'greeting' || m.role === 'user'
   );
+
+  // Detect empty state (only the initial GREETING present)
+  const isEmptyState = !hasRealMessages;
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -143,6 +171,18 @@ const FloatingAskKaeo: React.FC = () => {
     window.addEventListener('open-ask-libby', handleOpenAsk);
     return () => window.removeEventListener('open-ask-libby', handleOpenAsk);
   }, [sendMessage]);
+
+  // Lazily load workspace brief when empty state is visible
+  useEffect(() => {
+    if (!activeClient?.id || !activeOrg?.id || !isOpen || !isEmptyState) return;
+    if (briefLoadedRef.current === activeClient.id) return;
+    briefLoadedRef.current = activeClient.id;
+    setBriefLoading(true);
+    buildWorkspaceContext(activeClient.id, activeOrg.id)
+      .then(ctx => setWorkspaceBrief(buildWorkspaceBrief(ctx)))
+      .catch(() => setWorkspaceBrief(null))
+      .finally(() => setBriefLoading(false));
+  }, [activeClient?.id, activeOrg?.id, isOpen, isEmptyState]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -301,34 +341,12 @@ const FloatingAskKaeo: React.FC = () => {
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col justify-center py-4 px-1 gap-3">
-                  <div className="text-center mb-1">
-                    <p className="text-xs font-bold text-foreground mb-0.5">
-                      Ask Libby CFO Advisor
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Choose a quick question below or type your own query.
-                    </p>
-                  </div>
-                  <div className="space-y-1.5">
-                    {[
-                      "What should I fix first?",
-                      "Review my transactions",
-                      "Which vendors need attention?",
-                      "Are we ready for month-end?",
-                      "Prepare my accountant pack"
-                    ].map((query, idx) => (
-                      <button
-                        key={idx}
-                        onClick={async () => {
-                          await sendMessage(query);
-                        }}
-                        className="w-full text-left px-3.5 py-2.5 bg-card hover:bg-[var(--muted)] text-foreground font-semibold rounded-xl border border-border/50 hover:border-[var(--primary)]/30 text-xs transition-all cursor-pointer flex items-center justify-between group"
-                      >
-                        <span className="truncate pr-2 font-medium">{query}</span>
-                        <Sparkles className="w-3.5 h-3.5 text-muted-foreground group-hover:text-[var(--primary)] transition-colors shrink-0" />
-                      </button>
-                    ))}
-                  </div>
+                  <WorkspaceBrief
+                    brief={workspaceBrief}
+                    loading={briefLoading}
+                    onSendMessage={sendMessage}
+                    compact={true}
+                  />
                 </div>
               ) : (
                 messages.map((msg, idx) => {
@@ -483,6 +501,10 @@ const FloatingAskKaeo: React.FC = () => {
             {/* ── Input Area ── */}
             {hasContext && (
               <div className="px-4 py-3.5 shrink-0 border-t border-[var(--border)] bg-transparent">
+                {/* Quick Actions — compact 3-chip row */}
+                <div className="mb-2">
+                  <QuickActions onSendMessage={sendMessage} loading={loading} compact={true} />
+                </div>
                 <form onSubmit={handleSend} className="flex items-center gap-2">
                   <input
                     ref={inputRef}

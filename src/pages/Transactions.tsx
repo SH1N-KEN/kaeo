@@ -35,6 +35,7 @@ import { applyReviewSuggestion } from '../lib/reviewActions';
 import { Sparkles } from 'lucide-react';
 import { formatCurrency, formatSignedCurrency } from '../lib/formatters';
 import { useWorkspaceRefresh } from '../hooks/useWorkspaceRefresh';
+import AskLibbyButton from '../components/libby/AskLibbyButton';
 import {
   isWithinDateRange,
   getThisMonthRange,
@@ -726,7 +727,10 @@ const Transactions: React.FC = () => {
       {/* ── Page header ── */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-1">
         <div>
-          <h1 className="page-title">Transactions</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="page-title">Transactions</h1>
+            <AskLibbyButton query="Review my transactions" label="Ask Libby" variant="inline" />
+          </div>
           <p className="page-subtitle mt-1">
             Review, categorize, and approve imported ledger rows for <span style={{ color: 'var(--foreground)', fontWeight: 600 }}>{activeClient.name}</span>.
           </p>

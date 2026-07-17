@@ -40,6 +40,7 @@ import {
   Tooltip,
   CartesianGrid
 } from 'recharts';
+import AskLibbyButton from '../components/libby/AskLibbyButton';
 
 interface ChartDataPoint {
   date: string;
@@ -735,6 +736,9 @@ const Dashboard: React.FC = () => {
             title="Cash Flow Overview"
             description="Inflow and outflow activity over the last 15 days"
             className="lg:col-span-2"
+            action={
+              <AskLibbyButton query="What is my net cash?" label="Ask Libby" variant="inline" />
+            }
           >
             <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-[var(--border)]">
               <div className="flex items-center gap-6">
@@ -796,11 +800,14 @@ const Dashboard: React.FC = () => {
             title="Risk Snapshot"
             description="Open issues detected by Kaeo"
             action={
-              <button onClick={() => navigate('/risk-inbox')}
-                className="text-[12px] font-medium flex items-center gap-1 transition-colors"
-                style={{ color: 'var(--primary)' }}>
-                View Inbox <ChevronRight className="w-3.5 h-3.5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <AskLibbyButton query="What risks need review?" label="Ask Libby" variant="inline" />
+                <button onClick={() => navigate('/risk-inbox')}
+                  className="text-[12px] font-medium flex items-center gap-1 transition-colors"
+                  style={{ color: 'var(--primary)' }}>
+                  View Inbox <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             }
           >
             <div className="space-y-3">

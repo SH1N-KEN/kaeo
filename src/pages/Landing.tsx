@@ -18,141 +18,238 @@ const SectionLabel = ({ code, label }: { code: string; label: string }) => (
    WORKFLOW STEP INTERACTIVE VISUALIZERS
 ═══════════════════════════════════════════════ */
 const UploadVisualInteractive = ({ isDesktop = true }: { isDesktop?: boolean }) => {
+  const [progress, setProgress] = useState(0);
   const [hoveredFile, setHoveredFile] = useState<number | null>(null);
-  
+
+  useEffect(() => {
+    setProgress(0);
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return prev + 5;
+      });
+    }, 60);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isDesktop ? '20px' : '12px', height: '100%', justifyContent: 'center' }}>
-      <div 
-        style={{ 
-          border: '2px dashed rgba(19, 140, 126, 0.25)', 
-          borderRadius: '12px', 
-          padding: isDesktop ? '40px 24px' : '20px 16px', 
-          textAlign: 'center', 
-          background: 'rgba(19, 140, 126, 0.02)', 
-          cursor: 'pointer', 
-          transition: 'all 0.2s ease',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '8px'
-        }} 
-        className="hover:border-teal-400/40 hover:bg-teal-950/10"
-      >
-        <span style={{ fontSize: isDesktop ? '40px' : '28px', filter: 'drop-shadow(0 0 10px rgba(19,140,126,0.2))' }}>📁</span>
-        <div>
-          <span style={{ fontSize: isDesktop ? '15px' : '13px', color: '#138C7E', fontWeight: 700, display: 'block' }}>Drag & drop statement files here</span>
-          <span style={{ fontSize: isDesktop ? '12px' : '11px', color: 'rgba(232, 240, 238, 0.35)', display: 'block', marginTop: '4px' }}>Supports CSV or XLSX statement sheets</span>
+      {progress < 100 ? (
+        <div 
+          style={{ 
+            border: '2px dashed rgba(19, 140, 126, 0.25)', 
+            borderRadius: '12px', 
+            padding: isDesktop ? '40px 24px' : '20px 16px', 
+            textAlign: 'center', 
+            background: 'rgba(19, 140, 126, 0.02)', 
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          <span style={{ fontSize: isDesktop ? '40px' : '28px', animation: 'pulse 1.5s infinite' }}>📁</span>
+          <div style={{ width: '100%', maxWidth: '200px' }}>
+            <div style={{ fontSize: '13px', color: '#138C7E', fontWeight: 600, marginBottom: '6px' }}>Uploading statement...</div>
+            <div style={{ width: '100%', height: '4px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{ width: `${progress}%`, height: '100%', background: '#138C7E', transition: 'width 0.1s ease' }} />
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div 
+          style={{ 
+            border: '2px dashed rgba(34, 181, 115, 0.3)', 
+            borderRadius: '12px', 
+            padding: isDesktop ? '40px 24px' : '20px 16px', 
+            textAlign: 'center', 
+            background: 'rgba(34, 181, 115, 0.02)', 
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'kaeo-scale-in 0.3s ease forwards'
+          }}
+        >
+          <span style={{ fontSize: isDesktop ? '40px' : '28px' }}>✅</span>
+          <div>
+            <span style={{ fontSize: isDesktop ? '15px' : '13px', color: '#22B573', fontWeight: 700, display: 'block' }}>HDFC Statement parsed successfully</span>
+            <span style={{ fontSize: isDesktop ? '12px' : '11px', color: 'rgba(232, 240, 238, 0.35)', display: 'block', marginTop: '4px' }}>142 transaction rows identified</span>
+          </div>
+        </div>
+      )}
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ fontSize: '10.5px', color: 'rgba(232, 240, 238, 0.4)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>FILES IN THIS WORKSPACE</div>
         {[
-          { name: 'hdfc_bank_statement_apr.xlsx', size: '48 KB', type: 'Excel Sheet' },
-          { name: 'razorpay_settlement_report.csv', size: '112 KB', type: 'CSV Statement' },
-          ...(isDesktop ? [{ name: 'mumbai_supplies_invoice_102.pdf', size: '1.2 MB', type: 'GST Invoice PDF' }] : [])
-        ].map((f, i) => (
-          <div 
-            key={i} 
-            onMouseEnter={() => setHoveredFile(i)}
-            onMouseLeave={() => setHoveredFile(null)}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between', 
-              padding: isDesktop ? '14px 18px' : '10px 14px', 
-              background: hoveredFile === i ? 'rgba(19, 140, 126, 0.05)' : 'rgba(255,255,255,0.01)', 
-              borderRadius: '10px', 
-              border: hoveredFile === i ? '1px solid rgba(19, 140, 126, 0.3)' : '1px solid rgba(255,255,255,0.05)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '18px' }}>{f.name.endsWith('.pdf') ? '📄' : '📊'}</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '12px', color: '#E8F0EE', fontFamily: 'ui-monospace, monospace', fontWeight: 500 }}>{f.name}</span>
-                <span style={{ fontSize: '10px', color: 'rgba(232,240,238,0.4)' }}>{f.size} · {f.type}</span>
+          { name: 'hdfc_bank_statement_apr.xlsx', size: '48 KB', type: 'Excel Sheet', showAfter: 20 },
+          { name: 'razorpay_settlement_report.csv', size: '112 KB', type: 'CSV Statement', showAfter: 50 },
+          ...(isDesktop ? [{ name: 'mumbai_supplies_invoice_102.pdf', size: '1.2 MB', type: 'GST Invoice PDF', showAfter: 80 }] : [])
+        ].map((f, i) => {
+          const isVisible = progress >= f.showAfter;
+          return (
+            <div 
+              key={i} 
+              onMouseEnter={() => setHoveredFile(i)}
+              onMouseLeave={() => setHoveredFile(null)}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                padding: isDesktop ? '14px 18px' : '10px 14px', 
+                background: hoveredFile === i ? 'rgba(19, 140, 126, 0.05)' : 'rgba(255,255,255,0.01)', 
+                borderRadius: '10px', 
+                border: hoveredFile === i ? '1px solid rgba(19, 140, 126, 0.3)' : '1px solid rgba(255,255,255,0.05)',
+                opacity: isVisible ? 1 : 0,
+                transform: isVisible ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '18px' }}>{f.name.endsWith('.pdf') ? '📄' : '📊'}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontSize: '12px', color: '#E8F0EE', fontFamily: 'ui-monospace, monospace', fontWeight: 500 }}>{f.name}</span>
+                  <span style={{ fontSize: '10px', color: 'rgba(232,240,238,0.4)' }}>{f.size} · {f.type}</span>
+                </div>
               </div>
+              <span style={{ fontSize: '11px', color: progress >= 100 ? '#22B573' : '#138C7E', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: progress >= 100 ? '#22B573' : '#138C7E' }} />
+                {progress >= 100 ? '✓ Parsed' : 'Uploaded'}
+              </span>
             </div>
-            <span style={{ fontSize: '11px', color: '#138C7E', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#138C7E' }} /> ✓ Uploaded
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 };
 
-const MapVisualInteractive = ({ isDesktop = true }: { isDesktop?: boolean }) => {
+const AICategoriseVisual = ({ isDesktop = true }: { isDesktop?: boolean }) => {
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-  
+  const [animStage, setAnimStage] = useState(0);
+
+  useEffect(() => {
+    setAnimStage(0);
+    const t1 = setTimeout(() => setAnimStage(1), 500);
+    const t2 = setTimeout(() => setAnimStage(2), 1000);
+    const t3 = setTimeout(() => setAnimStage(3), 1500);
+    const t4 = setTimeout(() => setAnimStage(4), 2000);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+    };
+  }, []);
+
+  const rows = [
+    { desc: 'Bombay Rent Ltd', amount: '₹1,80,000.00', field: 'Rent & Utilities', threshold: 1 },
+    { desc: 'Mumbai Supplies Pvt Ltd', amount: '₹1,24,000.00', field: 'Capital Expense', threshold: 2 },
+    { desc: 'Slack Technologies', amount: '₹30,000.00', field: 'SaaS / Software', threshold: 3 },
+    { desc: 'Razorpay Settlement', amount: '₹4,80,000.00', field: 'Revenue / Inflow', threshold: 4 }
+  ];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isDesktop ? '16px' : '10px', height: '100%', justifyContent: 'center' }}>
       <div style={{ background: 'rgba(19, 140, 126, 0.03)', border: '1px solid rgba(19, 140, 126, 0.15)', borderRadius: '10px', padding: isDesktop ? '16px 20px' : '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '18px' }}>🤖</span>
+          <span style={{ fontSize: '18px', animation: animStage < 4 ? 'spin 2s linear infinite' : 'none' }}>🤖</span>
           <div>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#E8F0EE' }}>Statement Columns Mapped</span>
-            <span style={{ fontSize: '11px', color: 'rgba(232, 240, 238, 0.45)', display: 'block' }}>Kaeo mapped 4 base fields successfully</span>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#E8F0EE' }}>
+              {animStage < 4 ? 'AI Categorising transactions...' : 'Categorisation Complete'}
+            </span>
+            <span style={{ fontSize: '11px', color: 'rgba(232, 240, 238, 0.45)', display: 'block' }}>
+              {animStage < 4 ? `Categorised ${animStage} of 4 items` : 'All 4 items successfully mapped'}
+            </span>
           </div>
         </div>
-        <span style={{ fontSize: '11px', background: 'rgba(34, 181, 115, 0.1)', color: '#22B573', border: '1px solid rgba(34, 181, 115, 0.2)', borderRadius: '4px', padding: '2px 8px', fontWeight: 700 }}>100% ACCURACY</span>
+        <span style={{ fontSize: '11px', background: animStage >= 4 ? 'rgba(34, 181, 115, 0.1)' : 'rgba(19, 140, 126, 0.1)', color: animStage >= 4 ? '#22B573' : '#138C7E', border: `1px solid ${animStage >= 4 ? 'rgba(34, 181, 115, 0.2)' : 'rgba(19,140,126,0.2)'}`, borderRadius: '4px', padding: '2px 8px', fontWeight: 700 }}>
+          {animStage >= 4 ? '100% CATEGORISED' : 'PROCESSING'}
+        </span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {[
-          { target: 'Transaction Date', source: 'Value Date (Col A)', confidence: '99%', preview: '28-04-2026' },
-          { target: 'Description / Narration', source: 'Narration Details (Col B)', confidence: '98%', preview: 'UPI/Razorpay/Vendor...' },
-          { target: 'Debit Amount (Outflow)', source: 'Withdrawal Amt (Col D)', confidence: '96%', preview: '₹1,24,000.00' },
-          { target: 'Credit Amount (Inflow)', source: 'Deposit Amt (Col E)', confidence: '96%', preview: '₹4,80,000.00' }
-        ].map((row, i) => (
-          <div 
-            key={i} 
-            onMouseEnter={() => setHoveredRow(i)}
-            onMouseLeave={() => setHoveredRow(null)}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between', 
-              padding: isDesktop ? '14px 18px' : '10px 14px', 
-              background: hoveredRow === i ? 'rgba(19, 140, 126, 0.05)' : 'rgba(255,255,255,0.01)', 
-              borderRadius: '10px', 
-              border: hoveredRow === i ? '1px solid rgba(19, 140, 126, 0.3)' : '1px solid rgba(255,255,255,0.05)',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '13px', color: '#E8F0EE', fontWeight: 700 }}>{row.target}</span>
-              <span style={{ fontSize: '11px', color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>
-                ➔ Mapped: <span style={{ color: '#E8F0EE' }}>"{row.source}"</span>
-              </span>
+        {rows.map((row, i) => {
+          const isDone = animStage >= row.threshold;
+          return (
+            <div 
+              key={i} 
+              onMouseEnter={() => setHoveredRow(i)}
+              onMouseLeave={() => setHoveredRow(null)}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                padding: isDesktop ? '14px 18px' : '10px 14px', 
+                background: hoveredRow === i ? 'rgba(19, 140, 126, 0.05)' : 'rgba(255,255,255,0.01)', 
+                borderRadius: '10px', 
+                border: hoveredRow === i ? '1px solid rgba(19, 140, 126, 0.3)' : '1px solid rgba(255,255,255,0.05)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '13px', color: '#E8F0EE', fontWeight: 700 }}>{row.desc}</span>
+                <span style={{ fontSize: '11px', color: 'rgba(232, 240, 238, 0.4)' }}>Amount: {row.amount}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {isDone ? (
+                  <span 
+                    style={{ 
+                      fontSize: '11px', 
+                      background: 'rgba(19, 140, 126, 0.08)', 
+                      color: '#138C7E', 
+                      border: '1px solid rgba(19, 140, 126, 0.18)', 
+                      borderRadius: '4px', 
+                      padding: '2px 8px', 
+                      fontWeight: 600,
+                      animation: 'kaeo-scale-in 0.25s ease forwards'
+                    }}
+                  >
+                    🏷️ {row.field}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '11px', color: 'rgba(232,240,238,0.25)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#7E9C98', display: 'inline-block', animation: 'pulse 1s infinite' }} />
+                    categorising...
+                  </span>
+                )}
+              </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-              {isDesktop && <span style={{ fontSize: '11px', color: 'rgba(232, 240, 238, 0.5)', fontFamily: 'ui-monospace, monospace' }}>Sample: {row.preview}</span>}
-              <span style={{ fontSize: '9px', color: '#138C7E', background: 'rgba(19,140,126,0.08)', border: '1px solid rgba(19,140,126,0.18)', borderRadius: '4px', padding: '1px 6px', fontWeight: 700 }}>CONFIRMED</span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 };
 
-const ReviewVisualInteractive = ({ isDesktop = true }: { isDesktop?: boolean }) => {
+const RiskInboxVisual = ({ isDesktop = true }: { isDesktop?: boolean }) => {
   const [activeRisk, setActiveRisk] = useState<number | null>(0);
   
   const items = [
-    { date: '28 Apr', desc: 'Bombay Rent Ltd', cat: 'Rent & Utilities', amount: '−₹1,80,000', label: 'Duplicate payment suspect', why: 'Paid twice within 24 hours to the same landlord account.', advice: 'Verify landlord bank logs or confirm refund.' },
-    { date: '26 Apr', desc: 'Mumbai Supplies Pvt Ltd', cat: 'Capital Expense', amount: '−₹1,24,000', label: 'High-value outflow', why: 'This payment is 3.2× higher than historical monthly average.', advice: 'Review attached GST invoice and PO approval.' },
-    ...(isDesktop ? [{ date: '25 Apr', desc: 'UPI/9820123456/Rent/Paytm', cat: 'Uncategorized', amount: '−₹18,500', label: 'Uncategorized UPI transfer', why: 'Payee detected as Rent/Paytm but needs review.', advice: 'Assign to Landlord category.' }] : [])
+    { date: '28 Apr', desc: 'Bombay Rent Ltd', cat: 'Rent & Utilities', amount: '−₹1,80,000', label: 'Duplicate payment suspect', why: 'Paid twice within 24 hours to the same landlord account.', advice: 'Verify landlord bank logs or confirm refund.', badgeColor: '#E05450' },
+    { date: '26 Apr', desc: 'Mumbai Supplies Pvt Ltd', cat: 'Capital Expense', amount: '−₹1,24,000', label: 'High-value outflow anomaly', why: 'This payment is 3.2× higher than historical monthly average.', advice: 'Review attached GST invoice and PO approval.', badgeColor: '#E05450' },
+    ...(isDesktop ? [{ date: '25 Apr', desc: 'UPI/9820123456/Rent/Paytm', cat: 'Uncategorized', amount: '−₹18,500', label: 'Uncategorized UPI transfer', why: 'Payee detected as Rent/Paytm but needs review.', advice: 'Assign to Landlord category.', badgeColor: '#D4922A' }] : [])
   ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveRisk((prev) => (prev === null ? 0 : (prev + 1) % items.length));
+    }, 2800);
+    return () => clearInterval(interval);
+  }, [items.length]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isDesktop ? '14px' : '10px', height: '100%', justifyContent: 'center' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: '11px', color: 'rgba(232, 240, 238, 0.5)', textTransform: 'uppercase', fontWeight: 600 }}>Ledger Risks Inbox</span>
-        <span style={{ fontSize: '11px', color: '#E05450', fontWeight: 700, background: 'rgba(224, 84, 80, 0.08)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(224, 84, 80, 0.15)' }}>● Issues Pending</span>
+        <span style={{ fontSize: '11.5px', color: '#E05450', fontWeight: 700, background: 'rgba(224, 84, 80, 0.08)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(224, 84, 80, 0.15)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#E05450', display: 'inline-block', animation: 'ping 1s infinite' }} />
+          Issues Found
+        </span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {items.map((item, i) => {
@@ -165,9 +262,10 @@ const ReviewVisualInteractive = ({ isDesktop = true }: { isDesktop?: boolean }) 
                 padding: '12px 14px', 
                 background: isSelected ? 'rgba(224,84,80,0.04)' : 'rgba(255,255,255,0.01)', 
                 borderRadius: '10px', 
-                border: isSelected ? '1px solid rgba(224,84,80,0.35)' : '1px solid rgba(255,255,255,0.05)',
+                border: isSelected ? `1px solid ${item.badgeColor}60` : '1px solid rgba(255,255,255,0.05)',
                 cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                transform: isSelected ? 'scale(1.01)' : 'scale(1)'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2px' }}>
@@ -175,14 +273,14 @@ const ReviewVisualInteractive = ({ isDesktop = true }: { isDesktop?: boolean }) 
                   <span style={{ fontSize: '13px', fontWeight: 700, color: '#E8F0EE' }}>{item.desc}</span>
                   <span style={{ fontSize: '10px', color: 'rgba(232,240,238,0.4)', marginLeft: '8px' }}>{item.date}</span>
                 </div>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#E05450', fontFamily: 'ui-monospace, monospace' }}>{item.amount}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: item.badgeColor, fontFamily: 'ui-monospace, monospace' }}>{item.amount}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                <span style={{ fontSize: '11.5px', color: '#E05450', fontWeight: 600 }}>⚠ {item.label}</span>
+                <span style={{ fontSize: '11.5px', color: item.badgeColor, fontWeight: 600 }}>⚠ {item.label}</span>
                 <span style={{ fontSize: '10px', background: 'rgba(19,140,126,0.08)', color: '#138C7E', border: '1px solid rgba(19,140,126,0.15)', padding: '1px 6px', borderRadius: '4px' }}>{item.cat}</span>
               </div>
               {isSelected && (
-                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: '11.5px', color: 'rgba(232,240,238,0.7)', lineHeight: 1.5 }}>
+                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: '11.5px', color: 'rgba(232,240,238,0.7)', lineHeight: 1.5, animation: 'kaeo-fade-in 0.3s ease' }}>
                   <div style={{ marginBottom: '4px' }}><strong>Reason:</strong> {item.why}</div>
                   <div style={{ color: '#138C7E' }}><strong>Action:</strong> {item.advice}</div>
                 </div>
@@ -195,103 +293,154 @@ const ReviewVisualInteractive = ({ isDesktop = true }: { isDesktop?: boolean }) 
   );
 };
 
-const UnderstandVendorsVisual = ({ isDesktop = true }: { isDesktop?: boolean }) => {
-  const [activeVendor, setActiveVendor] = useState<number | null>(0);
-  const vendors = [
-    { name: 'Mumbai Supplies Pvt Ltd', total: '₹3,40,000', count: '3 bills', share: '62%', type: 'Supplier', progressWidth: '62%' },
-    { name: 'Bombay Rent Ltd', total: '₹1,80,000', count: '1 bill', share: '32%', type: 'Utilities', progressWidth: '32%' },
-    ...(isDesktop ? [{ name: 'Slack Technologies', total: '₹30,000', count: '1 bill', share: '6%', type: 'SaaS / Software', progressWidth: '6%' }] : [])
-  ];
+const ReportsGeneratedVisual = ({ isDesktop = true }: { isDesktop?: boolean }) => {
+  const [count, setCount] = useState(0);
+  const [risks, setRisks] = useState(0);
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: isDesktop ? '14px' : '10px', height: '100%', justifyContent: 'center' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '11px', color: 'rgba(232, 240, 238, 0.5)', textTransform: 'uppercase', fontWeight: 600 }}>Active Merchant Accounts</span>
-        <span style={{ fontSize: '11px', color: '#138C7E', fontWeight: 700 }}>3 vendors tracked</span>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {vendors.map((v, i) => {
-          const isActive = activeVendor === i;
-          return (
-            <div 
-              key={i} 
-              onClick={() => setActiveVendor(i)}
-              style={{ 
-                padding: '12px 14px', 
-                background: isActive ? 'rgba(19, 140, 126, 0.04)' : 'rgba(255,255,255,0.01)', 
-                borderRadius: '10px', 
-                border: isActive ? '1px solid rgba(19, 140, 126, 0.3)' : '1px solid rgba(255,255,255,0.05)',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <div>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#E8F0EE' }}>{v.name}</span>
-                  <span style={{ fontSize: '9px', background: 'rgba(255,255,255,0.05)', color: 'rgba(232,240,238,0.5)', padding: '1px 5px', borderRadius: '4px', marginLeft: '8px' }}>{v.type}</span>
-                </div>
-                <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>{v.total}</span>
-              </div>
-              
-              <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.04)', borderRadius: '2px', overflow: 'hidden', margin: '6px 0' }}>
-                <div style={{ width: v.progressWidth, height: '100%', background: '#138C7E', borderRadius: '2px' }} />
-              </div>
+  useEffect(() => {
+    setCount(0);
+    setRisks(0);
+    const interval = setInterval(() => {
+      setCount((prev) => {
+        if (prev >= 142) {
+          clearInterval(interval);
+          return 142;
+        }
+        return prev + 6;
+      });
+    }, 40);
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'rgba(232,240,238,0.45)' }}>
-                <span>{v.count} · Outflow</span>
-                <span style={{ color: '#138C7E', fontWeight: 600 }}>{v.share} of period spend</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
+    const riskTimeout = setTimeout(() => {
+      let riskVal = 0;
+      const riskInterval = setInterval(() => {
+        riskVal += 1;
+        setRisks(riskVal);
+        if (riskVal >= 3) {
+          clearInterval(riskInterval);
+        }
+      }, 300);
+    }, 400);
 
-const GenerateReportsVisual = ({ isDesktop = true }: { isDesktop?: boolean }) => {
-  const [downloaded, setDownloaded] = useState(false);
-  
+    return () => {
+      clearInterval(interval);
+      clearTimeout(riskTimeout);
+    };
+  }, []);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isDesktop ? '16px' : '10px', height: '100%', justifyContent: 'center' }}>
-      <div style={{ background: 'rgba(19, 140, 126, 0.03)', border: '1px solid rgba(19, 140, 126, 0.15)', borderRadius: '12px', padding: isDesktop ? '20px 20px' : '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ background: 'rgba(19, 140, 126, 0.03)', border: '1px solid rgba(19, 140, 126, 0.15)', borderRadius: '12px', padding: isDesktop ? '20px' : '12px 14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#E8F0EE', display: 'block' }}>Finance Review Pack · April 2026</span>
-            <span style={{ fontSize: '11px', color: 'rgba(232,240,238,0.45)', display: 'block', marginTop: '2px' }}>Verified ledger CSV + Scanned invoice attachment ZIP</span>
+            <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#E8F0EE', display: 'block' }}>April 2026 Audit Report Pack</span>
+            <span style={{ fontSize: '11px', color: 'rgba(232,240,238,0.45)', display: 'block', marginTop: '2px' }}>Ledger generated automatically</span>
           </div>
-          <span style={{ fontSize: '10px', color: '#22B573', fontWeight: 700, background: 'rgba(34, 181, 115, 0.1)', border: '1px solid rgba(34, 181, 115, 0.2)', padding: '2px 8px', borderRadius: '4px' }}>✓ READY</span>
+          <span style={{ fontSize: '10px', color: count >= 142 ? '#22B573' : '#138C7E', fontWeight: 700, background: count >= 142 ? 'rgba(34, 181, 115, 0.1)' : 'rgba(19,140,126,0.1)', border: `1px solid ${count >= 142 ? 'rgba(34, 181, 115, 0.2)' : 'rgba(19,140,126,0.2)'}`, padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+            {count >= 142 ? '✓ Generated' : 'Generating'}
+          </span>
         </div>
         
         <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
         
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <div>
-            <span style={{ fontSize: '10px', color: 'rgba(232,240,238,0.4)', display: 'block', textTransform: 'uppercase' }}>Transactions</span>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>142 verified</span>
+          <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
+            <span style={{ fontSize: '10.5px', color: 'rgba(232,240,238,0.4)', display: 'block', textTransform: 'uppercase' }}>Transactions Analyzed</span>
+            <span style={{ fontSize: '20px', fontWeight: 700, color: '#138C7E', fontFamily: 'ui-monospace, monospace' }}>{count} rows</span>
           </div>
-          <div>
-            <span style={{ fontSize: '10px', color: 'rgba(232,240,238,0.4)', display: 'block', textTransform: 'uppercase' }}>Risks Cleared</span>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: '#22B573', fontFamily: 'ui-monospace, monospace' }}>3 resolved</span>
+          <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
+            <span style={{ fontSize: '10.5px', color: 'rgba(232,240,238,0.4)', display: 'block', textTransform: 'uppercase' }}>Risks Audited</span>
+            <span style={{ fontSize: '20px', fontWeight: 700, color: '#22B573', fontFamily: 'ui-monospace, monospace' }}>{risks} cleared</span>
           </div>
         </div>
       </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ fontSize: '10.5px', color: 'rgba(232,240,238,0.4)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>COMPILED SECTIONS</div>
+        {[
+          { name: 'Summary Cashflow Ledger', val: '+₹4,38,200 net movement', icon: '📈' },
+          { name: 'Categorised Vendor Directory', val: '3 merchants verified', icon: '🏢' },
+        ].map((item, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>{item.icon}</span>
+              <span style={{ fontSize: '12px', color: '#E8F0EE', fontWeight: 500 }}>{item.name}</span>
+            </div>
+            <span style={{ fontSize: '11px', color: '#138C7E', fontWeight: 600 }}>{item.val}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const ExportVisualInteractive = ({ isDesktop = true }: { isDesktop?: boolean }) => {
+  const [state, setState] = useState<'idle' | 'exporting' | 'done'>('idle');
+  const [progress, setProgress] = useState(0);
+  
+  useEffect(() => {
+    setState('idle');
+    setProgress(0);
+    const delay = setTimeout(() => {
+      setState('exporting');
+      const interval = setInterval(() => {
+        setProgress((p) => {
+          if (p >= 100) {
+            clearInterval(interval);
+            setState('done');
+            return 100;
+          }
+          return p + 10;
+        });
+      }, 100);
+    }, 600);
+    return () => clearTimeout(delay);
+  }, []);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isDesktop ? '16px' : '10px', height: '100%', justifyContent: 'center' }}>
+      <div style={{ background: 'rgba(19, 140, 126, 0.03)', border: '1px solid rgba(19, 140, 126, 0.15)', borderRadius: '12px', padding: isDesktop ? '20px 20px' : '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#E8F0EE', display: 'block' }}>kaeo-accountant-pack.zip</span>
+            <span style={{ fontSize: '11px', color: 'rgba(232,240,238,0.45)', display: 'block', marginTop: '2px' }}>Contains verified ledger CSV + matched receipt PDFs</span>
+          </div>
+          <span style={{ fontSize: '10px', color: state === 'done' ? '#22B573' : '#138C7E', fontWeight: 700, background: state === 'done' ? 'rgba(34, 181, 115, 0.1)' : 'rgba(19, 140, 126, 0.08)', border: `1px solid ${state === 'done' ? 'rgba(34, 181, 115, 0.2)' : 'rgba(19, 140, 126, 0.15)'}`, padding: '2px 8px', borderRadius: '4px' }}>
+            {state === 'done' ? '✓ EXPORTED' : state === 'exporting' ? 'EXPORTING' : 'READY'}
+          </span>
+        </div>
+        
+        {state === 'exporting' && (
+          <div style={{ width: '100%', marginTop: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#138C7E', marginBottom: '4px' }}>
+              <span>Zipping attachments...</span>
+              <span>{progress}%</span>
+            </div>
+            <div style={{ width: '100%', height: '4px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{ width: `${progress}%`, height: '100%', background: '#138C7E', transition: 'width 0.1s ease' }} />
+            </div>
+          </div>
+        )}
+
+        {state === 'done' && (
+          <div style={{ background: 'rgba(34, 181, 115, 0.05)', border: '1px solid rgba(34, 181, 115, 0.15)', borderRadius: '8px', padding: '10px 14px', fontSize: '11.5px', color: '#22B573', display: 'flex', alignItems: 'center', gap: '8px', animation: 'kaeo-scale-in 0.25s ease' }}>
+            <span>✓</span>
+            <span>Ledger and 18 matching invoices compiled successfully.</span>
+          </div>
+        )}
+      </div>
       
       <button 
-        onClick={() => {
-          setDownloaded(true);
-          setTimeout(() => setDownloaded(false), 3000);
-        }}
+        disabled={state === 'exporting'}
         style={{ 
           width: '100%', 
           padding: '14px', 
-          background: downloaded ? 'rgba(34, 181, 115, 0.15)' : '#138C7E', 
-          color: downloaded ? '#22B573' : '#050F0D', 
-          border: downloaded ? '1px solid rgba(34, 181, 115, 0.3)' : 'none', 
+          background: state === 'done' ? 'rgba(34, 181, 115, 0.15)' : '#138C7E', 
+          color: state === 'done' ? '#22B573' : '#050F0D', 
+          border: state === 'done' ? '1px solid rgba(34, 181, 115, 0.3)' : 'none', 
           borderRadius: '10px', 
           fontWeight: 700, 
           fontSize: '12.5px', 
-          cursor: 'pointer', 
+          cursor: state === 'exporting' ? 'not-allowed' : 'pointer', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center', 
@@ -300,7 +449,7 @@ const GenerateReportsVisual = ({ isDesktop = true }: { isDesktop?: boolean }) =>
           boxShadow: '0 4px 12px rgba(19, 140, 126, 0.15)'
         }}
       >
-        <span>{downloaded ? '✓ Downloaded accountant pack' : '📥 Download Accountant Export (ZIP)'}</span>
+        <span>{state === 'done' ? '✓ Accountant pack exported (ZIP)' : state === 'exporting' ? 'Exporting...' : '📥 Export Accountant Pack (ZIP)'}</span>
       </button>
     </div>
   );
@@ -315,38 +464,38 @@ const InteractiveWorkflowSection: React.FC = () => {
   const steps = [
     {
       num: "01",
-      label: "Upload files",
+      label: "Upload Statement",
       title: "Upload statement and invoice sheets",
       description: "Supports standard ICICI, HDFC, Axis CSV/XLSX file formats.",
       visual: (isDesk: boolean) => <UploadVisualInteractive isDesktop={isDesk} />
     },
     {
       num: "02",
-      label: "Map transactions",
-      title: "Automatic field identification",
-      description: "Auto-detects columns, debit/credit values, and references.",
-      visual: (isDesk: boolean) => <MapVisualInteractive isDesktop={isDesk} />
+      label: "AI categorises transactions",
+      title: "Automatic field and category identification",
+      description: "Auto-detects columns and maps transactions to categories automatically.",
+      visual: (isDesk: boolean) => <AICategoriseVisual isDesktop={isDesk} />
     },
     {
       num: "03",
-      label: "Review risks",
+      label: "Risk Inbox highlights issues",
       title: "Identify ledger risk anomalies",
       description: "Flags duplicate suspects, high outflows, and uncategorized spend.",
-      visual: (isDesk: boolean) => <ReviewVisualInteractive isDesktop={isDesk} />
+      visual: (isDesk: boolean) => <RiskInboxVisual isDesktop={isDesk} />
     },
     {
       num: "04",
-      label: "Understand vendors",
+      label: "Reports generated",
       title: "Get complete vendor spend context",
       description: "Aggregates transactions by merchant and tracks recurring trends.",
-      visual: (isDesk: boolean) => <UnderstandVendorsVisual isDesktop={isDesk} />
+      visual: (isDesk: boolean) => <ReportsGeneratedVisual isDesktop={isDesk} />
     },
     {
       num: "05",
-      label: "Generate reports",
+      label: "Export accountant-ready files",
       title: "Export accountant-ready packs",
       description: "Download structured review summaries and attachments for your CA.",
-      visual: (isDesk: boolean) => <GenerateReportsVisual isDesktop={isDesk} />
+      visual: (isDesk: boolean) => <ExportVisualInteractive isDesktop={isDesk} />
     }
   ];
 
@@ -1990,6 +2139,117 @@ const LibbyChatMock = () => (
   </div>
 );
 
+const FAQSection = () => {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const faqs = [
+    {
+      q: "Is my financial data secure?",
+      a: "Yes. We encrypt all data in transit and at rest using AES-256 encryption. Workspaces are fully isolated to ensure strict data privacy."
+    },
+    {
+      q: "What file formats are supported?",
+      a: "We support standard Excel (.xlsx) and CSV exports from all major Indian banks including HDFC, ICICI, Axis, SBI, and Kotak."
+    },
+    {
+      q: "Does Kaeo connect to my bank?",
+      a: "Kaeo operates purely on statement uploads. We do not require direct credentials or API links to your bank accounts, ensuring zero unauthorized access risk."
+    },
+    {
+      q: "Can accountants use Kaeo?",
+      a: "Absolutely. Kaeo generates structured review packs and standard formats that match CA requirements, making auditing and GST filing extremely fast."
+    },
+    {
+      q: "How does AI assist?",
+      a: "Our AI auto-categorises transactions and flags anomalies (duplicates, concentration, balance gaps). You maintain 100% control; no values are silently modified."
+    },
+    {
+      q: "Can I delete uploaded files?",
+      a: "Yes. You have full ownership of your data. You can delete uploaded statements and cleared records from our secure servers at any time."
+    }
+  ];
+
+  return (
+    <section id="faq" style={{ padding: '100px 48px', background: 'transparent' }}>
+      <div style={{ maxWidth: '760px', margin: '0 auto', width: '100%' }}>
+        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+          <div style={{ color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.08em', marginBottom: '16px', textTransform: 'uppercase', fontWeight: 500 }}>
+            FAQ — ANSWERS
+          </div>
+          <h2 style={{ fontWeight: 700, fontSize: 'clamp(28px, 4vw, 44px)', letterSpacing: '-0.02em', lineHeight: 1.15, color: '#E8F0EE', margin: 0 }}>
+            Frequently Asked Questions
+          </h2>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {faqs.map((faq, idx) => {
+            const isOpen = openIndex === idx;
+            return (
+              <div 
+                key={idx}
+                style={{
+                  background: 'rgba(20, 24, 23, 0.45)',
+                  border: '1px solid rgba(140, 150, 148, 0.1)',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)'
+                }}
+                className="premium-glass"
+              >
+                <button
+                  onClick={() => setOpenIndex(isOpen ? null : idx)}
+                  style={{
+                    width: '100%',
+                    padding: '20px 24px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: 'transparent',
+                    border: 'none',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    color: '#E8F0EE',
+                    fontWeight: 600,
+                    fontSize: '15px',
+                    outline: 'none'
+                  }}
+                >
+                  <span>{faq.q}</span>
+                  <span style={{ 
+                    color: '#138C7E', 
+                    fontSize: '18px', 
+                    transition: 'transform 0.3s ease',
+                    transform: isOpen ? 'rotate(45deg)' : 'rotate(0)'
+                  }}>
+                    +
+                  </span>
+                </button>
+                <div style={{
+                  maxHeight: isOpen ? '150px' : '0',
+                  opacity: isOpen ? 1 : 0,
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{ 
+                    padding: '0 24px 20px 24px', 
+                    color: 'rgba(232, 240, 238, 0.65)', 
+                    fontSize: '13.5px', 
+                    lineHeight: 1.6 
+                  }}>
+                    {faq.a}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 /* ═══════════════════════════════════════════════
    MAIN LANDING PAGE
 ═══════════════════════════════════════════════ */
@@ -2175,6 +2435,49 @@ export const Landing: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Minimalist Strip */}
+          <div style={{
+            marginTop: '80px',
+            borderTop: '1px solid rgba(140, 150, 148, 0.12)',
+            paddingTop: '40px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: '20px',
+            textAlign: 'center'
+          }}>
+            {[
+              { icon: '🇮🇳', title: 'Built for Indian SMEs', desc: 'Tailored for Indian businesses' },
+              { icon: '🏦', title: 'Indian bank statements', desc: 'Direct support for HDFC, ICICI, etc' },
+              { icon: '🧾', title: 'GST-friendly workflows', desc: 'Classified for standard GST audits' },
+              { icon: '💳', title: 'Mixed payment methods', desc: 'UPI, NEFT, IMPS, and cards' },
+              { icon: '👥', title: 'Built for accountants', desc: 'CA-ready review packs and formats' }
+            ].map((card, i) => (
+              <div 
+                key={i}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.01)',
+                  border: '1px solid rgba(140, 150, 148, 0.08)',
+                  borderRadius: '12px',
+                  padding: '20px 16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  cursor: 'default'
+                }}
+                className="premium-glass hover:border-[#138C7E]/40 hover:bg-[#138C7E]/[0.01]"
+              >
+                <span style={{ fontSize: '22px' }}>{card.icon}</span>
+                <div>
+                  <h4 style={{ fontSize: '13.5px', fontWeight: 600, color: '#E8F0EE', margin: '0 0 2px 0' }}>{card.title}</h4>
+                  <p style={{ fontSize: '11px', color: 'rgba(232, 240, 238, 0.4)', margin: 0 }}>{card.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
         </div>
       </section>
 
@@ -2214,6 +2517,201 @@ export const Landing: React.FC = () => {
 
       {/* ═══════ 006 — REPORTS ═══════ */}
       <InteractiveReportsSection />
+
+      {/* ═══════ TRUST & SECURITY ═══════ */}
+      <section id="security" style={S.section()}>
+        <div style={S.inner}>
+          <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+            <SectionLabel code="SEC" label="Trust & Security" />
+            <h2 style={{ ...S.h2, margin: '0 auto 16px', maxWidth: '640px' }}>
+              Built for financial trust.
+            </h2>
+            <p style={{ fontSize: '16px', color: 'rgba(232, 240, 238, 0.50)', maxWidth: '520px', margin: '0 auto', lineHeight: 1.6 }}>
+              Financial data deserves enterprise-grade security without sacrificing usability.
+            </p>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '24px'
+          }}>
+            {[
+              { icon: '🔒', title: 'AES-256 Encryption', desc: 'Financial data encrypted in transit and at rest.' },
+              { icon: '🛡', title: 'Private Workspaces', desc: 'Every workspace is securely isolated.' },
+              { icon: '👥', title: 'Role-Based Access', desc: 'Control who can review and export financial information.' },
+              { icon: '📜', title: 'Audit Trail', desc: 'Track reviews and important financial actions.' },
+              { icon: '🤖', title: 'AI With Human Control', desc: 'Kaeo suggests. You decide. AI never silently modifies financial records.' },
+              { icon: '🗑', title: 'Delete Anytime', desc: 'Delete uploaded financial files whenever you choose.' }
+            ].map((card, i) => (
+              <div
+                key={i}
+                style={{
+                  background: 'rgba(20, 24, 23, 0.45)',
+                  border: '1px solid rgba(140, 150, 148, 0.1)',
+                  borderRadius: '16px',
+                  padding: '28px 24px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  cursor: 'default',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)'
+                }}
+                className="premium-glass hover:border-[#138C7E]/40 hover:bg-[#138C7E]/[0.01]"
+              >
+                <div style={{
+                  fontSize: '20px',
+                  background: 'rgba(140, 150, 148, 0.05)',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid rgba(140, 150, 148, 0.08)'
+                }}>
+                  {card.icon}
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#E8F0EE', marginBottom: '8px', letterSpacing: '-0.01em' }}>
+                    {card.title}
+                  </h4>
+                  <p style={{ fontSize: '13px', color: 'rgba(232, 240, 238, 0.45)', lineHeight: 1.55, margin: 0 }}>
+                    {card.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ PRODUCT VISION ═══════ */}
+      <section id="vision" style={S.section()}>
+        <div style={S.inner}>
+          <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+            <SectionLabel code="VIS" label="Product Vision" />
+            <h2 style={{ ...S.h2, margin: '0 auto 16px', maxWidth: '640px' }}>
+              Where Kaeo is going
+            </h2>
+            <p style={{ fontSize: '16px', color: 'rgba(232, 240, 238, 0.50)', maxWidth: '480px', margin: '0 auto', lineHeight: 1.6 }}>
+              Move from reviewing spend to controlling and paying for it.
+            </p>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '32px',
+            position: 'relative'
+          }} className="vision-grid">
+            {[
+              {
+                stage: 'TODAY',
+                title: 'Review',
+                items: ['Upload', 'Categorise', 'Review', 'Export'],
+                desc: 'Turn messy financial data into accountant-ready insights.'
+              },
+              {
+                stage: 'TOMORROW',
+                title: 'Control',
+                items: ['Approval workflows', 'Staff spend review', 'Spend policies', 'Vendor intelligence'],
+                desc: 'Move from reviewing spend to controlling it.'
+              },
+              {
+                stage: 'FUTURE',
+                title: 'Pay',
+                items: ['Corporate cards', 'UPI approvals', 'Business payments', 'Finance workspace'],
+                desc: 'Manage every business expense from one workspace.'
+              }
+            ].map((card, i) => (
+              <div
+                key={i}
+                style={{
+                  background: 'rgba(20, 24, 23, 0.45)',
+                  border: '1px solid rgba(140, 150, 148, 0.1)',
+                  borderRadius: '20px',
+                  padding: '32px 28px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  minHeight: '340px',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  position: 'relative'
+                }}
+                className="premium-glass hover:border-[#138C7E]/40 hover:bg-[#138C7E]/[0.01]"
+              >
+                {/* Arrow Connector on desktop */}
+                {i < 2 && (
+                  <div style={{
+                    position: 'absolute',
+                    right: '-24px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    fontSize: '20px',
+                    color: 'rgba(19, 140, 126, 0.35)',
+                    zIndex: 10
+                  }} className="vision-connector-desktop">
+                    ➔
+                  </div>
+                )}
+                
+                {/* Arrow Connector on mobile */}
+                {i < 2 && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '-24px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    fontSize: '20px',
+                    color: 'rgba(19, 140, 126, 0.35)',
+                    zIndex: 10
+                  }} className="vision-connector-mobile">
+                    ↓
+                  </div>
+                )}
+
+                <div>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    letterSpacing: '0.1em',
+                    color: i === 0 ? '#138C7E' : i === 1 ? '#D4922A' : '#7E9C98',
+                    background: i === 0 ? 'rgba(19, 140, 126, 0.08)' : i === 1 ? 'rgba(212, 146, 42, 0.08)' : 'rgba(140, 150, 148, 0.08)',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    display: 'inline-block',
+                    marginBottom: '16px'
+                  }}>
+                    {card.stage}
+                  </span>
+                  
+                  <h3 style={{ fontSize: '22px', fontWeight: 700, color: '#E8F0EE', marginBottom: '8px' }}>
+                    {card.title}
+                  </h3>
+                  
+                  <p style={{ fontSize: '13.5px', color: 'rgba(232, 240, 238, 0.45)', lineHeight: 1.5, marginBottom: '24px' }}>
+                    {card.desc}
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '16px' }}>
+                  {card.items.map((item, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span style={{ color: '#138C7E', fontSize: '12px' }}>✓</span>
+                      <span style={{ fontSize: '13px', color: 'rgba(232, 240, 238, 0.65)' }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ═══════ 007 — PRICING ═══════ */}
       <section id="pricing" style={S.section('#121514')}>
@@ -2331,37 +2829,90 @@ export const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* ═══════ 008 — FINAL CTA ═══════ */}
-      <section style={{ ...S.section('#080A09'), position: 'relative', overflow: 'hidden' }}>
+      {/* ═══════ FAQ ═══════ */}
+      <FAQSection />
+
+      {/* ═══════ 008 — FOUNDING DESIGN PARTNERS ═══════ */}
+      <section style={{ ...S.section('#080A09'), position: 'relative', overflow: 'hidden' }} id="design-partners">
         <div
           aria-hidden="true"
           style={{
             position: 'absolute',
             top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
             width: '600px', height: '300px',
-            background: 'radial-gradient(ellipse, rgba(19, 140, 126, 0.05) 0%, transparent 65%)',
+            background: 'radial-gradient(ellipse, rgba(19, 140, 126, 0.06) 0%, transparent 65%)',
             pointerEvents: 'none',
           }}
         />
-        <div style={{ ...S.inner, textAlign: 'center', position: 'relative' }}>
-          <div style={{ color: '#138C7E', fontFamily: 'ui-monospace, monospace', fontSize: '11px', letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 500, marginBottom: '24px' }}>
-            008 — GET STARTED
+        <div style={{ ...S.inner, textAlign: 'center', position: 'relative', maxWidth: '800px' }}>
+          
+          {/* Exclusive Premium Badge */}
+          <div style={{
+            display: 'inline-block',
+            background: 'rgba(19, 140, 126, 0.08)',
+            border: '1px solid rgba(19, 140, 126, 0.25)',
+            borderRadius: '999px',
+            padding: '6px 16px',
+            color: '#138C7E',
+            fontSize: '11px',
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            marginBottom: '24px'
+          }}>
+            ✨ Limited to the first 10 businesses
           </div>
-          <h2 style={{ ...S.h2, fontSize: 'clamp(36px, 5vw, 68px)', maxWidth: '640px', margin: '0 auto 20px' }}>
-            Clean books start with <span style={S.accent}>clean review.</span>
+
+          <h2 style={{ ...S.h2, fontSize: 'clamp(32px, 5vw, 54px)', maxWidth: '680px', margin: '0 auto 20px' }}>
+            Become a Founding <span style={S.accent}>Design Partner</span>
           </h2>
-          <p style={{ fontSize: '17px', color: 'rgba(232,240,238,0.45)', maxWidth: '460px', margin: '0 auto 40px', lineHeight: 1.6 }}>
-            Upload your first bank statement and see your transactions mapped, categorized, and flagged in minutes.
+          
+          <p style={{ fontSize: '16px', color: 'rgba(232,240,238,0.55)', maxWidth: '580px', margin: '0 auto 36px', lineHeight: 1.65 }}>
+            We're working closely with a small group of SMEs and accountants to shape Kaeo before public launch.
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
+
+          {/* Benefits Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '16px',
+            maxWidth: '640px',
+            margin: '0 auto 44px',
+            textAlign: 'left'
+          }}>
+            {[
+              'Early access to features',
+              'Direct influence on roadmap',
+              'Priority support channel',
+              'Lifetime launch pricing tiers'
+            ].map((benefit, idx) => (
+              <div 
+                key={idx}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: 'rgba(255, 255, 255, 0.01)',
+                  border: '1px solid rgba(140, 150, 148, 0.1)',
+                  borderRadius: '10px',
+                  padding: '12px 16px'
+                }}
+              >
+                <span style={{ color: '#138C7E', fontWeight: 700, fontSize: '13px' }}>✓</span>
+                <span style={{ fontSize: '13.5px', color: 'rgba(232, 240, 238, 0.75)', fontWeight: 500 }}>{benefit}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <Link
-              to={user ? '/dashboard' : '/signup'}
+              to="/signup"
               style={{
                 background: '#138C7E',
                 color: '#080A09',
                 padding: '16px 36px',
                 borderRadius: '999px',
-                fontSize: '16px',
+                fontSize: '15px',
                 fontWeight: 600,
                 textDecoration: 'none',
                 display: 'inline-block',
@@ -2369,29 +2920,29 @@ export const Landing: React.FC = () => {
               }}
               className="cta-btn cta-primary"
             >
-              {user ? 'Go to Dashboard' : 'Start reviewing'}{' '}
-              <span className="cta-arrow" style={{ display: 'inline-block' }}>→</span>
+              Become a Founding Design Partner <span className="cta-arrow" style={{ display: 'inline-block' }}>→</span>
             </Link>
             <a
-              href="#how-it-works"
-              onClick={(e) => { e.preventDefault(); document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }); }}
+              href="mailto:demo@kaeo.in?subject=Book a Demo"
               style={{
-                color: 'rgba(232,240,238,0.55)',
-                fontSize: '15px',
+                color: 'rgba(232,240,238,0.65)',
+                fontSize: '14.5px',
                 fontWeight: 500,
                 textDecoration: 'none',
                 padding: '16px 28px',
                 border: '1px solid rgba(140, 150, 148, 0.18)',
                 borderRadius: '999px',
                 display: 'inline-block',
+                background: 'rgba(255, 255, 255, 0.01)'
               }}
               className="cta-btn cta-secondary"
             >
-              See how it works
+              Book a Demo
             </a>
           </div>
-          <p style={{ marginTop: '28px', fontSize: '13px', color: 'rgba(232,240,238,0.30)', lineHeight: 1.5 }}>
-            No credit card required · Indian bank statement formats supported · Accountant-ready output
+          
+          <p style={{ marginTop: '28px', fontSize: '12.5px', color: 'rgba(232,240,238,0.30)', lineHeight: 1.5 }}>
+            No upfront commitment required · Help build the future of Indian business operations
           </p>
         </div>
       </section>

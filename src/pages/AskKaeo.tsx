@@ -4,6 +4,8 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import { useAskKaeoChat } from '../hooks/useAskKaeoChat';
 import { Send, AlertCircle, User, Zap, Sparkles, ExternalLink } from 'lucide-react';
 import EmptyState from '../components/ui/EmptyState';
+import WorkspaceBrief from '../components/libby/WorkspaceBrief';
+import QuickActions from '../components/libby/QuickActions';
 
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../components/auth/AuthProvider';
@@ -17,6 +19,8 @@ import {
   EXECUTABLE_ACTION_TYPES,
   type LibbyAction
 } from '../lib/libbyActions';
+import { buildWorkspaceContext } from '../lib/libby/contextEngine';
+import { buildWorkspaceBrief, type WorkspaceBriefData } from '../lib/libby/workspaceBriefEngine';
 
 const renderStructuredContent = (content: string) => {
   if (!content) return null;
@@ -26,15 +30,15 @@ const renderStructuredContent = (content: string) => {
   }
 
   const lines = content.split('\n');
-  const sections: { title: string; items: string[]; type: 'summary' | 'numbers' | 'risks' | 'actions' | 'sources' | 'general' }[] = [];
+  const sections: { title: string; items: string[]; type: 'summary' | 'why' | 'impact' | 'actions' | 'numbers' | 'risks' | 'sources' | 'general' }[] = [];
   
-  let currentSection: { title: string; items: string[]; type: 'summary' | 'numbers' | 'risks' | 'actions' | 'sources' | 'general' } = { title: '', items: [], type: 'general' };
+  let currentSection: { title: string; items: string[]; type: 'summary' | 'why' | 'impact' | 'actions' | 'numbers' | 'risks' | 'sources' | 'general' } = { title: '', items: [], type: 'general' };
   
   lines.forEach(line => {
     const trimmed = line.trim();
     if (!trimmed) return;
     
-    const headerMatch = trimmed.match(/^(?:###|\*\*|### \*\*)\s*(Summary|Key [nN]umbers|Risks? [fF]ound|Risks?|Recommended [nN]ext [aA]ctions|Recommended [aA]ctions|Next [aA]ctions|Sources?|Source [tT]ransactions)\s*(?::|\*\*|: \*\*|$)/i);
+    const headerMatch = trimmed.match(/^(?:###|\*\*|### \*\*)\s*(Summary|Why|Impact|Suggested [aA]ctions|Key [nN]umbers|Risks? [fF]ound|Risks?|Recommended [nN]ext [aA]ctions|Recommended [aA]ctions|Next [aA]ctions|Sources?|Source [tT]ransactions)\s*(?::|\*\*|: \*\*|$)/i);
     
     if (headerMatch) {
       if (currentSection.title || currentSection.items.length > 0) {
@@ -42,17 +46,19 @@ const renderStructuredContent = (content: string) => {
       }
       
       const title = headerMatch[1];
-      let type: 'summary' | 'numbers' | 'risks' | 'actions' | 'sources' | 'general' = 'general';
+      let type: 'summary' | 'why' | 'impact' | 'actions' | 'numbers' | 'risks' | 'sources' | 'general' = 'general';
       const lowerTitle = title.toLowerCase();
       if (lowerTitle.includes('summary')) type = 'summary';
+      else if (lowerTitle.includes('why')) type = 'why';
+      else if (lowerTitle.includes('impact')) type = 'impact';
+      else if (lowerTitle.includes('action') || lowerTitle.includes('suggested')) type = 'actions';
       else if (lowerTitle.includes('number')) type = 'numbers';
       else if (lowerTitle.includes('risk')) type = 'risks';
-      else if (lowerTitle.includes('action')) type = 'actions';
       else if (lowerTitle.includes('source')) type = 'sources';
       
       currentSection = { title, items: [], type };
     } else {
-      const cleanedLine = trimmed.replace(/^[-*+]\s+/, '').replace(/^###\s+/, '');
+      const cleanedLine = trimmed.replace(/^[-*+•]\s+/, '').replace(/^###\s+/, '');
       currentSection.items.push(cleanedLine);
     }
   });
@@ -66,13 +72,46 @@ const renderStructuredContent = (content: string) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-left">
       {sections.map((sec, idx) => {
         if (sec.type === 'summary') {
           return (
             <div key={idx} className="pb-3 border-b border-border/30">
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-1">Summary</h4>
-              <p className="text-sm font-medium leading-relaxed text-foreground">{sec.items.join(' ')}</p>
+              <p className="text-sm font-semibold leading-relaxed text-foreground">{sec.items.join(' ')}</p>
+            </div>
+          );
+        }
+        
+        if (sec.type === 'why') {
+          return (
+            <div key={idx} className="bg-muted/15 p-3.5 rounded-xl border border-border/30">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)]/60" />
+                Why
+              </h4>
+              <p className="text-xs text-foreground font-medium leading-relaxed whitespace-pre-line">
+                {sec.items.join('\n')}
+              </p>
+            </div>
+          );
+        }
+
+        if (sec.type === 'impact') {
+          return (
+            <div key={idx} className="bg-[rgba(234,179,8,0.03)] p-3.5 rounded-xl border border-[rgba(234,179,8,0.15)]">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--warning)] mb-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)]" />
+                Impact
+              </h4>
+              <ul className="space-y-1.5">
+                {sec.items.map((item, i) => (
+                  <li key={i} className="text-xs text-foreground font-medium leading-normal flex items-start gap-2">
+                    <span className="text-[var(--warning)] mt-0.5">•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           );
         }
@@ -120,7 +159,7 @@ const renderStructuredContent = (content: string) => {
             <div key={idx} className="bg-[rgba(15,118,110,0.03)] p-3.5 rounded-xl border border-[rgba(15,118,110,0.12)]">
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--primary)] mb-2 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
-                Recommended Next Actions
+                Suggested Actions
               </h4>
               <ul className="space-y-1.5">
                 {sec.items.map((item, i) => (
@@ -176,7 +215,10 @@ const AskKaeo = () => {
   const { messages, loading, dbError, sendMessage } = useAskKaeoChat();
   const [input, setInput] = useState('');
   const [preparedActions, setPreparedActions] = useState<LibbyAction[]>([]);
-  
+  const [workspaceBrief, setWorkspaceBrief] = useState<WorkspaceBriefData | null>(null);
+  const [briefLoading, setBriefLoading] = useState(false);
+  const briefLoadedRef = useRef<string | null>(null);
+
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   // Track previous client and organization to clear stale actions on scope switch
   const prevClientIdRef = useRef<string | null>(null);
@@ -227,6 +269,19 @@ const AskKaeo = () => {
       setPreparedActions([]);
     }
   }, [loadPreparedActions, messages, activeClient?.id, activeOrg?.id]);
+
+  // Lazily load workspace brief only when the empty state is visible
+  const isEmptyState = messages.length <= 1 && messages[0]?.source_json?.mode === 'greeting';
+  useEffect(() => {
+    if (!activeClient?.id || !activeOrg?.id || !isEmptyState) return;
+    if (briefLoadedRef.current === activeClient.id) return;
+    briefLoadedRef.current = activeClient.id;
+    setBriefLoading(true);
+    buildWorkspaceContext(activeClient.id, activeOrg.id)
+      .then(ctx => setWorkspaceBrief(buildWorkspaceBrief(ctx)))
+      .catch(() => setWorkspaceBrief(null))
+      .finally(() => setBriefLoading(false));
+  }, [activeClient?.id, activeOrg?.id, isEmptyState]);
 
   // Refresh prepared actions when a workspace-wide refresh is triggered
   useWorkspaceRefresh(useCallback(() => {
@@ -319,37 +374,27 @@ const AskKaeo = () => {
 
         {/* CHAT AREA */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-center h-full max-w-md mx-auto px-4 py-8">
-              <div className="w-16 h-16 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center mb-4 animate-pulse">
-                <Sparkles className="w-8 h-8 text-teal-400" />
-              </div>
-              <h3 className="text-lg font-bold text-foreground mb-1">Ask Libby</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-6">
-                Libby is Kaeo’s AI finance operator. Ask her to find risks, summarize spend, review vendors, and generate accountant-ready reports.
-              </p>
-              <div className="w-full space-y-2">
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mb-2 text-left">Suggested Questions</p>
-
-                {[
-                  "What should I fix first?",
-                  "Review my transactions",
-                  "Which vendors need attention?",
-                  "Are we ready for month-end?",
-                  "Prepare my accountant pack"
-                ].map((query, idx) => (
-                  <button
-                    key={idx}
-                    onClick={async () => {
-                      await sendMessage(query);
-                    }}
-                    className="w-full text-left px-4 py-3 bg-card hover:bg-[var(--muted)] text-foreground font-semibold rounded-xl border border-border/60 hover:border-[var(--primary)]/30 text-xs transition-all cursor-pointer flex items-center justify-between group"
-                  >
-                    <span className="font-medium">{query}</span>
-                    <Sparkles className="w-3.5 h-3.5 text-muted-foreground group-hover:text-[var(--primary)] transition-colors shrink-0" />
-                  </button>
-                ))}
-              </div>
+          {isEmptyState ? (
+            <div className="flex flex-col items-center justify-center h-full px-4 py-8">
+              {(workspaceBrief || briefLoading) ? (
+                <WorkspaceBrief
+                  brief={workspaceBrief}
+                  loading={briefLoading}
+                  onSendMessage={sendMessage}
+                  compact={false}
+                />
+              ) : (
+                // Fallback when brief fetch fails
+                <div className="flex flex-col items-center text-center max-w-md mx-auto">
+                  <div className="w-16 h-16 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center mb-4">
+                    <Sparkles className="w-8 h-8 text-teal-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-foreground mb-1">Ask Libby</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed mb-6">
+                    Libby is Kaeo's AI finance operator. Ask her to find risks, summarize spend, review vendors, and generate reports.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             messages.map((msg, idx) => {
@@ -456,6 +501,10 @@ const AskKaeo = () => {
 
         {/* INPUT AREA */}
         <div className="p-4 border-t border-[var(--border)] bg-transparent shrink-0">
+          {/* Quick Actions — shown above input */}
+          <div className="max-w-4xl mx-auto mb-2">
+            <QuickActions onSendMessage={sendMessage} loading={loading} compact={false} />
+          </div>
           <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex items-center gap-2">
             <input
               type="text"
@@ -473,7 +522,7 @@ const AskKaeo = () => {
               <Send className="w-3.5 h-3.5" />
             </button>
           </form>
-          <div className="text-center mt-2.5">
+          <div className="text-center mt-2">
             <p className="text-[10px] text-muted-foreground/80 font-medium">Libby uses your business data to keep answers useful and grounded.</p>
           </div>
         </div>
