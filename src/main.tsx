@@ -3,13 +3,8 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
-// Initialize theme
-const savedTheme = localStorage.getItem('kaeo-theme');
-if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-  document.documentElement.classList.add('dark');
-} else {
-  document.documentElement.classList.remove('dark');
-}
+// Initialize theme (always force dark mode)
+document.documentElement.classList.add('dark');
 
 
 createRoot(document.getElementById('root')!).render(

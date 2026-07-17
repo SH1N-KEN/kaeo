@@ -102,7 +102,14 @@ export default function ReportDetail() {
         <div className="p-8 md:p-12 border-b">
           <div className="flex justify-between items-start mb-12">
             <div>
-              <h1 className="text-4xl font-bold text-foreground mb-2">CFO Report</h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-4xl font-bold text-foreground">CFO Report</h1>
+                <AskLibbyButton
+                  query={`Summarise this report. (Report: ${report.title})`}
+                  variant="inline"
+                  label="Explain Report"
+                />
+              </div>
               <p className="text-xl text-muted-foreground">{summary.clientName}</p>
             </div>
             <div className="text-right">

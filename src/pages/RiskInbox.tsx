@@ -481,7 +481,7 @@ const RiskInbox: React.FC = () => {
                       setSelectedRisk(risk);
                       fetchNotes(risk.id);
                     }}
-                    className={`frosted-card p-5 cursor-pointer relative overflow-hidden transition-all ${
+                    className={`frosted-card p-5 cursor-pointer relative overflow-hidden transition-all group ${
                       selectedRisk?.id === risk.id 
                         ? 'border-primary shadow-sm bg-primary/[0.02]' 
                         : 'frosted-card-hover hover:border-primary/40'
@@ -510,9 +510,11 @@ const RiskInbox: React.FC = () => {
                               <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${getSeverityColor(risk.severity)}`}>
                                 {risk.severity}
                               </span>
-                              {(risk.severity === 'critical' || risk.severity === 'high') && (
-                                <AskLibbyButton query={`Tell me about ${risk.title}`} variant="icon" />
-                              )}
+                              <AskLibbyButton
+                                query={`Why was this flagged? (Risk: ${risk.title})`}
+                                variant="icon"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                              />
                             </div>
                             <p className="text-[12px] text-[var(--foreground-muted)] leading-normal mt-1">{risk.description}</p>
                           </div>

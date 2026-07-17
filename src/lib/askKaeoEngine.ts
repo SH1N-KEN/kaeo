@@ -799,7 +799,7 @@ export async function askKaeo(
     } else {
       impactBullets.push(`Grounded in ${workspaceContext.financial.transactionCount} verified transactions.`);
     }
-    formattedText += `\n\nImpact:\n${impactBullets.map(b => `• ${b}`).join('\n')}`;
+    formattedText += `\n\nEvidence:\n${impactBullets.map(b => `• ${b}`).join('\n')}`;
 
     if (aiResult.recommended_actions && aiResult.recommended_actions.length > 0) {
       formattedText += `\n\nSuggested Actions:\n${aiResult.recommended_actions.map(a => `• ${a}`).join('\n')}`;
@@ -816,7 +816,21 @@ export async function askKaeo(
     return {
       intent: legacyIntent,
       text: formattedText,
-      source_json: { mode, intent: legacyIntent, grounding_status, ai_confidence: aiResult.confidence, caveats: aiResult.caveats, needs_external_research: aiResult.needs_external_research, source_summary: aiResult.source_summary, ai_raw_response: aiResult }
+      source_json: {
+        mode,
+        intent: legacyIntent,
+        grounding_status,
+        ai_confidence: aiResult.confidence,
+        caveats: aiResult.caveats,
+        needs_external_research: aiResult.needs_external_research,
+        source_summary: aiResult.source_summary,
+        ai_raw_response: aiResult,
+        transactionCount: workspaceContext.financial.transactionCount,
+        uploads: workspaceContext.uploads || [],
+        risksCount: workspaceContext.risks.length,
+        vendorsCount: workspaceContext.vendors.totalVendorCount,
+        hasIncompleteData: workspaceContext.financial.transactionCount === 0 || (workspaceContext.uploads || []).length === 0,
+      }
     };
   }
 
@@ -845,7 +859,7 @@ AI review suggestions are prepared for your review.
 Why:
 Kaeo's background auditor scanned the ledger and prepared automated corrections.
 
-Impact:
+Evidence:
 • ${currentSuggestions.length} pending recommendations.
 • ${safeSuggestions.length} items are low risk and safe to bulk approve.
 
@@ -866,7 +880,7 @@ Your net cash movement is ${netCashPositive ? 'positive' : 'negative'} at ${form
 Why:
 Total inflows of ${formatReportCurrency(financial.income, baseCurrency)} minus outflows of ${formatReportCurrency(financial.expenses, baseCurrency)} resulted in net flow of ${formatReportCurrency(financial.netCash, baseCurrency)}.
 
-Impact:
+Evidence:
 • The business is cash-${netCashPositive ? 'positive' : 'negative'} this period.
 • Grounded in ${txCount} verified transactions.
 
@@ -888,7 +902,7 @@ Ledger optimization steps are required for month-end readiness.
 Why:
 Completing the ledger audit requires clearing open alerts and categorizing all entries.
 
-Impact:
+Evidence:
 • Current readiness score is affected by ${risks.length} open risks.
 • ${unreviewedCount} transactions are pending review validation.
 
@@ -909,7 +923,7 @@ There are ${risks.length} compliance risks that need attention.
 Why:
 Kaeo's automated monitors detected duplicate payments, unmatched invoices, or missing proofs.
 
-Impact:
+Evidence:
 • Duplicate exposure of ${formatReportCurrency(workspaceContext.duplicateExposure, baseCurrency)} detected.
 • ${highSeverityRisks.length} high-severity risk items are outstanding.
 
@@ -933,7 +947,7 @@ Recorded spend with ${mentionedVendor.display_name || mentionedVendor.name} is $
 Why:
 Aggregated spend concentration records for the mentioned vendor counterparty.
 
-Impact:
+Evidence:
 • Vendor category: ${mentionedVendor.category || 'Uncategorized'}.
 • Total spend represents a major outflow this period.
 
@@ -952,7 +966,7 @@ Your highest spend is with ${top.normalized_name}, totaling ${formatReportCurren
 Why:
 Vendor spend analysis across all registered business counterparties.
 
-Impact:
+Evidence:
 • Total of ${rawVendors.length} active vendors tracked.
 • Top vendor accounts for a significant portion of outflows.
 
@@ -969,7 +983,7 @@ No significant vendor spend concentration detected.
 Why:
 Unclassified or missing transactions in the current data period.
 
-Impact:
+Evidence:
 • Vendor metrics are limited by unclassified transactions.
 
 Suggested Actions:
@@ -990,7 +1004,7 @@ Your estimated recurring commitment is ${formatReportCurrency(vendors.recurringC
 Why:
 SaaS subscriptions and regular recurring outflows identified by transaction frequency.
 
-Impact:
+Evidence:
 • ${vendors.recurringVendors.length} active recurring vendors.
 • Subscription floor is established at ${formatReportCurrency(vendors.recurringCommitment, baseCurrency)}.
 
@@ -1012,7 +1026,7 @@ Ledger review optimization advice for ${workspaceContext.settings.clientName}.
 Why:
 Clean records are required for reliable cash flow forecasting and reporting.
 
-Impact:
+Evidence:
 • Current net cash movement is ${financial.netCash >= 0 ? 'positive' : 'negative'} at ${formatReportCurrency(financial.netCash, baseCurrency)}.
 • ${risks.length} open risks are causing data variance.
 
@@ -1037,7 +1051,7 @@ How can I help you review your finances?
 Why:
 I can answer queries regarding cash flow, risks, vendors, and reports.
 
-Impact:
+Evidence:
 • ${risks.length} open risks are currently active.
 • ${unreviewedCount} transactions are awaiting validation.
 
@@ -1056,7 +1070,7 @@ I can still summarize your imported Kaeo data, but the AI model is unavailable r
 Why:
 AI network request timeout or service temporarily offline.
 
-Impact:
+Evidence:
 • Displaying deterministic database aggregates.
 
 Suggested Actions:
@@ -1071,6 +1085,17 @@ ${responseText}`;
   return {
     intent: legacyIntent,
     text: responseText,
-    source_json: { mode: 'deterministic', intent: legacyIntent, grounding_status, fallback_reason: fallbackReason, ...sourceJson }
+    source_json: {
+      mode: 'deterministic',
+      intent: legacyIntent,
+      grounding_status,
+      fallback_reason: fallbackReason,
+      transactionCount: workspaceContext.financial.transactionCount,
+      uploads: workspaceContext.uploads || [],
+      risksCount: workspaceContext.risks.length,
+      vendorsCount: workspaceContext.vendors.totalVendorCount,
+      hasIncompleteData: workspaceContext.financial.transactionCount === 0 || (workspaceContext.uploads || []).length === 0,
+      ...sourceJson
+    }
   };
 }

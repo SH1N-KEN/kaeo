@@ -728,8 +728,18 @@ const Transactions: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-1">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="page-title">Transactions</h1>
-            <AskLibbyButton query="Review my transactions" label="Ask Libby" variant="inline" />
+            <h1 className="page-title">
+              {filterReview === 'staff_petty' ? 'Staff Spend Review' : 'Transactions'}
+            </h1>
+            <AskLibbyButton
+              query={
+                filterReview === 'staff_petty'
+                  ? 'Which staff/petty expenses need proof? (Staff Spend)'
+                  : 'Review my transactions'
+              }
+              label="Ask Libby"
+              variant="inline"
+            />
           </div>
           <p className="page-subtitle mt-1">
             Review, categorize, and approve imported ledger rows for <span style={{ color: 'var(--foreground)', fontWeight: 600 }}>{activeClient.name}</span>.
@@ -1089,9 +1099,16 @@ const Transactions: React.FC = () => {
                         {/* Counterparty + Description */}
                         <td className="max-w-[280px] px-4 py-3.5">
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-[13px] font-bold block truncate text-[var(--foreground)]">
-                              {tx.counterparty_name && tx.counterparty_name !== 'No counterparty' ? tx.counterparty_name : (tx.description?.split(' ')[0] || 'Unknown Vendor')}
-                            </span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-[13px] font-bold block truncate text-[var(--foreground)]">
+                                {tx.counterparty_name && tx.counterparty_name !== 'No counterparty' ? tx.counterparty_name : (tx.description?.split(' ')[0] || 'Unknown Vendor')}
+                              </span>
+                              <AskLibbyButton
+                                query={`Explain this transaction. (Transaction: ${tx.description || tx.counterparty_name || 'unknown'})`}
+                                variant="icon"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                              />
+                            </div>
                             <span className="text-[11px] block truncate text-[var(--muted-foreground)] font-normal" title={tx.description}>
                               {tx.description}
                             </span>

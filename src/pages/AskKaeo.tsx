@@ -10,6 +10,9 @@ import QuickActions from '../components/libby/QuickActions';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useWorkspaceRefresh, triggerWorkspaceRefresh } from '../hooks/useWorkspaceRefresh';
+import SuggestedActionChips, { extractSuggestedActions } from '../components/libby/SuggestedActionChips';
+import GroundingStatusCard from '../components/libby/GroundingStatusCard';
+import FinanceInsightCard, { parseInsightSections } from '../components/libby/FinanceInsightCard';
 import {
   getAvailableLibbyActionsForContext,
   applyLibbyAction,
@@ -22,6 +25,26 @@ import {
 import { buildWorkspaceContext } from '../lib/libby/contextEngine';
 import { buildWorkspaceBrief, type WorkspaceBriefData } from '../lib/libby/workspaceBriefEngine';
 
+const cleanUserMessage = (content: string): string => {
+  if (!content) return content;
+  return content
+    .replace(/\s*\(Risk:.*?\)/gi, '')
+    .replace(/\s*\(Vendor:.*?\)/gi, '')
+    .replace(/\s*\(Report:.*?\)/gi, '')
+    .replace(/\s*\(KPI:.*?\)/gi, '')
+    .replace(/\s*\(Transaction:.*?\)/gi, '');
+};
+
+const stripSuggestedActions = (content: string): string => {
+  if (!content) return content;
+  const blocks = content.split('\n\n');
+  const filteredBlocks = blocks.filter(block => {
+    const lower = block.trim().toLowerCase();
+    return !lower.startsWith('suggested actions:') && !lower.startsWith('next:');
+  });
+  return filteredBlocks.join('\n\n');
+};
+
 const renderStructuredContent = (content: string) => {
   if (!content) return null;
   // If the content is simple text, just render standard paragraph
@@ -30,15 +53,15 @@ const renderStructuredContent = (content: string) => {
   }
 
   const lines = content.split('\n');
-  const sections: { title: string; items: string[]; type: 'summary' | 'why' | 'impact' | 'actions' | 'numbers' | 'risks' | 'sources' | 'general' }[] = [];
+  const sections: { title: string; items: string[]; type: 'summary' | 'why' | 'impact' | 'evidence' | 'actions' | 'numbers' | 'risks' | 'sources' | 'general' }[] = [];
   
-  let currentSection: { title: string; items: string[]; type: 'summary' | 'why' | 'impact' | 'actions' | 'numbers' | 'risks' | 'sources' | 'general' } = { title: '', items: [], type: 'general' };
+  let currentSection: { title: string; items: string[]; type: 'summary' | 'why' | 'impact' | 'evidence' | 'actions' | 'numbers' | 'risks' | 'sources' | 'general' } = { title: '', items: [], type: 'general' };
   
   lines.forEach(line => {
     const trimmed = line.trim();
     if (!trimmed) return;
     
-    const headerMatch = trimmed.match(/^(?:###|\*\*|### \*\*)\s*(Summary|Why|Impact|Suggested [aA]ctions|Key [nN]umbers|Risks? [fF]ound|Risks?|Recommended [nN]ext [aA]ctions|Recommended [aA]ctions|Next [aA]ctions|Sources?|Source [tT]ransactions)\s*(?::|\*\*|: \*\*|$)/i);
+    const headerMatch = trimmed.match(/^(?:###|\*\*|### \*\*)\s*(Summary|Why|Impact|Evidence|Suggested [aA]ctions|Key [nN]umbers|Risks? [fF]ound|Risks?|Recommended [nN]ext [aA]ctions|Recommended [aA]ctions|Next [aA]ctions|Sources?|Source [tT]ransactions)\s*(?::|\*\*|: \*\*|$)/i);
     
     if (headerMatch) {
       if (currentSection.title || currentSection.items.length > 0) {
@@ -46,11 +69,12 @@ const renderStructuredContent = (content: string) => {
       }
       
       const title = headerMatch[1];
-      let type: 'summary' | 'why' | 'impact' | 'actions' | 'numbers' | 'risks' | 'sources' | 'general' = 'general';
+      let type: 'summary' | 'why' | 'impact' | 'evidence' | 'actions' | 'numbers' | 'risks' | 'sources' | 'general' = 'general';
       const lowerTitle = title.toLowerCase();
       if (lowerTitle.includes('summary')) type = 'summary';
       else if (lowerTitle.includes('why')) type = 'why';
       else if (lowerTitle.includes('impact')) type = 'impact';
+      else if (lowerTitle.includes('evidence')) type = 'evidence';
       else if (lowerTitle.includes('action') || lowerTitle.includes('suggested')) type = 'actions';
       else if (lowerTitle.includes('number')) type = 'numbers';
       else if (lowerTitle.includes('risk')) type = 'risks';
@@ -108,6 +132,25 @@ const renderStructuredContent = (content: string) => {
                 {sec.items.map((item, i) => (
                   <li key={i} className="text-xs text-foreground font-medium leading-normal flex items-start gap-2">
                     <span className="text-[var(--warning)] mt-0.5">•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        }
+
+        if (sec.type === 'evidence') {
+          return (
+            <div key={idx} className="bg-primary/5 p-3.5 rounded-xl border border-primary/15">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--primary)] mb-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)]" />
+                Evidence
+              </h4>
+              <ul className="space-y-1.5">
+                {sec.items.map((item, i) => (
+                  <li key={i} className="text-xs text-foreground font-medium leading-normal flex items-start gap-2">
+                    <span className="text-[var(--primary)] mt-0.5">•</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -414,9 +457,21 @@ const AskKaeo = () => {
                   )}
                   
                   <div className="flex flex-col gap-1.5 max-w-[80%] md:max-w-[70%]">
-                    <div className={`rounded-2xl px-4 py-3 ${isUser ? 'bg-primary text-primary-foreground rounded-tr-sm font-medium' : 'bg-muted/40 border border-border/40 text-foreground rounded-tl-sm font-normal'}`}>
+                    <div className={`rounded-2xl w-full ${
+                      isUser
+                        ? 'bg-primary text-primary-foreground rounded-tr-sm font-medium px-4 py-3'
+                        : parseInsightSections(msg.content)
+                          ? 'bg-transparent border-none p-0'
+                          : 'bg-muted/40 border border-border/40 text-foreground rounded-tl-sm font-normal px-4 py-3'
+                    }`}>
                       <div className="text-[13px] leading-relaxed">
-                        {renderStructuredContent(msg.content)}
+                        {isUser ? (
+                          renderStructuredContent(cleanUserMessage(msg.content))
+                        ) : parseInsightSections(msg.content) ? (
+                          <FinanceInsightCard content={msg.content} intent={msg.source_json?.intent} />
+                        ) : (
+                          renderStructuredContent(stripSuggestedActions(msg.content))
+                        )}
                       </div>
                       {isLimitExceeded && (
                         <div className="mt-3 pt-3 border-t border-border/50">
@@ -454,19 +509,12 @@ const AskKaeo = () => {
                         </div>
                       )}
                       {!isUser && !isGreeting && !isLimitExceeded && !isError && (
-                        <div className="mt-2.5 pt-2.5 border-t border-border/10 text-[9px] text-muted-foreground/85 flex items-center gap-1.5 font-medium animate-in fade-in">
-                          <Sparkles className="w-2.5 h-2.5" style={{ color: 'var(--primary)' }} />
-                          {(() => {
-                            const mode = msg.source_json?.mode;
-                            const status = msg.source_json?.grounding_status;
-                            if (status === 'general') return 'General recommendation';
-                            if (mode === 'deterministic') return 'Based on Kaeo data';
-                            if (mode && mode.startsWith('ai_')) return 'AI-assisted · Grounded in Kaeo data';
-                            return 'Based on Kaeo data';
-                          })()}
-                        </div>
+                        <GroundingStatusCard sourceJson={msg.source_json} />
                       )}
                     </div>
+                    {!isUser && (
+                      <SuggestedActionChips actions={extractSuggestedActions(msg.content)} />
+                    )}
                   </div>
 
                   {isUser && (

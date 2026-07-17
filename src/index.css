@@ -72,65 +72,69 @@
   --radius-sm:  0.25rem;
 }
 
-/* ─── LIGHT MODE TOKENS ─── */
+/* ─── LIGHT MODE TOKENS (FORCED DARK) ─── */
 :root {
   /* Backgrounds */
-  --background:        #F5F4F0; /* Warm stone-beige background */
-  --surface:           #FAFAFA;
-  --surface-muted:     #EAE9E4;
+  --background:        #080A09; /* Sleek deep graphite charcoal foundation */
+  --surface:           rgba(18, 20, 19, 0.45);
+  --surface-muted:     rgba(18, 20, 19, 0.65);
 
   /* Foreground */
-  --foreground:        #1A2220; /* Soft dark slate for premium text contrast */
-  --foreground-muted:  #6E7370;
+  --foreground:        #E8F0EE;
+  --foreground-muted:  #7E9C98;
 
   /* Card */
-  --card:              #FFFFFF; /* Pure white cards sitting on warm beige */
-  --card-foreground:   #1A2220;
+  --card:              rgba(20, 24, 23, 0.55);
+  --card-foreground:   #E8F0EE;
 
   /* Brand */
-  --primary:           #0F766E;
-  --primary-dark:      #064E4A;
+  --primary:           #138C7E; /* Restrained premium muted teal accent */
+  --primary-dark:      #0F766E;
   --primary-foreground:#FFFFFF;
 
   /* Secondary */
-  --secondary:         rgba(15, 118, 110, 0.06);
-  --secondary-foreground: #0F766E;
+  --secondary:         rgba(19, 140, 126, 0.08);
+  --secondary-foreground: #138C7E;
 
   /* Muted */
-  --muted:             #EAE9E4;
-  --muted-foreground:  #6E7370;
+  --muted:             rgba(22, 28, 27, 0.4);
+  --muted-foreground:  #7E9C98;
 
   /* Accent */
   --accent:            #138C7E;
   --accent-foreground: #FFFFFF;
 
   /* Borders */
-  --border:            #DFDDD7; /* Warm, visible but soft borders */
-  --input:             #DFDDD7;
-  --ring:              #0F766E;
+  --border:            rgba(140, 150, 148, 0.10); /* Subdued graphite border */
+  --input:             rgba(140, 150, 148, 0.08);
+  --ring:              #138C7E;
 
   /* Status */
-  --danger:   #C2413A;
-  --warning:  #B7791F;
-  --success:  #168A5B;
+  --danger:   #E05450;
+  --warning:  #D4922A;
+  --success:  #22B573;
 
   /* Shadows */
-  --shadow-card:    0 2px 8px rgba(16, 22, 21, 0.03), 0 1px 3px rgba(16, 22, 21, 0.02);
-  --shadow-popover: 0 10px 40px rgba(16, 22, 21, 0.06), 0 2px 8px rgba(16, 22, 21, 0.04);
-  --shadow-modal:   0 20px 60px rgba(16, 22, 21, 0.08), 0 4px 16px rgba(16, 22, 21, 0.06);
+  --shadow-card:    0 8px 32px 0 rgba(0, 0, 0, 0.35);
+  --shadow-popover: 0 10px 40px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-modal:   0 20px 60px rgba(0, 0, 0, 0.7), 0 4px 16px rgba(0, 0, 0, 0.5);
 
   /* Chart */
-  --chart-grid:           rgba(15, 118, 110, 0.06);
-  --chart-label:          #6E7370;
-  --chart-stroke-inflow:  #168A5B;
-  --chart-stroke-outflow: #C2413A;
+  --chart-grid:           rgba(19, 140, 126, 0.02);
+  --chart-label:          #7E9C98;
+  --chart-stroke-inflow:  #22B573;
+  --chart-stroke-outflow: #E05450;
+
+  /* Frosted Overlays & Popovers */
+  --glass-bg-popover:     rgba(10, 12, 11, 0.94);
+  --glass-border-strong:  rgba(140, 150, 148, 0.18);
 
   /* Sidebar */
-  --sidebar:                  #F0EFEA;
-  --sidebar-foreground:       #3A4542;
-  --sidebar-border:           #DFDDD7;
-  --sidebar-active:           rgba(15, 118, 110, 0.08);
-  --sidebar-active-foreground:#0F766E;
+  --sidebar:                  #060807;
+  --sidebar-foreground:       #7E9C98;
+  --sidebar-border:           rgba(140, 150, 148, 0.06);
+  --sidebar-active:           rgba(19, 140, 126, 0.09);
+  --sidebar-active-foreground:#138C7E;
 }
 
 .dark {

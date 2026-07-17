@@ -1,5 +1,6 @@
 import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import AskLibbyButton from '../libby/AskLibbyButton';
 
 interface MetricCardProps {
   title: string;
@@ -17,6 +18,7 @@ interface MetricCardProps {
   valueClassName?: string;
   onClick?: () => void;
   accentColor?: 'default' | 'success' | 'danger' | 'warning' | 'primary';
+  askLibbyQuery?: string;
 }
 
 const MetricCard: React.FC<MetricCardProps> = ({
@@ -29,6 +31,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   valueClassName = '',
   onClick,
   accentColor = 'default',
+  askLibbyQuery,
 }) => {
   const accentMap = {
     default: { icon: 'bg-[var(--muted)] text-[var(--muted-foreground)]' },
@@ -46,11 +49,11 @@ const MetricCard: React.FC<MetricCardProps> = ({
     primary: 'text-[var(--primary)]',
   };
 
-  const Tag = onClick ? 'button' : 'div';
+  const Tag = (onClick && !askLibbyQuery) ? 'button' : 'div';
 
   return (
     <Tag
-      className={`frosted-card ${onClick ? 'frosted-card-hover' : ''} p-5 flex flex-col justify-between h-full min-h-[120px] ${className}`}
+      className={`frosted-card ${onClick ? 'frosted-card-hover cursor-pointer' : ''} p-5 flex flex-col justify-between h-full min-h-[120px] group ${className}`}
       onClick={onClick}
     >
       {/* Header row */}
@@ -59,6 +62,13 @@ const MetricCard: React.FC<MetricCardProps> = ({
           {title}
         </span>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {askLibbyQuery && (
+            <AskLibbyButton
+              query={askLibbyQuery}
+              variant="icon"
+              className="opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+            />
+          )}
           {trend && (
             <span
               className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${

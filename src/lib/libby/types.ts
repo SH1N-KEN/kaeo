@@ -151,6 +151,8 @@ export interface WorkspaceContext {
   approvedNumbers: Set<number>;
   /** Duplicate exposure in rupees from duplicate-type risks */
   duplicateExposure: number;
+  /** Uploaded filenames in workspace */
+  uploads?: string[];
 }
 
 // ─── Relevant Data Slice ──────────────────────────────────────────────────────

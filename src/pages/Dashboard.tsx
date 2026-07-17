@@ -651,6 +651,7 @@ const Dashboard: React.FC = () => {
           accentColor={hasTransactions ? 'danger' : 'default'}
           valueClassName={hasTransactions ? 'text-[var(--danger)] text-2xl font-bold' : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/transactions?type=expense')}
+          askLibbyQuery={hasTransactions ? "Explain why expenses changed this month. (KPI: Total Spend)" : undefined}
         />
         <MetricCard
           title="Money In"
@@ -661,6 +662,7 @@ const Dashboard: React.FC = () => {
           accentColor={hasTransactions ? 'success' : 'default'}
           valueClassName={hasTransactions ? 'text-[var(--success)] text-2xl font-bold' : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/transactions?type=income')}
+          askLibbyQuery={hasTransactions ? "Explain why revenue changed this month. (KPI: Money In)" : undefined}
         />
         <MetricCard
           title="Open Risks"
@@ -671,6 +673,7 @@ const Dashboard: React.FC = () => {
           accentColor={hasTransactions ? (metrics.openRisksCount > 0 ? 'danger' : 'success') : 'default'}
           valueClassName={hasTransactions ? `text-2xl font-bold ${metrics.openRisksCount > 0 ? 'text-[var(--danger)]' : 'text-[var(--success)]'}` : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/risk-inbox')}
+          askLibbyQuery={hasTransactions ? "Explain my open compliance risks. (KPI: Open Risks)" : undefined}
         />
         <MetricCard
           title="Net Flow"
@@ -681,6 +684,7 @@ const Dashboard: React.FC = () => {
           accentColor={hasTransactions ? (metrics.net >= 0 ? 'success' : 'danger') : 'default'}
           valueClassName={hasTransactions ? `text-2xl font-bold ${metrics.net >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}` : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/transactions')}
+          askLibbyQuery={hasTransactions ? "Explain why net cash changed this month. (KPI: Net Flow)" : undefined}
         />
       </div>
 
@@ -695,6 +699,7 @@ const Dashboard: React.FC = () => {
           accentColor={hasTransactions ? (metrics.unreviewedCount > 0 ? 'warning' : 'success') : 'default'}
           valueClassName={hasTransactions ? `text-2xl font-bold ${metrics.unreviewedCount > 0 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}` : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/transactions?review=pending')}
+          askLibbyQuery={hasTransactions ? "Explain what needs review. (KPI: Needs Review)" : undefined}
         />
         <MetricCard
           title="Uncategorized"
@@ -705,6 +710,7 @@ const Dashboard: React.FC = () => {
           accentColor={hasTransactions ? ((metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'warning' : 'success') : 'default'}
           valueClassName={hasTransactions ? `text-2xl font-bold ${(metrics.uncategorizedCount + metrics.unknownCount) > 0 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}` : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/transactions?category=uncategorized')}
+          askLibbyQuery={hasTransactions ? "Explain which transactions are uncategorized. (KPI: Uncategorized)" : undefined}
         />
         <MetricCard
           title="Total Transactions"
@@ -715,6 +721,7 @@ const Dashboard: React.FC = () => {
           accentColor={hasTransactions ? 'primary' : 'default'}
           valueClassName={hasTransactions ? 'text-[var(--foreground)] text-2xl font-bold' : 'text-[var(--muted-foreground)] text-2xl font-bold'}
           onClick={() => navigate('/transactions')}
+          askLibbyQuery={hasTransactions ? "Summarise my transactions. (KPI: Total Transactions)" : undefined}
         />
         <MetricCard
           title="Readiness Score"
@@ -725,6 +732,7 @@ const Dashboard: React.FC = () => {
           accentColor={hasTransactions && readiness ? (isReadinessComplete ? 'success' : 'warning') : 'default'}
           valueClassName={`text-2xl font-bold ${hasTransactions && readiness ? (isReadinessComplete ? 'text-[var(--success)]' : 'text-[var(--warning)]') : 'text-[var(--muted-foreground)]'}`}
           onClick={() => navigate('/reports')}
+          askLibbyQuery={hasTransactions ? "How ready am I for month-end close? (KPI: Readiness Score)" : undefined}
         />
       </div>
 

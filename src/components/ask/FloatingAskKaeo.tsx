@@ -16,8 +16,21 @@ import { useWorkspace } from '../../hooks/useWorkspace';
 import { Plus } from 'lucide-react';
 import WorkspaceBrief from '../libby/WorkspaceBrief';
 import QuickActions from '../libby/QuickActions';
+import SuggestedActionChips, { extractSuggestedActions } from '../libby/SuggestedActionChips';
+import GroundingStatusCard from '../libby/GroundingStatusCard';
+import FinanceInsightCard, { parseInsightSections } from '../libby/FinanceInsightCard';
 import { buildWorkspaceContext } from '../../lib/libby/contextEngine';
 import { buildWorkspaceBrief, type WorkspaceBriefData } from '../../lib/libby/workspaceBriefEngine';
+
+const cleanUserMessage = (content: string): string => {
+  if (!content) return content;
+  return content
+    .replace(/\s*\(Risk:.*?\)/gi, '')
+    .replace(/\s*\(Vendor:.*?\)/gi, '')
+    .replace(/\s*\(Report:.*?\)/gi, '')
+    .replace(/\s*\(KPI:.*?\)/gi, '')
+    .replace(/\s*\(Transaction:.*?\)/gi, '');
+};
 
 const shortenMessage = (content: string, userQuery: string): string => {
   if (!content) return content;
@@ -55,8 +68,8 @@ const shortenMessage = (content: string, userQuery: string): string => {
       continue;
     }
 
-    // Handle "Impact:" section by extracting its bullets
-    if (lower.startsWith('impact:')) {
+    // Handle "Impact:" / "Evidence:" section by extracting its bullets
+    if (lower.startsWith('impact:') || lower.startsWith('evidence:')) {
       const lines = cleanBlock.split('\n').slice(1);
       if (lines.length > 0) {
         shortBlocks.push(lines.join('\n'));
@@ -64,12 +77,8 @@ const shortenMessage = (content: string, userQuery: string): string => {
       continue;
     }
     
-    // Handle recommended actions ("Suggested Actions:" or "Next:")
+    // Skip suggested actions section in shortenMessage since they will be rendered as interactive chips below
     if (lower.startsWith('suggested actions:') || lower.startsWith('next:')) {
-      const lines = cleanBlock.split('\n').slice(1);
-      if (lines.length > 0) {
-        shortBlocks.push(lines.join('\n'));
-      }
       continue;
     }
 
@@ -367,110 +376,109 @@ const FloatingAskKaeo: React.FC = () => {
                         </div>
                       )}
 
-                      <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap font-medium ${
-                          isUser
-                            ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                            : 'bg-muted/40 border border-border/40 text-foreground rounded-tl-sm font-normal'
-                        }`}
-                      >
-                        {isUser ? msg.content : shortenMessage(msg.content, idx > 0 ? messages[idx - 1].content : '')}
+                      <div className="flex flex-col gap-1.5 max-w-[80%] w-full">
+                        <div
+                          className={`rounded-2xl text-[13px] leading-relaxed whitespace-pre-wrap w-full ${
+                            isUser
+                              ? 'bg-primary text-primary-foreground rounded-tr-sm px-4 py-3 font-medium'
+                              : parseInsightSections(msg.content)
+                                ? 'bg-transparent border-none p-0'
+                                : 'bg-muted/40 border border-border/40 text-foreground rounded-tl-sm font-normal px-4 py-3'
+                          }`}
+                        >
+                          {isUser ? (
+                            cleanUserMessage(msg.content)
+                          ) : parseInsightSections(msg.content) ? (
+                            <FinanceInsightCard content={msg.content} intent={msg.source_json?.intent} />
+                          ) : (
+                            shortenMessage(msg.content, idx > 0 ? messages[idx - 1].content : '')
+                          )}
 
-                        {/* Limit exceeded CTA */}
-                        {isLimitExceeded && (
-                          <button
-                            onClick={() => {
-                              setIsOpen(false);
-                              navigate('/billing');
-                            }}
-                            className="mt-3 px-3 py-1.5 bg-primary text-primary-foreground text-[11px] font-bold rounded-lg hover:opacity-95 transition-all cursor-pointer inline-flex items-center gap-1.5"
-                          >
-                            <Zap className="w-3.5 h-3.5 text-warning fill-warning" />
-                            Upgrade Plan
-                          </button>
-                        )}
-
-                        {/* AI Review CTA */}
-                        {msg.source_json?.cta === 'open_ai_review' && (
-                          <button
-                            onClick={() => {
-                              setIsOpen(false);
-                              navigate('/transactions?review_status=ai_suggested');
-                            }}
-                            className="mt-3 px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-black text-[11px] font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5"
-                          >
-                            <Sparkles className="w-3.5 h-3.5" />
-                            Open AI Review
-                          </button>
-                        )}
-
-                        {/* Open Add Client Business CTA */}
-                        {msg.source_json?.cta === 'open_add_client_business' && (
-                          <button
-                            onClick={() => {
-                              setIsOpen(false);
-                              setModalMode('create_client_business');
-                              setClientToEdit(null);
-                              setIsCreateModalOpen(true);
-                            }}
-                            className="mt-3 px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-black text-[11px] font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            Open Add Client Business
-                          </button>
-                        )}
-
-                        {/* Open Add Business CTA */}
-                        {msg.source_json?.cta === 'open_add_business' && (
-                          <button
-                            onClick={() => {
-                              setIsOpen(false);
-                              setModalMode('create_business');
-                              setClientToEdit(null);
-                              setIsCreateModalOpen(true);
-                            }}
-                            className="mt-3 px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-black text-[11px] font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            Open Add Business
-                          </button>
-                        )}
-
-                        {/* Quick Action Suggestion for greeting */}
-                        {isGreeting && (
-                          <div className="mt-3">
+                          {/* Limit exceeded CTA */}
+                          {isLimitExceeded && (
                             <button
-                              onClick={async () => {
-                                await sendMessage("Review my transactions");
+                              onClick={() => {
+                                setIsOpen(false);
+                                navigate('/billing');
                               }}
-                              className="w-full text-left px-3 py-2 font-semibold rounded-lg text-[10px] transition-all cursor-pointer flex items-center gap-1.5"
-                              style={{ background: 'rgba(15,118,110,0.08)', color: 'var(--primary)', border: '1px solid rgba(15,118,110,0.18)' }}
-                              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(15,118,110,0.14)'; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(15,118,110,0.08)'; }}
+                              className="mt-3 px-3 py-1.5 bg-primary text-primary-foreground text-[11px] font-bold rounded-lg hover:opacity-95 transition-all cursor-pointer inline-flex items-center gap-1.5"
                             >
-                              <Sparkles className="w-3 h-3" />
-                              "Review my transactions"
+                              <Zap className="w-3.5 h-3.5 text-warning fill-warning" />
+                              Upgrade Plan
                             </button>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Grounded badge */}
-                        {!isUser && !isGreeting && !isLimitExceeded && !isError && (
-                          <p className="text-[9px] text-muted-foreground/85 mt-2 pt-2 border-t border-border/10 flex items-center gap-1.5 font-medium animate-in fade-in">
-                            <Sparkles className="w-2.5 h-2.5" style={{ color: 'var(--primary)' }} />
-                            {(() => {
-                              const mode = msg.source_json?.mode;
-                              const status = msg.source_json?.grounding_status;
-                              if (status === 'general') return 'General recommendation';
-                              if (status === 'general_vendor_knowledge') return 'General vendor knowledge';
-                              if (status === 'inferred_not_confirmed') return 'Inferred, not confirmed';
-                              if (status === 'needs_clarification') return 'Needs clarification';
-                              if (status === 'app_guidance') return 'App guidance';
-                              if (mode === 'deterministic') return 'Based on Kaeo data';
-                              if (mode && mode.startsWith('ai_')) return 'AI-assisted · Grounded in Kaeo data';
-                              return 'Based on Kaeo data';
-                            })()}
-                          </p>
+                          {/* AI Review CTA */}
+                          {msg.source_json?.cta === 'open_ai_review' && (
+                            <button
+                              onClick={() => {
+                                setIsOpen(false);
+                                navigate('/transactions?review_status=ai_suggested');
+                              }}
+                              className="mt-3 px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-black text-[11px] font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              Open AI Review
+                            </button>
+                          )}
+
+                          {/* Open Add Client Business CTA */}
+                          {msg.source_json?.cta === 'open_add_client_business' && (
+                            <button
+                              onClick={() => {
+                                setIsOpen(false);
+                                setModalMode('create_client_business');
+                                setClientToEdit(null);
+                                setIsCreateModalOpen(true);
+                              }}
+                              className="mt-3 px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-black text-[11px] font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              Open Add Client Business
+                            </button>
+                          )}
+
+                          {/* Open Add Business CTA */}
+                          {msg.source_json?.cta === 'open_add_business' && (
+                            <button
+                              onClick={() => {
+                                setIsOpen(false);
+                                setModalMode('create_business');
+                                setClientToEdit(null);
+                                setIsCreateModalOpen(true);
+                              }}
+                              className="mt-3 px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-black text-[11px] font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              Open Add Business
+                            </button>
+                          )}
+
+                          {/* Quick Action Suggestion for greeting */}
+                          {isGreeting && (
+                            <div className="mt-3">
+                              <button
+                                onClick={async () => {
+                                  await sendMessage("Review my transactions");
+                                }}
+                                className="w-full text-left px-3 py-2 font-semibold rounded-lg text-[10px] transition-all cursor-pointer flex items-center gap-1.5"
+                                style={{ background: 'rgba(15,118,110,0.08)', color: 'var(--primary)', border: '1px solid rgba(15,118,110,0.18)' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(15,118,110,0.14)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(15,118,110,0.08)'; }}
+                              >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                "Review my transactions"
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Grounded badge */}
+                          {!isUser && !isGreeting && !isLimitExceeded && !isError && (
+                            <GroundingStatusCard sourceJson={msg.source_json} />
+                          )}
+                        </div>
+                        {!isUser && (
+                          <SuggestedActionChips actions={extractSuggestedActions(msg.content)} />
                         )}
                       </div>
                     </div>

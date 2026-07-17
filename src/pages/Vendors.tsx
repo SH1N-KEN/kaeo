@@ -321,7 +321,7 @@ const Vendors: React.FC = () => {
                 <div 
                   key={vendor.id} 
                   onClick={() => setSelectedVendor(vendor)}
-                  className="frosted-card-hover p-6 flex flex-col h-full"
+                  className="frosted-card-hover p-6 flex flex-col h-full group"
                 >
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex items-center gap-4">
@@ -331,7 +331,11 @@ const Vendors: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-bold text-foreground leading-tight">{vendor.name}</h3>
-                          <AskLibbyButton query={`How much do we spend on ${vendor.name}?`} variant="icon" />
+                          <AskLibbyButton
+                            query={`Summarise this vendor. (Vendor: ${vendor.name})`}
+                            variant="icon"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                          />
                         </div>
                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{vendor.category || 'Uncategorized'}</p>
                       </div>
@@ -434,7 +438,13 @@ const Vendors: React.FC = () => {
                 <Building2 className="w-7 h-7 text-muted-foreground" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-foreground leading-tight">{selectedVendor.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-bold text-foreground leading-tight">{selectedVendor.name}</h3>
+                  <AskLibbyButton
+                    query={`Summarise this vendor. (Vendor: ${selectedVendor.name})`}
+                    variant="icon"
+                  />
+                </div>
                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">{selectedVendor.category || 'Uncategorized'}</p>
               </div>
             </div>

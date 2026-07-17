@@ -372,6 +372,20 @@ function buildApprovedNumbers(
   return approved;
 }
 
+async function fetchUploadedFiles(clientId: string): Promise<string[]> {
+  try {
+    const { data } = await supabase
+      .from('uploaded_files')
+      .select('file_name')
+      .eq('client_id', clientId)
+      .limit(10);
+    return data ? data.map(f => f.file_name || '') : [];
+  } catch (err) {
+    console.warn('Error fetching uploaded files in context engine:', err);
+    return [];
+  }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -394,7 +408,7 @@ export async function buildWorkspaceContext(
   // Fetch transactions + KPIs (transactions needed by other fetchers)
   const { transactions, financial } = await fetchTransactionsAndKPIs(clientId);
 
-  // Parallel fetch: risks, vendor intelligence, invoices, reports, billing, notes
+  // Parallel fetch: risks, vendor intelligence, invoices, reports, billing, notes, uploads
   const [
     risks,
     { intelligence: vendors, rawVendors },
@@ -402,6 +416,7 @@ export async function buildWorkspaceContext(
     latestReport,
     billing,
     relevantNotes,
+    uploads,
   ] = await Promise.all([
     fetchRisks(clientId),
     fetchVendorIntelligence(clientId, transactions),
@@ -409,6 +424,7 @@ export async function buildWorkspaceContext(
     fetchLatestReport(clientId),
     fetchBillingInfo(orgId),
     fetchRelevantNotes(clientId),
+    fetchUploadedFiles(clientId),
   ]);
 
   // Build derived data (pure computation, no I/O)
@@ -442,6 +458,7 @@ export async function buildWorkspaceContext(
     rawVendors,
     approvedNumbers,
     duplicateExposure,
+    uploads,
   };
 }
 

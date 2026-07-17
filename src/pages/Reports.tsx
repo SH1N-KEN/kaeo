@@ -646,10 +646,17 @@ export default function Reports() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredReports.map((report) => (
-            <div key={report.id} className="frosted-card p-5 flex flex-col">
+            <div key={report.id} className="frosted-card p-5 flex flex-col group">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-2 rounded-xl" style={{ background: 'var(--secondary)' }}>
-                  <FileText className="h-5 w-5" style={{ color: 'var(--primary)' }} />
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl" style={{ background: 'var(--secondary)' }}>
+                    <FileText className="h-5 w-5" style={{ color: 'var(--primary)' }} />
+                  </div>
+                  <AskLibbyButton
+                    query={`Summarise this report. (Report: ${report.title})`}
+                    variant="icon"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                  />
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
                   <span className="text-xs font-medium bg-muted px-2 py-1 rounded-full text-muted-foreground">

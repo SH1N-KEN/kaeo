@@ -12,12 +12,6 @@
 
 import React from 'react';
 import {
-  ShieldAlert,
-  Receipt,
-  TrendingUp,
-  TrendingDown,
-  Building2,
-  CheckCircle2,
   Sparkles,
   Loader2,
 } from 'lucide-react';
@@ -30,69 +24,6 @@ interface WorkspaceBriefProps {
   /** Compact mode for FloatingAskKaeo — shows 3 signals, smaller layout. */
   compact?: boolean;
 }
-
-// ─── Signal Card ──────────────────────────────────────────────────────────────
-
-interface SignalCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: React.ReactNode;
-  sub?: string;
-  accent?: 'danger' | 'warning' | 'success' | 'primary' | 'default';
-  query: string;
-  onSendMessage: (query: string) => void;
-}
-
-const accentColors = {
-  danger:  { bg: 'rgba(224,84,80,0.06)',   border: 'rgba(224,84,80,0.18)',   icon: 'var(--danger)',          text: 'var(--danger)' },
-  warning: { bg: 'rgba(234,179,8,0.06)',   border: 'rgba(234,179,8,0.20)',   icon: 'var(--warning)',         text: 'var(--warning)' },
-  success: { bg: 'rgba(34,197,94,0.05)',   border: 'rgba(34,197,94,0.18)',   icon: 'var(--success)',         text: 'var(--success)' },
-  primary: { bg: 'rgba(15,118,110,0.06)',  border: 'rgba(15,118,110,0.18)',  icon: 'var(--primary)',         text: 'var(--primary)' },
-  default: { bg: 'var(--muted)',           border: 'var(--border)',           icon: 'var(--muted-foreground)', text: 'var(--foreground)' },
-};
-
-const SignalCard: React.FC<SignalCardProps> = ({ icon, label, value, sub, accent = 'default', query, onSendMessage }) => {
-  const colors = accentColors[accent];
-  return (
-    <button
-      onClick={() => onSendMessage(query)}
-      className="flex items-start gap-2.5 p-3 rounded-xl text-left w-full transition-all cursor-pointer group"
-      style={{ background: colors.bg, border: `1px solid ${colors.border}` }}
-      onMouseEnter={e => {
-        e.currentTarget.style.borderColor = accent === 'default' ? 'rgba(15,118,110,0.25)' : colors.border;
-        e.currentTarget.style.background = accent === 'default' ? 'rgba(15,118,110,0.06)' : colors.bg;
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.borderColor = colors.border;
-        e.currentTarget.style.background = colors.bg;
-      }}
-    >
-      <div
-        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-        style={{ background: `${colors.bg}`, border: `1px solid ${colors.border}` }}
-      >
-        <span style={{ color: colors.icon }}>{icon}</span>
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: 'var(--muted-foreground)' }}>
-          {label}
-        </p>
-        <p className="text-[13px] font-bold leading-tight" style={{ color: colors.text }}>
-          {value}
-        </p>
-        {sub && (
-          <p className="text-[10px] mt-0.5 leading-snug" style={{ color: 'var(--muted-foreground)' }}>
-            {sub}
-          </p>
-        )}
-      </div>
-      <Sparkles
-        className="w-3 h-3 shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
-        style={{ color: 'var(--primary)' }}
-      />
-    </button>
-  );
-};
 
 // ─── WorkspaceBrief ───────────────────────────────────────────────────────────
 
@@ -114,167 +45,84 @@ const WorkspaceBrief: React.FC<WorkspaceBriefProps> = ({
   }
 
   if (!brief) {
-    // Fallback to the original static empty state if brief data is unavailable
     return null;
   }
 
-  const riskAccent = brief.openRisksCount > 0
-    ? (brief.highRisksCount > 0 ? 'danger' : 'warning')
-    : 'success';
-
-  const proofAccent = brief.missingProofCount > 0 ? 'warning' : 'success';
-  const cashAccent = brief.isPositive ? 'success' : 'danger';
-
-  const readinessAccent =
-    brief.readinessScore >= 90 ? 'success' :
-    brief.readinessScore >= 60 ? 'warning' : 'danger';
-
-  if (compact) {
-    // Compact layout for FloatingAskKaeo: 3 priority signals stacked
-    return (
-      <div className="space-y-2 animate-in fade-in duration-300">
-        {/* Greeting */}
-        <div className="pb-2">
-          <p className="text-[12px] font-bold" style={{ color: 'var(--foreground)' }}>
-            {brief.greeting}, {brief.clientName.split(' ')[0]}
-          </p>
-          <p className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
-            Here's what needs your attention.
-          </p>
-        </div>
-
-        <SignalCard
-          icon={<ShieldAlert className="w-3.5 h-3.5" />}
-          label="Open Risks"
-          value={brief.openRisksCount === 0 ? 'All clear' : `${brief.openRisksCount} open`}
-          sub={brief.highRisksCount > 0 ? `${brief.highRisksCount} high severity` : undefined}
-          accent={riskAccent}
-          query="What risks need review?"
-          onSendMessage={onSendMessage}
-        />
-
-        <SignalCard
-          icon={<Receipt className="w-3.5 h-3.5" />}
-          label="Missing Proof"
-          value={brief.missingProofCount === 0 ? 'All covered' : `${brief.missingProofCount} missing`}
-          sub={brief.missingProofCount > 0 ? 'Staff expenses need receipts' : undefined}
-          accent={proofAccent}
-          query="Which staff/petty expenses need proof?"
-          onSendMessage={onSendMessage}
-        />
-
-        <SignalCard
-          icon={brief.isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-          label="Net Cash"
-          value={`${brief.isPositive ? '+' : '-'}${brief.netCashFormatted}`}
-          sub={`${brief.transactionCount} transactions`}
-          accent={cashAccent}
-          query="What is my net cash?"
-          onSendMessage={onSendMessage}
-        />
-      </div>
-    );
+  // Compile active attention points
+  const attentionItems: string[] = [];
+  if (brief.unreviewedCount > 0) {
+    attentionItems.push(`${brief.unreviewedCount} transaction${brief.unreviewedCount !== 1 ? 's' : ''} need review`);
+  }
+  if (brief.missingProofAmount > 0) {
+    const formattedAmt = '₹' + Math.round(brief.missingProofAmount).toLocaleString('en-IN');
+    attentionItems.push(`${formattedAmt} missing proof`);
+  }
+  if (brief.categoryTrendStr) {
+    attentionItems.push(brief.categoryTrendStr);
+  }
+  if (brief.hasDuplicateVendor) {
+    attentionItems.push('Duplicate vendor detected');
+  } else if (brief.openRisksCount > 0) {
+    attentionItems.push(`${brief.openRisksCount} open risk${brief.openRisksCount !== 1 ? 's' : ''} detected`);
   }
 
-  // Full layout for AskKaeo page: 2-column grid of 6 signals
+  const attentionCount = attentionItems.length;
+
+  const recommendations = [
+    { label: 'Review Risks', query: 'What risks need review?' },
+    { label: 'Compare This Month', query: 'Give me a full monthly summary' },
+    { label: 'Vendor Analysis', query: 'Which vendors need attention?' },
+    { label: 'Generate Executive Summary', query: 'Are we ready for month-end?' },
+  ];
+
   return (
-    <div className="w-full max-w-xl mx-auto animate-in fade-in duration-300">
-      {/* Greeting Header */}
-      <div className="text-center mb-5">
-        <div
-          className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
-          style={{ background: 'rgba(15,118,110,0.08)', border: '1px solid rgba(15,118,110,0.18)' }}
-        >
-          <Sparkles className="w-5 h-5" style={{ color: 'var(--primary)' }} />
-        </div>
-        <h3 className="text-[15px] font-bold" style={{ color: 'var(--foreground)' }}>
-          {brief.greeting}
+    <div className={`w-full mx-auto animate-in fade-in duration-300 ${compact ? 'max-w-xs' : 'max-w-xl'} flex flex-col gap-4 text-left`}>
+      {/* Header */}
+      <div>
+        <h3 className={`font-bold text-foreground ${compact ? 'text-sm' : 'text-base'}`}>
+          {brief.greeting}.
         </h3>
-        <p className="text-[12px] mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
-          Here's your workspace snapshot for{' '}
-          <span className="font-semibold" style={{ color: 'var(--foreground)' }}>
-            {brief.clientName}
-          </span>
+        <p className={`text-muted-foreground mt-0.5 ${compact ? 'text-[11px]' : 'text-xs'}`}>
+          {attentionCount > 0
+            ? `${attentionCount} thing${attentionCount !== 1 ? 's' : ''} need your attention today.`
+            : 'Workspace is all clear today.'}
         </p>
       </div>
 
-      {/* 2-column signal grid */}
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <SignalCard
-          icon={<ShieldAlert className="w-3.5 h-3.5" />}
-          label="Open Risks"
-          value={brief.openRisksCount === 0 ? 'All clear' : `${brief.openRisksCount} open`}
-          sub={
-            brief.highRisksCount > 0
-              ? `${brief.highRisksCount} high severity`
-              : brief.openRisksCount === 0
-                ? 'No issues found'
-                : 'Medium or low severity'
-          }
-          accent={riskAccent}
-          query="What risks need review?"
-          onSendMessage={onSendMessage}
-        />
+      {/* Bulleted summary card */}
+      {attentionCount > 0 && (
+        <div className="frosted-card border border-border/40 p-4 rounded-xl space-y-2 bg-muted/5">
+          <ul className={`space-y-1.5 ${compact ? 'text-[11px]' : 'text-xs'}`}>
+            {attentionItems.map((item, idx) => (
+              <li key={idx} className="flex items-start gap-2 text-foreground/90 font-medium">
+                <span className="text-[var(--primary)] mt-0.5">•</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-        <SignalCard
-          icon={<Receipt className="w-3.5 h-3.5" />}
-          label="Missing Proof"
-          value={brief.missingProofCount === 0 ? 'All covered' : `${brief.missingProofCount} missing`}
-          sub={
-            brief.missingProofCount > 0
-              ? 'Staff expenses need receipts'
-              : 'All staff expenses have proof'
-          }
-          accent={proofAccent}
-          query="Which staff/petty expenses need proof?"
-          onSendMessage={onSendMessage}
-        />
-
-        <SignalCard
-          icon={<CheckCircle2 className="w-3.5 h-3.5" />}
-          label="Report Readiness"
-          value={`${brief.readinessScore}%`}
-          sub={brief.readinessLabel}
-          accent={readinessAccent}
-          query="Are we ready for month-end?"
-          onSendMessage={onSendMessage}
-        />
-
-        <SignalCard
-          icon={<Building2 className="w-3.5 h-3.5" />}
-          label="Top Vendor"
-          value={brief.topVendorName || '—'}
-          sub={brief.topVendorName ? brief.topVendorFormatted : 'No vendor data yet'}
-          accent={brief.topVendorName ? 'primary' : 'default'}
-          query="Which vendors need attention?"
-          onSendMessage={onSendMessage}
-        />
-
-        <SignalCard
-          icon={brief.isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-          label="Net Cash"
-          value={`${brief.isPositive ? '+' : '-'}${brief.netCashFormatted}`}
-          sub={`${brief.transactionCount} transactions`}
-          accent={cashAccent}
-          query="What is my net cash?"
-          onSendMessage={onSendMessage}
-        />
-
-        <SignalCard
-          icon={<Sparkles className="w-3.5 h-3.5" />}
-          label="Recurring Spend"
-          value={brief.recurringCommitmentFormatted}
-          sub="Estimated monthly floor"
-          accent="primary"
-          query="What is my recurring spend?"
-          onSendMessage={onSendMessage}
-        />
+      {/* Recommendations */}
+      <div className="space-y-2">
+        <span className={`font-black uppercase tracking-wider text-muted-foreground/80 ${compact ? 'text-[8px]' : 'text-[9px]'}`}>
+          Recommendations
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {recommendations.map((rec, idx) => (
+            <button
+              key={idx}
+              onClick={() => onSendMessage(rec.query)}
+              className={`frosted-card border border-border/40 hover:border-[var(--primary)]/30 hover:bg-[var(--primary)]/5 transition-all duration-200 rounded-xl font-semibold text-foreground/90 hover:text-foreground text-left cursor-pointer flex items-center justify-between gap-2 group ${
+                compact ? 'px-3 py-2 text-[10px]' : 'px-4 py-3 text-xs w-full'
+              }`}
+            >
+              <span>{rec.label}</span>
+              <Sparkles className="w-3 h-3 text-[var(--primary)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            </button>
+          ))}
+        </div>
       </div>
-
-      {/* Tap hint */}
-      <p className="text-center text-[10px] font-medium" style={{ color: 'var(--muted-foreground)' }}>
-        Tap any card to ask Libby · or type your own question below
-      </p>
     </div>
   );
 };
