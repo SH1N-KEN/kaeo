@@ -17,6 +17,7 @@ export type {
   RiskEvent,
   VendorIntelligence,
   VendorSummaryItem,
+  AggregatedVendor,
   StaffSpendSummary,
   InvoiceSummary,
   BillingInfo,
@@ -36,7 +37,7 @@ export {
 export { detectIntent, determineResponseMode } from './intentEngine';
 
 // Data Retriever
-export { retrieveRelevantData } from './dataRetriever';
+export { retrieveRelevantData, aggregateVendorsByTransaction } from './dataRetriever';
 
 // Response Formatter
 export {
@@ -56,3 +57,13 @@ export {
 // Workspace Brief Engine
 export { buildWorkspaceBrief } from './workspaceBriefEngine';
 export type { WorkspaceBriefData } from './workspaceBriefEngine';
+
+// Conversation State
+export {
+  createEmptyConversationState,
+  isFollowUpQuery,
+  resolveFollowUp,
+  updateConversationState,
+} from './conversationState';
+export type { ConversationState, ConversationEntityType } from './conversationState';
+

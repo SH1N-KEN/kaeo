@@ -59,6 +59,29 @@ export interface RiskEvent {
   status: string;
 }
 
+/**
+ * Per-vendor aggregation produced by the Data Retriever.
+ * Groups all transactions that belong to the same logical vendor.
+ */
+export interface AggregatedVendor {
+  /** Normalised canonical key used for grouping (lowercase). */
+  normalized_name: string;
+  /** Human-readable display name (Title Case). */
+  display_name: string;
+  /** Inferred or database-sourced category. */
+  category: string;
+  /** Sum of all transaction amounts (absolute value, INR). */
+  totalSpend: number;
+  /** Number of transactions that belong to this vendor. */
+  transactionCount: number;
+  /** Earliest transaction date in the dataset for this vendor (ISO string). */
+  firstSeen: string | null;
+  /** Most recent transaction date for this vendor (ISO string). */
+  lastSeen: string | null;
+  /** Whether the vendor appears to be a recurring/subscription payment. */
+  isRecurring: boolean;
+}
+
 /** A vendor with aggregated spend data. */
 export interface VendorSummaryItem {
   normalized_name: string;
@@ -172,6 +195,11 @@ export interface RelevantData {
     recurringCommitment: number;
     totalVendorCount: number;
   };
+  /**
+   * Transaction-based vendor aggregations sorted by totalSpend descending.
+   * Each entry reflects the true rollup across all transactions for that vendor.
+   */
+  aggregatedVendors?: AggregatedVendor[];
   staffSpend?: StaffSpendSummary;
   invoices?: InvoiceSummary;
   billing?: BillingInfo;

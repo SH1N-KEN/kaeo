@@ -11,6 +11,8 @@ import { supabase } from '../lib/supabase';
 import { askKaeo } from '../lib/askKaeoEngine';
 import { trackUsageEvent } from '../lib/billing';
 import { checkUsageEventAllowed } from '../lib/billingGuards';
+import { createEmptyConversationState } from '../lib/libby';
+import type { ConversationState } from '../lib/libby';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -62,6 +64,10 @@ export const AskKaeoChatProvider: React.FC<{ children: React.ReactNode }> = ({
   // Guard: only load thread once per client change
   const loadedClientRef = useRef<string | null>(null);
 
+  // Conversation state — tracks active entity/intent across turns
+  // Scoped to the current session; resets when client changes
+  const conversationStateRef = useRef<ConversationState>(createEmptyConversationState());
+
   const hasContext = !!(activeClient && activeOrg);
 
   // Load / create thread when client changes
@@ -70,11 +76,13 @@ export const AskKaeoChatProvider: React.FC<{ children: React.ReactNode }> = ({
       setMessages([GREETING]);
       setThreadId(null);
       loadedClientRef.current = null;
+      conversationStateRef.current = createEmptyConversationState();
       return;
     }
     // Skip if already loaded for this client
     if (loadedClientRef.current === activeClient.id) return;
     loadedClientRef.current = activeClient.id;
+    conversationStateRef.current = createEmptyConversationState();
     refreshThread();
   }, [activeClient?.id, activeOrg?.id]);
 
@@ -244,9 +252,14 @@ export const AskKaeoChatProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      // 5. Ask the engine
+      // 5. Ask the engine — pass conversation state for follow-up resolution
       try {
-        const reply = await askKaeo(trimmed, activeClient.id, activeOrg.id);
+        const reply = await askKaeo(trimmed, activeClient.id, activeOrg.id, conversationStateRef.current);
+
+        // Update conversation state for the next turn
+        if (reply.conversationState) {
+          conversationStateRef.current = reply.conversationState;
+        }
 
         const asstMsg: ChatMessage = {
           id: crypto.randomUUID(),
@@ -293,6 +306,7 @@ export const AskKaeoChatProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const clearMessages = useCallback(() => {
     setMessages([GREETING]);
+    conversationStateRef.current = createEmptyConversationState();
   }, []);
 
   return (

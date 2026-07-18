@@ -75,10 +75,18 @@ export interface AIStructuredContext {
   } | null;
 }
 
-export const askKaeoAi = async (context: AIStructuredContext): Promise<AskKaeoAIResponse | null> => {
+export const askKaeoAi = async (
+  context: AIStructuredContext,
+  workspaceId: string
+): Promise<AskKaeoAIResponse | null> => {
   try {
     const { data, error } = await supabase.functions.invoke('ask-kaeo-ai', {
-      body: { context }
+      body: { 
+        context,
+        workspace_id: workspaceId,
+        message: context.question,
+        intent: context.intent
+      }
     });
 
     if (error) {

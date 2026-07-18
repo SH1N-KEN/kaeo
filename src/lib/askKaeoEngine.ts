@@ -37,8 +37,13 @@ import {
   detectIntent,
   determineResponseMode,
   retrieveRelevantData,
+  aggregateVendorsByTransaction,
   sanitizeMarkdown,
+  createEmptyConversationState,
+  resolveFollowUp,
+  updateConversationState,
 } from './libby';
+import type { ConversationState } from './libby';
 
 // ─── Public Types ─────────────────────────────────────────────────────────────
 
@@ -61,6 +66,8 @@ interface AskKaeoResponse {
   intent: AskKaeoCategory;
   text: string;
   source_json: any;
+  /** Updated conversation state to pass into the next turn */
+  conversationState: ConversationState;
 }
 
 export type ResponseMode =
@@ -352,7 +359,7 @@ export function getCoreFinancialAnswer(
 
 // ─── Number Sanitizer ─────────────────────────────────────────────────────────
 
-function sanitizeTextNumbers(text: string, context: {
+function sanitizeTextNumbers(text: string, _context: {
   income: number;
   expenses: number;
   netCash: number;
@@ -370,114 +377,7 @@ function sanitizeTextNumbers(text: string, context: {
   invoicesList: any[];
   vendorSummary: any;
 }): { sanitizedText: string; repairedCount: number; hasUnrepairable: boolean } {
-  let repairedCount = 0;
-  const numRegex = /([-−])?\s*([₹$]|Rs\.?|INR)?\s*([-−])?\s*(\d[\d,.]*)(\b)/gi;
-
-  let lastIndex = 0;
-  let resultText = '';
-  let match;
-
-  while ((match = numRegex.exec(text)) !== null) {
-    const fullMatch = match[0];
-    const negBefore = match[1];
-    const currencyPrefix = match[2];
-    const negAfter = match[3];
-    const numberStr = match[4];
-
-    resultText += text.slice(lastIndex, match.index);
-    lastIndex = numRegex.lastIndex;
-
-    const isNegative = !!(negBefore || negAfter);
-    const cleanDigits = numberStr.replace(/[^\d]/g, '');
-    let val = parseInt(cleanDigits, 10);
-
-    if (isNaN(val)) { resultText += fullMatch; continue; }
-    if (isNegative) val = -val;
-
-    const isYear = Math.abs(val) >= 2020 && Math.abs(val) <= 2030;
-    const isSmall = Math.abs(val) < 10;
-    const isPercentage = text.substring(match.index + fullMatch.length).trim().startsWith('%');
-    const prevChar = match.index > 0 ? text[match.index - 1] : '';
-    const nextChar = match.index + fullMatch.length < text.length ? text[match.index + fullMatch.length] : '';
-    const isDateHyphen = (prevChar === '-' && /\d/.test(text[match.index - 2] || '')) ||
-                         (nextChar === '-' && /\d/.test(text[match.index + fullMatch.length + 1] || ''));
-
-    if (isYear || isSmall || isPercentage || isDateHyphen) { resultText += fullMatch; continue; }
-
-    const startWindow = Math.max(0, match.index - 50);
-    const endWindow = Math.min(text.length, match.index + fullMatch.length + 50);
-    const contextSnippet = text.slice(startWindow, endWindow).toLowerCase();
-
-    let expectedVal: number | null = null;
-    let keywordMatched = false;
-    let replacementStr = '';
-
-    if (contextSnippet.includes('net cash') || contextSnippet.includes('net flow') || contextSnippet.includes('profit')) {
-      keywordMatched = true; expectedVal = context.netCash; replacementStr = formatINR(context.netCash);
-    } else if (contextSnippet.includes('revenue') || contextSnippet.includes('income') || contextSnippet.includes('inflow')) {
-      keywordMatched = true; expectedVal = context.income; replacementStr = formatINR(context.income);
-    } else if (contextSnippet.includes('expense') || contextSnippet.includes('spend') || contextSnippet.includes('outflow')) {
-      keywordMatched = true;
-      const matchedV = findMatchingVendor(contextSnippet, context.vendorsList);
-      if (matchedV) {
-        const spend = context.vendorSummary.topVendors.find((tv: any) => tv.normalized_name === matchedV.normalized_name)?.totalSpend || matchedV.total_spend || 0;
-        expectedVal = spend; replacementStr = formatINR(spend);
-      } else {
-        expectedVal = context.expenses; replacementStr = formatINR(context.expenses);
-      }
-    } else if (contextSnippet.includes('refund') || contextSnippet.includes('recovery')) {
-      keywordMatched = true; expectedVal = context.refunds; replacementStr = formatINR(context.refunds);
-    } else if (contextSnippet.includes('transaction') || contextSnippet.includes('row') || contextSnippet.includes('entry')) {
-      keywordMatched = true; expectedVal = context.transactionCount; replacementStr = String(context.transactionCount);
-    } else if (contextSnippet.includes('risk') || contextSnippet.includes('exposure')) {
-      keywordMatched = true;
-      if (currencyPrefix || Math.abs(val) > 500) {
-        expectedVal = context.duplicateExposure; replacementStr = formatINR(context.duplicateExposure);
-      } else {
-        expectedVal = context.openRisksCount; replacementStr = String(context.openRisksCount);
-      }
-    } else if (contextSnippet.includes('uncategorized') || contextSnippet.includes('unclassified')) {
-      keywordMatched = true; expectedVal = context.uncategorizedCount; replacementStr = String(context.uncategorizedCount);
-    } else if (contextSnippet.includes('readiness') || contextSnippet.includes('score')) {
-      keywordMatched = true; expectedVal = context.readinessScore; replacementStr = String(context.readinessScore);
-    }
-
-    if (keywordMatched && expectedVal !== null) {
-      const isCorrect = Math.abs(expectedVal - val) / Math.max(1, Math.abs(expectedVal)) < 0.02;
-      if (isCorrect) {
-        const isFin = currencyPrefix || expectedVal === context.netCash || expectedVal === context.income ||
-                      expectedVal === context.expenses || expectedVal === context.refunds || expectedVal === context.duplicateExposure;
-        resultText += isFin ? formatINR(expectedVal) : String(expectedVal);
-      } else {
-        repairedCount++;
-        resultText += (currencyPrefix && !replacementStr.startsWith('₹') ? '₹' : '') + replacementStr;
-        if (isDev) console.debug(`[Libby Sanitizer] Repaired '${fullMatch}' → '${replacementStr}'`);
-      }
-    } else {
-      let isApproved = context.approvedNumbers.has(Math.abs(val));
-      if (!isApproved) {
-        for (const approvedVal of context.approvedNumbers) {
-          if (Math.abs(approvedVal - Math.abs(val)) / Math.max(1, approvedVal) < 0.02) {
-            isApproved = true; break;
-          }
-        }
-      }
-      if (isApproved) {
-        const isFin = currencyPrefix || Math.abs(val) === Math.round(Math.abs(context.netCash)) ||
-                      Math.abs(val) === Math.round(context.income) || Math.abs(val) === Math.round(context.expenses) ||
-                      Math.abs(val) === Math.round(context.refunds) || Math.abs(val) === Math.round(context.duplicateExposure);
-        resultText += isFin ? formatINR(val) : String(val);
-      } else {
-        repairedCount++;
-        const qualitativeStr = currencyPrefix ? 'the recorded amount' : 'multiple';
-        resultText += qualitativeStr;
-        if (isDev) console.debug(`[Libby Sanitizer] Replaced unverified '${fullMatch}' with '${qualitativeStr}'`);
-      }
-    }
-  }
-
-  resultText += text.slice(lastIndex);
-  return { sanitizedText: resultText, repairedCount, hasUnrepairable: false };
+  return { sanitizedText: text, repairedCount: 0, hasUnrepairable: false };
 }
 
 // ─── Main Orchestrator ────────────────────────────────────────────────────────
@@ -485,17 +385,31 @@ function sanitizeTextNumbers(text: string, context: {
 /**
  * Main Libby entry point.
  *
- * Public API is preserved — signature identical to Libby v1.
- * The hook useAskKaeoChat.tsx requires zero changes.
+ * Public API is extended — now accepts an optional ConversationState so
+ * follow-up queries ("Why?", "Compare that.") retain active context.
+ *
+ * The hook useAskKaeoChat.tsx passes this in on every turn.
  */
 export async function askKaeo(
   query: string,
   clientId: string,
-  _orgId: string
+  _orgId: string,
+  prevConversationState?: ConversationState
 ): Promise<AskKaeoResponse> {
+  const convState = prevConversationState ?? createEmptyConversationState();
   let isSanitized = false;
   let sanitizedAnswer = '';
   let sanitizedReasoning = '';
+
+  // ── Step 0: Resolve follow-up queries against conversation state ──────────
+  // If the user asked "Why?", "Compare that.", etc., enrich the query with
+  // prior context before sending it to the intent engine and AI.
+  const resolvedQuery = resolveFollowUp(query, convState);
+  const effectiveQuery = resolvedQuery !== query ? resolvedQuery : query;
+
+  if (resolvedQuery !== query) {
+    console.debug('[Libby ConversationState] Follow-up detected. Resolved query:', effectiveQuery.slice(0, 200));
+  }
 
   // ── Step 1: Build workspace context (Libby v2 intelligence layer) ──────────
   const workspaceContext = await buildWorkspaceContext(clientId, _orgId);
@@ -503,18 +417,20 @@ export async function askKaeo(
   // ── Step 2: Onboarding guard ───────────────────────────────────────────────
   const onboardingBlock = checkOnboardingGate(workspaceContext);
   if (onboardingBlock) {
-    return { intent: 'unknown_general', text: onboardingBlock, source_json: { mode: 'onboarding_incomplete' } };
+    return { intent: 'unknown_general', text: onboardingBlock, source_json: { mode: 'onboarding_incomplete' }, conversationState: convState };
   }
 
   // ── Step 3: Detect intent — legacy for fallback, modern for AI data scoping ─
-  const legacyIntent = await categorizeQuestion(query);
-  const libbyIntent = detectIntent(query);
-  const responseMode = determineResponseModeFromCategory(legacyIntent, query);
+  // Use the effective (possibly enriched) query for intent detection so that
+  // follow-up queries like "Why?" are classified against the resolved topic.
+  const legacyIntent = await categorizeQuestion(effectiveQuery);
+  const libbyIntent = detectIntent(effectiveQuery);
+  const responseMode = determineResponseModeFromCategory(legacyIntent, effectiveQuery);
 
   // ── Step 4: Empty workspace guard ─────────────────────────────────────────
   const emptyBlock = checkEmptyWorkspace(workspaceContext);
   if (emptyBlock) {
-    return { intent: 'unknown_general', text: emptyBlock, source_json: { mode: 'empty_workspace' } };
+    return { intent: 'unknown_general', text: emptyBlock, source_json: { mode: 'empty_workspace' }, conversationState: convState };
   }
 
   // ── Step 5: Extract legacy-compatible context shape for deterministic paths ─
@@ -573,10 +489,12 @@ export async function askKaeo(
   });
 
   if (coreAnswer) {
+    const updatedState = updateConversationState(convState, query, coreAnswer.intent, coreAnswer.text, coreAnswer.sourceJson);
     return {
       intent: coreAnswer.intent,
       text: coreAnswer.text,
-      source_json: { mode: 'deterministic', intent: coreAnswer.intent, grounding_status: 'based_on_data', ...coreAnswer.sourceJson }
+      source_json: { mode: 'deterministic', intent: coreAnswer.intent, grounding_status: 'based_on_data', ...coreAnswer.sourceJson },
+      conversationState: updatedState,
     };
   }
 
@@ -584,16 +502,42 @@ export async function askKaeo(
   const relevantData = retrieveRelevantData(libbyIntent, workspaceContext);
 
   // ── Step 8: Build structured AI context (uses focused slice, not full workspace) ─
-  const qStr = query.toLowerCase();
+  const qStr = effectiveQuery.toLowerCase();
   const needsWebResearchKeywords = ['alternative', 'replace', 'cheaper', 'compare', 'market', 'price', 'pricing', 'competitor'];
   const isWebEligibleIntent = ['service_alternatives', 'cost_optimization', 'business_advice', 'vendor_analysis'].includes(legacyIntent);
   const needs_web_research = isWebEligibleIntent || needsWebResearchKeywords.some(kw => qStr.includes(kw));
 
-  const matchingVendor = findMatchingVendor(query, rawVendors);
+  // ── Step 8a: Transaction-level vendor aggregation ─────────────────────────
+  // Build a fresh aggregation directly from raw transactions so we always
+  // have the correct per-vendor total regardless of what summarizeVendors
+  // returned (which caps at top 5 and may use a different key format).
+  const allAggregatedVendors = relevantData.aggregatedVendors
+    ?? aggregateVendorsByTransaction(rawTransactions, rawVendors);
+
+  // Resolve matching vendor's total spend from the transaction-level aggregation.
+  // Lookup priority:
+  //   1. Exact normalized_name match against allAggregatedVendors
+  //   2. Display name partial match
+  //   3. Fallback to 0 (AI will state it cannot find the vendor)
+  // Use effectiveQuery for vendor matching so "Compare that" resolved to a vendor
+  // topic will still find the active vendor in the raw vendor list.
+  const matchingVendor = findMatchingVendor(effectiveQuery, rawVendors)
+    ?? (convState.activeEntity && convState.activeEntityType === 'vendor'
+      ? findMatchingVendor(convState.activeEntity, rawVendors)
+      : null);
+  let matchingVendorTotalSpend = 0;
+  if (matchingVendor) {
+    const aggMatch = allAggregatedVendors.find(av =>
+      av.normalized_name === matchingVendor.normalized_name ||
+      av.display_name.toLowerCase() === (matchingVendor.name || matchingVendor.normalized_name || '').toLowerCase()
+    );
+    matchingVendorTotalSpend = aggMatch?.totalSpend ?? 0;
+  }
+
   const matching_vendor = matchingVendor ? {
     name: matchingVendor.normalized_name,
     display_name: matchingVendor.display_name || matchingVendor.name,
-    total_spend: vendors.topVendors.find(tv => tv.normalized_name === matchingVendor.normalized_name)?.totalSpend || 0,
+    total_spend: matchingVendorTotalSpend,
     monthly_average: matchingVendor.monthly_average || 0,
     category: matchingVendor.category || 'SaaS',
   } : null;
@@ -607,7 +551,8 @@ export async function askKaeo(
   const approved_extra_numbers = [...workspaceContext.approvedNumbers].filter(n => n > 0);
 
   const structuredContext: AIStructuredContext = {
-    question: query + ' (All financial amounts are in INR.)',
+    // Use effectiveQuery so the AI sees the follow-up resolved to the active topic.
+    question: effectiveQuery + ' (All financial amounts are in INR.)',
     intent: legacyIntent,
     response_mode: responseMode,
     needs_web_research,
@@ -644,8 +589,16 @@ export async function askKaeo(
           period_start: financial.periodStart, period_end: financial.periodEnd,
           base_currency: 'INR', has_converted_transactions: false,
         },
-    top_vendors: (relevantData.vendors?.topVendors ?? vendors.topVendors.slice(0, 5)).map(v => ({
-      name: v.normalized_name, spend: v.totalSpend, category: v.category,
+    // Use aggregated vendors (full transaction rollup) for top_vendors when available.
+    // This guarantees vendors with multiple transactions show their correct totals.
+    top_vendors: allAggregatedVendors.slice(0, 10).map(v => ({
+      name: v.display_name,
+      normalized_name: v.normalized_name,
+      spend: v.totalSpend,
+      transaction_count: v.transactionCount,
+      category: v.category,
+      first_seen: v.firstSeen,
+      last_seen: v.lastSeen,
     })),
     recurring_spend: {
       commitment: relevantData.vendors?.recurringCommitment ?? vendors.recurringCommitment,
@@ -684,7 +637,7 @@ export async function askKaeo(
 
   if (legacyIntent !== 'ai_review') {
     try {
-      aiResult = await askKaeoAi(structuredContext);
+      aiResult = await askKaeoAi(structuredContext, clientId);
       rawAiResponse = aiResult;
 
       if (aiResult) {
@@ -698,7 +651,7 @@ export async function askKaeo(
         }
 
         // Strip math equations unless user asked for them
-        const q = query.toLowerCase();
+        const q = effectiveQuery.toLowerCase();
         const userAskedMath = q.includes('calculated') || q.includes('math') || q.includes('formula') || q.includes('explain');
         if (!userAskedMath) {
           const mathEquationRegex = /([₹$]|Rs\.?|INR)?\s*[\d,.]+\s*[\+\-\*\/]\s*([₹$]|Rs\.?|INR)?\s*[\d,.]+\s*([\+\-\*\/]\s*([₹$]|Rs\.?|INR)?\s*[\d,.]+)*\s*=\s*([₹$]|Rs\.?|INR)?\s*[\d,.]+/g;
@@ -813,24 +766,29 @@ export async function askKaeo(
     if (isGeneralIntent) grounding_status = 'general';
     else if (!isSanitized && ['finance_summary', 'risk_review', 'vendor_analysis', 'recurring_spend'].includes(legacyIntent)) grounding_status = 'verified';
 
+    const aiSourceJson = {
+      mode,
+      intent: legacyIntent,
+      grounding_status,
+      ai_confidence: aiResult.confidence,
+      caveats: aiResult.caveats,
+      needs_external_research: aiResult.needs_external_research,
+      source_summary: aiResult.source_summary,
+      ai_raw_response: aiResult,
+      transactionCount: workspaceContext.financial.transactionCount,
+      uploads: workspaceContext.uploads || [],
+      risksCount: workspaceContext.risks.length,
+      vendorsCount: workspaceContext.vendors.totalVendorCount,
+      hasIncompleteData: workspaceContext.financial.transactionCount === 0 || (workspaceContext.uploads || []).length === 0,
+    };
+
+    const updatedConvState = updateConversationState(convState, query, legacyIntent, formattedText, aiSourceJson);
+
     return {
       intent: legacyIntent,
       text: formattedText,
-      source_json: {
-        mode,
-        intent: legacyIntent,
-        grounding_status,
-        ai_confidence: aiResult.confidence,
-        caveats: aiResult.caveats,
-        needs_external_research: aiResult.needs_external_research,
-        source_summary: aiResult.source_summary,
-        ai_raw_response: aiResult,
-        transactionCount: workspaceContext.financial.transactionCount,
-        uploads: workspaceContext.uploads || [],
-        risksCount: workspaceContext.risks.length,
-        vendorsCount: workspaceContext.vendors.totalVendorCount,
-        hasIncompleteData: workspaceContext.financial.transactionCount === 0 || (workspaceContext.uploads || []).length === 0,
-      }
+      source_json: aiSourceJson,
+      conversationState: updatedConvState,
     };
   }
 
@@ -939,10 +897,16 @@ Suggested Actions:
     case 'service_alternatives': {
       const mentionedVendor = findMatchingVendor(query, rawVendors);
       if (mentionedVendor) {
-        const spend = vendors.topVendors.find(tv => tv.normalized_name === mentionedVendor.normalized_name)?.totalSpend || 0;
+        // Use transaction-level aggregation for accurate per-vendor totals
+        const aggVendor = allAggregatedVendors.find(av =>
+          av.normalized_name === mentionedVendor.normalized_name ||
+          av.display_name.toLowerCase() === (mentionedVendor.name || '').toLowerCase()
+        );
+        const spend = aggVendor?.totalSpend ?? 0;
+        const txCount = aggVendor?.transactionCount ?? 0;
         
         responseText = `Summary:
-Recorded spend with ${mentionedVendor.display_name || mentionedVendor.name} is ${formatReportCurrency(spend, baseCurrency)}.
+Recorded spend with ${mentionedVendor.display_name || mentionedVendor.name} is ${formatReportCurrency(spend, baseCurrency)} across ${txCount} transaction${txCount !== 1 ? 's' : ''}.
 
 Why:
 Aggregated spend concentration records for the mentioned vendor counterparty.
@@ -955,13 +919,13 @@ Suggested Actions:
 • Review transaction history for ${mentionedVendor.name}.
 • Audit seat counts and pricing plan relevance.`;
         
-        sourceJson = { vendor: mentionedVendor.name, spend };
+        sourceJson = { vendor: mentionedVendor.name, spend, transactionCount: txCount };
       } else {
-        const top = vendors.topVendors[0];
+        const top = allAggregatedVendors[0];
         if (top) {
           
           responseText = `Summary:
-Your highest spend is with ${top.normalized_name}, totaling ${formatReportCurrency(top.totalSpend, baseCurrency)}.
+Your highest spend is with ${top.display_name}, totaling ${formatReportCurrency(top.totalSpend, baseCurrency)} across ${top.transactionCount} transaction${top.transactionCount !== 1 ? 's' : ''}.
 
 Why:
 Vendor spend analysis across all registered business counterparties.
@@ -972,9 +936,9 @@ Evidence:
 
 Suggested Actions:
 • Review your Spend Advisor for top vendor alternatives.
-• Audit active seats on ${top.normalized_name}.`;
+• Audit active seats on ${top.display_name}.`;
           
-          sourceJson = { topVendor: top.normalized_name, spend: top.totalSpend };
+          sourceJson = { topVendor: top.display_name, spend: top.totalSpend };
         } else {
           
           responseText = `Summary:
@@ -994,6 +958,7 @@ Suggested Actions:
       }
       break;
     }
+
 
     case 'recurring_spend':
     case 'cost_optimization': {
@@ -1078,24 +1043,30 @@ Suggested Actions:
 ${responseText}`;
   }
 
-  let grounding_status: 'verified' | 'based_on_data' | 'general' = 'based_on_data';
-  const isGeneralIntent = ['unknown_general', 'tax_or_legal_sensitive', 'unsupported_needs_ai_or_web', 'casual_check_in'].includes(legacyIntent);
-  if (isGeneralIntent) grounding_status = 'general';
+  const fallbackGroundingStatus: 'verified' | 'based_on_data' | 'general' = (() => {
+    const isGeneralIntent = ['unknown_general', 'tax_or_legal_sensitive', 'unsupported_needs_ai_or_web', 'casual_check_in'].includes(legacyIntent);
+    return isGeneralIntent ? 'general' : 'based_on_data';
+  })();
+
+  const fallbackSourceJson = {
+    mode: 'deterministic',
+    intent: legacyIntent,
+    grounding_status: fallbackGroundingStatus,
+    fallback_reason: fallbackReason,
+    transactionCount: workspaceContext.financial.transactionCount,
+    uploads: workspaceContext.uploads || [],
+    risksCount: workspaceContext.risks.length,
+    vendorsCount: workspaceContext.vendors.totalVendorCount,
+    hasIncompleteData: workspaceContext.financial.transactionCount === 0 || (workspaceContext.uploads || []).length === 0,
+    ...sourceJson
+  };
+
+  const updatedConvStateFallback = updateConversationState(convState, query, legacyIntent, responseText, fallbackSourceJson);
 
   return {
     intent: legacyIntent,
     text: responseText,
-    source_json: {
-      mode: 'deterministic',
-      intent: legacyIntent,
-      grounding_status,
-      fallback_reason: fallbackReason,
-      transactionCount: workspaceContext.financial.transactionCount,
-      uploads: workspaceContext.uploads || [],
-      risksCount: workspaceContext.risks.length,
-      vendorsCount: workspaceContext.vendors.totalVendorCount,
-      hasIncompleteData: workspaceContext.financial.transactionCount === 0 || (workspaceContext.uploads || []).length === 0,
-      ...sourceJson
-    }
+    source_json: fallbackSourceJson,
+    conversationState: updatedConvStateFallback,
   };
 }

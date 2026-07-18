@@ -73,8 +73,16 @@ const Dashboard: React.FC = () => {
   const [manualTxNote, setManualTxNote] = useState('');
   const [manualTxSaving, setManualTxSaving] = useState(false);
   const [isAIQueueOpen, setIsAIQueueOpen] = useState(false);
+  const [chartReady, setChartReady] = useState(false);
   // Track AI suggestion counts but don't display in current layout
   const [, setSugMetrics] = useState({ pending: 0, safe: 0, high: 0 });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setChartReady(true);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (manualTxDesc) {
@@ -772,10 +780,10 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {chartData.length > 0 ? (
-              <div className="h-[240px] sm:h-[280px] lg:h-[320px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            {chartData.length > 0 && chartReady ? (
+              <div className="h-[240px] sm:h-[280px] lg:h-[320px] w-full min-w-[300px] min-h-[240px]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={240}>
+                  <AreaChart width={500} height={300} data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="inflowGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="var(--success)" stopOpacity={0.12}/>
