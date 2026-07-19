@@ -63,7 +63,10 @@ export {
   createEmptyConversationState,
   isFollowUpQuery,
   resolveFollowUp,
+  resolvePronounsInQuery,
+  containsContextualPronoun,
   updateConversationState,
 } from './conversationState';
 export type { ConversationState, ConversationEntityType } from './conversationState';
+
 

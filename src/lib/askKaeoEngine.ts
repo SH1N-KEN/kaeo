@@ -41,6 +41,7 @@ import {
   sanitizeMarkdown,
   createEmptyConversationState,
   resolveFollowUp,
+  resolvePronounsInQuery,
   updateConversationState,
 } from './libby';
 import type { ConversationState } from './libby';
@@ -402,13 +403,23 @@ export async function askKaeo(
   let sanitizedReasoning = '';
 
   // ── Step 0: Resolve follow-up queries against conversation state ──────────
-  // If the user asked "Why?", "Compare that.", etc., enrich the query with
-  // prior context before sending it to the intent engine and AI.
+  // Phase A: Enrich structural follow-ups ("Why?", "Compare that.") with prior
+  //          context so the intent engine sees a fully-worded query.
   const resolvedQuery = resolveFollowUp(query, convState);
   const effectiveQuery = resolvedQuery !== query ? resolvedQuery : query;
 
+  // Phase B: Substitute context pronouns (them/it/that/this) with the active
+  //          entity name. This makes the *entity-resolved* query available to
+  //          the vendor matcher and AI context builder, so "How much did we
+  //          spend with them?" becomes "How much did we spend with Salary Batch?"
+  //          before reaching the data retrieval layer.
+  const pronounResolvedQuery = resolvePronounsInQuery(effectiveQuery, convState);
+
   if (resolvedQuery !== query) {
     console.debug('[Libby ConversationState] Follow-up detected. Resolved query:', effectiveQuery.slice(0, 200));
+  }
+  if (pronounResolvedQuery !== effectiveQuery) {
+    console.debug('[Libby ConversationState] Pronouns resolved:', pronounResolvedQuery.slice(0, 200));
   }
 
   // ── Step 1: Build workspace context (Libby v2 intelligence layer) ──────────
@@ -519,20 +530,37 @@ export async function askKaeo(
   //   1. Exact normalized_name match against allAggregatedVendors
   //   2. Display name partial match
   //   3. Fallback to 0 (AI will state it cannot find the vendor)
-  // Use effectiveQuery for vendor matching so "Compare that" resolved to a vendor
-  // topic will still find the active vendor in the raw vendor list.
-  const matchingVendor = findMatchingVendor(effectiveQuery, rawVendors)
-    ?? (convState.activeEntity && convState.activeEntityType === 'vendor'
+  // Use the pronoun-resolved query for vendor matching so that queries like
+  // "How much did we spend with them?" (resolved to "...with Salary Batch?")
+  // correctly hit the active vendor rather than returning null and falling back
+  // to workspace-wide totals.
+  const matchingVendor =
+    findMatchingVendor(pronounResolvedQuery, rawVendors) ??
+    findMatchingVendor(effectiveQuery, rawVendors) ??
+    (convState.activeEntity && convState.activeEntityType === 'vendor'
       ? findMatchingVendor(convState.activeEntity, rawVendors)
       : null);
-  let matchingVendorTotalSpend = 0;
-  if (matchingVendor) {
-    const aggMatch = allAggregatedVendors.find(av =>
-      av.normalized_name === matchingVendor.normalized_name ||
-      av.display_name.toLowerCase() === (matchingVendor.name || matchingVendor.normalized_name || '').toLowerCase()
-    );
-    matchingVendorTotalSpend = aggMatch?.totalSpend ?? 0;
-  }
+
+  // When activeEntityType is 'vendor' but no DB vendor record matched, fall
+  // back to finding the active entity directly in the aggregated vendor list.
+  // This covers the case where the vendor name came from a previous AI response
+  // (via sourceJson.topVendor) and isn't stored as a raw vendor record.
+  const focusedAggVendor: typeof allAggregatedVendors[number] | null =
+    matchingVendor
+      ? (allAggregatedVendors.find(av =>
+          av.normalized_name === matchingVendor.normalized_name ||
+          av.display_name.toLowerCase() === (matchingVendor.name || matchingVendor.normalized_name || '').toLowerCase()
+        ) ?? null)
+      : convState.activeEntity && convState.activeEntityType === 'vendor'
+        ? (allAggregatedVendors.find(av =>
+            av.display_name.toLowerCase() === convState.activeEntity!.toLowerCase() ||
+            av.normalized_name.toLowerCase() === convState.activeEntity!.toLowerCase() ||
+            convState.activeEntity!.toLowerCase().includes(av.normalized_name.toLowerCase()) ||
+            av.display_name.toLowerCase().includes(convState.activeEntity!.toLowerCase())
+          ) ?? null)
+        : null;
+
+  const matchingVendorTotalSpend = focusedAggVendor?.totalSpend ?? 0;
 
   const matching_vendor = matchingVendor ? {
     name: matchingVendor.normalized_name,
@@ -540,6 +568,20 @@ export async function askKaeo(
     total_spend: matchingVendorTotalSpend,
     monthly_average: matchingVendor.monthly_average || 0,
     category: matchingVendor.category || 'SaaS',
+  } : null;
+
+  // Build a focused vendor context block for the AI whenever there is an
+  // active vendor entity — this is what allows the AI to answer
+  // "How much did we spend with them?" with the correct aggregated total.
+  const focused_vendor = focusedAggVendor ? {
+    name: focusedAggVendor.display_name,
+    normalized_name: focusedAggVendor.normalized_name,
+    total_spend: focusedAggVendor.totalSpend,
+    transaction_count: focusedAggVendor.transactionCount,
+    category: focusedAggVendor.category,
+    first_seen: focusedAggVendor.firstSeen,
+    last_seen: focusedAggVendor.lastSeen,
+    is_recurring: focusedAggVendor.isRecurring,
   } : null;
 
   const numbersInQuery = (query.replace(/\b20\d{2}\b/g, '').match(/\d[\d,.]*/g) || []) as string[];
@@ -551,12 +593,22 @@ export async function askKaeo(
   const approved_extra_numbers = [...workspaceContext.approvedNumbers].filter(n => n > 0);
 
   const structuredContext: AIStructuredContext = {
-    // Use effectiveQuery so the AI sees the follow-up resolved to the active topic.
-    question: effectiveQuery + ' (All financial amounts are in INR.)',
+    // Use pronounResolvedQuery so the AI sees "Salary Batch" not "them".
+    // This is the authoritative question the AI should answer.
+    question: pronounResolvedQuery + ' (All financial amounts are in INR.)',
     intent: legacyIntent,
     response_mode: responseMode,
     needs_web_research,
     active_client_name: workspaceContext.settings.clientName,
+    // Active entity context — tells the AI exactly what was being discussed
+    // before this query. The AI must use focused_vendor when answering vendor
+    // questions instead of computing workspace-wide totals.
+    active_entity: convState.activeEntity ?? null,
+    active_entity_type: convState.activeEntityType ?? 'general',
+    // Focused vendor: pre-aggregated data for the specific vendor the user is
+    // asking about. When present, the AI must use this data (not workspace total)
+    // to answer questions about spend, transactions, or comparisons.
+    focused_vendor,
     business_profile: {
       account_mode: workspaceContext.settings.accountMode,
       onboarding_completed: workspaceContext.settings.onboardingCompleted,
@@ -737,27 +789,43 @@ export async function askKaeo(
 
   // ── Step 10: Return AI result if successful ────────────────────────────────
   if (aiResult) {
-    let formattedText = `Summary:\n${isSanitized ? sanitizedAnswer : aiResult.answer}`;
-    
+    const answer = isSanitized ? sanitizedAnswer : aiResult.answer;
     const reasoning = isSanitized ? sanitizedReasoning : aiResult.reasoning_summary;
-    if (reasoning && reasoning.trim()) {
-      formattedText += `\n\nWhy:\n${reasoning}`;
-    } else {
-      formattedText += `\n\nWhy:\nBased on ledger data from the current reviews period.`;
+
+    // Build a natural, conversational response instead of hard-coded section headers.
+    // The AI already produces good prose \u2014 we just need to join it cleanly.
+    let formattedText = answer.trim();
+
+    // Append reasoning as a natural follow-on paragraph when it adds genuine value
+    // (i.e. it's not just a repeat of the answer and isn't empty).
+    if (reasoning && reasoning.trim() && reasoning.trim() !== answer.trim()) {
+      formattedText += `\n\n${reasoning.trim()}`;
     }
 
-    let impactBullets: string[] = [];
-    if (aiResult.caveats && aiResult.caveats.length > 0) {
-      impactBullets.push(...aiResult.caveats);
-    } else {
-      impactBullets.push(`Grounded in ${workspaceContext.financial.transactionCount} verified transactions.`);
+    // Append recommended actions as inline bullets \u2014 no section header \u2014 only
+    // when the AI actually produced specific, non-generic actions.
+    const genericActionPhrases = ['no immediate', 'no action required', 'no manual ledger'];
+    const hasRealActions = aiResult.recommended_actions &&
+      aiResult.recommended_actions.length > 0 &&
+      !aiResult.recommended_actions.every(a =>
+        genericActionPhrases.some(g => a.toLowerCase().includes(g))
+      );
+    if (hasRealActions) {
+      formattedText += `\n\n${aiResult.recommended_actions!.map(a => `\u2022 ${a}`).join('\n')}`;
     }
-    formattedText += `\n\nEvidence:\n${impactBullets.map(b => `• ${b}`).join('\n')}`;
 
-    if (aiResult.recommended_actions && aiResult.recommended_actions.length > 0) {
-      formattedText += `\n\nSuggested Actions:\n${aiResult.recommended_actions.map(a => `• ${a}`).join('\n')}`;
-    } else {
-      formattedText += `\n\nSuggested Actions:\n• No immediate manual ledger adjustments required.`;
+    // Append a single grounding caveat when it provides useful context
+    // (e.g. limited data, missing month, etc.). Skip boilerplate ones.
+    const boilerplateCaveats = [
+      'ai explanations are for informational purposes',
+      'calculations are strictly grounded',
+      'all financial amounts are in inr',
+    ];
+    const meaningfulCaveats = (aiResult.caveats || []).filter(c =>
+      !boilerplateCaveats.some(b => c.toLowerCase().includes(b))
+    );
+    if (meaningfulCaveats.length > 0) {
+      formattedText += `\n\n${meaningfulCaveats.map(c => `\u2022 ${c}`).join('\n')}`;
     }
 
     const mode = isSanitized ? 'ai_assisted_sanitized' : 'ai_assisted';
@@ -780,6 +848,16 @@ export async function askKaeo(
       risksCount: workspaceContext.risks.length,
       vendorsCount: workspaceContext.vendors.totalVendorCount,
       hasIncompleteData: workspaceContext.financial.transactionCount === 0 || (workspaceContext.uploads || []).length === 0,
+      // Expose active entity for conversation state extraction and UI grounding.
+      // Priority: focused_vendor name > matching_vendor name > prior state entity.
+      // This ensures extractActiveEntity() in conversationState.ts always finds
+      // the vendor entity regardless of which turn produced it.
+      activeEntity: focused_vendor?.name ?? matching_vendor?.display_name ?? convState.activeEntity,
+      activeEntityType: (focused_vendor || matching_vendor)
+        ? 'vendor'
+        : convState.activeEntityType,
+      focused_vendor,
+      matching_vendor,
     };
 
     const updatedConvState = updateConversationState(convState, query, legacyIntent, formattedText, aiSourceJson);

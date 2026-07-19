@@ -8,6 +8,37 @@ export interface AIStructuredContext {
   response_mode?: string;
   needs_web_research: boolean;
   active_client_name: string;
+  /**
+   * The active entity being discussed (e.g. "Salary Batch", "ACME SERVICES").
+   * Set from conversationState.activeEntity. Used by the AI to understand
+   * which vendor/risk/entity the user is referring to with pronouns.
+   */
+  active_entity?: string | null;
+  /**
+   * The type of the active entity (vendor, risk, cash_flow, etc.).
+   * Helps the AI understand the domain of the conversation.
+   */
+  active_entity_type?: string | null;
+  /**
+   * Pre-aggregated data for the focused vendor when active_entity_type is
+   * 'vendor'. The AI MUST use this data when answering vendor-specific
+   * questions rather than summing top_vendors or financial_summary.
+   *
+   * When present, this is the authoritative source for:
+   *   - total_spend for this specific vendor
+   *   - transaction_count for this vendor
+   *   - date range of this vendor's activity
+   */
+  focused_vendor?: {
+    name: string;
+    normalized_name: string;
+    total_spend: number;
+    transaction_count: number;
+    category: string;
+    first_seen: string | null;
+    last_seen: string | null;
+    is_recurring: boolean;
+  } | null;
   financial_summary: {
     income: number;
     refunds: number;
@@ -74,6 +105,7 @@ export interface AIStructuredContext {
     top_staff_vendors: Array<{ name: string; spend: string }>;
   } | null;
 }
+
 
 export const askKaeoAi = async (
   context: AIStructuredContext,

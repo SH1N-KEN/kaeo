@@ -106,16 +106,86 @@ const FOLLOW_UP_PATTERNS: Array<RegExp> = [
 ];
 
 /**
- * Detects whether a user message is a follow-up to a prior topic
- * (relies on FOLLOW_UP_PATTERNS for short/pronoun-heavy queries).
+ * Regex that detects context-dependent pronouns in a query.
+ * When present in a query, these indicate the user is referring
+ * to whatever entity is currently active in the conversation.
+ *
+ * Examples:
+ *   "How much did we spend with them in total?"  → 'them' present
+ *   "What should I do about it?"                 → 'it' present
+ *   "Why is that one serious?"                   → 'that' present
+ */
+const CONTEXT_PRONOUN_REGEX = /\b(them|they|their|it|that|this|those|these)\b/i;
+
+/**
+ * Returns true if the query contains a context-dependent pronoun
+ * that requires the active conversation entity to be substituted.
+ *
+ * Only considers queries under 150 characters (long queries likely
+ * introduce a genuinely new topic even when they contain pronouns).
+ *
+ * @param query - The raw user message
+ * @returns true if the query contains a resolvable context pronoun
+ */
+export function containsContextualPronoun(query: string): boolean {
+  const q = query.trim();
+  if (q.length > 150) return false;
+  return CONTEXT_PRONOUN_REGEX.test(q);
+}
+
+/**
+ * Substitutes context-dependent pronouns in a query with the name of
+ * the currently active entity from conversation state.
+ *
+ * This produces an entity-anchored query that the data retrieval layer
+ * can use to filter/aggregate data for the correct vendor, risk, etc.
+ *
+ * Examples (activeEntity = "Salary Batch"):
+ *   "How much did we spend with them in total?"
+ *   → "How much did we spend with Salary Batch in total?"
+ *
+ *   "What should I do about it?"
+ *   → "What should I do about Salary Batch?"
+ *
+ * Pronouns are only replaced when an activeEntity is known.
+ * If state.activeEntity is null, returns the original query unchanged.
+ *
+ * @param query - The raw user message (possibly already enriched by resolveFollowUp)
+ * @param state - Current conversation state
+ * @returns Query with pronouns replaced by the active entity name
+ */
+export function resolvePronounsInQuery(query: string, state: ConversationState): string {
+  if (!state.activeEntity) return query;
+  if (!containsContextualPronoun(query)) return query;
+
+  const entity = state.activeEntity;
+
+  // Replace plural/group pronouns first (them, they, their, those, these)
+  // then singular pronouns (it, that, this)
+  return query
+    .replace(/\b(them|they|their|those|these)\b/gi, entity)
+    .replace(/\b(it|that|this)\b/gi, entity);
+}
+
+/**
+ * Detects whether a user message is a follow-up to a prior topic.
+ *
+ * A message is considered a follow-up if:
+ *   a) It matches one of the structured FOLLOW_UP_PATTERNS (short/exact), OR
+ *   b) It contains a context-dependent pronoun (them/it/that/this/etc.)
+ *      and is under 120 characters — indicating the user is referring
+ *      to the active entity rather than asking a new question.
  *
  * @param query - The raw user message
  * @returns true if the query is a follow-up
  */
 export function isFollowUpQuery(query: string): boolean {
   const q = query.trim();
-  if (q.length > 80) return false; // Long queries are almost always new topics
-  return FOLLOW_UP_PATTERNS.some(p => p.test(q));
+  // Structured exact-match patterns (short queries)
+  if (FOLLOW_UP_PATTERNS.some(p => p.test(q))) return true;
+  // Pronoun-bearing queries that reference the active entity
+  if (q.length <= 120 && containsContextualPronoun(q)) return true;
+  return false;
 }
 
 // ─── Follow-up Resolution ─────────────────────────────────────────────────────
@@ -295,7 +365,31 @@ function extractActiveEntity(
 ): { entity: string | null; entityType: ConversationEntityType } {
   if (!sourceJson) return { entity: null, entityType: 'general' };
 
-  // Vendor entity
+  // ── Priority 1: Explicit entity fields from the updated aiSourceJson ──────
+  // The orchestrator now writes activeEntity + activeEntityType directly into
+  // the source_json returned from each turn. Use these as the most reliable
+  // signal — they are set from the pre-aggregated focused_vendor data and the
+  // active conversation state, so they are always correct.
+  if (sourceJson.activeEntity && sourceJson.activeEntityType) {
+    return {
+      entity: sourceJson.activeEntity,
+      entityType: sourceJson.activeEntityType as ConversationEntityType,
+    };
+  }
+
+  // ── Priority 2: focused_vendor from the orchestrator ─────────────────────
+  // When a focused_vendor was found during retrieval, use its name as the
+  // active vendor entity for the next turn.
+  if (sourceJson.focused_vendor?.name) {
+    return { entity: sourceJson.focused_vendor.name, entityType: 'vendor' };
+  }
+
+  // ── Priority 3: matching_vendor (set by findMatchingVendor in orchestrator) ─
+  if (sourceJson.matching_vendor?.display_name) {
+    return { entity: sourceJson.matching_vendor.display_name, entityType: 'vendor' };
+  }
+
+  // ── Priority 4: Legacy fields (deterministic path, pre-v2 source_json) ───
   if (sourceJson.vendor) return { entity: sourceJson.vendor, entityType: 'vendor' };
   if (sourceJson.topVendor) return { entity: sourceJson.topVendor, entityType: 'vendor' };
 
@@ -326,6 +420,7 @@ function extractActiveEntity(
 
   return { entity: null, entityType: 'general' };
 }
+
 
 /**
  * Extracts the active period from source_json or from the query text.
