@@ -1,7 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const getEnvVar = (key: string): string | undefined => {
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    return import.meta.env[key];
+  }
+  return process.env[key];
+};
+
+const supabaseUrl = getEnvVar('VITE_SUPABASE_URL');
+const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY');
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl && 
@@ -11,7 +18,9 @@ export const isSupabaseConfigured = Boolean(
   !supabaseUrl.includes('placeholder')
 );
 
-if (!isSupabaseConfigured && import.meta.env.PROD) {
+const isProd = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.PROD : false;
+
+if (!isSupabaseConfigured && isProd) {
   console.warn('Supabase is not properly configured in production.');
 }
 

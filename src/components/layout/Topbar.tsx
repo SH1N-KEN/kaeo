@@ -451,7 +451,7 @@ const Topbar: React.FC = () => {
                         <SearchResult
                           key={tx.id}
                           primary={tx.description || 'Unnamed'}
-                          secondary={`${tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString() : ''} · ${tx.category || 'Uncategorized'}`}
+                          secondary={`${tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN', { timeZone: 'UTC' }) : ''} · ${tx.category || 'Uncategorized'}`}
                           badge={formatINR(tx.amount)}
                           badgeColor={tx.type === 'income' || tx.type === 'refund' ? '#168A5B' : '#C2413A'}
                           tag="txn"

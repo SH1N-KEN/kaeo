@@ -1,20 +1,26 @@
 import { supabase } from '../supabase';
 
 /**
- * Generates a unique, deterministic fingerprint for a financial transaction.
- * Scrapes date (date portion), absolute amount, and cleaned description to resist minor text changes.
+ * Validates if a reference is a real, non-placeholder value.
+ * Treating null, undefined, empty string, '0', and '0.00' as missing/placeholder references.
+ */
+export const isReferenceValValid = (ref: any): boolean => {
+  if (ref === null || ref === undefined) return false;
+  const str = String(ref).trim();
+  return str !== '' && str !== '0' && str !== '0.00';
+};
+
+/**
+ * Generates a unique, deterministic fingerprint for a financial transaction based on reference.
+ * If reference is missing or a placeholder, returns null.
  */
 export const generateFingerprint = (
   clientId: string,
-  txDate: string,
-  amount: number,
-  description: string
-): string => {
-  const dateStr = new Date(txDate).toISOString().split('T')[0];
-  const absAmount = Math.abs(amount).toFixed(2);
-  const cleanDesc = description.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-  
-  return `${clientId}_${dateStr}_${absAmount}_${cleanDesc}`;
+  reference: any
+): string | null => {
+  if (!isReferenceValValid(reference)) return null;
+  const cleanRef = String(reference).trim().toLowerCase();
+  return `${clientId}_ref_${cleanRef}`;
 };
 
 export interface DuplicateReport {
@@ -43,29 +49,34 @@ export const checkDuplicateTransactions = async (
 
   // 1. Identify intra-file duplicates (redundant rows in the same upload)
   incomingTransactions.forEach((tx) => {
-    const fingerprint = generateFingerprint(
-      clientId,
-      tx.transaction_date,
-      tx.amount,
-      tx.description
-    );
+    const fingerprint = generateFingerprint(clientId, tx.reference);
 
-    if (seenFingerprints.has(fingerprint)) {
-      intraFileDuplicates++;
+    if (fingerprint) {
+      if (seenFingerprints.has(fingerprint)) {
+        intraFileDuplicates++;
+      } else {
+        seenFingerprints.add(fingerprint);
+        uniqueIncoming.push({
+          ...tx,
+          source_row_hash: fingerprint // store reference fingerprint in source_row_hash column!
+        });
+      }
     } else {
-      seenFingerprints.add(fingerprint);
+      // If a reference number isn't available for a row (or is a default placeholder like 0),
+      // don't auto-dedupe it at all — flag it for manual review instead.
       uniqueIncoming.push({
         ...tx,
-        source_row_hash: fingerprint // store fingerprint in source_row_hash column!
+        source_row_hash: null,
+        review_status: 'needs_review'
       });
     }
   });
 
   // 2. Query Supabase database to check against existing transactions
-  // To optimize, we'll fetch existing source_row_hashes for this client
+  // Fetch existing source_row_hashes and references for this client
   const { data: existingHashes, error } = await supabase
     .from('transactions')
-    .select('source_row_hash, transaction_date, amount, description')
+    .select('source_row_hash, transaction_date, amount, description, reference')
     .eq('client_id', clientId);
 
   if (error) {
@@ -76,12 +87,11 @@ export const checkDuplicateTransactions = async (
   const dbFingerprints = new Set<string>();
   if (existingHashes) {
     existingHashes.forEach((tx) => {
-      if (tx.source_row_hash) {
-        dbFingerprints.add(tx.source_row_hash);
-      } else {
-        // Build fallback fingerprint if source_row_hash isn't filled for historical rows
-        const fp = generateFingerprint(clientId, tx.transaction_date, tx.amount, tx.description);
+      const fp = generateFingerprint(clientId, tx.reference);
+      if (fp) {
         dbFingerprints.add(fp);
+      } else if (tx.source_row_hash && tx.source_row_hash.startsWith(`${clientId}_ref_`)) {
+        dbFingerprints.add(tx.source_row_hash);
       }
     });
   }
@@ -91,7 +101,7 @@ export const checkDuplicateTransactions = async (
   let dbDuplicates = 0;
 
   uniqueIncoming.forEach((tx) => {
-    if (dbFingerprints.has(tx.source_row_hash)) {
+    if (tx.source_row_hash && dbFingerprints.has(tx.source_row_hash)) {
       dbDuplicates++;
     } else {
       cleanTransactions.push(tx);

@@ -330,7 +330,7 @@ const Dashboard: React.FC = () => {
 
         if (tx.transaction_date) {
           const rawDateStr = tx.transaction_date.split('T')[0];
-          const displayDate = new Date(tx.transaction_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+          const displayDate = new Date(tx.transaction_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
           if (!dailyMap[displayDate]) dailyMap[displayDate] = { inflow: 0, outflow: 0, rawDate: rawDateStr };
           if (tx.type !== 'transfer') {
             if (isInflowTx) dailyMap[displayDate].inflow += amt;
@@ -966,7 +966,7 @@ const Dashboard: React.FC = () => {
                       onClick={() => navigate(`/transactions?search=${encodeURIComponent(tx.description || '')}`)}
                       className="cursor-pointer">
                       <td className="td-muted whitespace-nowrap">
-                        {tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'}
+                        {tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'UTC' }) : '—'}
                       </td>
                       <td>
                         <div>

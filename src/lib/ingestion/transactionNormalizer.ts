@@ -131,7 +131,8 @@ export const parseIngestedDate = (val: any): { date: Date; ambiguous: boolean; e
 
   // If already parsed as a Date object
   if (val instanceof Date) {
-    return { date: val, ambiguous: false, error: false };
+    const d = new Date(Date.UTC(val.getFullYear(), val.getMonth(), val.getDate()));
+    return { date: d, ambiguous: false, error: false };
   }
 
   // Handle Excel serial date (numeric or string matching 5 digits)
@@ -152,7 +153,11 @@ export const parseIngestedDate = (val: any): { date: Date; ambiguous: boolean; e
   
   // 1. Check if ISO-like YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-    const d = new Date(str);
+    const parts = str.split('T')[0].split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const d = new Date(Date.UTC(year, month, day));
     return { date: isNaN(d.getTime()) ? new Date() : d, ambiguous: false, error: isNaN(d.getTime()) };
   }
 
@@ -167,17 +172,17 @@ export const parseIngestedDate = (val: any): { date: Date; ambiguous: boolean; e
     }
 
     if (p1 > 12) {
-      const d = new Date(year, p2 - 1, p1);
+      const d = new Date(Date.UTC(year, p2 - 1, p1));
       return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
     }
     
     if (p2 > 12) {
-      const d = new Date(year, p1 - 1, p2);
+      const d = new Date(Date.UTC(year, p1 - 1, p2));
       return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
     }
 
     // Both are <= 12: Ambiguous! Default to standard Indian DD/MM/YYYY, but mark ambiguous
-    const d = new Date(year, p2 - 1, p1);
+    const d = new Date(Date.UTC(year, p2 - 1, p1));
     return { date: d, ambiguous: true, error: isNaN(d.getTime()) };
   }
 
@@ -195,14 +200,18 @@ export const parseIngestedDate = (val: any): { date: Date; ambiguous: boolean; e
     const monthIdx = monthNames.findIndex(m => monthStr.toLowerCase().startsWith(m));
 
     if (monthIdx !== -1) {
-      const d = new Date(year, monthIdx, day);
+      const d = new Date(Date.UTC(year, monthIdx, day));
       return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
     }
   }
 
   // Standard fallback
   const d = new Date(str);
-  return { date: isNaN(d.getTime()) ? new Date() : d, ambiguous: false, error: isNaN(d.getTime()) };
+  if (!isNaN(d.getTime())) {
+    const utcDate = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    return { date: utcDate, ambiguous: false, error: false };
+  }
+  return { date: new Date(), ambiguous: false, error: true };
 };
 
 /**

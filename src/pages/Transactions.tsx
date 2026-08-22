@@ -1093,7 +1093,7 @@ const Transactions: React.FC = () => {
 
                         {/* Date */}
                         <td className="whitespace-nowrap td-muted px-4 py-3.5 text-xs text-muted-foreground font-medium">
-                          {tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                          {tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—'}
                         </td>
 
                         {/* Counterparty + Description */}
@@ -1570,7 +1570,7 @@ const Transactions: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex justify-between text-[10px] text-muted-foreground/80">
-                        <span>{tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN') : '—'}</span>
+                        <span>{tx.transaction_date ? new Date(tx.transaction_date).toLocaleDateString('en-IN', { timeZone: 'UTC' }) : '—'}</span>
                         <span className="capitalize">{tx.type}</span>
                       </div>
                     </div>

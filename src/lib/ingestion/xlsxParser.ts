@@ -142,7 +142,10 @@ const isExpenseLedgerSheet = (headers: string[]): boolean => {
 const parseExcelSerialDate = (serial: any): string | null => {
   if (serial === null || serial === undefined || serial === '') return null;
   if (serial instanceof Date) {
-    return serial.toISOString().split('T')[0];
+    const yyyy = serial.getFullYear();
+    const mm = String(serial.getMonth() + 1).padStart(2, '0');
+    const dd = String(serial.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   }
   const num = Number(serial);
   if (!isNaN(num) && num > 0) {
@@ -246,7 +249,10 @@ const processHDFCSheet = (
         else {
           let cellVal = rawRow[idx];
           if (cellVal instanceof Date) {
-            cellVal = cellVal.toISOString().split('T')[0];
+            const yyyy = cellVal.getFullYear();
+            const mm = String(cellVal.getMonth() + 1).padStart(2, '0');
+            const dd = String(cellVal.getDate()).padStart(2, '0');
+            cellVal = `${yyyy}-${mm}-${dd}`;
           }
           currentTx[h] = cellVal !== undefined ? cellVal : null;
         }
@@ -430,7 +436,10 @@ export const parseXLSXFile = (file: File): Promise<ParsedFinancialFile> => {
               headers.forEach((header, idx) => {
                 let cellVal = rawRow[idx];
                 if (cellVal instanceof Date) {
-                  cellVal = cellVal.toISOString().split('T')[0];
+                  const yyyy = cellVal.getFullYear();
+                  const mm = String(cellVal.getMonth() + 1).padStart(2, '0');
+                  const dd = String(cellVal.getDate()).padStart(2, '0');
+                  cellVal = `${yyyy}-${mm}-${dd}`;
                 }
                 obj[header] = cellVal !== undefined ? cellVal : null;
               });
@@ -453,7 +462,10 @@ export const parseXLSXFile = (file: File): Promise<ParsedFinancialFile> => {
                 // Strictly map by index to prevent column shifting
                 let cellVal = row[idx];
                 if (cellVal instanceof Date) {
-                  cellVal = cellVal.toISOString().split('T')[0];
+                  const yyyy = cellVal.getFullYear();
+                  const mm = String(cellVal.getMonth() + 1).padStart(2, '0');
+                  const dd = String(cellVal.getDate()).padStart(2, '0');
+                  cellVal = `${yyyy}-${mm}-${dd}`;
                 }
                 obj[header] = cellVal !== undefined ? cellVal : null;
               });

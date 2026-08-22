@@ -367,7 +367,7 @@ const Vendors: React.FC = () => {
                       {vendor.transaction_count} Txs
                     </span>
                     <span className="px-2 py-1 bg-muted/40 rounded-md text-[9px] font-bold text-muted-foreground uppercase tracking-widest border border-border/30">
-                      Last: {new Date(vendor.last_seen).toLocaleDateString()}
+                      Last: {new Date(vendor.last_seen).toLocaleDateString('en-IN', { timeZone: 'UTC' })}
                     </span>
                     {vendor.openRisksCount > 0 && (
                       <span className="px-2 py-1 bg-warning/10 rounded-md text-[9px] font-bold text-warning uppercase tracking-widest border border-warning/20 flex items-center gap-1">
@@ -396,7 +396,7 @@ const Vendors: React.FC = () => {
 
                     <div className="flex items-center justify-between pt-2">
                       <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                        <Calendar className="w-3 h-3" /> Since {new Date(vendor.first_seen).toLocaleDateString()}
+                        <Calendar className="w-3 h-3" /> Since {new Date(vendor.first_seen).toLocaleDateString('en-IN', { timeZone: 'UTC' })}
                       </div>
                       <button 
                         onClick={(e) => {
@@ -486,7 +486,7 @@ const Vendors: React.FC = () => {
                       <div key={tx.id} className="p-2.5 bg-[var(--surface-muted)] border border-border/20 rounded-xl flex items-center justify-between text-xs">
                         <div>
                           <p className="font-bold text-foreground truncate max-w-[150px]">{tx.description}</p>
-                          <p className="text-[9px] text-muted-foreground">{new Date(tx.transaction_date).toLocaleDateString()}</p>
+                          <p className="text-[9px] text-muted-foreground">{new Date(tx.transaction_date).toLocaleDateString('en-IN', { timeZone: 'UTC' })}</p>
                         </div>
                         <span className="font-black text-risk">{formatCurrency(Math.abs(tx.amount))}</span>
                       </div>
