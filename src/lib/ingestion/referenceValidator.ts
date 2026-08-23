@@ -21,7 +21,11 @@ export const isValidReference = (ref: any): boolean => {
   if (placeholders.includes(lower)) return false;
 
   // 3. Reject pure symbol patterns (e.g., "---", "***", "/ /")
-  if (/^[^a-zA-Z0-9]+$/.test(str)) return false;
+  if (/^--+$/.test(str) || /^[^a-zA-Z0-9]+$/.test(str)) return false;
+
+  // 4. Reject purely alphabetic strings (e.g., "HDFC", "ICIC", "UTIB", "CHRISTUNIVERSITY", "RAZORPAYPAYMENTSPVTLTD")
+  // Real banking transaction references (UTRs, check numbers, seq IDs) must contain at least one digit.
+  if (/^[a-zA-Z\s]+$/.test(str)) return false;
 
   return true;
 };
