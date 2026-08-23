@@ -8,6 +8,9 @@ import {
 } from '../currency';
 import { parseIndianNarration } from '../transactionIntelligence';
 import { detectPaymentMethod, shouldSuggestStaffCategory, inferStaffExpense } from '../staffReview';
+import { cleanAmount } from './amountNormalizer';
+import { parseIngestedDate } from './dateNormalizer';
+
 
 
 /**
@@ -69,184 +72,8 @@ export interface NormalizationResult {
   warnings: string[];
 }
 
-/**
- * Sanitizes numeric amount string, supporting parentheses, currency symbols, and DR/CR tags.
- */
-export const cleanAmount = (val: any): { amount: number; isExpense: boolean; isIncome: boolean } => {
-  if (val === null || val === undefined) {
-    return { amount: 0, isExpense: false, isIncome: false };
-  }
-
-  let str = String(val).trim();
-  if (str === '') {
-    return { amount: 0, isExpense: false, isIncome: false };
-  }
-
-  let isExpense = false;
-  let isIncome = false;
-
-  // Support trailing minus sign: e.g. "120.00-"
-  if (str.endsWith('-')) {
-    isExpense = true;
-    str = str.slice(0, -1).trim();
-  }
-
-  // 1. Parentheses format: (120.00) => expense
-  if (str.startsWith('(') && str.endsWith(')')) {
-    isExpense = true;
-    str = str.slice(1, -1);
-  }
-
-  // 2. DR/CR suffixes
-  const lowerStr = str.toLowerCase();
-  if (lowerStr.endsWith('dr') || lowerStr.endsWith(' db') || lowerStr.endsWith('debit')) {
-    isExpense = true;
-    str = str.replace(/(dr|db|debit)$/i, '').trim();
-  } else if (lowerStr.endsWith('cr') || lowerStr.endsWith('credit')) {
-    isIncome = true;
-    str = str.replace(/(cr|credit)$/i, '').trim();
-  }
-
-  // 3. Remove ALL commas and spaces FIRST to prevent parseInt/parseFloat truncation
-  str = str.replace(/,/g, '').replace(/\s+/g, '');
-
-  // 4. Clean other symbols (currency signs etc)
-  str = str.replace(/[^\d.-]/g, '');
-
-  let amount = parseFloat(str);
-  
-  if (isNaN(amount)) {
-    return { amount: 0, isExpense: false, isIncome: false };
-  }
-
-  if (isExpense) {
-    amount = -Math.abs(amount);
-  } else if (isIncome) {
-    amount = Math.abs(amount);
-  }
-
-  return { amount, isExpense, isIncome };
-};
-
-/**
- * Parses diverse date formats reliably, including Indian formats (DD/MM/YYYY, DD-MM-YYYY, DD Mon YYYY).
- * Returns { date: Date; ambiguous: boolean; error: boolean }
- */
-export const parseIngestedDate = (val: any): { date: Date; ambiguous: boolean; error: boolean } => {
-  if (val === null || val === undefined || val === '') return { date: new Date(), ambiguous: false, error: true };
-
-  // If already parsed as a Date object
-  if (val instanceof Date) {
-    const d = new Date(Date.UTC(val.getFullYear(), val.getMonth(), val.getDate()));
-    return { date: d, ambiguous: false, error: false };
-  }
-
-  // Handle Excel serial date (numeric or string matching 5 digits)
-  if (typeof val === 'number') {
-    const num = Number(val);
-    if (!isNaN(num) && num > 0) {
-      const d = new Date(Math.round((num - 25569) * 86400 * 1000));
-      return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
-    }
-  }
-
-  let str = val.toString().trim();
-  
-  // Strip weekday prefix (e.g., "Monday, ", "Mon, ", "Monday ")
-  str = str.replace(/^(?:sun|mon|tue|wed|thu|fri|sat)(?:day)?(?:,\s*|\s+)/i, '');
-
-  if (/^\d{5}$/.test(str)) {
-    const num = Number(str);
-    const d = new Date(Math.round((num - 25569) * 86400 * 1000));
-    return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
-  }
-  
-  // 1. Check if ISO-like YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
-  const isoMatch = str.match(/^(\d{4})[-/.\s](\d{1,2})[-/.\s](\d{1,2})/);
-  if (isoMatch) {
-    const year = parseInt(isoMatch[1], 10);
-    const month = parseInt(isoMatch[2], 10) - 1;
-    const day = parseInt(isoMatch[3], 10);
-    const d = new Date(Date.UTC(year, month, day));
-    return { date: isNaN(d.getTime()) ? new Date() : d, ambiguous: false, error: isNaN(d.getTime()) };
-  }
-
-  // 2. Check for DD/MM/YYYY or DD-MM-YYYY or MM/DD/YYYY or 2-digit year variants with multiple separators
-  const delimiterMatch = str.match(/^(\d{1,2})([-/.\s])(\d{1,2})[-/.\s](\d{2,4})/);
-  if (delimiterMatch) {
-    const p1 = parseInt(delimiterMatch[1], 10);
-    const p2 = parseInt(delimiterMatch[3], 10);
-    let year = parseInt(delimiterMatch[4], 10);
-    if (year < 100) {
-      year = year < 50 ? 2000 + year : 1900 + year;
-    }
-
-    if (p1 === p2) {
-      const d = new Date(Date.UTC(year, p2 - 1, p1));
-      return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
-    }
-
-    if (p1 > 12) {
-      const d = new Date(Date.UTC(year, p2 - 1, p1));
-      return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
-    }
-    
-    if (p2 > 12) {
-      const d = new Date(Date.UTC(year, p1 - 1, p2));
-      return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
-    }
-
-    // Both are <= 12: Ambiguous! Default to standard Indian DD/MM/YYYY, but mark ambiguous
-    const d = new Date(Date.UTC(year, p2 - 1, p1));
-    return { date: d, ambiguous: true, error: isNaN(d.getTime()) };
-  }
-
-  const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-
-  // 3. Check for word months: e.g. "12 May 2026", "12-May-2026", "12.May.26"
-  const wordMonthMatch = str.match(/^(\d{1,2})[-/.\s]([A-Za-z]{3,9})\.?[-/.\s](\d{2,4})/);
-  if (wordMonthMatch) {
-    const day = parseInt(wordMonthMatch[1], 10);
-    const monthStr = wordMonthMatch[2];
-    let year = parseInt(wordMonthMatch[3], 10);
-    if (year < 100) {
-      year = year < 50 ? 2000 + year : 1900 + year;
-    }
-
-    const monthIdx = monthNames.findIndex(m => monthStr.toLowerCase().startsWith(m));
-
-    if (monthIdx !== -1) {
-      const d = new Date(Date.UTC(year, monthIdx, day));
-      return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
-    }
-  }
-
-  // 4. Check for word-month-first format: e.g. "February 7th, 2026" or "Feb 7, 2026" or "Feb. 7, 26"
-  const wordMonthFirstMatch = str.match(/^([A-Za-z]{3,9})\.?[-/.\s](\d{1,2})(?:st|nd|rd|th)?(?:,\s*|\s+)(\d{2,4})/i);
-  if (wordMonthFirstMatch) {
-    const monthStr = wordMonthFirstMatch[1];
-    const day = parseInt(wordMonthFirstMatch[2], 10);
-    let year = parseInt(wordMonthFirstMatch[3], 10);
-    if (year < 100) {
-      year = year < 50 ? 2000 + year : 1900 + year;
-    }
-
-    const monthIdx = monthNames.findIndex(m => monthStr.toLowerCase().startsWith(m));
-
-    if (monthIdx !== -1) {
-      const d = new Date(Date.UTC(year, monthIdx, day));
-      return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
-    }
-  }
-
-  // Standard fallback
-  const d = new Date(str);
-  if (!isNaN(d.getTime())) {
-    const utcDate = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    return { date: utcDate, ambiguous: false, error: false };
-  }
-  return { date: new Date(), ambiguous: false, error: true };
-};
+export { cleanAmount } from './amountNormalizer';
+export { parseIngestedDate } from './dateNormalizer';
 
 /**
  * Core Normalizer Function — v2 (Direction-First)
@@ -284,7 +111,9 @@ export const normalizeIngestedRows = (
       const { date, ambiguous, error: dateError } = parseIngestedDate(rawDate);
 
       if (dateError) {
-        warnings.push(`Row ${index + 1}: Skipping due to unparseable transaction date.`);
+        const reason = `Row ${index + 1}: Skipping due to unparseable transaction date.`;
+        warnings.push(reason);
+        console.log(`[Normalizer] ${reason}`);
         return;
       }
 
@@ -298,7 +127,9 @@ export const normalizeIngestedRows = (
       const amount = -Math.abs(parsedAmt); // negative for expense
 
       if (amount === 0) {
-        warnings.push(`Row ${index + 1}: Skipping due to zero or missing amount.`);
+        const reason = `Row ${index + 1}: Skipping due to zero or missing amount.`;
+        warnings.push(reason);
+        console.log(`[Normalizer] ${reason}`);
         return;
       }
 
@@ -404,7 +235,9 @@ export const normalizeIngestedRows = (
     const { date, ambiguous, error: dateError } = parseIngestedDate(rawDate);
 
     if (dateError) {
-      warnings.push(`Row ${index + 1}: Skipping due to unparseable transaction date.`);
+      const reason = `Row ${index + 1}: Skipping due to unparseable transaction date.`;
+      warnings.push(reason);
+      console.log(`[Normalizer] ${reason}`);
       return;
     }
 
@@ -482,6 +315,13 @@ export const normalizeIngestedRows = (
       // Store debit/credit breakdown
       if (direction === 'outflow') rawDebit = Math.abs(parsedAmt);
       else if (direction === 'inflow') rawCredit = parsedAmt;
+    }
+
+    if (amount === 0) {
+      const reason = `Row ${index + 1}: Skipping due to zero or missing amount.`;
+      warnings.push(reason);
+      console.log(`[Normalizer] ${reason}`);
+      return;
     }
 
     // 3. Resolve description

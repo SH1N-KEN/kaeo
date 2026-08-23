@@ -1,29 +1,5 @@
 import { supabase } from '../supabase';
-
-/**
- * Validates if a reference is a real, non-placeholder value.
- * Treating null, undefined, empty string, '0', and '0.00' as missing/placeholder references.
- */
-export const isReferenceValValid = (ref: any): boolean => {
-  if (ref === null || ref === undefined) return false;
-  const str = String(ref).trim();
-  if (str === '') return false;
-  // Reject any reference that consists entirely of zeros, e.g. "000000000000000", "0", "0.00"
-  return !/^0+(\.0+)?$/.test(str);
-};
-
-/**
- * Generates a unique, deterministic fingerprint for a financial transaction based on reference.
- * If reference is missing or a placeholder, returns null.
- */
-export const generateFingerprint = (
-  clientId: string,
-  reference: any
-): string | null => {
-  if (!isReferenceValValid(reference)) return null;
-  const cleanRef = String(reference).trim().toLowerCase();
-  return `${clientId}_ref_${cleanRef}`;
-};
+import { isValidReference } from './referenceValidator';
 
 export interface DuplicateReport {
   intraFileDuplicates: number;
@@ -34,80 +10,101 @@ export interface DuplicateReport {
 }
 
 /**
- * Scans an array of incoming transactions, identifies intra-file duplicates,
- * queries the Supabase database, identifies matches, and returns a clean deduplicated list.
+ * Deterministic fingerprint for valid references.
+ */
+export const generateFingerprint = (clientId: string, reference: any): string | null => {
+  if (!isValidReference(reference)) return null;
+  const cleanRef = String(reference).trim().toLowerCase();
+  return `${clientId}_ref_${cleanRef}`;
+};
+
+/**
+ * Deduplicates transactions based on a general-purpose zero-special-casing strategy.
  */
 export const checkDuplicateTransactions = async (
   clientId: string,
   incomingTransactions: any[]
 ): Promise<DuplicateReport> => {
-  console.log("DEDUP_FIX_V2_ACTIVE");
+  console.log('[Duplicate Engine] checkDuplicateTransactions active');
+  
   if (incomingTransactions.length === 0) {
     return { intraFileDuplicates: 0, dbDuplicates: 0, totalIncoming: 0, importableCount: 0, cleanTransactions: [] };
   }
 
-  const seenFingerprints = new Set<string>();
-  const uniqueIncoming: any[] = [];
+  // 1. Fetch existing hashes from Supabase
+  let dbFingerprints = new Set<string>();
+  try {
+    const { data: existingHashes, error } = await supabase
+      .from('transactions')
+      .select('source_row_hash, reference')
+      .eq('client_id', clientId);
+
+    if (error) {
+      console.error('[Duplicate Engine] Failed to query existing hashes:', error);
+    } else if (existingHashes) {
+      existingHashes.forEach((tx) => {
+        const fp = generateFingerprint(clientId, tx.reference);
+        if (fp) {
+          dbFingerprints.add(fp);
+        }
+        if (tx.source_row_hash && tx.source_row_hash.startsWith(`${clientId}_ref_`)) {
+          dbFingerprints.add(tx.source_row_hash);
+        }
+      });
+    }
+  } catch (err) {
+    console.error('[Duplicate Engine] Unexpected error querying DB:', err);
+  }
+
+  const seenRefs = new Set<string>();
+  const seenSignatures = new Set<string>(); // for reference-less transactions
+  const cleanTransactions: any[] = [];
+  
   let intraFileDuplicates = 0;
+  let dbDuplicates = 0;
 
-  // 1. Identify intra-file duplicates (redundant rows in the same upload)
-  incomingTransactions.forEach((tx) => {
-    const fingerprint = generateFingerprint(clientId, tx.reference);
+  incomingTransactions.forEach((tx, idx) => {
+    const ref = tx.reference;
+    const hasValidRef = isValidReference(ref);
 
-    if (fingerprint) {
-      if (seenFingerprints.has(fingerprint)) {
+    if (hasValidRef) {
+      const fingerprint = generateFingerprint(clientId, ref)!;
+
+      if (seenRefs.has(fingerprint)) {
         intraFileDuplicates++;
+        console.log(`[Duplicate Engine] Dropped row ${idx + 1}: Intra-file duplicate with valid reference "${ref}"`);
+      } else if (dbFingerprints.has(fingerprint)) {
+        dbDuplicates++;
+        console.log(`[Duplicate Engine] Dropped row ${idx + 1}: Database duplicate with valid reference "${ref}"`);
       } else {
-        seenFingerprints.add(fingerprint);
-        uniqueIncoming.push({
+        seenRefs.add(fingerprint);
+        cleanTransactions.push({
           ...tx,
-          source_row_hash: fingerprint // store reference fingerprint in source_row_hash column!
+          source_row_hash: fingerprint
         });
       }
     } else {
-      // If a reference number isn't available for a row (or is a default placeholder like 0),
-      // don't auto-dedupe it at all — flag it for manual review instead.
-      uniqueIncoming.push({
-        ...tx,
-        source_row_hash: null,
-        review_status: 'needs_review'
-      });
-    }
-  });
+      // Reference is missing or invalid placeholder:
+      // Deduplicate WITHIN the upload only using exact content signatures
+      const dateStr = tx.transaction_date ? new Date(tx.transaction_date).toISOString() : '';
+      const amtStr = String(tx.amount);
+      const descStr = String(tx.description || '').trim().toLowerCase();
+      const typeStr = String(tx.type || '');
+      const signature = `${dateStr}|${amtStr}|${descStr}|${typeStr}`;
 
-  // 2. Query Supabase database to check against existing transactions
-  // Fetch existing source_row_hashes and references for this client
-  const { data: existingHashes, error } = await supabase
-    .from('transactions')
-    .select('source_row_hash, transaction_date, amount, description, reference')
-    .eq('client_id', clientId);
-
-  if (error) {
-    console.error('[Duplicate Engine] Failed to query existing hashes:', error);
-  }
-
-  // Create a map of existing db fingerprints
-  const dbFingerprints = new Set<string>();
-  if (existingHashes) {
-    existingHashes.forEach((tx) => {
-      const fp = generateFingerprint(clientId, tx.reference);
-      if (fp) {
-        dbFingerprints.add(fp);
-      } else if (tx.source_row_hash && tx.source_row_hash.startsWith(`${clientId}_ref_`)) {
-        dbFingerprints.add(tx.source_row_hash);
+      if (seenSignatures.has(signature)) {
+        intraFileDuplicates++;
+        console.log(`[Duplicate Engine] Dropped row ${idx + 1}: Intra-file duplicate reference-less transaction. Signature: "${signature}"`);
+      } else {
+        seenSignatures.add(signature);
+        
+        // "Flag any reference-less transaction for manual review regardless of dedup outcome."
+        cleanTransactions.push({
+          ...tx,
+          source_row_hash: null,
+          review_status: 'needs_review'
+        });
       }
-    });
-  }
-
-  // 3. Filter out DB duplicates
-  const cleanTransactions: any[] = [];
-  let dbDuplicates = 0;
-
-  uniqueIncoming.forEach((tx) => {
-    if (tx.source_row_hash && dbFingerprints.has(tx.source_row_hash)) {
-      dbDuplicates++;
-    } else {
-      cleanTransactions.push(tx);
     }
   });
 

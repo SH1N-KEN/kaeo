@@ -3,104 +3,17 @@ import { detectHeaderRow, filterMessyRows } from './headerDetector';
 import type { ParsedFinancialFile, ParsedSheet } from './ingestionTypes';
 import { suggestMappingFromColumns } from '../mappingEngine';
 import { calculateParserConfidence } from './ingestionConfidence';
-
-const DATE_KEYWORDS = ['date', 'txn date', 'txn_date', 'transaction date', 'value date', 'posted', 'tran date', 'val date', 'time'];
-const DESC_KEYWORDS = ['description', 'narration', 'particulars', 'remarks', 'payee', 'vendor', 'details', 'particular', 'payer'];
-const AMT_KEYWORDS = ['amount', 'debit', 'credit', 'withdrawal', 'deposit', 'net amount', 'value', 'txn amount', 'balance', 'paid', 'received'];
-
-const isDateLike = (val: any): boolean => {
-  if (val instanceof Date) return !isNaN(val.getTime());
-  if (typeof val === 'number') {
-    return val > 30000 && val < 60000;
-  }
-  if (typeof val !== 'string') return false;
-  const cleaned = val.trim();
-  if (!cleaned) return false;
-  const dateRegex = /^\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}/;
-  if (dateRegex.test(cleaned)) return true;
-  const parsed = Date.parse(cleaned);
-  return !isNaN(parsed);
-};
-
-const isDescriptionLike = (val: any): boolean => {
-  if (val === null || val === undefined) return false;
-  const str = val.toString().trim();
-  return str.length > 0;
-};
-
-const isAmountLike = (val: any): boolean => {
-  if (val === null || val === undefined) return false;
-  if (typeof val === 'number') return val !== 0;
-  const str = val.toString().trim();
-  if (str === '' || str === '-' || str === '0' || str === '0.00') return false;
-  const cleaned = str.replace(/,/g, '').replace(/[^\d.-]/g, '');
-  const parsed = parseFloat(cleaned);
-  return !isNaN(parsed) && parsed !== 0;
-};
-
-const findColumnIndex = (headers: string[], keywords: string[]): number => {
-  const normalizedHeaders = headers.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
-  return headers.findIndex((h, idx) => {
-    const nh = normalizedHeaders[idx];
-    const words = h.toLowerCase().split(/[^a-z0-9]+/);
-    return keywords.some(k => {
-      const nk = k.replace(/[^a-z0-9]/g, '');
-      if (['in', 'out', 'dr', 'cr'].includes(k)) {
-        return words.includes(k) || nh === nk;
-      }
-      return nh.includes(nk) || words.includes(nk);
-    });
-  });
-};
-
-const findAllAmountColumnIndexes = (headers: string[]): number[] => {
-  const normalizedHeaders = headers.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
-  const indexes: number[] = [];
-  headers.forEach((h, idx) => {
-    const nh = normalizedHeaders[idx];
-    const words = h.toLowerCase().split(/[^a-z0-9]+/);
-    const isAmt = AMT_KEYWORDS.some(k => {
-      const nk = k.replace(/[^a-z0-9]/g, '');
-      if (['in', 'out', 'dr', 'cr'].includes(k)) {
-        return words.includes(k) || nh === nk;
-      }
-      return nh.includes(nk) || words.includes(nk);
-    });
-    if (isAmt) {
-      indexes.push(idx);
-    }
-  });
-  return indexes;
-};
+import { mergeContinuationRows } from './continuationMerger';
+import { cleanAmount } from './amountNormalizer';
 
 const isNonFinancialName = (name: string): boolean => {
   const lower = name.toLowerCase().trim();
-  const keywords = [
-    'readme',
-    'expected results',
-    'expected_results',
-    'summary',
-    'pivot',
-    'notes',
-    'instructions',
-    'metadata',
-    'help'
-  ];
+  const keywords = ['readme', 'expected results', 'expected_results', 'summary', 'pivot', 'notes', 'instructions', 'metadata', 'help'];
   return keywords.some(k => lower.includes(k));
 };
 
 const isNonFinancialContent = (displayGrid: any[][]): boolean => {
-  const keywords = [
-    'readme',
-    'expected results',
-    'expected_results',
-    'summary',
-    'pivot',
-    'notes',
-    'instructions',
-    'metadata',
-    'help'
-  ];
+  const keywords = ['readme', 'expected results', 'expected_results', 'summary', 'pivot', 'notes', 'instructions', 'metadata', 'help'];
   const rowsToScan = Math.min(10, displayGrid.length);
   for (let r = 0; r < rowsToScan; r++) {
     const row = displayGrid[r];
@@ -136,246 +49,6 @@ const isExpenseLedgerSheet = (headers: string[]): boolean => {
   return keywords.some(k => normalized.includes(k));
 };
 
-const parseExcelSerialDate = (serial: any): string | null => {
-  if (serial === null || serial === undefined || serial === '') return null;
-  if (serial instanceof Date) {
-    const adjusted = new Date(serial.getTime() + 12 * 60 * 60 * 1000);
-    const yyyy = adjusted.getUTCFullYear();
-    const mm = String(adjusted.getUTCMonth() + 1).padStart(2, '0');
-    const dd = String(adjusted.getUTCDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
-  const num = Number(serial);
-  if (!isNaN(num) && num > 0) {
-    const date = new Date(Math.round((num - 25569) * 86400 * 1000));
-    const yyyy = date.getUTCFullYear();
-    const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const dd = String(date.getUTCDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
-  return String(serial).trim();
-};
-
-const cleanHdfcAmount = (val: any): number | null => {
-  if (val === null || val === undefined || val === '') return null;
-  if (typeof val === 'number') return val;
-  let str = String(val).trim();
-  
-  let isExpense = false;
-  let isIncome = false;
-  if (str.startsWith('(') && str.endsWith(')')) {
-    isExpense = true;
-    str = str.slice(1, -1);
-  }
-  const lowerStr = str.toLowerCase();
-  if (lowerStr.endsWith('dr') || lowerStr.endsWith(' db') || lowerStr.endsWith('debit')) {
-    isExpense = true;
-    str = str.replace(/(dr|db|debit)$/i, '').trim();
-  } else if (lowerStr.endsWith('cr') || lowerStr.endsWith('credit')) {
-    isIncome = true;
-    str = str.replace(/(cr|credit)$/i, '').trim();
-  }
-
-  str = str.replace(/,/g, '').replace(/\s+/g, '');
-  str = str.replace(/[^\d.-]/g, '');
-  
-  let num = parseFloat(str);
-  if (isNaN(num)) return null;
-  if (isExpense) num = -Math.abs(num);
-  else if (isIncome) num = Math.abs(num);
-  return num;
-};
-
-const resolveColumnIndex = (headers: string[], keywords: string[]): number => {
-  const normalizedHeaders = headers.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
-  return headers.findIndex((_, idx) => {
-    const nh = normalizedHeaders[idx];
-    const words = headers[idx].toLowerCase().split(/[^a-z0-9]+/);
-    return keywords.some(k => {
-      const nk = k.replace(/[^a-z0-9]/g, '');
-      if (['dr', 'cr', 'in', 'out'].includes(k)) {
-        return words.includes(k) || nh === nk;
-      }
-      return nh.includes(nk) || words.includes(nk);
-    });
-  });
-};
-
-const processHDFCSheet = (
-  displayGrid: any[][],
-  rawGrid: any[][],
-  headers: string[],
-  headerRowIndex: number
-): { cleanRows: any[]; warnings: string[]; skippedCount: number; hdfcStats: any } => {
-  const warnings: string[] = [];
-  const cleanRows: any[] = [];
-  let skippedCount = 0;
-  let continuationRowsMerged = 0;
-  let orphanRowsSkipped = 0;
-  let blankRowsSkipped = 0;
-  
-  const dateIdx = resolveColumnIndex(headers, ['date', 'txn date', 'transaction date', 'posted date', 'valuedt']);
-  const narrationIdx = resolveColumnIndex(headers, ['narration', 'description', 'particulars', 'remarks']);
-  const refIdx = resolveColumnIndex(headers, ['chq', 'ref', 'reference', 'utr', 'instrument', 'cheque']);
-  const valueDtIdx = resolveColumnIndex(headers, ['value date', 'value dt', 'val date', 'val dt']);
-  const withdrawalIdx = resolveColumnIndex(headers, ['withdrawal', 'debit', 'payment', 'dr', 'outflow']);
-  const depositIdx = resolveColumnIndex(headers, ['deposit', 'credit', 'receipt', 'cr', 'inflow']);
-  const balanceIdx = resolveColumnIndex(headers, ['balance', 'closing balance', 'bal']);
-
-  let currentTx: any = null;
-  let orphanSkipped = false;
-
-  const dataGrid = rawGrid.slice(headerRowIndex + 1);
-  const displayDataGrid = displayGrid.slice(headerRowIndex + 1);
-
-  for (let r = 0; r < dataGrid.length; r++) {
-    const rawRow = dataGrid[r];
-    const displayRow = displayDataGrid[r];
-
-    if (!rawRow || rawRow.length === 0) {
-      blankRowsSkipped++;
-      skippedCount++;
-      continue;
-    }
-
-    const isBlank = rawRow.every(val => val === null || val === undefined || String(val).trim() === '');
-    if (isBlank) {
-      blankRowsSkipped++;
-      skippedCount++;
-      continue;
-    }
-
-    const rawDate = dateIdx !== -1 ? rawRow[dateIdx] : null;
-    const rawNarration = narrationIdx !== -1 ? rawRow[narrationIdx] : null;
-    const rawRef = refIdx !== -1 ? displayRow[refIdx] : '';
-    const rawValueDt = valueDtIdx !== -1 ? rawRow[valueDtIdx] : null;
-    const rawWithdrawal = withdrawalIdx !== -1 ? rawRow[withdrawalIdx] : null;
-    const rawDeposit = depositIdx !== -1 ? rawRow[depositIdx] : null;
-    const rawBalance = balanceIdx !== -1 ? rawRow[balanceIdx] : null;
-
-    const hasDate = rawDate !== null && rawDate !== undefined && String(rawDate).trim() !== '';
-    const hasNarration = rawNarration !== null && rawNarration !== undefined && String(rawNarration).trim() !== '';
-    const hasWithdrawal = rawWithdrawal !== null && rawWithdrawal !== undefined && String(rawWithdrawal).trim() !== '' && cleanHdfcAmount(rawWithdrawal) !== null;
-    const hasDeposit = rawDeposit !== null && rawDeposit !== undefined && String(rawDeposit).trim() !== '' && cleanHdfcAmount(rawDeposit) !== null;
-    const hasBalance = rawBalance !== null && rawBalance !== undefined && String(rawBalance).trim() !== '' && cleanHdfcAmount(rawBalance) !== null;
-
-    const isTransactionStart = hasDate && hasNarration && (hasWithdrawal || hasDeposit || hasBalance);
-
-    if (isTransactionStart) {
-      const txDate = parseExcelSerialDate(rawDate);
-      const valDate = parseExcelSerialDate(rawValueDt);
-      const withdrawal = cleanHdfcAmount(rawWithdrawal);
-      const deposit = cleanHdfcAmount(rawDeposit);
-      const balance = cleanHdfcAmount(rawBalance);
-
-      currentTx = {};
-      headers.forEach((h, idx) => {
-        if (idx === dateIdx) currentTx[h] = txDate;
-        else if (idx === narrationIdx) currentTx[h] = String(rawNarration).trim();
-        else if (idx === refIdx) {
-          // Preserve reference exactly from display row (as a string, keeping leading zeros)
-          currentTx[h] = rawRef !== null && rawRef !== undefined ? String(rawRef).trim() : '';
-        }
-        else if (idx === valueDtIdx) currentTx[h] = valDate;
-        else if (idx === withdrawalIdx) currentTx[h] = withdrawal;
-        else if (idx === depositIdx) currentTx[h] = deposit;
-        else if (idx === balanceIdx) currentTx[h] = balance;
-        else {
-          let cellVal = rawRow[idx];
-          if (cellVal instanceof Date) {
-            const yyyy = cellVal.getFullYear();
-            const mm = String(cellVal.getMonth() + 1).padStart(2, '0');
-            const dd = String(cellVal.getDate()).padStart(2, '0');
-            cellVal = `${yyyy}-${mm}-${dd}`;
-          }
-          currentTx[h] = cellVal !== undefined ? cellVal : null;
-        }
-      });
-
-      cleanRows.push(currentTx);
-    } else {
-      const isContinuation = !hasDate && !hasWithdrawal && !hasDeposit && !hasBalance && hasNarration && narrationIdx !== -1;
-      if (isContinuation) {
-        if (currentTx) {
-          const prev = currentTx[headers[narrationIdx]];
-          const next = String(rawNarration).trim();
-          const lastChar = prev.charAt(prev.length - 1);
-          const firstChar = next.charAt(0);
-          const isAlphanumeric = (ch: string) => /[a-zA-Z0-9]/.test(ch);
-          if (isAlphanumeric(lastChar) && isAlphanumeric(firstChar)) {
-            currentTx[headers[narrationIdx]] = prev + next;
-          } else {
-            currentTx[headers[narrationIdx]] = prev + ' ' + next;
-          }
-          continuationRowsMerged++;
-        } else {
-          if (!orphanSkipped) {
-            warnings.push("Skipped orphan narration row before first transaction.");
-            orphanSkipped = true;
-          }
-          orphanRowsSkipped++;
-          skippedCount++;
-        }
-      } else {
-        skippedCount++;
-      }
-    }
-  }
-
-  // Calculate balance warnings and sum totals
-  let balanceWarnings = 0;
-  let prevBalance: number | null = null;
-  let totalDeposits = 0;
-  let totalWithdrawals = 0;
-
-  cleanRows.forEach((tx, idx) => {
-    const balanceVal = balanceIdx !== -1 ? tx[headers[balanceIdx]] || 0 : 0;
-    const depositVal = depositIdx !== -1 ? tx[headers[depositIdx]] || 0 : 0;
-    const withdrawalVal = withdrawalIdx !== -1 ? tx[headers[withdrawalIdx]] || 0 : 0;
-    
-    totalDeposits += depositVal;
-    totalWithdrawals += withdrawalVal;
-
-    if (balanceIdx === -1) return;
-
-    if (idx === 0) {
-      prevBalance = balanceVal;
-      return;
-    }
-    
-    const expectedDelta = depositVal - withdrawalVal;
-    const actualDelta = balanceVal - prevBalance!;
-    const diff = Math.abs(expectedDelta - actualDelta);
-    if (diff > 0.02) {
-      balanceWarnings++;
-    }
-    prevBalance = balanceVal;
-  });
-
-  const netCashMovement = totalDeposits - totalWithdrawals;
-
-  warnings.push("Some narration lines were merged from a PDF-converted statement.");
-  if (balanceWarnings > 0) {
-    warnings.push(`${balanceWarnings} rows have balance movement mismatches and should be reviewed.`);
-  }
-
-  return {
-    cleanRows,
-    warnings,
-    skippedCount,
-    hdfcStats: {
-      transactionsCount: cleanRows.length,
-      continuationRowsMerged,
-      orphanRowsSkipped,
-      blankRowsSkipped,
-      balanceWarnings,
-      totalDeposits,
-      totalWithdrawals,
-      netCashMovement
-    }
-  };
-};
-
 export const parseXLSXFile = (file: File): Promise<ParsedFinancialFile> => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -388,173 +61,134 @@ export const parseXLSXFile = (file: File): Promise<ParsedFinancialFile> => {
 
         const parsedSheets: ParsedSheet[] = [];
 
-        workbook.SheetNames.forEach((sheetName) => {
+        workbook.SheetNames.forEach((sheetName: string) => {
           const sheet = workbook.Sheets[sheetName];
-          // Convert sheet twice: once for reliable header detection (strings), once for raw numbers
           const displayGrid = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, raw: false, defval: null });
           const rawGrid = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, raw: true, defval: null });
 
           if (!displayGrid || displayGrid.length === 0) {
-            return; // Skip empty sheets
+            return;
           }
 
-          // Run smart header detection per sheet using the display grid for string matching
+          // A. Header Row Detection
           const { headerRowIndex, headers, skippedRowCount, warnings: headerWarnings, headerRowsCount = 1 } = detectHeaderRow(displayGrid);
 
           if (headers.length === 0) {
-            return; // Skip if no columns found
+            return;
           }
 
+          const isHdfc = isHDFCSheet(headers);
+          const isExpenseLedger = isExpenseLedgerSheet(headers);
+          
           let cleanRows: Record<string, any>[] = [];
           let allWarnings = [...headerWarnings];
           let totalSkipped = skippedRowCount;
-          let hdfcStats: any = null;
-          const isHdfc = isHDFCSheet(headers);
-          const isExpenseLedger = isExpenseLedgerSheet(headers);
 
-          if (isHdfc) {
-            const hdfcRes = processHDFCSheet(displayGrid, rawGrid, headers, headerRowIndex);
-            cleanRows = hdfcRes.cleanRows;
-            allWarnings = [...allWarnings, ...hdfcRes.warnings];
-            totalSkipped += hdfcRes.skippedCount;
-            hdfcStats = hdfcRes.hdfcStats;
-          } else if (isExpenseLedger) {
-            let parsedTotal = 0;
-            let sheetTotalRowValue = null;
-            
-            const dataGrid = rawGrid.slice(headerRowIndex + headerRowsCount);
-
-            const amountIdx = findColumnIndex(headers, ['amount (in rs.)', 'amount in rs', 'amount', 'value', 'total']);
-            const dateIdx = findColumnIndex(headers, ['payment date', 'order date', 'date']);
-            const descIdx = findColumnIndex(headers, ['item', 'supplier details', 'supplier', 'invoice no']);
-
-            cleanRows = [];
-
-            for (let r = 0; r < dataGrid.length; r++) {
-              const rawRow = dataGrid[r];
-              if (!rawRow || rawRow.length === 0) continue;
-
-              const isBlank = rawRow.every(val => val === null || val === undefined || String(val).trim() === '');
-              if (isBlank) continue;
-
-              const isTotal = rawRow.some(val => val !== null && val !== undefined && String(val).toUpperCase().includes('TOTAL'));
-              if (isTotal) {
-                if (amountIdx !== -1 && rawRow[amountIdx] !== undefined && rawRow[amountIdx] !== null) {
-                  const amtStr = String(rawRow[amountIdx]).replace(/,/g, '').replace(/[^\d.-]/g, '');
-                  const amtNum = parseFloat(amtStr);
-                  if (!isNaN(amtNum)) {
-                    sheetTotalRowValue = amtNum;
-                  }
-                }
-                continue;
+          // B. Map Rows
+          const dataGrid = rawGrid.slice(headerRowIndex + headerRowsCount);
+          const mappedRows: Record<string, any>[] = dataGrid.map((row) => {
+            const obj: Record<string, any> = {};
+            headers.forEach((header, idx) => {
+              let cellVal = row[idx];
+              if (cellVal instanceof Date) {
+                // Strict UTC shifted string serialization
+                const adjusted = new Date(cellVal.getTime() - cellVal.getTimezoneOffset() * 60000);
+                cellVal = adjusted.toISOString().split('T')[0];
               }
-
-              let rowAmount = 0;
-              if (amountIdx !== -1 && rawRow[amountIdx] !== undefined && rawRow[amountIdx] !== null) {
-                const amtStr = String(rawRow[amountIdx]).replace(/,/g, '').replace(/[^\d.-]/g, '');
-                const amtNum = parseFloat(amtStr);
-                if (!isNaN(amtNum) && amtNum > 0) {
-                  rowAmount = amtNum;
-                }
-              }
-
-              const hasDate = dateIdx !== -1 && rawRow[dateIdx] !== undefined && rawRow[dateIdx] !== null && String(rawRow[dateIdx]).trim() !== '';
-              const hasDesc = descIdx !== -1 && rawRow[descIdx] !== undefined && rawRow[descIdx] !== null && String(rawRow[descIdx]).trim() !== '';
-
-              if (rowAmount <= 0 || !hasDate || !hasDesc) {
-                totalSkipped++;
-                continue;
-              }
-
-              parsedTotal += rowAmount;
-
-              const obj: Record<string, any> = {};
-              headers.forEach((header, idx) => {
-                let cellVal = rawRow[idx];
-                if (cellVal instanceof Date) {
-                  const yyyy = cellVal.getFullYear();
-                  const mm = String(cellVal.getMonth() + 1).padStart(2, '0');
-                  const dd = String(cellVal.getDate()).padStart(2, '0');
-                  cellVal = `${yyyy}-${mm}-${dd}`;
-                }
-                obj[header] = cellVal !== undefined ? cellVal : null;
-              });
-
-              cleanRows.push(obj);
-            }
-
-            if (sheetTotalRowValue !== null) {
-              const diff = Math.abs(sheetTotalRowValue - parsedTotal);
-              if (diff > 0.01) {
-                allWarnings.push(`Parsed ${cleanRows.length} expense rows. The sheet total differs from parsed numeric rows by ₹${diff.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`);
-              }
-            }
-          } else {
-            // Map rows to key-value objects using the raw grid for precise numeric values
-            const dataGrid = rawGrid.slice(headerRowIndex + headerRowsCount);
-            const mappedRows: Record<string, any>[] = dataGrid.map((row) => {
-              const obj: Record<string, any> = {};
-              headers.forEach((header, idx) => {
-                // Strictly map by index to prevent column shifting
-                let cellVal = row[idx];
-                if (cellVal instanceof Date) {
-                  const yyyy = cellVal.getFullYear();
-                  const mm = String(cellVal.getMonth() + 1).padStart(2, '0');
-                  const dd = String(cellVal.getDate()).padStart(2, '0');
-                  cellVal = `${yyyy}-${mm}-${dd}`;
-                }
-                obj[header] = cellVal !== undefined ? cellVal : null;
-              });
-              return obj;
+              obj[header] = cellVal !== undefined ? cellVal : null;
             });
+            return obj;
+          });
 
-            // Filter messy rows
-            const { cleanRows: clean, skippedCount: filterSkipped, warnings: filterWarnings } = filterMessyRows(mappedRows, headers);
-            cleanRows = clean;
-            allWarnings = [...allWarnings, ...filterWarnings];
-            totalSkipped += filterSkipped;
-          }
+          // C. Filter Messy Rows
+          const { cleanRows: filteredRows, skippedCount: filterSkipped, warnings: filterWarnings } = filterMessyRows(mappedRows, headers);
+          allWarnings = [...allWarnings, ...filterWarnings];
+          totalSkipped += filterSkipped;
 
-          // 1. Check if sheet name or content suggests README etc.
-          const suggestsNonFinancial = isNonFinancialName(sheetName) || isNonFinancialContent(displayGrid);
-
-          // 2. Determine if it is a valid transaction sheet
-          const dateIdx = findColumnIndex(headers, DATE_KEYWORDS);
-          const descIdx = findColumnIndex(headers, DESC_KEYWORDS);
-          const amtIndexes = findAllAmountColumnIndexes(headers);
-
-          const hasRequiredColumns = dateIdx !== -1 && descIdx !== -1 && amtIndexes.length > 0;
-          
-          let validTransactionRowsCount = 0;
-          if (hasRequiredColumns && !isHdfc && !isExpenseLedger) {
-            const dataGrid = rawGrid.slice(headerRowIndex + headerRowsCount);
-            dataGrid.forEach((row) => {
-              if (!row || !Array.isArray(row)) return;
-              const dateVal = row[dateIdx];
-              const descVal = row[descIdx];
-              if (!isDateLike(dateVal)) return;
-              if (!isDescriptionLike(descVal)) return;
-              
-              let hasAmt = false;
-              for (const idx of amtIndexes) {
-                if (isAmountLike(row[idx])) {
-                  hasAmt = true;
-                  break;
-                }
-              }
-              if (hasAmt) {
-                validTransactionRowsCount++;
-              }
-            });
-          }
-
-          const isValidTransactionSheet = isHdfc || isExpenseLedger || (hasRequiredColumns && validTransactionRowsCount >= 3);
-          const isNonFinancial = suggestsNonFinancial && !isValidTransactionSheet;
-
-          // Generate mapping suggestion to verify suitability
+          // D. Suggest Mapping
           const mappingResult = suggestMappingFromColumns(headers);
 
-          // Calculate confidence score for this sheet
+          // E. Merge Continuation Rows Generally
+          const { cleanRows: mergedRows, mergedCount } = mergeContinuationRows(filteredRows, mappingResult.mapping, headers);
+          cleanRows = mergedRows;
+          
+          if (mergedCount > 0) {
+            allWarnings.push(`Merged ${mergedCount} wrapped/continuation narration lines.`);
+          }
+
+          // F. Calculate general reconciliation statistics for the sheet preview
+          let balanceWarnings = 0;
+          let prevBalance: number | null = null;
+          let totalDeposits = 0;
+          let totalWithdrawals = 0;
+
+          const debitCol = mappingResult.mapping['debit'];
+          const creditCol = mappingResult.mapping['credit'];
+          const amountCol = mappingResult.mapping['amount'];
+          const balanceCol = headers.find(h => ['balance', 'closingbalance', 'runningbalance'].includes(h.toLowerCase().trim().replace(/[^a-z0-9]/g, '')));
+
+          cleanRows.forEach((row) => {
+            let depositVal = 0;
+            let withdrawalVal = 0;
+
+            if (debitCol || creditCol) {
+              if (debitCol && row[debitCol] !== undefined && row[debitCol] !== null) {
+                const cleaned = cleanAmount(row[debitCol]);
+                withdrawalVal = Math.abs(cleaned.amount);
+              }
+              if (creditCol && row[creditCol] !== undefined && row[creditCol] !== null) {
+                const cleaned = cleanAmount(row[creditCol]);
+                depositVal = Math.abs(cleaned.amount);
+              }
+            } else if (amountCol && row[amountCol] !== undefined && row[amountCol] !== null) {
+              const cleaned = cleanAmount(row[amountCol]);
+              if (cleaned.amount < 0) {
+                withdrawalVal = Math.abs(cleaned.amount);
+              } else {
+                depositVal = cleaned.amount;
+              }
+            }
+
+            totalDeposits += depositVal;
+            totalWithdrawals += withdrawalVal;
+
+            if (balanceCol && row[balanceCol] !== undefined && row[balanceCol] !== null && row[balanceCol] !== '') {
+              const cleanBal = typeof row[balanceCol] === 'number' ? row[balanceCol] : parseFloat(String(row[balanceCol]).replace(/,/g, '').trim());
+              if (!isNaN(cleanBal)) {
+                if (prevBalance !== null) {
+                  const expectedDelta = depositVal - withdrawalVal;
+                  const actualDelta = cleanBal - prevBalance;
+                  const diff = Math.abs(expectedDelta - actualDelta);
+                  if (diff > 0.02) {
+                    balanceWarnings++;
+                  }
+                }
+                prevBalance = cleanBal;
+              }
+            }
+          });
+
+          const netCashMovement = totalDeposits - totalWithdrawals;
+
+          if (balanceWarnings > 0) {
+            allWarnings.push(`${balanceWarnings} rows have balance movement mismatches and should be reviewed.`);
+          }
+
+          const hdfcStats = {
+            transactionsCount: cleanRows.length,
+            continuationRowsMerged: mergedCount,
+            orphanRowsSkipped: 0,
+            blankRowsSkipped: totalSkipped,
+            balanceWarnings,
+            totalDeposits,
+            totalWithdrawals,
+            netCashMovement
+          };
+
+          const suggestsNonFinancial = isNonFinancialName(sheetName) || isNonFinancialContent(displayGrid);
+          const isValidTransactionSheet = isHdfc || isExpenseLedger || (headers.length >= 3 && cleanRows.length >= 3);
+          const isNonFinancial = suggestsNonFinancial && !isValidTransactionSheet;
+
           let confidence = isHdfc ? 1.0 : calculateParserConfidence({
             fileType: 'xlsx',
             headers,
@@ -593,7 +227,6 @@ export const parseXLSXFile = (file: File): Promise<ParsedFinancialFile> => {
         let maxScore = -999999;
 
         parsedSheets.forEach((s) => {
-          // If a sheet is non-financial, penalize its score so a financial sheet is preferred
           const score = s.isNonFinancial ? -1000 : s.confidence * s.rowCount;
           if (score > maxScore) {
             maxScore = score;

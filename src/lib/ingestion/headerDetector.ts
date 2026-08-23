@@ -1,6 +1,6 @@
 /**
- * Header Row Detector Heuristics
- * Analyzes raw cell grids to detect the optimal header row, skipping title/blank lines.
+ * Header Row Detector and Messy Row Filter Heuristics
+ * Analyzes raw cell grids to detect the optimal header row and clean transaction rows.
  */
 
 const DATE_KEYWORDS = ['date', 'txn date', 'txn_date', 'transaction date', 'value date', 'posted', 'tran date', 'val date', 'txndate', 'value_date', 'dt', 'tx dt', 'txn dt', 'time'];
@@ -15,15 +15,55 @@ export interface HeaderDetectionResult {
   headerRowsCount?: number;
 }
 
+/**
+ * Checks if a row looks like transaction data rather than column labels.
+ */
+const looksLikeDataRow = (row: any[]): boolean => {
+  if (!row || !Array.isArray(row)) return false;
+
+  let numericCount = 0;
+  let dateCount = 0;
+  let totalPopulated = 0;
+
+  row.forEach(cell => {
+    if (cell === null || cell === undefined) return;
+    const str = String(cell).trim();
+    if (str === '') return;
+
+    totalPopulated++;
+
+    // 1. Check if numeric
+    const cleanNumStr = str.replace(/,/g, '').trim();
+    const num = Number(cleanNumStr);
+    if (!isNaN(num) && num !== 0) {
+      numericCount++;
+    }
+
+    // 2. Check if matches standard date patterns
+    const cleanStr = str.replace(/^(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday|sun|mon|tue|wed|thu|fri|sat)(?:,\s*|\s+)/i, '');
+    const isDate = /^\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}/.test(cleanStr) ||
+                   /^[A-Za-z]{3,9}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4}/.test(cleanStr);
+    if (isDate) {
+      dateCount++;
+    }
+  });
+
+  if (totalPopulated === 0) return false;
+
+  // If >30% of populated cells are numeric/date, it's a data row
+  const density = (numericCount + dateCount) / totalPopulated;
+  return density > 0.3;
+};
+
 export const detectHeaderRow = (grid: any[][]): HeaderDetectionResult => {
   const warnings: string[] = [];
-  
+
   if (!grid || grid.length === 0) {
     return { headerRowIndex: 0, headers: [], skippedRowCount: 0, warnings: ['Empty data grid.'], headerRowsCount: 1 };
   }
 
   let bestRowIndex = 0;
-  let maxScore = 0;
+  let maxScore = -1;
   let isBestCombined = false;
   let bestHeaders: string[] = [];
 
@@ -112,6 +152,10 @@ export const detectHeaderRow = (grid: any[][]): HeaderDetectionResult => {
     const row = grid[i];
     if (!row || !Array.isArray(row) || row.length === 0) continue;
 
+    // Skip empty spacer rows in search
+    const isAllBlank = row.every(c => c === null || c === undefined || String(c).trim() === '');
+    if (isAllBlank) continue;
+
     // Evaluate single row
     const singleHeaders = row.map(c => c !== null && c !== undefined ? String(c).trim() : '');
     const { score: singleScore } = getScore(singleHeaders);
@@ -123,13 +167,14 @@ export const detectHeaderRow = (grid: any[][]): HeaderDetectionResult => {
       bestHeaders = singleHeaders;
     }
 
-    // Evaluate combined row (i and i+1)
+    // Evaluate combined row (i and i+1) - only if row i+1 does NOT look like transaction data
     if (i + 1 < grid.length) {
       const nextRow = grid[i + 1];
-      if (nextRow && Array.isArray(nextRow) && nextRow.length > 0) {
+      if (nextRow && Array.isArray(nextRow) && nextRow.length > 0 && !looksLikeDataRow(nextRow)) {
         const combined = combineHeaders(row, nextRow);
         const { score: combinedScore } = getScore(combined);
 
+        // Combined score must be strictly better to justify merging
         if (combinedScore > maxScore) {
           maxScore = combinedScore;
           bestRowIndex = i;
@@ -140,6 +185,7 @@ export const detectHeaderRow = (grid: any[][]): HeaderDetectionResult => {
     }
   }
 
+  // Fallback to row 0 if no clear headers found
   if (maxScore < 4) {
     bestRowIndex = 0;
     isBestCombined = false;
@@ -156,6 +202,7 @@ export const detectHeaderRow = (grid: any[][]): HeaderDetectionResult => {
   });
 
   const headerRowsCount = isBestCombined ? 2 : 1;
+  const skippedRowCount = bestRowIndex;
 
   if (bestRowIndex > 0) {
     warnings.push(`Skipped ${bestRowIndex} title/meta rows at the top of the file.`);
@@ -165,10 +212,15 @@ export const detectHeaderRow = (grid: any[][]): HeaderDetectionResult => {
     warnings.push('Detected and merged a two-row header block.');
   }
 
+  // Log skipped title rows at the top (Step 2 - No silent drops rule)
+  for (let idx = 0; idx < bestRowIndex; idx++) {
+    console.log(`[Header Detector] Skipped metadata/title row at index ${idx + 1}: ${JSON.stringify(grid[idx])}`);
+  }
+
   return {
     headerRowIndex: bestRowIndex,
     headers,
-    skippedRowCount: bestRowIndex + (isBestCombined ? 1 : 0),
+    skippedRowCount: skippedRowCount + (isBestCombined ? 1 : 0),
     warnings,
     headerRowsCount
   };
@@ -190,6 +242,7 @@ export const filterMessyRows = (
     const hasValues = Object.values(row).some(v => v !== null && v !== undefined && v.toString().trim() !== '');
     if (!hasValues) {
       skippedCount++;
+      console.log(`[Row Filter] Dropped completely empty row at raw index ${idx + 1}`);
       return;
     }
 
@@ -201,7 +254,9 @@ export const filterMessyRows = (
 
     if (isRepeatedHeader) {
       skippedCount++;
-      warnings.push(`Filtered out matching repeated header row at ledger index ${idx + 1}.`);
+      const reason = `Filtered out matching repeated header row at raw index ${idx + 1}.`;
+      warnings.push(reason);
+      console.log(`[Row Filter] ${reason}`);
       return;
     }
 
@@ -212,6 +267,7 @@ export const filterMessyRows = (
       const isKeyword = ['total', 'totals', 'subtotal', 'opening balance', 'closing balance', 'carried forward', 'brought forward'].some(k => str === k || str.startsWith(k + ' ') || str === k + ':');
       if (isKeyword) {
         const nonNullCount = Object.values(row).filter(x => x !== null && x !== undefined && String(x).trim() !== '').length;
+        // In a real statement, summaries have few populated columns. We threshold at 3.
         return nonNullCount <= 3;
       }
       return false;
@@ -219,7 +275,9 @@ export const filterMessyRows = (
 
     if (isSummaryRow) {
       skippedCount++;
-      warnings.push(`Filtered out summary/balance row at ledger index ${idx + 1}.`);
+      const reason = `Filtered out summary/balance row at raw index ${idx + 1}.`;
+      warnings.push(reason);
+      console.log(`[Row Filter] ${reason}`);
       return;
     }
 

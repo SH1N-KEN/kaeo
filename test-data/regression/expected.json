@@ -1,0 +1,23 @@
+{
+  "statement_hdfc.xlsx": {
+    "sheetName": "Table 1",
+    "totalTransactions": 112,
+    "totalInflow": 401686.37,
+    "totalOutflow": 418889.76,
+    "netMovement": -17203.39,
+    "balanceWarnings": 2
+  },
+  "statement_messy.xlsx": {
+    "sheetName": "Bank Statement FY",
+    "totalTransactions": 38,
+    "totalInflow": 2937500,
+    "totalOutflow": 1804566,
+    "netMovement": 1132934,
+    "intraFileDuplicates": 1,
+    "skippedSummaryRows": [
+      "Opening Balance",
+      "Closing Balance",
+      "Totals"
+    ]
+  }
+}
