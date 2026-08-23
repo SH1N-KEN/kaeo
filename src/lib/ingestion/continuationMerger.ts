@@ -54,7 +54,15 @@ export const mergeContinuationRows = (
       cleanRows.push(currentTx);
     } else {
       // Check if this row is a continuation of the previous transaction
-      const isContinuation = !hasDate && !hasAmt && hasDesc && descCol;
+      let isContinuation = !hasDate && !hasAmt && hasDesc && descCol;
+
+      if (isContinuation && descCol) {
+        const nextNarration = String(rawDesc).trim();
+        const isOrphanTx = /^(?:upi|neft|imps|pos|card|cc|rtgs|ach|nach|transfer)(?:[\s\-\/]|$)/i.test(nextNarration);
+        if (isOrphanTx) {
+          isContinuation = false;
+        }
+      }
       
       if (isContinuation && currentTx && descCol) {
         const prevNarration = String(currentTx[descCol] || '').trim();

@@ -9,11 +9,11 @@
   },
   "statement_messy.xlsx": {
     "sheetName": "Account Statement",
-    "totalTransactions": 181,
-    "totalInflow": 1345442.17,
+    "totalTransactions": 180,
+    "totalInflow": 1343502.79,
     "totalOutflow": 2314506.04,
-    "netMovement": -969063.87,
-    "intraFileDuplicates": 4,
+    "netMovement": -971003.25,
+    "intraFileDuplicates": 5,
     "skippedSummaryRows": [
       "Account Statement",
       "Customer Name",
