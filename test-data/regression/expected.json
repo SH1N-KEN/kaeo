@@ -8,16 +8,16 @@
     "balanceWarnings": 2
   },
   "statement_messy.xlsx": {
-    "sheetName": "Bank Statement FY",
-    "totalTransactions": 38,
-    "totalInflow": 2937500,
-    "totalOutflow": 1804566,
-    "netMovement": 1132934,
-    "intraFileDuplicates": 1,
+    "sheetName": "Account Statement",
+    "totalTransactions": 176,
+    "totalInflow": 1296540.96,
+    "totalOutflow": 2310071.09,
+    "netMovement": -1013530.13,
+    "intraFileDuplicates": 9,
     "skippedSummaryRows": [
-      "Opening Balance",
-      "Closing Balance",
-      "Totals"
+      "Account Statement",
+      "Customer Name",
+      "Statement Period"
     ]
   }
 }
