@@ -139,9 +139,10 @@ const isExpenseLedgerSheet = (headers: string[]): boolean => {
 const parseExcelSerialDate = (serial: any): string | null => {
   if (serial === null || serial === undefined || serial === '') return null;
   if (serial instanceof Date) {
-    const yyyy = serial.getUTCFullYear();
-    const mm = String(serial.getUTCMonth() + 1).padStart(2, '0');
-    const dd = String(serial.getUTCDate()).padStart(2, '0');
+    const adjusted = new Date(serial.getTime() + 12 * 60 * 60 * 1000);
+    const yyyy = adjusted.getUTCFullYear();
+    const mm = String(adjusted.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(adjusted.getUTCDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
   }
   const num = Number(serial);

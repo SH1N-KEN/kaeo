@@ -7,7 +7,9 @@ import { supabase } from '../supabase';
 export const isReferenceValValid = (ref: any): boolean => {
   if (ref === null || ref === undefined) return false;
   const str = String(ref).trim();
-  return str !== '' && str !== '0' && str !== '0.00';
+  if (str === '') return false;
+  // Reject any reference that consists entirely of zeros, e.g. "000000000000000", "0", "0.00"
+  return !/^0+(\.0+)?$/.test(str);
 };
 
 /**
