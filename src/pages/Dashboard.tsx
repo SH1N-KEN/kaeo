@@ -259,12 +259,10 @@ const Dashboard: React.FC = () => {
         const directionDerived = tx.raw_row_json?.direction_derived as string | undefined;
         const isInflowTx = directionDerived === 'inflow' || (!directionDerived && txAmountVal > 0);
 
-        if (tx.type !== 'transfer') {
-          if (tx.type === 'income' && isInflowTx && amt > 0) {
-            monthlyData[key].income += amt;
-          } else if (['expense', 'vendor_payment', 'subscription', 'bank_charge'].includes(tx.type)) {
-            monthlyData[key].expenses += amt;
-          }
+        if (isInflowTx && amt > 0) {
+          monthlyData[key].income += amt;
+        } else if (amt > 0) {
+          monthlyData[key].expenses += amt;
         }
         monthlyData[key].count++;
       });
@@ -356,15 +354,24 @@ const Dashboard: React.FC = () => {
           }
         }
 
-        if (tx.type === 'income' && isInflowTx && amt > 0) { acc.income += amt; acc.incomeCount++; }
-        else if (['expense', 'vendor_payment', 'subscription', 'bank_charge'].includes(tx.type) && tx.type !== 'transfer') {
-          acc.expenses += amt; acc.expenseCount++;
+        if (isInflowTx && amt > 0) {
+          acc.income += amt;
+          acc.incomeCount++;
+          if (tx.type === 'refund') {
+            acc.refunds += amt;
+            acc.refundCount++;
+          }
+        }
+        else if (isOutflowTx && amt > 0) {
+          acc.expenses += amt;
+          acc.expenseCount++;
           if (tx.type === 'vendor_payment') acc.vendorPaymentCount++;
           const name = tx.counterparty_name?.trim() || tx.description.replace(/vendor payment|payment to|paid to/gi, '').trim().split(' ').filter((w: string) => w.length > 2 && !/\d/.test(w))[0] || tx.description.split(' ')[0];
           vendors[name] = (vendors[name] || 0) + amt;
         }
-        else if (tx.type === 'refund') { acc.refunds += amt; acc.refundCount++; }
-        else if (tx.type === 'failed' || tx.type === 'failed_payment') { acc.failedCount++; }
+        else if (tx.type === 'failed' || tx.type === 'failed_payment') {
+          acc.failedCount++;
+        }
         acc.count++;
         return acc;
       }, { income: 0, expenses: 0, refunds: 0, count: 0, incomeCount: 0, expenseCount: 0, unknownCount: 0, vendorPaymentCount: 0, refundCount: 0, failedCount: 0, uncategorizedCount: 0, unreviewedCount: 0 });
@@ -425,7 +432,7 @@ const Dashboard: React.FC = () => {
       setSugMetrics({ pending: pendingSugsCount, safe: safeSugsCount, high: highSugsCount });
 
       setMetrics({
-        ...stats, net: stats.income + stats.refunds - stats.expenses,
+        ...stats, net: stats.income - stats.expenses,
         topVendor, openRisksCount: risksData?.length || 0, duplicateExposure,
         uniqueVendorsCount: Object.keys(vendors).length,
         matchedInvoicesCount, totalInvoicesCount, overdueInvoicesCount,
