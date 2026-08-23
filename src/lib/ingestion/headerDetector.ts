@@ -264,8 +264,24 @@ export const filterMessyRows = (
     const isSummaryRow = Object.values(row).some(v => {
       if (!v) return false;
       const str = v.toString().toLowerCase().trim();
-      const isKeyword = ['total', 'totals', 'subtotal', 'opening balance', 'closing balance', 'carried forward', 'brought forward'].some(k => str === k || str.startsWith(k + ' ') || str === k + ':');
+      const isKeyword = ['total', 'totals', 'subtotal', 'opening balance', 'closing balance', 'carried forward', 'brought forward'].some(k => {
+        if (str === k || str === k + ':') return true;
+        if (str.startsWith(k + ' ') || str.startsWith(k + ':')) {
+          return str.length < 25;
+        }
+        return false;
+      });
       if (isKeyword) {
+        // A real summary/balance row never contains a valid transaction date.
+        // If the row contains a valid date in standard format, it should be kept.
+        const hasDate = Object.values(row).some(cellVal => {
+          if (!cellVal) return false;
+          const cleanStr = String(cellVal).trim().replace(/^(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday|sun|mon|tue|wed|thu|fri|sat)(?:,\s*|\s+)/i, '');
+          return /^\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}/.test(cleanStr) ||
+                 /^[A-Za-z]{3,9}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4}/.test(cleanStr);
+        });
+        if (hasDate) return false;
+
         const nonNullCount = Object.values(row).filter(x => x !== null && x !== undefined && String(x).trim() !== '').length;
         // In a real statement, summaries have few populated columns. We threshold at 3.
         return nonNullCount <= 3;

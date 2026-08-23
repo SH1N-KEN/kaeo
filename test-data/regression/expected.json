@@ -19,5 +19,18 @@
       "Customer Name",
       "Statement Period"
     ]
+  },
+  "kaeo_stress_test_v2.xlsx": {
+    "sheetName": "Statement Export",
+    "totalTransactions": 33,
+    "totalInflow": 405350.00,
+    "totalOutflow": 236766.25,
+    "netMovement": 168583.75,
+    "intraFileDuplicates": 1,
+    "skippedSummaryRows": [
+      "Kaeo Test Bank",
+      "Account Holder",
+      "Statement Period"
+    ]
   }
 }

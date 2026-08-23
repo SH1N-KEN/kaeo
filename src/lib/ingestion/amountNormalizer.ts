@@ -64,12 +64,48 @@ export const cleanAmount = (val: any): ParsedAmountResult => {
     str = str.slice(0, -suffixMatch[0].length).trim();
   }
 
-  // 5. Clean thousands separators, currency symbols, and spaces
-  // Keep only numbers, decimal points, and dots.
-  str = str.replace(/,/g, '').replace(/\s+/g, '');
-  str = str.replace(/[^\d.]/g, ''); // Remove currency symbols like ₹, $, €, £
+  // 5. Clean separators dynamically based on European vs US/Indian conventions
+  let cleanStr = str.replace(/[^\d.,]/g, '').trim();
+  const lastPeriod = cleanStr.lastIndexOf('.');
+  const lastComma = cleanStr.lastIndexOf(',');
 
-  let amount = parseFloat(str);
+  if (lastPeriod !== -1 && lastComma !== -1) {
+    if (lastComma > lastPeriod) {
+      // European format: "12.500,75"
+      // Period is thousands separator, comma is decimal point.
+      cleanStr = cleanStr.replace(/\./g, '').replace(/,/g, '.');
+    } else {
+      // Standard format: "12,500.75"
+      // Comma is thousands separator, period is decimal point.
+      cleanStr = cleanStr.replace(/,/g, '');
+    }
+  } else if (lastComma !== -1) {
+    // Only commas exist
+    const commaCount = (cleanStr.match(/,/g) || []).length;
+    if (commaCount > 1) {
+      // Multiple commas (e.g. "1,200,000")
+      cleanStr = cleanStr.replace(/,/g, '');
+    } else {
+      // Exactly one comma (e.g. "1200,75" or "1,200")
+      const parts = cleanStr.split(',');
+      if (parts[1] && parts[1].length === 3) {
+        // Thousands separator
+        cleanStr = cleanStr.replace(/,/g, '');
+      } else {
+        // Decimal separator
+        cleanStr = cleanStr.replace(/,/g, '.');
+      }
+    }
+  } else if (lastPeriod !== -1) {
+    // Only periods exist
+    const periodCount = (cleanStr.match(/\./g) || []).length;
+    if (periodCount > 1) {
+      // Multiple periods (e.g. "12.500.000")
+      cleanStr = cleanStr.replace(/\./g, '');
+    }
+  }
+
+  let amount = parseFloat(cleanStr);
   if (isNaN(amount)) {
     return { amount: 0, isExpense: false, isIncome: false };
   }
