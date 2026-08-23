@@ -39,6 +39,7 @@ export const checkDuplicateTransactions = async (
   clientId: string,
   incomingTransactions: any[]
 ): Promise<DuplicateReport> => {
+  console.log("DEDUP_FIX_V2_ACTIVE");
   if (incomingTransactions.length === 0) {
     return { intraFileDuplicates: 0, dbDuplicates: 0, totalIncoming: 0, importableCount: 0, cleanTransactions: [] };
   }

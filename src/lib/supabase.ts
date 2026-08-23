@@ -29,6 +29,10 @@ export const supabase = createClient(
   supabaseAnonKey || 'placeholder'
 );
 
+if (typeof window !== 'undefined') {
+  (window as any).supabase = supabase;
+}
+
 export type SupabaseConfigError = {
   missing: string[];
   malformed: string[];

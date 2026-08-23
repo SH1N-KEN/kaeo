@@ -31,7 +31,11 @@ export const detectProvider = (headers: string[], _firstRows: any[], fileName: s
     return { provider: 'Shopify', sourceType: 'ecommerce' };
   }
 
-  if (h.includes('transaction date') && (h.includes('withdrawal') || h.includes('deposit') || h.includes('debit') || h.includes('credit'))) {
+  const normalized = headers.map(s => s.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
+  const hasDateCol = normalized.some(x => x === 'date' || x === 'txndate' || x === 'transactiondate' || x === 'valuedt' || x === 'valuedate');
+  const hasAmtCol = normalized.some(x => x.includes('amount') || x.includes('withdrawal') || x.includes('deposit') || x === 'debit' || x === 'credit' || x === 'dr' || x === 'cr' || x === 'payment' || x === 'receipt' || x === 'outflow' || x === 'inflow');
+
+  if (hasDateCol && hasAmtCol) {
     return { provider: 'Bank Statement', sourceType: 'bank' };
   }
 

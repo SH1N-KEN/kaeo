@@ -3,9 +3,9 @@
  * Analyzes raw cell grids to detect the optimal header row, skipping title/blank lines.
  */
 
-const DATE_KEYWORDS = ['date', 'txn date', 'txn_date', 'transaction date', 'value date', 'posted', 'tran date', 'val date'];
-const DESC_KEYWORDS = ['description', 'narration', 'particulars', 'remarks', 'payee', 'vendor', 'details', 'particular'];
-const AMT_KEYWORDS = ['amount', 'debit', 'credit', 'withdrawal', 'deposit', 'net amount', 'value', 'txn amount', 'balance'];
+const DATE_KEYWORDS = ['date', 'txn date', 'txn_date', 'transaction date', 'value date', 'posted', 'tran date', 'val date', 'txndate', 'value_date', 'dt', 'tx dt', 'txn dt', 'time'];
+const DESC_KEYWORDS = ['description', 'narration', 'particulars', 'remarks', 'payee', 'vendor', 'details', 'particular', 'desc', 'naration', 'payee name'];
+const AMT_KEYWORDS = ['amount', 'debit', 'credit', 'withdrawal', 'deposit', 'net amount', 'value', 'txn amount', 'balance', 'dr', 'cr', 'amt', 'withdrawal amt', 'deposit amt', 'closing balance', 'in', 'out'];
 
 export interface HeaderDetectionResult {
   headerRowIndex: number;
@@ -71,16 +71,28 @@ export const detectHeaderRow = (grid: any[][]): HeaderDetectionResult => {
     headersList.forEach(cell => {
       if (!cell) return;
       const strVal = cell.toLowerCase().trim();
+      const normalizedHeader = strVal.replace(/[^a-z0-9]/g, '');
+      const words = strVal.split(/[^a-z0-9]+/);
 
-      if (!hasDate && DATE_KEYWORDS_DETECTOR.some(k => strVal === k || strVal.includes(k))) {
+      const matchesKeyword = (keywords: string[]) => {
+        return keywords.some(k => {
+          const nk = k.replace(/[^a-z0-9]/g, '');
+          if (['in', 'out', 'dr', 'cr'].includes(k)) {
+            return words.includes(k) || normalizedHeader === nk;
+          }
+          return normalizedHeader.includes(nk) || words.includes(nk);
+        });
+      };
+
+      if (!hasDate && matchesKeyword(DATE_KEYWORDS_DETECTOR)) {
         hasDate = true;
         matchCount++;
       }
-      if (!hasDesc && DESC_KEYWORDS_DETECTOR.some(k => strVal === k || strVal.includes(k))) {
+      if (!hasDesc && matchesKeyword(DESC_KEYWORDS_DETECTOR)) {
         hasDesc = true;
         matchCount++;
       }
-      if (!hasAmt && AMT_KEYWORDS_DETECTOR.some(k => strVal === k || strVal.includes(k))) {
+      if (!hasAmt && matchesKeyword(AMT_KEYWORDS_DETECTOR)) {
         hasAmt = true;
         matchCount++;
       }
@@ -197,7 +209,12 @@ export const filterMessyRows = (
     const isSummaryRow = Object.values(row).some(v => {
       if (!v) return false;
       const str = v.toString().toLowerCase().trim();
-      return ['total', 'totals', 'subtotal', 'opening balance', 'closing balance', 'carried forward', 'brought forward'].some(k => str === k || str.startsWith(k));
+      const isKeyword = ['total', 'totals', 'subtotal', 'opening balance', 'closing balance', 'carried forward', 'brought forward'].some(k => str === k || str.startsWith(k + ' ') || str === k + ':');
+      if (isKeyword) {
+        const nonNullCount = Object.values(row).filter(x => x !== null && x !== undefined && String(x).trim() !== '').length;
+        return nonNullCount <= 3;
+      }
+      return false;
     });
 
     if (isSummaryRow) {

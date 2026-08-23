@@ -119,18 +119,15 @@ const isNonFinancialContent = (displayGrid: any[][]): boolean => {
 };
 
 const isHDFCSheet = (headers: string[]): boolean => {
-  const hdfcHeaders = [
-    'Date',
-    'Narration',
-    'Chq./Ref.No.',
-    'Value Dt',
-    'Withdrawal Amt.',
-    'Deposit Amt.',
-    'Closing Balance'
-  ];
   const normalized = headers.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
-  const normalizedHdfc = hdfcHeaders.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
-  return normalizedHdfc.every(h => normalized.includes(h));
+  
+  const hasDate = normalized.some(h => h === 'date' || h === 'txndate' || h === 'transactiondate' || h === 'valuedt' || h === 'valuedate');
+  const hasNarration = normalized.some(h => h === 'narration' || h === 'description' || h === 'particulars' || h === 'remarks');
+  const hasWithdrawal = normalized.some(h => h.includes('withdrawal') || h === 'debit' || h === 'dr' || h === 'payment');
+  const hasDeposit = normalized.some(h => h.includes('deposit') || h === 'credit' || h === 'cr' || h === 'receipt');
+  const hasBalance = normalized.some(h => h.includes('balance'));
+
+  return hasDate && hasNarration && hasWithdrawal && hasDeposit && hasBalance;
 };
 
 const isExpenseLedgerSheet = (headers: string[]): boolean => {
@@ -142,9 +139,9 @@ const isExpenseLedgerSheet = (headers: string[]): boolean => {
 const parseExcelSerialDate = (serial: any): string | null => {
   if (serial === null || serial === undefined || serial === '') return null;
   if (serial instanceof Date) {
-    const yyyy = serial.getFullYear();
-    const mm = String(serial.getMonth() + 1).padStart(2, '0');
-    const dd = String(serial.getDate()).padStart(2, '0');
+    const yyyy = serial.getUTCFullYear();
+    const mm = String(serial.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(serial.getUTCDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
   }
   const num = Number(serial);
@@ -161,10 +158,46 @@ const parseExcelSerialDate = (serial: any): string | null => {
 const cleanHdfcAmount = (val: any): number | null => {
   if (val === null || val === undefined || val === '') return null;
   if (typeof val === 'number') return val;
-  const cleanStr = String(val).replace(/,/g, '').trim();
-  if (cleanStr === '' || cleanStr === '-') return null;
-  const num = parseFloat(cleanStr);
-  return isNaN(num) ? null : num;
+  let str = String(val).trim();
+  
+  let isExpense = false;
+  let isIncome = false;
+  if (str.startsWith('(') && str.endsWith(')')) {
+    isExpense = true;
+    str = str.slice(1, -1);
+  }
+  const lowerStr = str.toLowerCase();
+  if (lowerStr.endsWith('dr') || lowerStr.endsWith(' db') || lowerStr.endsWith('debit')) {
+    isExpense = true;
+    str = str.replace(/(dr|db|debit)$/i, '').trim();
+  } else if (lowerStr.endsWith('cr') || lowerStr.endsWith('credit')) {
+    isIncome = true;
+    str = str.replace(/(cr|credit)$/i, '').trim();
+  }
+
+  str = str.replace(/,/g, '').replace(/\s+/g, '');
+  str = str.replace(/[^\d.-]/g, '');
+  
+  let num = parseFloat(str);
+  if (isNaN(num)) return null;
+  if (isExpense) num = -Math.abs(num);
+  else if (isIncome) num = Math.abs(num);
+  return num;
+};
+
+const resolveColumnIndex = (headers: string[], keywords: string[]): number => {
+  const normalizedHeaders = headers.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
+  return headers.findIndex((_, idx) => {
+    const nh = normalizedHeaders[idx];
+    const words = headers[idx].toLowerCase().split(/[^a-z0-9]+/);
+    return keywords.some(k => {
+      const nk = k.replace(/[^a-z0-9]/g, '');
+      if (['dr', 'cr', 'in', 'out'].includes(k)) {
+        return words.includes(k) || nh === nk;
+      }
+      return nh.includes(nk) || words.includes(nk);
+    });
+  });
 };
 
 const processHDFCSheet = (
@@ -180,13 +213,13 @@ const processHDFCSheet = (
   let orphanRowsSkipped = 0;
   let blankRowsSkipped = 0;
   
-  const dateIdx = headers.indexOf('Date');
-  const narrationIdx = headers.indexOf('Narration');
-  const refIdx = headers.indexOf('Chq./Ref.No.');
-  const valueDtIdx = headers.indexOf('Value Dt');
-  const withdrawalIdx = headers.indexOf('Withdrawal Amt.');
-  const depositIdx = headers.indexOf('Deposit Amt.');
-  const balanceIdx = headers.indexOf('Closing Balance');
+  const dateIdx = resolveColumnIndex(headers, ['date', 'txn date', 'transaction date', 'posted date', 'valuedt']);
+  const narrationIdx = resolveColumnIndex(headers, ['narration', 'description', 'particulars', 'remarks']);
+  const refIdx = resolveColumnIndex(headers, ['chq', 'ref', 'reference', 'utr', 'instrument', 'cheque']);
+  const valueDtIdx = resolveColumnIndex(headers, ['value date', 'value dt', 'val date', 'val dt']);
+  const withdrawalIdx = resolveColumnIndex(headers, ['withdrawal', 'debit', 'payment', 'dr', 'outflow']);
+  const depositIdx = resolveColumnIndex(headers, ['deposit', 'credit', 'receipt', 'cr', 'inflow']);
+  const balanceIdx = resolveColumnIndex(headers, ['balance', 'closing balance', 'bal']);
 
   let currentTx: any = null;
   let orphanSkipped = false;
@@ -211,13 +244,13 @@ const processHDFCSheet = (
       continue;
     }
 
-    const rawDate = rawRow[dateIdx];
-    const rawNarration = rawRow[narrationIdx];
-    const rawRef = displayRow[refIdx]; // Keep Chq./Ref.No. as reference exactly from display grid!
-    const rawValueDt = rawRow[valueDtIdx];
-    const rawWithdrawal = rawRow[withdrawalIdx];
-    const rawDeposit = rawRow[depositIdx];
-    const rawBalance = rawRow[balanceIdx];
+    const rawDate = dateIdx !== -1 ? rawRow[dateIdx] : null;
+    const rawNarration = narrationIdx !== -1 ? rawRow[narrationIdx] : null;
+    const rawRef = refIdx !== -1 ? displayRow[refIdx] : '';
+    const rawValueDt = valueDtIdx !== -1 ? rawRow[valueDtIdx] : null;
+    const rawWithdrawal = withdrawalIdx !== -1 ? rawRow[withdrawalIdx] : null;
+    const rawDeposit = depositIdx !== -1 ? rawRow[depositIdx] : null;
+    const rawBalance = balanceIdx !== -1 ? rawRow[balanceIdx] : null;
 
     const hasDate = rawDate !== null && rawDate !== undefined && String(rawDate).trim() !== '';
     const hasNarration = rawNarration !== null && rawNarration !== undefined && String(rawNarration).trim() !== '';
@@ -260,7 +293,7 @@ const processHDFCSheet = (
 
       cleanRows.push(currentTx);
     } else {
-      const isContinuation = !hasDate && !hasWithdrawal && !hasDeposit && !hasBalance && hasNarration;
+      const isContinuation = !hasDate && !hasWithdrawal && !hasDeposit && !hasBalance && hasNarration && narrationIdx !== -1;
       if (isContinuation) {
         if (currentTx) {
           const prev = currentTx[headers[narrationIdx]];
@@ -295,12 +328,14 @@ const processHDFCSheet = (
   let totalWithdrawals = 0;
 
   cleanRows.forEach((tx, idx) => {
-    const balanceVal = tx[headers[balanceIdx]] || 0;
-    const depositVal = tx[headers[depositIdx]] || 0;
-    const withdrawalVal = tx[headers[withdrawalIdx]] || 0;
+    const balanceVal = balanceIdx !== -1 ? tx[headers[balanceIdx]] || 0 : 0;
+    const depositVal = depositIdx !== -1 ? tx[headers[depositIdx]] || 0 : 0;
+    const withdrawalVal = withdrawalIdx !== -1 ? tx[headers[withdrawalIdx]] || 0 : 0;
     
     totalDeposits += depositVal;
     totalWithdrawals += withdrawalVal;
+
+    if (balanceIdx === -1) return;
 
     if (idx === 0) {
       prevBalance = balanceVal;

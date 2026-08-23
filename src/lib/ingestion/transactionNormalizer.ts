@@ -85,6 +85,12 @@ export const cleanAmount = (val: any): { amount: number; isExpense: boolean; isI
   let isExpense = false;
   let isIncome = false;
 
+  // Support trailing minus sign: e.g. "120.00-"
+  if (str.endsWith('-')) {
+    isExpense = true;
+    str = str.slice(0, -1).trim();
+  }
+
   // 1. Parentheses format: (120.00) => expense
   if (str.startsWith('(') && str.endsWith(')')) {
     isExpense = true;
@@ -144,31 +150,40 @@ export const parseIngestedDate = (val: any): { date: Date; ambiguous: boolean; e
     }
   }
 
-  const str = val.toString().trim();
+  let str = val.toString().trim();
+  
+  // Strip weekday prefix (e.g., "Monday, ", "Mon, ", "Monday ")
+  str = str.replace(/^(?:sun|mon|tue|wed|thu|fri|sat)(?:day)?(?:,\s*|\s+)/i, '');
+
   if (/^\d{5}$/.test(str)) {
     const num = Number(str);
     const d = new Date(Math.round((num - 25569) * 86400 * 1000));
     return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
   }
   
-  // 1. Check if ISO-like YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-    const parts = str.split('T')[0].split('-');
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
-    const day = parseInt(parts[2], 10);
+  // 1. Check if ISO-like YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
+  const isoMatch = str.match(/^(\d{4})[-/.\s](\d{1,2})[-/.\s](\d{1,2})/);
+  if (isoMatch) {
+    const year = parseInt(isoMatch[1], 10);
+    const month = parseInt(isoMatch[2], 10) - 1;
+    const day = parseInt(isoMatch[3], 10);
     const d = new Date(Date.UTC(year, month, day));
     return { date: isNaN(d.getTime()) ? new Date() : d, ambiguous: false, error: isNaN(d.getTime()) };
   }
 
-  // 2. Check for DD/MM/YYYY or DD-MM-YYYY or MM/DD/YYYY or 2-digit year variants
-  const delimiterMatch = str.match(/^(\d{1,2})([-/])(\d{1,2})[-/](\d{2,4})/);
+  // 2. Check for DD/MM/YYYY or DD-MM-YYYY or MM/DD/YYYY or 2-digit year variants with multiple separators
+  const delimiterMatch = str.match(/^(\d{1,2})([-/.\s])(\d{1,2})[-/.\s](\d{2,4})/);
   if (delimiterMatch) {
     const p1 = parseInt(delimiterMatch[1], 10);
     const p2 = parseInt(delimiterMatch[3], 10);
     let year = parseInt(delimiterMatch[4], 10);
     if (year < 100) {
       year = year < 50 ? 2000 + year : 1900 + year;
+    }
+
+    if (p1 === p2) {
+      const d = new Date(Date.UTC(year, p2 - 1, p1));
+      return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
     }
 
     if (p1 > 12) {
@@ -186,8 +201,10 @@ export const parseIngestedDate = (val: any): { date: Date; ambiguous: boolean; e
     return { date: d, ambiguous: true, error: isNaN(d.getTime()) };
   }
 
-  // 3. Check for word months: e.g. "12 May 2026" or "12-May-2026" or 2-digit years
-  const wordMonthMatch = str.match(/^(\d{1,2})[- ]([A-Za-z]{3,9})[- ](\d{2,4})/);
+  const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+  // 3. Check for word months: e.g. "12 May 2026", "12-May-2026", "12.May.26"
+  const wordMonthMatch = str.match(/^(\d{1,2})[-/.\s]([A-Za-z]{3,9})\.?[-/.\s](\d{2,4})/);
   if (wordMonthMatch) {
     const day = parseInt(wordMonthMatch[1], 10);
     const monthStr = wordMonthMatch[2];
@@ -196,7 +213,24 @@ export const parseIngestedDate = (val: any): { date: Date; ambiguous: boolean; e
       year = year < 50 ? 2000 + year : 1900 + year;
     }
 
-    const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const monthIdx = monthNames.findIndex(m => monthStr.toLowerCase().startsWith(m));
+
+    if (monthIdx !== -1) {
+      const d = new Date(Date.UTC(year, monthIdx, day));
+      return { date: d, ambiguous: false, error: isNaN(d.getTime()) };
+    }
+  }
+
+  // 4. Check for word-month-first format: e.g. "February 7th, 2026" or "Feb 7, 2026" or "Feb. 7, 26"
+  const wordMonthFirstMatch = str.match(/^([A-Za-z]{3,9})\.?[-/.\s](\d{1,2})(?:st|nd|rd|th)?(?:,\s*|\s+)(\d{2,4})/i);
+  if (wordMonthFirstMatch) {
+    const monthStr = wordMonthFirstMatch[1];
+    const day = parseInt(wordMonthFirstMatch[2], 10);
+    let year = parseInt(wordMonthFirstMatch[3], 10);
+    if (year < 100) {
+      year = year < 50 ? 2000 + year : 1900 + year;
+    }
+
     const monthIdx = monthNames.findIndex(m => monthStr.toLowerCase().startsWith(m));
 
     if (monthIdx !== -1) {

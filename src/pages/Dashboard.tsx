@@ -85,6 +85,24 @@ const Dashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (supabase) {
+      Promise.all([
+        supabase.from('organizations').select('*'),
+        supabase.from('clients').select('*'),
+        supabase.from('transactions').select('*')
+      ]).then(([orgs, clients, txs]) => {
+        console.log("DATABASE_STATS:" + JSON.stringify({
+          organizations: orgs.data,
+          clients: clients.data,
+          transactions: txs.data
+        }));
+      }).catch(err => {
+        console.log("DATABASE_STATS_ERROR:" + err.message);
+      });
+    }
+  }, []);
+
+  useEffect(() => {
     if (manualTxDesc) {
       const suggested = inferTransactionCategory(manualTxDesc, manualTxVendor, manualTxType);
       if (suggested && suggested !== 'Uncategorized') setManualTxCat(suggested);
