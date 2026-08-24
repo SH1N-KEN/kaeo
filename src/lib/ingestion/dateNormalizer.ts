@@ -26,6 +26,10 @@ export const constructUTCDate = (year: number, monthZeroIndexed: number, day: nu
     date.getUTCMonth() !== monthZeroIndexed ||
     date.getUTCDate() !== day
   ) {
+    // Special exception: Allow Feb 29th to roll over to Mar 1st instead of dropping the row
+    if (monthZeroIndexed === 1 && day === 29) {
+      return date;
+    }
     console.warn(`[Date Normalization] Date rollover detected: Input ${year}-${monthZeroIndexed + 1}-${day} resolved to ${date.getUTCFullYear()}-${date.getUTCMonth() + 1}-${date.getUTCDate()}. Skipping.`);
     return null;
   }
