@@ -227,6 +227,14 @@ export const detectHeaderRow = (grid: any[][]): HeaderDetectionResult => {
 };
 
 /**
+ * Checks if a string contains summary keywords.
+ */
+export const isSummaryKeyword = (str: string): boolean => {
+  const keywords = ['subtotal', 'closing', 'opening', 'balance'];
+  return keywords.some(k => str.includes(k));
+};
+
+/**
  * Filter out pagination header duplicates or blank trailing lines.
  */
 export const filterMessyRows = (

@@ -52,7 +52,16 @@ export function isMetadataTransaction(tx: any): boolean {
     'subtotal'
   ];
 
-  if (startsWithKeywords.some(k => desc === k || desc.startsWith(k))) {
+  if (startsWithKeywords.some(k => {
+    if (desc === k) return true;
+    if (desc.startsWith(k + ' ') || desc.startsWith(k + ':')) {
+      if (k === 'total' || k === 'totals' || k === 'subtotal') {
+        return desc.length < 25;
+      }
+      return true;
+    }
+    return false;
+  })) {
     return true;
   }
 
