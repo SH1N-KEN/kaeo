@@ -1,73 +1,53 @@
-# React + TypeScript + Vite
+# Kaeo — AI Financial Review for Indian SMEs
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## The Problem
+Indian businesses waste 2–4 hours per week manually parsing bank statements, finding duplicates, and reconciling balances.
 
-Currently, two official plugins are available:
+## The Solution
+Kaeo automates the financial review layer.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Upload statement → Parse → Normalize → Detect risks → Review exceptions → Export report
 
-## React Compiler
+## Features
+- **Multi-format parsing:** XLSX, CSV
+- **Smart normalization:** Handles European decimals, trailing minus, DR/CR suffixes, multiple date formats
+- **Duplicate detection:** Reference-based + intra-file fuzzy matching with fallback signatures
+- **Risk engine:** Flags high-value, suspicious, and unmatched transactions
+- **Dashboard:** Real-time financial KPIs and cash flow visualization
+- **AI assistant:** Ask Libby questions about your financial data
+- **Reports:** Export accountant-ready summaries
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Verified Accuracy
+Tested against real bank statements with known ground truth:
 
-## Expanding the ESLint configuration
+| File | Format | Transactions | Accuracy |
+|------|--------|--------------|----------|
+| HDFC Statement | XLSX | 112 | 100% |
+| Messy Statement | XLSX | 180 | 100% |
+| Stress Test | XLSX | 33 | 100% |
+| SaaS Statement | CSV | 34 | 100% |
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Run the regression suite: `npm run regression-test`
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Stack
+- React + TypeScript (frontend)
+- Node.js (backend)
+- Supabase (database)
+- Razorpay (payments)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Getting Started
+```bash
+npm install
+npm run dev
+npm run regression-test
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Architecture
+See `/docs/ARCHITECTURE.md` for the full parsing pipeline.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Vision
+**Phase 1 (current):** Financial review — understand what's happening  
+**Phase 2 (next):** Multi-source reconciliation — match transactions across Stripe, bank, credit card  
+**Phase 3 (future):** Financial control — govern how money is spent  
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Built for the Razorpay AI Buildathon 2026.
