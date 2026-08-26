@@ -47,7 +47,8 @@ export function reconcileTransactions(
     if (match) {
       matches.push(match);
       // Remove matched Stripe transaction from the pool to prevent double matching
-      remainingStripe = remainingStripe.filter(s => s.id !== match.stripeTxn.id);
+      // Using reference comparison to avoid issues with missing transaction IDs
+      remainingStripe = remainingStripe.filter(s => s !== match.stripeTxn);
     } else {
       unmatchedBankTxns.push(bankTxn);
     }
@@ -56,7 +57,8 @@ export function reconcileTransactions(
   const matchedBankCount = matches.length;
   const matchedStripeCount = stripeTxns.length - remainingStripe.length;
   const totalBankTxns = bankTxns.length;
-  const matchRate = totalBankTxns > 0 ? (matchedBankCount / totalBankTxns) * 100 : 0;
+  // Calculate match rate based on the percentage of Stripe transactions reconciled
+  const matchRate = stripeTxns.length > 0 ? (matchedStripeCount / stripeTxns.length) * 100 : 0;
 
   return {
     summary: {

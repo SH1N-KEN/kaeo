@@ -54,7 +54,8 @@ export function findMatchForBankTxn(
     const similarity = merchantSimilarity(getTxnDescription(bankTxn), getTxnDescription(stripeTxn));
     if (similarity < threshold) continue;
 
-    const amountDiff = Math.abs(getTxnAmount(bankTxn) - getTxnAmount(stripeTxn));
+    // Compare using absolute values of amounts to handle potential sign differences (e.g. Withdrawal vs Deposit representation)
+    const amountDiff = Math.abs(Math.abs(getTxnAmount(bankTxn)) - Math.abs(getTxnAmount(stripeTxn)));
     if (amountDiff > amountTolerance) continue;
 
     const bankDateStr = getTxnDate(bankTxn);
@@ -64,7 +65,7 @@ export function findMatchForBankTxn(
 
     // Calculate confidence score
     let confidence = similarity;
-    if (getTxnAmount(bankTxn) === getTxnAmount(stripeTxn)) {
+    if (Math.abs(getTxnAmount(bankTxn)) === Math.abs(getTxnAmount(stripeTxn))) {
       confidence += 10;
     }
     if (isSameDay(bankDateStr, stripeDateStr)) {

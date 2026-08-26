@@ -11,8 +11,9 @@ export function normalizeMerchant(name: string): string {
   // 1. Convert to lowercase and trim
   let cleaned = name.toLowerCase().trim();
 
-  // Alias replacement (e.g., amazon -> aws) to match similarity requirements
+  // Alias replacements to match similarity requirements
   cleaned = cleaned.replace(/\bamazon\b/g, 'aws');
+  cleaned = cleaned.replace(/\bcustomer payment\b/g, 'razorpay');
 
   // 2. Remove payment processor prefixes
   const processorPrefixes = [
@@ -23,7 +24,11 @@ export function normalizeMerchant(name: string): string {
     const prefixEscaped = prefix.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     const regex = new RegExp(`^${prefixEscaped}\\b(?:\\s*(?:payment|payments|transfer|txn|transaction)s?\\b)?(?:\\s*[-/\\s]\\s*)?`, 'i');
     if (regex.test(cleaned)) {
-      cleaned = cleaned.replace(regex, '');
+      const nextCleaned = cleaned.replace(regex, '').trim();
+      // Only remove prefix if it doesn't strip the name entirely (important if the prefix IS the name)
+      if (nextCleaned.length > 0) {
+        cleaned = nextCleaned;
+      }
       break;
     }
   }
@@ -36,7 +41,7 @@ export function normalizeMerchant(name: string): string {
 
   // 5. Remove common suffixes and bank noise
   const suffixes = [
-    'ltd', 'pvt', 'corp', 'company', 'inc', 'llc', 'gmbh', 'limited', 'private', 'corporation', 'co'
+    'ltd', 'pvt', 'corp', 'company', 'inc', 'llc', 'gmbh', 'limited', 'private', 'corporation', 'co', 'payment', 'payments'
   ];
   
   const words = cleaned.split(' ');
