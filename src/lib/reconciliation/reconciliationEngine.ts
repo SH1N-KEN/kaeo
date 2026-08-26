@@ -1,4 +1,5 @@
 import type { NormalizedTransaction } from '../../types/finance';
+import { findMatchForBankTxn } from './transactionMatcher';
 
 export interface ReconciliationMatch {
   bankTxn: NormalizedTransaction;
@@ -19,6 +20,8 @@ export interface ReconciliationReport {
     matchRate: number;      // Percentage of bank transactions matched (0-100)
   };
   matches: ReconciliationMatch[];
+  unmatchedBankTxns: NormalizedTransaction[];
+  unmatchedStripeTxns: NormalizedTransaction[];
   timestamp: string;        // ISO timestamp of reconciliation run
 }
 
@@ -33,17 +36,41 @@ export function reconcileTransactions(
   bankTxns: NormalizedTransaction[],
   stripeTxns: NormalizedTransaction[]
 ): ReconciliationReport {
+  const matches: ReconciliationMatch[] = [];
+  const unmatchedBankTxns: NormalizedTransaction[] = [];
+  
+  // Clone the Stripe transactions array to track the pool of available matches
+  let remainingStripe = [...stripeTxns];
+
+  for (const bankTxn of bankTxns) {
+    const match = findMatchForBankTxn(bankTxn, remainingStripe);
+    if (match) {
+      matches.push(match);
+      // Remove matched Stripe transaction from the pool to prevent double matching
+      remainingStripe = remainingStripe.filter(s => s.id !== match.stripeTxn.id);
+    } else {
+      unmatchedBankTxns.push(bankTxn);
+    }
+  }
+
+  const matchedBankCount = matches.length;
+  const matchedStripeCount = stripeTxns.length - remainingStripe.length;
+  const totalBankTxns = bankTxns.length;
+  const matchRate = totalBankTxns > 0 ? (matchedBankCount / totalBankTxns) * 100 : 0;
+
   return {
     summary: {
-      totalBankTxns: bankTxns.length,
+      totalBankTxns,
       totalStripeTxns: stripeTxns.length,
-      matchedBankTxnsCount: 0,
-      matchedStripeTxnsCount: 0,
-      unmatchedBankTxnsCount: bankTxns.length,
-      unmatchedStripeTxnsCount: stripeTxns.length,
-      matchRate: 0,
+      matchedBankTxnsCount: matchedBankCount,
+      matchedStripeTxnsCount: matchedStripeCount,
+      unmatchedBankTxnsCount: unmatchedBankTxns.length,
+      unmatchedStripeTxnsCount: remainingStripe.length,
+      matchRate,
     },
-    matches: [],
+    matches,
+    unmatchedBankTxns,
+    unmatchedStripeTxns: remainingStripe,
     timestamp: new Date().toISOString(),
   };
 }
