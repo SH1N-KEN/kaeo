@@ -2,6 +2,8 @@ import type { NormalizedTransaction } from '../../types/finance';
 import type { ReconciliationMatch } from './reconciliationEngine';
 import { merchantSimilarity } from './merchantMatcher';
 
+export type ReconciliationMode = 'merchant' | 'processor';
+
 export interface MatchCriteria {
   merchantSimilarityThreshold?: number; // default 80 (0-100)
   amountTolerance?: number;             // default 1 (rupees)
@@ -15,12 +17,14 @@ export interface MatchCriteria {
  * @param bankTxn The bank transaction to match
  * @param stripeTxns The list of Stripe transactions to search within
  * @param criteria Optional customization parameters for the match criteria
+ * @param reconciliationMode Matching strategy ('merchant' or 'processor')
  * @returns The best reconciliation match found, or null if no match meets the criteria
  */
 export function findMatchForBankTxn(
   bankTxn: NormalizedTransaction,
   stripeTxns: NormalizedTransaction[],
-  criteria: MatchCriteria = {}
+  criteria: MatchCriteria = {},
+  reconciliationMode: ReconciliationMode = 'merchant'
 ): ReconciliationMatch | null {
   const threshold = criteria.merchantSimilarityThreshold ?? 80;
   const amountTolerance = criteria.amountTolerance ?? 1;
@@ -52,7 +56,9 @@ export function findMatchForBankTxn(
 
   for (const stripeTxn of stripeTxns) {
     const similarity = merchantSimilarity(getTxnDescription(bankTxn), getTxnDescription(stripeTxn));
-    if (similarity < threshold) continue;
+    
+    // In 'merchant' mode, require similarity to be >= threshold
+    if (reconciliationMode === 'merchant' && similarity < threshold) continue;
 
     // Compare using absolute values of amounts to handle potential sign differences (e.g. Withdrawal vs Deposit representation)
     const amountDiff = Math.abs(Math.abs(getTxnAmount(bankTxn)) - Math.abs(getTxnAmount(stripeTxn)));
@@ -63,14 +69,30 @@ export function findMatchForBankTxn(
     const dateDiffDays = getDateDiffInDays(bankDateStr, stripeDateStr);
     if (dateDiffDays > dateTolerance) continue;
 
-    // Calculate confidence score
-    let confidence = similarity;
-    if (Math.abs(getTxnAmount(bankTxn)) === Math.abs(getTxnAmount(stripeTxn))) {
-      confidence += 10;
+    // Calculate confidence score based on the mode
+    let confidence = 0;
+    if (reconciliationMode === 'processor') {
+      // In processor mode, base match is 85 points if amount matches within tolerance and date within tolerance
+      confidence = 85;
+      
+      // If dates match exactly, bump to 95
+      if (isSameDay(bankDateStr, stripeDateStr)) {
+        confidence = 95;
+      }
+      
+      // Merchant similarity only provides bonus points (up to 10 max)
+      const bonus = (similarity / 100) * 10;
+      confidence += bonus;
+    } else {
+      confidence = similarity;
+      if (Math.abs(getTxnAmount(bankTxn)) === Math.abs(getTxnAmount(stripeTxn))) {
+        confidence += 10;
+      }
+      if (isSameDay(bankDateStr, stripeDateStr)) {
+        confidence += 5;
+      }
     }
-    if (isSameDay(bankDateStr, stripeDateStr)) {
-      confidence += 5;
-    }
+    
     confidence = Math.min(100, confidence);
 
     if (confidence > highestConfidence) {
@@ -94,7 +116,7 @@ export function findMatchForBankTxn(
         bankTxn,
         stripeTxn,
         matchConfidence: confidence,
-        matchType: confidence > 95 ? 'exact' : 'fuzzy',
+        matchType: confidence >= 95 ? 'exact' : 'fuzzy',
         reason: `${similarityText}, ${amtText}, ${dateText}`
       };
     }

@@ -56,7 +56,7 @@ const Reconciliation: React.FC = () => {
       const operatingBankTxns = bankNorm.transactions.filter(t => !t.description.toLowerCase().includes('interest'));
 
       // 3. Reconcile
-      const rawReport = reconcileTransactions(operatingBankTxns, stripeNorm.transactions);
+      const rawReport = reconcileTransactions(operatingBankTxns, stripeNorm.transactions, 'processor');
       
       // 4. Format for UI
       const jsonReport = formatReconciliationReportJSON(rawReport);
@@ -85,7 +85,7 @@ const Reconciliation: React.FC = () => {
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       <PageHeader 
         title="Multi-Source Reconciliation" 
-        subtitle="Match transactions across bank statements and payment processors"
+        description="Match transactions across bank statements and payment processors"
       />
 
       {/* Upload Section */}
@@ -182,22 +182,22 @@ const Reconciliation: React.FC = () => {
               <div className="bg-card rounded-xl p-5 shadow-sm border border-border flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-1 h-full bg-teal-500" />
                 <span className="text-sm font-medium text-muted-foreground mb-2">Matched Pairs</span>
-                <span className="text-3xl font-bold text-teal-600 dark:text-teal-400">{report.summary.matchedBankTxnsCount}</span>
+                <span className="text-3xl font-bold text-teal-600 dark:text-teal-400">{report.summary?.matchedBankTxnsCount}</span>
               </div>
               <div className="bg-card rounded-xl p-5 shadow-sm border border-border flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-teal-500" />
                 <span className="text-sm font-medium text-muted-foreground mb-2">Match Rate</span>
-                <span className="text-3xl font-bold text-teal-600 dark:text-teal-400">{report.summary.matchRate}%</span>
+                <span className="text-3xl font-bold text-teal-600 dark:text-teal-400">{report.summary?.matchRate}%</span>
               </div>
               <div className="bg-card rounded-xl p-5 shadow-sm border border-border flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-orange-500" />
                 <span className="text-sm font-medium text-muted-foreground mb-2">Unmatched Processor</span>
-                <span className="text-3xl font-bold text-orange-600 dark:text-orange-500">{report.summary.unmatchedStripeTxnsCount}</span>
+                <span className="text-3xl font-bold text-orange-600 dark:text-orange-500">{report.summary?.unmatchedStripeTxnsCount}</span>
               </div>
               <div className="bg-card rounded-xl p-5 shadow-sm border border-border flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-gray-400" />
                 <span className="text-sm font-medium text-muted-foreground mb-2">Unmatched Bank</span>
-                <span className="text-3xl font-bold text-gray-700 dark:text-gray-300">{report.summary.unmatchedBankTxnsCount}</span>
+                <span className="text-3xl font-bold text-gray-700 dark:text-gray-300">{report.summary?.unmatchedBankTxnsCount}</span>
               </div>
             </div>
 
@@ -207,14 +207,14 @@ const Reconciliation: React.FC = () => {
               <div className="bg-orange-50/50 dark:bg-orange-950/20 rounded-xl border border-orange-200 dark:border-orange-900 overflow-hidden shadow-sm">
                 <div className="px-4 py-3 bg-orange-100/50 dark:bg-orange-900/40 border-b border-orange-200 dark:border-orange-900 font-medium text-orange-800 dark:text-orange-400 flex items-center justify-between">
                   <span>Unmatched Processor Transactions</span>
-                  <span className="bg-orange-200 dark:bg-orange-800 text-xs px-2 py-1 rounded-full">{report.summary.unmatchedStripeTxnsCount}</span>
+                  <span className="bg-orange-200 dark:bg-orange-800 text-xs px-2 py-1 rounded-full">{report.summary?.unmatchedStripeTxnsCount}</span>
                 </div>
                 <div className="p-0 overflow-y-auto max-h-80">
-                  {report.unmatchedStripeTxns.length === 0 ? (
+                  {(report.unmatchedStripeTxns?.length ?? 0) === 0 ? (
                     <div className="p-4 text-sm text-orange-600 text-center italic">All processor transactions matched!</div>
                   ) : (
                     <ul className="divide-y divide-orange-200/50 dark:divide-orange-900/50">
-                      {report.unmatchedStripeTxns.map((t: any, i: number) => (
+                      {report.unmatchedStripeTxns?.map((t: any, i: number) => (
                         <li key={i} className="p-3 text-sm flex items-center gap-3 hover:bg-orange-100/30 dark:hover:bg-orange-900/20 transition-colors">
                           <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
                           <div className="font-semibold text-orange-700 dark:text-orange-300 w-20">₹{t.amount}</div>
@@ -231,14 +231,14 @@ const Reconciliation: React.FC = () => {
               <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-border overflow-hidden shadow-sm">
                 <div className="px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b border-border font-medium text-gray-700 dark:text-gray-300 flex items-center justify-between">
                   <span>Unmatched Bank Transactions</span>
-                  <span className="bg-gray-200 dark:bg-gray-700 text-xs px-2 py-1 rounded-full text-gray-800 dark:text-gray-200">{report.summary.unmatchedBankTxnsCount}</span>
+                  <span className="bg-gray-200 dark:bg-gray-700 text-xs px-2 py-1 rounded-full text-gray-800 dark:text-gray-200">{report.summary?.unmatchedBankTxnsCount}</span>
                 </div>
                 <div className="p-0 overflow-y-auto max-h-80">
-                  {report.unmatchedBankTxns.length === 0 ? (
+                  {(report.unmatchedBankTxns?.length ?? 0) === 0 ? (
                     <div className="p-4 text-sm text-gray-500 text-center italic">All bank transactions matched!</div>
                   ) : (
                     <ul className="divide-y divide-border">
-                      {report.unmatchedBankTxns.map((t: any, i: number) => (
+                      {report.unmatchedBankTxns?.map((t: any, i: number) => (
                         <li key={i} className="p-3 text-sm flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-gray-800/80 transition-colors">
                           <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
                           <div className="flex-1 truncate font-medium text-gray-700 dark:text-gray-300">{t.description}</div>
@@ -260,7 +260,7 @@ const Reconciliation: React.FC = () => {
               >
                 <div className="font-medium flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-teal-500"></span>
-                  Matched Pairs ({report.matches.length})
+                  Matched Pairs ({report.matches?.length ?? 0})
                 </div>
                 {showTopMatches ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
               </button>
@@ -278,7 +278,7 @@ const Reconciliation: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {report.matches.slice(0, 10).map((m: any, i: number) => (
+                        {report.matches?.slice(0, 10).map((m: any, i: number) => (
                           <tr key={i} className="hover:bg-muted/20 transition-colors">
                             <td className="px-5 py-3">
                               <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
@@ -301,9 +301,9 @@ const Reconciliation: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
-                  {report.matches.length > 10 && (
+                  {(report.matches?.length ?? 0) > 10 && (
                     <div className="px-5 py-3 text-center text-xs text-muted-foreground bg-muted/20 border-t border-border">
-                      Showing top 10 matches. Export report to see all {report.matches.length} pairs.
+                      Showing top 10 matches. Export report to see all {report.matches?.length ?? 0} pairs.
                     </div>
                   )}
                 </div>

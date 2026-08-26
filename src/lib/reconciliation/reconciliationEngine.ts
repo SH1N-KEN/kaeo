@@ -1,6 +1,8 @@
 import type { NormalizedTransaction } from '../../types/finance';
 import { findMatchForBankTxn } from './transactionMatcher';
 
+import type { ReconciliationMode } from './transactionMatcher';
+
 export interface ReconciliationMatch {
   bankTxn: NormalizedTransaction;
   stripeTxn: NormalizedTransaction;
@@ -30,11 +32,13 @@ export interface ReconciliationReport {
  * 
  * @param bankTxns Array of normalized bank transactions
  * @param stripeTxns Array of normalized Stripe transactions
+ * @param mode Matching strategy ('merchant' or 'processor')
  * @returns A reconciliation report containing match details and summary statistics
  */
 export function reconcileTransactions(
   bankTxns: NormalizedTransaction[],
-  stripeTxns: NormalizedTransaction[]
+  stripeTxns: NormalizedTransaction[],
+  mode: ReconciliationMode = 'merchant'
 ): ReconciliationReport {
   const matches: ReconciliationMatch[] = [];
   const unmatchedBankTxns: NormalizedTransaction[] = [];
@@ -43,7 +47,7 @@ export function reconcileTransactions(
   let remainingStripe = [...stripeTxns];
 
   for (const bankTxn of bankTxns) {
-    const match = findMatchForBankTxn(bankTxn, remainingStripe);
+    const match = findMatchForBankTxn(bankTxn, remainingStripe, {}, mode);
     if (match) {
       matches.push(match);
       // Remove matched Stripe transaction from the pool to prevent double matching
