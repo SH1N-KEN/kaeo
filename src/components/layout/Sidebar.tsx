@@ -26,6 +26,7 @@ const primaryNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard',    path: '/dashboard' },
   { icon: UploadCloud,     label: 'Files',        path: '/files' },
   { icon: ArrowRightLeft,  label: 'Transactions', path: '/transactions' },
+  { icon: ArrowRightLeft,  label: 'Reconciliation', path: '/reconciliation' },
   { icon: Inbox,           label: 'Risk Inbox',   path: '/risk-inbox' },
   { icon: Building2,       label: 'Vendors',      path: '/vendors' },
   { icon: FileText,        label: 'Reports',      path: '/reports' },
