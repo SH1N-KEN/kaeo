@@ -82,16 +82,17 @@ async function verifySemantics() {
   console.log(`Out of Scope Bank Count:  ${result.summary.outOfScopeCount}`);
 
   console.log('\n=====================================================');
-  console.log('DISPOSITION OF PROCESSOR RECORDS:');
+  console.log('DISPOSITION OF RECONCILIATION RECORDS:');
   console.log('-----------------------------------------------------');
-  result.results.forEach((res, i) => {
+  const reconRecords = result.results.filter(r => r.decision.status !== 'OUT_OF_SCOPE');
+  reconRecords.forEach((res, i) => {
     const proc = res.processorRecord.transaction;
     const bank = res.bankRecord?.transaction;
     
     console.log(`[Record #${i + 1}] Status: ${res.decision.status} | Reason: ${res.decision.reason}`);
-    console.log(`  Processor: ${proc.description} | ₹${proc.amount} | Date: ${proc.transaction_date}`);
+    console.log(`  Processor: ${proc.description} | ₹${proc.amount} | Date: ${proc.transaction_date.slice(0,10)}`);
     if (bank) {
-      console.log(`  Bank:      ${bank.description} | ₹${bank.amount} | Date: ${bank.transaction_date}`);
+      console.log(`  Bank:      ${bank.description} | ₹${bank.amount} | Date: ${bank.transaction_date.slice(0,10)}`);
       console.log(`  Evidence:  Confidence: ${res.decision.evidence.confidenceScore}% | Amount Exact: ${res.decision.evidence.amountExact}`);
     } else {
       console.log(`  Bank:      (No matched ledger item)`);
@@ -104,8 +105,10 @@ async function verifySemantics() {
   console.log('\n=====================================================');
   console.log('DISPOSITION OF OUT-OF-SCOPE BANK RECORDS:');
   console.log('-----------------------------------------------------');
-  result.outOfScopeBankTxns.forEach((txn, i) => {
-    console.log(`[Bank Out-of-Scope #${i + 1}] ${txn.description} | ₹${txn.amount} | Date: ${txn.transaction_date}`);
+  const outOfScopeRecords = result.results.filter(r => r.decision.status === 'OUT_OF_SCOPE');
+  outOfScopeRecords.forEach((res, i) => {
+    const bank = res.bankRecord!.transaction;
+    console.log(`[Bank Out-of-Scope #${i + 1}] ${bank.description} | ₹${bank.amount} | Date: ${bank.transaction_date.slice(0,10)}`);
   });
   
   console.log('=====================================================');

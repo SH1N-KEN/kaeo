@@ -18,6 +18,18 @@ export const generateFingerprint = (clientId: string, reference: any): string | 
   return `${clientId}_ref_${cleanRef}`;
 };
 
+export const generateContentFingerprint = (
+  clientId: string,
+  dateStr: string,
+  amtStr: string,
+  descStr: string,
+  typeStr: string
+): string => {
+  const cleanDesc = descStr.trim().toLowerCase();
+  const cleanType = typeStr.trim().toLowerCase();
+  return `${clientId}_sig_${dateStr}_${amtStr}_${cleanDesc}_${cleanType}`;
+};
+
 /**
  * Deduplicates transactions based on a general-purpose zero-special-casing strategy.
  */
@@ -47,7 +59,7 @@ export const checkDuplicateTransactions = async (
         if (fp) {
           dbFingerprints.add(fp);
         }
-        if (tx.source_row_hash && tx.source_row_hash.startsWith(`${clientId}_ref_`)) {
+        if (tx.source_row_hash) {
           dbFingerprints.add(tx.source_row_hash);
         }
       });
@@ -85,23 +97,26 @@ export const checkDuplicateTransactions = async (
       }
     } else {
       // Reference is missing or invalid placeholder:
-      // Deduplicate WITHIN the upload only using exact content signatures
+      // Deduplicate WITHIN the upload and AGAINST the database using content signatures
       const dateStr = tx.transaction_date ? new Date(tx.transaction_date).toISOString() : '';
       const amtStr = String(tx.amount);
       const descStr = String(tx.description || '').trim().toLowerCase();
       const typeStr = String(tx.type || '');
-      const signature = `${dateStr}|${amtStr}|${descStr}|${typeStr}`;
+      const signatureFingerprint = generateContentFingerprint(clientId, dateStr, amtStr, descStr, typeStr);
 
-      if (seenSignatures.has(signature)) {
+      if (seenSignatures.has(signatureFingerprint)) {
         intraFileDuplicates++;
-        console.log(`[Duplicate Engine] Dropped row ${idx + 1}: Intra-file duplicate reference-less transaction. Signature: "${signature}"`);
+        console.log(`[Duplicate Engine] Dropped row ${idx + 1}: Intra-file duplicate reference-less transaction. Signature: "${signatureFingerprint}"`);
+      } else if (dbFingerprints.has(signatureFingerprint)) {
+        dbDuplicates++;
+        console.log(`[Duplicate Engine] Dropped row ${idx + 1}: Database duplicate reference-less transaction. Signature: "${signatureFingerprint}"`);
       } else {
-        seenSignatures.add(signature);
+        seenSignatures.add(signatureFingerprint);
         
         // "Flag any reference-less transaction for manual review regardless of dedup outcome."
         cleanTransactions.push({
           ...tx,
-          source_row_hash: null,
+          source_row_hash: signatureFingerprint,
           review_status: 'needs_review'
         });
       }

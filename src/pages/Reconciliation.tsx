@@ -100,6 +100,8 @@ const Reconciliation: React.FC = () => {
       case 'PROCESSING': return <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Processing</span>;
       case 'CHARGEBACK': return <span className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Chargeback Exception</span>;
       case 'DUPLICATE': return <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Duplicate Record</span>;
+      case 'REFUND': return <span className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Refund Event</span>;
+      case 'OUT_OF_SCOPE': return <span className="bg-gray-100 text-gray-650 dark:bg-gray-850 dark:text-gray-400 px-2 py-1 rounded-full text-xs font-medium">Out of Scope</span>;
       default: return <span className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 px-2 py-1 rounded-full text-xs font-medium">{status}</span>;
     }
   };
@@ -183,7 +185,7 @@ const Reconciliation: React.FC = () => {
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold flex items-center gap-2">
               <CheckCircle className="w-6 h-6 text-teal-500" />
-              Audit Complete
+              Reconciliation Complete
             </h2>
             <div className="flex gap-3">
               <button onClick={() => setResult(null)} className="px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-muted transition-colors">Start Over</button>
@@ -260,105 +262,110 @@ const Reconciliation: React.FC = () => {
           )}
 
           {/* Payouts & Settlement Results */}
-          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-border font-semibold flex items-center justify-between bg-muted/20">
-              <span>Settlement Audit Log ({result.results.length} records processed)</span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-muted-foreground text-xs uppercase font-semibold border-b border-border">
-                  <tr>
-                    <th className="px-5 py-3 text-left">Status</th>
-                    <th className="px-5 py-3 text-left">Bank description</th>
-                    <th className="px-5 py-3 text-right">Settlement Amt (Processor)</th>
-                    <th className="px-5 py-3 text-right">Bank Amt (Ledger)</th>
-                    <th className="px-5 py-3 text-right">Date</th>
-                    <th className="px-5 py-3 w-10"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {result.results.map((res, i) => (
-                    <React.Fragment key={i}>
-                      <tr 
-                        className="hover:bg-muted/10 transition-colors cursor-pointer" 
-                        onClick={() => setExpandedRow(expandedRow === i ? null : i)}
-                      >
-                        <td className="px-5 py-3">{renderStatusBadge(res.decision.status)}</td>
-                        <td className="px-5 py-3 font-medium text-foreground max-w-[200px] truncate" title={res.bankRecord?.transaction?.description || res.processorRecord?.transaction?.description}>
-                          {res.bankRecord?.transaction?.description || res.processorRecord?.transaction?.description || 'Missing Ledger Item'}
-                        </td>
-                        <td className="px-5 py-3 text-right font-semibold text-foreground">{getAmountStr(res.processorRecord)}</td>
-                        <td className="px-5 py-3 text-right font-semibold text-muted-foreground">{getAmountStr(res.bankRecord)}</td>
-                        <td className="px-5 py-3 text-right text-muted-foreground">
-                          {res.bankRecord ? getDateStr(res.bankRecord) : getDateStr(res.processorRecord)}
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          {expandedRow === i ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                        </td>
+          {(() => {
+            const auditResults = result.results.filter(r => r.decision.status !== 'OUT_OF_SCOPE');
+            return (
+              <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-border font-semibold flex items-center justify-between bg-muted/20">
+                  <span>Settlement Audit Log ({auditResults.length} records processed)</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 text-muted-foreground text-xs uppercase font-semibold border-b border-border">
+                      <tr>
+                        <th className="px-5 py-3 text-left">Status</th>
+                        <th className="px-5 py-3 text-left">Bank description</th>
+                        <th className="px-5 py-3 text-right">Settlement Amt (Processor)</th>
+                        <th className="px-5 py-3 text-right">Bank Amt (Ledger)</th>
+                        <th className="px-5 py-3 text-right">Date</th>
+                        <th className="px-5 py-3 w-10"></th>
                       </tr>
-                      {expandedRow === i && (
-                        <tr className="bg-muted/5">
-                          <td colSpan={6} className="px-5 py-6">
-                            <div className="flex flex-col md:flex-row gap-8 items-start justify-center max-w-4xl mx-auto">
-                              {/* Processor Side */}
-                              <div className="flex-1 bg-white dark:bg-gray-900 border border-border p-4 rounded-lg w-full shadow-xs">
-                                <div className="text-xs text-muted-foreground font-semibold mb-2 uppercase tracking-wider">Processor Ledger Entry</div>
-                                <div className="text-2xl font-bold mb-1">{getAmountStr(res.processorRecord)}</div>
-                                <div className="text-xs text-muted-foreground mb-4">Date: {getDateStr(res.processorRecord)}</div>
-                                <div className="text-sm break-all font-mono bg-muted/40 p-2.5 rounded border border-border">{res.processorRecord?.transaction?.description || 'No matching record'}</div>
-                              </div>
-
-                              <div className="flex flex-col items-center justify-center pt-8">
-                                <ArrowRight className="w-6 h-6 text-muted-foreground hidden md:block" />
-                                {res.decision.evidence.confidenceScore > 0 ? (
-                                  <div className="text-xs text-teal-600 dark:text-teal-400 font-bold mt-2">{res.decision.evidence.confidenceScore}% Match</div>
-                                ) : (
-                                  <div className="text-xs text-muted-foreground font-bold mt-2">Unmatched</div>
-                                )}
-                              </div>
-
-                              {/* Bank Side */}
-                              <div className="flex-1 bg-white dark:bg-gray-900 border border-border p-4 rounded-lg w-full shadow-xs">
-                                <div className="text-xs text-muted-foreground font-semibold mb-2 uppercase tracking-wider">Bank Statement Payout</div>
-                                {res.bankRecord ? (
-                                  <>
-                                    <div className="text-2xl font-bold mb-1">{getAmountStr(res.bankRecord)}</div>
-                                    <div className="text-xs text-muted-foreground mb-4">Date: {getDateStr(res.bankRecord)}</div>
-                                    <div className="text-sm break-all font-mono bg-muted/40 p-2.5 rounded border border-border">{res.bankRecord.transaction.description}</div>
-                                  </>
-                                ) : (
-                                  <div className="h-full flex items-center justify-center text-muted-foreground text-sm italic py-8 bg-muted/20 border border-dashed border-border rounded">No bank ledger entry found</div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Evidence / Audit Trail */}
-                            <div className="max-w-4xl mx-auto mt-6 bg-white dark:bg-gray-900 border border-border rounded-lg p-5 shadow-xs">
-                              <div className="text-xs text-muted-foreground font-semibold mb-3 uppercase tracking-wider">Audit Evidence Trail</div>
-                              <div className="grid grid-cols-2 gap-4 text-sm mb-4 border-b border-border pb-3">
-                                <div><span className="text-muted-foreground font-medium">Ledger Status:</span> <span className="font-semibold text-foreground">{res.decision.status}</span></div>
-                                <div><span className="text-muted-foreground font-medium">Reconciled Amount:</span> {res.decision.evidence.amountExact ? 'Exact Match' : `Variance ₹${res.decision.evidence.amountDifference.toFixed(2)}`}</div>
-                                <div><span className="text-muted-foreground font-medium">Settlement Date:</span> {res.decision.evidence.dateWithinWindow ? 'Within Control Window' : 'Variance Outside Window'}</div>
-                                <div><span className="text-muted-foreground font-medium">Audit Outcome:</span> <span className="font-semibold text-foreground">{res.decision.reason}</span></div>
-                              </div>
-                              <div className="text-xs text-muted-foreground space-y-1.5 bg-gray-50 dark:bg-gray-950 p-4 rounded border border-border font-mono max-h-40 overflow-y-auto">
-                                {res.auditTrail.map((log, idx) => (
-                                  <div key={idx} className="flex gap-2">
-                                    <span className="text-teal-600 font-bold">»</span>
-                                    <span>{log}</span>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {auditResults.map((res, i) => (
+                        <React.Fragment key={i}>
+                          <tr 
+                            className="hover:bg-muted/10 transition-colors cursor-pointer" 
+                            onClick={() => setExpandedRow(expandedRow === i ? null : i)}
+                          >
+                            <td className="px-5 py-3">{renderStatusBadge(res.decision.status)}</td>
+                            <td className="px-5 py-3 font-medium text-foreground max-w-[200px] truncate" title={res.bankRecord?.transaction?.description || res.processorRecord?.transaction?.description}>
+                              {res.bankRecord?.transaction?.description || res.processorRecord?.transaction?.description || 'Missing Ledger Item'}
+                            </td>
+                            <td className="px-5 py-3 text-right font-semibold text-foreground">{getAmountStr(res.processorRecord)}</td>
+                            <td className="px-5 py-3 text-right font-semibold text-muted-foreground">{getAmountStr(res.bankRecord)}</td>
+                            <td className="px-5 py-3 text-right text-muted-foreground">
+                              {res.bankRecord ? getDateStr(res.bankRecord) : getDateStr(res.processorRecord)}
+                            </td>
+                            <td className="px-5 py-3 text-right">
+                              {expandedRow === i ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                            </td>
+                          </tr>
+                          {expandedRow === i && (
+                            <tr className="bg-muted/5">
+                              <td colSpan={6} className="px-5 py-6">
+                                <div className="flex flex-col md:flex-row gap-8 items-start justify-center max-w-4xl mx-auto">
+                                  {/* Processor Side */}
+                                  <div className="flex-1 bg-white dark:bg-gray-900 border border-border p-4 rounded-lg w-full shadow-xs">
+                                    <div className="text-xs text-muted-foreground font-semibold mb-2 uppercase tracking-wider">Processor Ledger Entry</div>
+                                    <div className="text-2xl font-bold mb-1">{getAmountStr(res.processorRecord)}</div>
+                                    <div className="text-xs text-muted-foreground mb-4">Date: {getDateStr(res.processorRecord)}</div>
+                                    <div className="text-sm break-all font-mono bg-muted/40 p-2.5 rounded border border-border">{res.processorRecord?.transaction?.description || 'No matching record'}</div>
                                   </div>
-                                ))}
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+
+                                  <div className="flex flex-col items-center justify-center pt-8">
+                                    <ArrowRight className="w-6 h-6 text-muted-foreground hidden md:block" />
+                                    {res.decision.evidence.confidenceScore > 0 ? (
+                                      <div className="text-xs text-teal-600 dark:text-teal-400 font-bold mt-2">{res.decision.evidence.confidenceScore}% Match</div>
+                                    ) : (
+                                      <div className="text-xs text-muted-foreground font-bold mt-2">Unmatched</div>
+                                    )}
+                                  </div>
+
+                                  {/* Bank Side */}
+                                  <div className="flex-1 bg-white dark:bg-gray-900 border border-border p-4 rounded-lg w-full shadow-xs">
+                                    <div className="text-xs text-muted-foreground font-semibold mb-2 uppercase tracking-wider">Bank Statement Payout</div>
+                                    {res.bankRecord ? (
+                                      <>
+                                        <div className="text-2xl font-bold mb-1">{getAmountStr(res.bankRecord)}</div>
+                                        <div className="text-xs text-muted-foreground mb-4">Date: {getDateStr(res.bankRecord)}</div>
+                                        <div className="text-sm break-all font-mono bg-muted/40 p-2.5 rounded border border-border">{res.bankRecord.transaction.description}</div>
+                                      </>
+                                    ) : (
+                                      <div className="h-full flex items-center justify-center text-muted-foreground text-sm italic py-8 bg-muted/20 border border-dashed border-border rounded">No bank ledger entry found</div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Evidence / Audit Trail */}
+                                <div className="max-w-4xl mx-auto mt-6 bg-white dark:bg-gray-900 border border-border rounded-lg p-5 shadow-xs">
+                                  <div className="text-xs text-muted-foreground font-semibold mb-3 uppercase tracking-wider">Audit Evidence Trail</div>
+                                  <div className="grid grid-cols-2 gap-4 text-sm mb-4 border-b border-border pb-3">
+                                    <div><span className="text-muted-foreground font-medium">Ledger Status:</span> <span className="font-semibold text-foreground">{res.decision.status}</span></div>
+                                    <div><span className="text-muted-foreground font-medium">Reconciled Amount:</span> {res.decision.evidence.amountExact ? 'Exact Match' : `Variance ₹${res.decision.evidence.amountDifference.toFixed(2)}`}</div>
+                                    <div><span className="text-muted-foreground font-medium">Settlement Date:</span> {res.decision.evidence.dateWithinWindow ? 'Within Control Window' : 'Variance Outside Window'}</div>
+                                    <div><span className="text-muted-foreground font-medium">Audit Outcome:</span> <span className="font-semibold text-foreground">{res.decision.reason}</span></div>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground space-y-1.5 bg-gray-50 dark:bg-gray-950 p-4 rounded border border-border font-mono max-h-40 overflow-y-auto">
+                                    {res.auditTrail.map((log, idx) => (
+                                      <div key={idx} className="flex gap-2">
+                                        <span className="text-teal-600 font-bold">»</span>
+                                        <span>{log}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Out of Scope Activity */}
           {result.outOfScopeBankTxns.length > 0 && (

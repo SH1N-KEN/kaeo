@@ -9,7 +9,7 @@ export interface ReconciliationMatchResult {
   processorRecord: ReconciliationRecord;
   bankRecord?: ReconciliationRecord;
   decision: {
-    status: 'MATCHED' | 'REVIEW' | 'UNRESOLVED' | 'PENDING' | 'PROCESSING' | 'CHARGEBACK' | 'DUPLICATE';
+    status: 'MATCHED' | 'REVIEW' | 'UNRESOLVED' | 'PENDING' | 'PROCESSING' | 'CHARGEBACK' | 'DUPLICATE' | 'REFUND' | 'OUT_OF_SCOPE';
     reason: string;
     verificationPassed: boolean;
     evidence: {
