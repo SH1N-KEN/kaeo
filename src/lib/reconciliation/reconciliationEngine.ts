@@ -88,6 +88,18 @@ export async function reconcileTransactionsPipeline(
 ): Promise<ReconciliationRunResult> {
   const results: ReconciliationMatchResult[] = [];
   
+  // Invariant / validation check: ensure all transactions have an id
+  for (let i = 0; i < bankTxns.length; i++) {
+    if (!bankTxns[i] || !bankTxns[i].id) {
+      throw new Error(`Bank transaction at index ${i} is missing a required 'id' field (Description: "${bankTxns[i]?.description}"). Ingestion normalizer must assign a unique ID.`);
+    }
+  }
+  for (let i = 0; i < processorTxns.length; i++) {
+    if (!processorTxns[i] || !processorTxns[i].id) {
+      throw new Error(`Processor transaction at index ${i} is missing a required 'id' field (Description: "${processorTxns[i]?.description}"). Ingestion normalizer must assign a unique ID.`);
+    }
+  }
+
   // Identify processor duplicates
   const isProcessorDuplicate = (txn: NormalizedTransaction, index: number, arr: NormalizedTransaction[]): boolean => {
     return arr.some((other, idx) => 
@@ -384,7 +396,6 @@ export async function reconcileTransactionsPipeline(
       });
     }
   }
-
   // Calculate summary metrics
   const totalProcessorRecords = processorTxns.length;
   

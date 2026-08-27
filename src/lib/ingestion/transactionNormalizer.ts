@@ -11,6 +11,13 @@ import { detectPaymentMethod, shouldSuggestStaffCategory, inferStaffExpense } fr
 import { cleanAmount } from './amountNormalizer';
 import { parseIngestedDate } from './dateNormalizer';
 
+const generateId = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `tx_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+};
+
 
 
 /**
@@ -179,6 +186,7 @@ export const normalizeIngestedRows = (
       const rowIsStaff = row.is_staff_expense !== undefined ? !!row.is_staff_expense : (row.isStaffExpense !== undefined ? !!row.isStaffExpense : inferredStaff);
 
       const txObj: any = {
+        id: generateId(),
         transaction_date: date.toISOString(),
         description: formattedDesc,
         amount: amount,
@@ -494,6 +502,7 @@ export const normalizeIngestedRows = (
 
     // 7. Build standardized transaction schema
     const txObj: any = {
+      id: generateId(),
       transaction_date: date.toISOString(),
       description: rawDesc,
       amount: amount,

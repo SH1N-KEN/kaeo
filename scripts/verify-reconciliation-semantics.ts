@@ -113,6 +113,65 @@ async function verifySemantics() {
   
   console.log('=====================================================');
   console.log('Validation complete.');
+
+  // Load and run the second fixture (recon_bank_statement.csv + recon_razorpay_export.csv)
+  console.log('\n=====================================================');
+  console.log('RUNNING REGRESSION TEST FOR HDFC & RAZORPAY FIXTURES:');
+  console.log('-----------------------------------------------------');
+  const reconBankPath = path.join(projectDir, 'test-data/reconciliation/recon_bank_statement.csv');
+  const reconRazorpayPath = path.join(projectDir, 'test-data/reconciliation/recon_razorpay_export.csv');
+
+  if (!fs.existsSync(reconBankPath) || !fs.existsSync(reconRazorpayPath)) {
+    console.error('Razorpay CSV fixtures do not exist!');
+    process.exit(1);
+  }
+
+  const reconBankContent = fs.readFileSync(reconBankPath, 'utf8');
+  const reconRazorpayContent = fs.readFileSync(reconRazorpayPath, 'utf8');
+
+  const reconBankFile = new File([reconBankContent], 'recon_bank_statement.csv', { type: 'text/csv' });
+  const reconRazorpayFile = new File([reconRazorpayContent], 'recon_razorpay_export.csv', { type: 'text/csv' });
+
+  const reconBankParsed = await parseFinancialFile(reconBankFile);
+  const reconRazorpayParsed = await parseFinancialFile(reconRazorpayFile);
+
+  const reconBankNorm = normalizeIngestedRows(
+    reconBankParsed.allRows,
+    reconBankParsed.suggestedMapping,
+    { provider: reconBankParsed.provider, currency: 'INR' }
+  );
+
+  const reconRazorpayNorm = normalizeIngestedRows(
+    reconRazorpayParsed.allRows,
+    reconRazorpayParsed.suggestedMapping,
+    { provider: reconRazorpayParsed.provider, currency: 'INR' }
+  );
+
+  console.log('Running reconcileTransactionsPipeline on Razorpay export...');
+  const razorpayResult = await reconcileTransactionsPipeline(reconBankNorm.transactions, reconRazorpayNorm.transactions);
+
+  console.log('RECONCILIATION PIPELINE SUMMARY (RAZORPAY):');
+  console.log(`Reconciled Value:         ₹${razorpayResult.summary.reconciledValue.toLocaleString()}`);
+  console.log(`Eligible Settlements:     ${razorpayResult.summary.eligibleProcessorRecords} / ${razorpayResult.summary.totalProcessorRecords}`);
+  console.log(`Unresolved Discrepancies:  ₹${razorpayResult.summary.difference.toLocaleString()}`);
+  console.log(`Reconciliation Rate:      ${razorpayResult.summary.matchRate.toFixed(2)}%`);
+  console.log(`Matched Count:            ${razorpayResult.summary.matchedCount}`);
+  console.log(`Review Count:             ${razorpayResult.summary.reviewCount}`);
+  console.log(`Unresolved Count:         ${razorpayResult.summary.unresolvedCount}`);
+  console.log(`Pending / Excluded Count: ${razorpayResult.summary.pendingCount}`);
+  console.log(`Duplicate Count:          ${razorpayResult.summary.duplicateCount}`);
+  console.log(`Out of Scope Bank Count:  ${razorpayResult.summary.outOfScopeCount}`);
+
+  // Invariant validation checks:
+  if (razorpayResult.summary.matchedCount !== 5) {
+    throw new Error(`Expected 5 matched pairs, but found ${razorpayResult.summary.matchedCount}`);
+  }
+  if (razorpayResult.summary.unresolvedCount !== 4) {
+    throw new Error(`Expected 4 unresolved exceptions, but found ${razorpayResult.summary.unresolvedCount}`);
+  }
+  console.log('-----------------------------------------------------');
+  console.log('✅ HDFC & Razorpay Regression verification passed.');
+  console.log('=====================================================');
 }
 
 verifySemantics().catch(err => {

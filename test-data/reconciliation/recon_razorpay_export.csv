@@ -1,0 +1,9 @@
+Settlement Date,Settlement ID,Description,Amount,Status
+02/02/2026,RZPY2026020200001,Settlement - Customer orders Feb 1-2,125000,settled
+08/02/2026,RZPY2026020800002,Settlement - Customer orders Feb 6-8,67500,settled
+16/02/2026,RZPY2026021600003,Settlement - Customer orders Feb 13-16,89000,settled
+23/02/2026,RZPY2026022300004,Settlement - Customer orders Feb 20-23,41000,settled
+28/02/2026,RZPY2026022800005,Settlement - Customer orders Feb 26-28,55000,settled
+01/03/2026,RZPY2026030100006,Settlement - Customer orders Mar 1,23500,pending
+03/03/2026,RZPY2026030300007,Settlement - Refund processing Mar 3,-4500,processing
+05/02/2026,RZPY2026020500008,Chargeback - Customer dispute Feb 5,-2000,settled
