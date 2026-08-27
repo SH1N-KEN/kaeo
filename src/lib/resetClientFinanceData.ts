@@ -43,6 +43,18 @@ export const resetClientFinanceData = async (organizationId: string, clientId: s
     // 7. Imports
     await safeDelete('imports', organizationId, clientId);
 
+    // 7.5. Reconciliation Runs
+    const { error: reconRunErr } = await supabase
+      .from('reconciliation_runs')
+      .delete()
+      .eq('workspace_id', organizationId)
+      .eq('client_id', clientId);
+    if (reconRunErr) {
+      console.error('[Reset] Failed deleting reconciliation_runs:', reconRunErr);
+      throw reconRunErr;
+    }
+    console.log('[Reset] Deleted reconciliation_runs');
+
     // 8. Uploaded Files
     await safeDelete('uploaded_files', organizationId, clientId);
 
