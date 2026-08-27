@@ -18,6 +18,11 @@ export interface ReconciliationMatchResult {
       amountDifference: number;
       feeAdjusted: boolean;
       dateWithinWindow: boolean;
+      processorAmount?: number;
+      bankAmount?: number;
+      normalizedSettlementAmount?: number;
+      directionallyValid?: boolean;
+      absoluteAmountMatch?: boolean;
     };
   };
   auditTrail: string[];
@@ -36,6 +41,17 @@ export interface ReconciliationRunResult {
     pendingCount: number;
     duplicateCount: number;
     outOfScopeCount: number;
+    
+    // Canonical summary metrics
+    processorTotal: number;
+    eligibleSettlementCount: number;
+    matchedSettlementCount: number;
+    unresolvedSettlementCount: number;
+    processingCount: number;
+    refundCount: number;
+    chargebackCount: number;
+    outOfScopeBankCount: number;
+    unresolvedExposure: number;
   };
   results: ReconciliationMatchResult[];
   outOfScopeBankTxns: NormalizedTransaction[];

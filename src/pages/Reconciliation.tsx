@@ -203,11 +203,11 @@ const Reconciliation: React.FC = () => {
             </div>
             <div className="bg-card rounded-xl p-5 shadow-sm border border-border flex flex-col justify-between">
               <span className="text-sm font-medium text-muted-foreground mb-2">Eligible Settlements</span>
-              <span className="text-3xl font-bold text-foreground">{result.summary.eligibleProcessorRecords} / {result.summary.totalProcessorRecords}</span>
+              <span className="text-3xl font-bold text-foreground">{result.summary.matchedSettlementCount} / {result.summary.eligibleSettlementCount}</span>
             </div>
             <div className="bg-card rounded-xl p-5 shadow-sm border border-border flex flex-col justify-between">
               <span className="text-sm font-medium text-muted-foreground mb-2">Unresolved Discrepancies</span>
-              <span className={`text-3xl font-bold ${result.summary.difference > 0 ? 'text-red-500' : 'text-teal-500'}`}>₹{result.summary.difference.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              <span className={`text-3xl font-bold ${result.summary.unresolvedExposure > 0 ? 'text-red-500' : 'text-teal-500'}`}>₹{result.summary.unresolvedExposure.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="bg-card rounded-xl p-5 shadow-sm border border-border flex flex-col justify-between">
               <span className="text-sm font-medium text-muted-foreground mb-2">Eligible Match Rate</span>
@@ -219,16 +219,16 @@ const Reconciliation: React.FC = () => {
           <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
             <h3 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">Reconciliation Ledger Distribution</h3>
             <div className="w-full h-4 bg-muted rounded-full overflow-hidden flex mb-4">
-              <div className="h-full bg-teal-500" style={{ width: `${(result.summary.matchedCount / result.summary.totalProcessorRecords) * 100}%` }}></div>
-              <div className="h-full bg-yellow-500" style={{ width: `${(result.summary.reviewCount / result.summary.totalProcessorRecords) * 100}%` }}></div>
-              <div className="h-full bg-orange-500" style={{ width: `${(result.summary.unresolvedCount / result.summary.totalProcessorRecords) * 100}%` }}></div>
-              <div className="h-full bg-blue-500" style={{ width: `${(result.summary.pendingCount / result.summary.totalProcessorRecords) * 100}%` }}></div>
-              <div className="h-full bg-purple-500" style={{ width: `${(result.summary.duplicateCount / result.summary.totalProcessorRecords) * 100}%` }}></div>
+              <div className="h-full bg-teal-500" style={{ width: `${(result.summary.matchedSettlementCount / result.summary.processorTotal) * 100}%` }}></div>
+              <div className="h-full bg-yellow-500" style={{ width: `${(result.summary.reviewCount / result.summary.processorTotal) * 100}%` }}></div>
+              <div className="h-full bg-orange-500" style={{ width: `${(result.summary.unresolvedSettlementCount / result.summary.processorTotal) * 100}%` }}></div>
+              <div className="h-full bg-blue-500" style={{ width: `${(result.summary.pendingCount / result.summary.processorTotal) * 100}%` }}></div>
+              <div className="h-full bg-purple-500" style={{ width: `${(result.summary.duplicateCount / result.summary.processorTotal) * 100}%` }}></div>
             </div>
             <div className="flex flex-wrap gap-6 text-sm font-medium">
-              <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-teal-500"></div> {result.summary.matchedCount} Reconciled</span>
+              <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-teal-500"></div> {result.summary.matchedSettlementCount} Reconciled</span>
               <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-yellow-500"></div> {result.summary.reviewCount} Under Review</span>
-              <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-orange-500"></div> {result.summary.unresolvedCount} Exceptions</span>
+              <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-orange-500"></div> {result.summary.unresolvedSettlementCount} Exceptions</span>
               <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-blue-500"></div> {result.summary.pendingCount} Pending / Excluded</span>
               <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-purple-500"></div> {result.summary.duplicateCount} Duplicates</span>
             </div>

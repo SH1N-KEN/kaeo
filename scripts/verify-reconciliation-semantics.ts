@@ -163,12 +163,47 @@ async function verifySemantics() {
   console.log(`Out of Scope Bank Count:  ${razorpayResult.summary.outOfScopeCount}`);
 
   // Invariant validation checks:
-  if (razorpayResult.summary.matchedCount !== 5) {
-    throw new Error(`Expected 5 matched pairs, but found ${razorpayResult.summary.matchedCount}`);
+  const summary = razorpayResult.summary;
+  console.log('Verifying Razorpay/HDFC assertions...');
+  if (summary.eligibleSettlementCount !== 6) {
+    throw new Error(`Assertion failed: expected eligibleSettlementCount === 6, got ${summary.eligibleSettlementCount}`);
   }
-  if (razorpayResult.summary.unresolvedCount !== 4) {
-    throw new Error(`Expected 4 unresolved exceptions, but found ${razorpayResult.summary.unresolvedCount}`);
+  if (summary.matchedSettlementCount !== 5) {
+    throw new Error(`Assertion failed: expected matchedSettlementCount === 5, got ${summary.matchedSettlementCount}`);
   }
+  if (summary.unresolvedSettlementCount !== 1) {
+    throw new Error(`Assertion failed: expected unresolvedSettlementCount === 1, got ${summary.unresolvedSettlementCount}`);
+  }
+  const expectedRate = (5 / 6) * 100;
+  if (Math.abs(summary.matchRate - expectedRate) > 0.01) {
+    throw new Error(`Assertion failed: expected matchRate === ${expectedRate}%, got ${summary.matchRate}%`);
+  }
+  if (summary.reconciledValue !== 377500) {
+    throw new Error(`Assertion failed: expected reconciledValue === 377500, got ${summary.reconciledValue}`);
+  }
+  if (summary.unresolvedExposure !== 23500) {
+    throw new Error(`Assertion failed: expected unresolvedExposure === 23500, got ${summary.unresolvedExposure}`);
+  }
+  if (summary.duplicateCount !== 1) {
+    throw new Error(`Assertion failed: expected duplicateCount === 1, got ${summary.duplicateCount}`);
+  }
+  if (summary.outOfScopeBankCount !== 22) {
+    throw new Error(`Assertion failed: expected outOfScopeBankCount === 22, got ${summary.outOfScopeBankCount}`);
+  }
+
+  // Assert Stripe bank credits are classified as OUT_OF_SCOPE with reason OTHER_PROCESSOR
+  const stripeCredits = razorpayResult.results.filter(r => 
+    r.bankRecord && 
+    r.bankRecord.transaction.description.toLowerCase().includes('stripe')
+  );
+  if (stripeCredits.length !== 3) {
+    throw new Error(`Assertion failed: expected 3 Stripe bank credits, got ${stripeCredits.length}`);
+  }
+  stripeCredits.forEach(r => {
+    if (r.decision.status !== 'OUT_OF_SCOPE' || r.decision.reason !== 'OTHER_PROCESSOR') {
+      throw new Error(`Assertion failed: Stripe credit "${r.bankRecord?.transaction.description}" was not classified as OUT_OF_SCOPE/OTHER_PROCESSOR (got Status: ${r.decision.status}, Reason: ${r.decision.reason})`);
+    }
+  });
   console.log('-----------------------------------------------------');
   console.log('✅ HDFC & Razorpay Regression verification passed.');
   console.log('=====================================================');

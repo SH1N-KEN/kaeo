@@ -112,6 +112,7 @@ export async function reconcileTransactionsPipeline(
 
   // Track bank transactions pool
   let remainingBank = [...bankTxns];
+  const seenBankSignatures = new Set<string>();
 
   // Processor records mapping and classification into Eligible vs events
   const processorRecordsWithStatus = processorTxns.map((txn, index, arr) => {
@@ -199,7 +200,7 @@ export async function reconcileTransactionsPipeline(
     // Try to match eligible processor records
     let bestBankMatch: NormalizedTransaction | null = null;
     let highestScore = -1;
-    let matchEvidence = {
+    let matchEvidence: ReconciliationMatchResult['decision']['evidence'] = {
       confidenceScore: 0,
       amountExact: false,
       amountDifference: 0,
@@ -245,13 +246,20 @@ export async function reconcileTransactionsPipeline(
           amountExact: amountDiff === 0,
           amountDifference: amountDiff,
           feeAdjusted: false,
-          dateWithinWindow: true
+          dateWithinWindow: true,
+          processorAmount: transaction.amount,
+          bankAmount: bankTxn.amount,
+          normalizedSettlementAmount: Math.abs(transaction.amount),
+          directionallyValid: true,
+          absoluteAmountMatch: Math.abs(transaction.amount) === Math.abs(bankTxn.amount)
         };
       }
     }
 
     if (bestBankMatch) {
       remainingBank = remainingBank.filter(b => b !== bestBankMatch);
+      const sig = `${bestBankMatch.transaction_date.slice(0, 10)}|${bestBankMatch.amount}|${bestBankMatch.description}`;
+      seenBankSignatures.add(sig);
       results.push({
         processorRecord: record,
         bankRecord: { transaction: bestBankMatch },
@@ -280,7 +288,11 @@ export async function reconcileTransactionsPipeline(
             amountExact: false,
             amountDifference: Math.abs(transaction.amount),
             feeAdjusted: false,
-            dateWithinWindow: false
+            dateWithinWindow: false,
+            processorAmount: transaction.amount,
+            normalizedSettlementAmount: Math.abs(transaction.amount),
+            directionallyValid: false,
+            absoluteAmountMatch: false
           }
         },
         auditTrail: [
@@ -299,7 +311,7 @@ export async function reconcileTransactionsPipeline(
     const dLower = desc.toLowerCase();
     
     // Operating expenses or payroll are always out of scope
-    if (dLower.includes('salary') || dLower.includes('payroll') || dLower.includes('operating expense')) {
+    if (dLower.includes('salary') || dLower.includes('payroll') || dLower.includes('operating expense') || dLower.includes('rent') || dLower.includes('office supplies') || dLower.includes('insurance premium') || dLower.includes('printing services') || dLower.includes('vendor payment')) {
       return false;
     }
     
@@ -315,7 +327,105 @@ export async function reconcileTransactionsPipeline(
   const outOfScopeBankTxns: NormalizedTransaction[] = [];
   
   for (const bankTxn of remainingBank) {
-    if (isProcessorRelated(bankTxn.description)) {
+    const dLower = (bankTxn.description || '').toLowerCase();
+    
+    // Check for duplicate bank record
+    const sig = `${bankTxn.transaction_date.slice(0, 10)}|${bankTxn.amount}|${bankTxn.description}`;
+    if (seenBankSignatures.has(sig)) {
+      results.push({
+        processorRecord: {
+          transaction: {
+            id: `virtual-dup-${bankTxn.id}`,
+            organization_id: bankTxn.organization_id,
+            client_id: bankTxn.client_id,
+            import_id: null,
+            file_id: null,
+            transaction_date: bankTxn.transaction_date,
+            description: 'Duplicate Bank Entry',
+            amount: 0,
+            currency: bankTxn.currency,
+            type: 'unknown',
+            raw_row_json: null,
+            category: null,
+            counterparty_name: null,
+            source_provider: null
+          }
+        },
+        bankRecord: { transaction: bankTxn },
+        decision: {
+          status: 'DUPLICATE',
+          reason: 'Duplicate bank statement record detected',
+          verificationPassed: false,
+          evidence: {
+            confidenceScore: 0,
+            amountExact: false,
+            amountDifference: 0,
+            feeAdjusted: false,
+            dateWithinWindow: false,
+            bankAmount: bankTxn.amount,
+            normalizedSettlementAmount: Math.abs(bankTxn.amount),
+            directionallyValid: false,
+            absoluteAmountMatch: false
+          }
+        },
+        auditTrail: [
+          `Duplicate bank statement transaction: ${bankTxn.description} (${bankTxn.transaction_date.slice(0,10)})`,
+          `Scan completed: identical record already processed.`
+        ]
+      });
+      continue;
+    }
+    seenBankSignatures.add(sig);
+
+    // Check if other processor
+    const isOtherProcessor = 
+      (activeProcessor.toLowerCase() === 'razorpay' && dLower.includes('stripe')) ||
+      (activeProcessor.toLowerCase() === 'stripe' && dLower.includes('razorpay'));
+
+    if (isOtherProcessor) {
+      outOfScopeBankTxns.push(bankTxn);
+      results.push({
+        processorRecord: {
+          transaction: {
+            id: `virtual-other-proc-${bankTxn.id}`,
+            organization_id: bankTxn.organization_id,
+            client_id: bankTxn.client_id,
+            import_id: null,
+            file_id: null,
+            transaction_date: bankTxn.transaction_date,
+            description: 'Other Processor Transaction',
+            amount: 0,
+            currency: bankTxn.currency,
+            type: 'unknown',
+            raw_row_json: null,
+            category: null,
+            counterparty_name: null,
+            source_provider: null
+          }
+        },
+        bankRecord: { transaction: bankTxn },
+        decision: {
+          status: 'OUT_OF_SCOPE',
+          reason: 'OTHER_PROCESSOR',
+          verificationPassed: true,
+          evidence: {
+            confidenceScore: 0,
+            amountExact: false,
+            amountDifference: 0,
+            feeAdjusted: false,
+            dateWithinWindow: false,
+            bankAmount: bankTxn.amount,
+            normalizedSettlementAmount: Math.abs(bankTxn.amount),
+            directionallyValid: false,
+            absoluteAmountMatch: false
+          }
+        },
+        auditTrail: [
+          `Other processor bank transaction: ${bankTxn.description} (${bankTxn.transaction_date.slice(0,10)})`,
+          `Scan completed: transaction belongs to another payment processor.`
+        ]
+      });
+    } else if (isProcessorRelated(bankTxn.description)) {
       results.push({
         processorRecord: {
           transaction: {
@@ -345,7 +455,11 @@ export async function reconcileTransactionsPipeline(
             amountExact: false,
             amountDifference: Math.abs(bankTxn.amount),
             feeAdjusted: false,
-            dateWithinWindow: false
+            dateWithinWindow: false,
+            bankAmount: bankTxn.amount,
+            normalizedSettlementAmount: Math.abs(bankTxn.amount),
+            directionallyValid: true,
+            absoluteAmountMatch: false
           }
         },
         auditTrail: [
@@ -386,7 +500,11 @@ export async function reconcileTransactionsPipeline(
             amountExact: false,
             amountDifference: 0,
             feeAdjusted: false,
-            dateWithinWindow: false
+            dateWithinWindow: false,
+            bankAmount: bankTxn.amount,
+            normalizedSettlementAmount: Math.abs(bankTxn.amount),
+            directionallyValid: false,
+            absoluteAmountMatch: false
           }
         },
         auditTrail: [
@@ -396,13 +514,14 @@ export async function reconcileTransactionsPipeline(
       });
     }
   }
+
   // Calculate summary metrics
-  const totalProcessorRecords = processorTxns.length;
+  const processorTotal = processorTxns.length;
   
   const matchedCount = results.filter(r => r.decision.status === 'MATCHED').length;
   const reviewCount = results.filter(r => r.decision.status === 'REVIEW').length;
   
-  const unresolvedCount = results.filter(r => 
+  const unresolvedSettlementCount = results.filter(r => 
     r.decision.status === 'UNRESOLVED' && 
     r.processorRecord && 
     !r.processorRecord.transaction.id.startsWith('virtual-')
@@ -414,45 +533,50 @@ export async function reconcileTransactionsPipeline(
     r.processorRecord.transaction.id.startsWith('virtual-missing-proc-')
   ).length;
 
-  const pendingCount = results.filter(r => 
-    r.decision.status === 'PENDING' || 
-    r.decision.status === 'PROCESSING' || 
-    r.decision.status === 'CHARGEBACK' || 
-    r.decision.status === 'REFUND'
-  ).length;
-
+  const pendingCount = results.filter(r => r.decision.status === 'PENDING').length;
+  const processingCount = results.filter(r => r.decision.status === 'PROCESSING').length;
+  const refundCount = results.filter(r => r.decision.status === 'REFUND').length;
+  const chargebackCount = results.filter(r => r.decision.status === 'CHARGEBACK').length;
   const duplicateCount = results.filter(r => r.decision.status === 'DUPLICATE').length;
-  const outOfScopeCount = outOfScopeBankTxns.length;
+  const outOfScopeBankCount = results.filter(r => r.decision.status === 'OUT_OF_SCOPE').length;
 
-  const eligibleProcessorRecords = totalProcessorRecords - pendingCount - duplicateCount;
+  const eligibleSettlementCount = matchedCount + unresolvedSettlementCount;
   
   const reconciledValue = results
     .filter(r => r.decision.status === 'MATCHED' && r.bankRecord)
     .reduce((sum, r) => sum + Math.abs(r.bankRecord!.transaction.amount), 0);
 
-  const matchRate = eligibleProcessorRecords > 0 ? (matchedCount / eligibleProcessorRecords) * 100 : 0;
+  const matchRate = eligibleSettlementCount > 0 ? (matchedCount / eligibleSettlementCount) * 100 : 0;
 
-  const difference = results
-    .filter(r => r.decision.status === 'UNRESOLVED')
-    .reduce((sum, r) => {
-      const procAmt = r.processorRecord && !r.processorRecord.transaction.id.startsWith('virtual-') ? r.processorRecord.transaction.amount : 0;
-      const bankAmt = r.bankRecord ? r.bankRecord.transaction.amount : 0;
-      return sum + Math.abs(procAmt || bankAmt);
-    }, 0);
+  const unresolvedExposure = results
+    .filter(r => r.decision.status === 'UNRESOLVED' && r.processorRecord && !r.processorRecord.transaction.id.startsWith('virtual-'))
+    .reduce((sum, r) => sum + Math.abs(r.processorRecord.transaction.amount), 0);
+
+  const difference = unresolvedExposure;
 
   return {
     summary: {
       reconciledValue,
-      eligibleProcessorRecords,
-      totalProcessorRecords,
+      eligibleProcessorRecords: eligibleSettlementCount,
+      totalProcessorRecords: processorTotal,
       difference,
       matchRate,
       matchedCount,
       reviewCount,
-      unresolvedCount: unresolvedCount + unresolvedBankCount,
-      pendingCount,
+      unresolvedCount: unresolvedSettlementCount + unresolvedBankCount,
+      pendingCount: pendingCount + processingCount + refundCount + chargebackCount,
       duplicateCount,
-      outOfScopeCount
+      outOfScopeCount: outOfScopeBankCount,
+      
+      processorTotal,
+      eligibleSettlementCount,
+      matchedSettlementCount: matchedCount,
+      unresolvedSettlementCount,
+      processingCount,
+      refundCount,
+      chargebackCount,
+      outOfScopeBankCount,
+      unresolvedExposure
     },
     results,
     outOfScopeBankTxns

@@ -19,11 +19,11 @@ export const detectProvider = (headers: string[], _firstRows: any[], fileName: s
   const name = fileName.toLowerCase();
 
   // Heuristics
-  if (h.includes('razorpay_payment_id') || h.includes('payment id') && name.includes('razorpay')) {
+  if (h.includes('razorpay_payment_id') || h.includes('payment id') || name.includes('razorpay') || h.includes('settlement id') || h.includes('settlement_id')) {
     return { provider: 'Razorpay', sourceType: 'gateway' };
   }
   
-  if (h.includes('stripe id') || h.includes('balance transaction id')) {
+  if (h.includes('stripe id') || h.includes('balance transaction id') || name.includes('stripe')) {
     return { provider: 'Stripe', sourceType: 'gateway' };
   }
 
