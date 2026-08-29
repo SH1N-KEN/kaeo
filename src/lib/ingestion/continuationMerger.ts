@@ -54,7 +54,7 @@ export const mergeContinuationRows = (
       cleanRows.push(currentTx);
     } else {
       // Check if this row is a continuation of the previous transaction
-      let isContinuation = !hasDate && !hasAmt && hasDesc && descCol;
+      let isContinuation = !hasDate && !hasAmt && hasDesc && !!descCol;
 
       if (isContinuation && descCol) {
         const nextNarration = String(rawDesc).trim();

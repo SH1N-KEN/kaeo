@@ -18,7 +18,7 @@ function searchFile(filePath: string) {
       }
     });
   } else if (ext === '.xlsx') {
-    const xlsxObj = (XLSX as any).default || XLSX;
+    const xlsxObj = ((XLSX as any).default || XLSX) as typeof XLSX;
     try {
       const workbook = xlsxObj.readFile(filePath);
       workbook.SheetNames.forEach(sheetName => {

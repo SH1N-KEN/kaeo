@@ -9,13 +9,13 @@ files.forEach(filename => {
   const filePath = path.join(projectDir, 'test-data/regression', filename);
   if (!fs.existsSync(filePath)) return;
   
-  const xlsxObj = (XLSX as any).default || XLSX;
+  const xlsxObj = ((XLSX as any).default || XLSX) as typeof XLSX;
   const workbook = xlsxObj.readFile(filePath, { cellDates: true });
   
   workbook.SheetNames.forEach(sheetName => {
     const sheet = workbook.Sheets[sheetName];
     const data = xlsxObj.utils.sheet_to_json<any>(sheet);
-    data.forEach((row, rIdx) => {
+    data.forEach((row: any, rIdx: number) => {
       Object.keys(row).forEach(key => {
         if (String(row[key]).includes('2999')) {
           console.log(`Found 2999 in ${filename} -> ${sheetName} row ${rIdx}:`, row);

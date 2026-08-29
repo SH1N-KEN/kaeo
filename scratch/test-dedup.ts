@@ -22,7 +22,7 @@ async function testDedup() {
     const filePath = path.join(projectDir, 'test-data/regression', filename);
     if (!fs.existsSync(filePath)) continue;
 
-    const xlsxObj = (XLSX as any).default || XLSX;
+    const xlsxObj = ((XLSX as any).default || XLSX) as typeof XLSX;
     const workbook = xlsxObj.readFile(filePath, { cellDates: true });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -34,7 +34,7 @@ async function testDedup() {
     const headers = headerDetect.headers;
     const dataGrid = rawGrid.slice(headerDetect.headerRowIndex + 1);
     
-    const mappedRows = dataGrid.map((row) => {
+    const mappedRows = dataGrid.map((row: any) => {
       const obj: any = {};
       headers.forEach((h, cIdx) => {
         obj[h] = row[cIdx] !== undefined ? row[cIdx] : null;

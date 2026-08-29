@@ -212,7 +212,7 @@ supabase.from = (table: string) => {
             const orgFilter = this.filters.find(() => true); // get the workspace_id equality check
             // Perform delete
             const filteredData = queryData.filter(item => {
-              const matchesFilters = this.filters.every(f => f(item));
+              const matchesFilters = this.filters.every((f: any) => f(item));
               if (matchesFilters) {
                 // Must be member to delete
                 return !isCurrentUserMember(item.workspace_id);
@@ -222,7 +222,7 @@ supabase.from = (table: string) => {
             
             // Cascade delete child reconciliation_records
             const deletedRuns = queryData.filter(item => {
-              const matchesFilters = this.filters.every(f => f(item));
+              const matchesFilters = this.filters.every((f: any) => f(item));
               return matchesFilters && isCurrentUserMember(item.workspace_id);
             });
             for (const r of deletedRuns) {
@@ -232,7 +232,7 @@ supabase.from = (table: string) => {
             mockDatabase.reconciliation_runs = filteredData;
           } else {
             const filteredData = queryData.filter(item => {
-              const matchesFilters = this.filters.every(f => f(item));
+              const matchesFilters = this.filters.every((f: any) => f(item));
               return !matchesFilters;
             });
             if (table === 'organizations') mockDatabase.organizations = filteredData;
@@ -326,7 +326,7 @@ supabase.from = (table: string) => {
       return {
         then: async (resolve: any) => {
           this.limitVal = 1;
-          const { data, error } = await this;
+          const { data, error } = await (this as any);
           resolve({
             data: data && data.length > 0 ? data[0] : null,
             error: data && data.length > 0 ? null : { message: 'Row not found' }
@@ -417,7 +417,7 @@ async function runTests() {
     amount: 125000,
     currency: 'INR',
     type: 'income'
-  });
+  }) as any;
 
   // --- Step 3: Run baseline reconciliation fixture (Razorpay + HDFC) ---
   console.log('\nReading and reconciling fixtures...');
@@ -482,7 +482,7 @@ async function runTests() {
   // Verify transaction FK linking logic (checks that matching transactions are linked by ID)
   const targetRecord = records1.find(r => r.bank_amount === 125000);
   assert(targetRecord !== undefined, 'Case A: Found target reconciliation record');
-  assert(targetRecord?.bank_transaction_id === mockTx.id, 'Case A: Successfully linked bank record to existing transaction ID from database');
+  assert(targetRecord?.bank_transaction_id === mockTx?.id, 'Case A: Successfully linked bank record to existing transaction ID from database');
 
   // --- Test Case E: Child records belong to exactly one run ---
   console.log('\nTesting Case E: Child records belong to exactly one run...');

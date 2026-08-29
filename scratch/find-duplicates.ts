@@ -13,7 +13,7 @@ files.forEach(filename => {
   const filePath = path.join(projectDir, 'test-data', filename);
   if (!fs.existsSync(filePath)) return;
   
-  const xlsxObj = (XLSX as any).default || XLSX;
+  const xlsxObj = ((XLSX as any).default || XLSX) as typeof XLSX;
   const workbook = xlsxObj.readFile(filePath, { cellDates: true });
   
   workbook.SheetNames.forEach(sheetName => {
@@ -21,7 +21,7 @@ files.forEach(filename => {
     const data = xlsxObj.utils.sheet_to_json<any>(sheet);
     
     const seen = new Map<string, any[]>();
-    data.forEach((row, idx) => {
+    data.forEach((row: any, idx: number) => {
       // Find all rows, log any containing 2999 in any cell
       let has2999 = false;
       Object.keys(row).forEach(key => {
