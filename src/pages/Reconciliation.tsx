@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   UploadCloud,
   FileSpreadsheet,
-  CheckCircle,
   AlertTriangle,
   ArrowRight,
   Download,
@@ -10,16 +9,12 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
-  XCircle,
-  Clock,
-  RefreshCw,
   History
 } from 'lucide-react';
-import PageHeader from '../components/ui/PageHeader';
 import { parseFinancialFile } from '../lib/fileParser';
 import { normalizeIngestedRows } from '../lib/ingestion/transactionNormalizer';
 import { reconcileTransactionsPipeline } from '../lib/reconciliation/reconciliationEngine';
-import type { ReconciliationRunResult, ReconciliationRecord } from '../types/reconciliation';
+import type { ReconciliationRunResult, ReconciliationRecord, ReconciliationMatchResult } from '../types/reconciliation';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
 import {
@@ -41,6 +36,7 @@ const Reconciliation: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ReconciliationRunResult | null>(null);
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
+  const [expandedExceptionIdx, setExpandedExceptionIdx] = useState<number | null>(null);
 
   const [historyRuns, setHistoryRuns] = useState<ReconciliationRunDb[]>([]);
   const [isLoadingLatest, setIsLoadingLatest] = useState(false);
@@ -247,16 +243,62 @@ const Reconciliation: React.FC = () => {
 
   const renderStatusBadge = (status: string) => {
     switch (status) {
-      case 'MATCHED': return <span className="bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"><Check className="w-3 h-3" /> Reconciled</span>;
-      case 'REVIEW': return <span className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Attention Required</span>;
-      case 'UNRESOLVED': return <span className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"><XCircle className="w-3 h-3" /> Unresolved Exception</span>;
-      case 'PENDING': return <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"><Clock className="w-3 h-3" /> Pending Payout</span>;
-      case 'PROCESSING': return <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Processing</span>;
-      case 'CHARGEBACK': return <span className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Chargeback Exception</span>;
-      case 'DUPLICATE': return <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Duplicate Record</span>;
-      case 'REFUND': return <span className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Refund Event</span>;
-      case 'OUT_OF_SCOPE': return <span className="bg-gray-100 text-gray-650 dark:bg-gray-850 dark:text-gray-400 px-2 py-1 rounded-full text-xs font-medium">Out of Scope</span>;
-      default: return <span className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 px-2 py-1 rounded-full text-xs font-medium">{status}</span>;
+      case 'MATCHED':
+        return (
+          <span className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--accent)' }}>
+            <Check className="w-3.5 h-3.5 flex-shrink-0" /> Reconciled
+          </span>
+        );
+      case 'REVIEW':
+        return (
+          <span className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--warning)' }}>
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--warning)' }} /> Attention Required
+          </span>
+        );
+      case 'UNRESOLVED':
+        return (
+          <span className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--danger)' }}>
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--danger)' }} /> Unresolved
+          </span>
+        );
+      case 'PENDING':
+        return (
+          <span className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--info)' }}>
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--info)' }} /> Pending Payout
+          </span>
+        );
+      case 'PROCESSING':
+        return (
+          <span className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--info)' }}>
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse" style={{ background: 'var(--info)' }} /> Processing
+          </span>
+        );
+      case 'CHARGEBACK':
+        return (
+          <span className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--danger)' }}>
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--danger)' }} /> Chargeback Exception
+          </span>
+        );
+      case 'DUPLICATE':
+        return (
+          <span className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--duplicate)' }}>
+            <span className="text-[10px] flex-shrink-0 leading-none">▲</span> Duplicate Record
+          </span>
+        );
+      case 'REFUND':
+        return (
+          <span className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--danger)' }}>
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--danger)' }} /> Refund Event
+          </span>
+        );
+      case 'OUT_OF_SCOPE':
+        return (
+          <span className="text-muted-foreground text-xs font-medium flex items-center gap-1">
+            Out of Scope
+          </span>
+        );
+      default:
+        return <span className="text-muted-foreground text-xs font-medium">{status}</span>;
     }
   };
 
@@ -270,6 +312,68 @@ const Reconciliation: React.FC = () => {
     return r.transaction.transaction_date || '---';
   };
 
+  const renderRecordDetails = (res: ReconciliationMatchResult) => {
+    return (
+      <div className="bg-[var(--surface-muted)] border border-border/80 rounded p-4 text-xs space-y-4 max-w-4xl mx-auto">
+        <div className="flex flex-col md:flex-row gap-6 items-stretch justify-center">
+          {/* Processor Side */}
+          <div className="flex-1 bg-muted/5 border border-border/50 p-4 rounded flex flex-col justify-between">
+            <div>
+              <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">Processor Ledger Entry</div>
+              <div className="text-xl font-mono font-semibold text-foreground mb-1">{getAmountStr(res.processorRecord)}</div>
+              <div className="text-[10px] text-muted-foreground mb-3 font-mono">Date: {getDateStr(res.processorRecord)}</div>
+            </div>
+            <div className="text-[11px] break-all font-mono bg-muted/15 p-2.5 rounded border border-border/30 text-muted-foreground">{res.processorRecord?.transaction?.description || 'No matching record'}</div>
+          </div>
+
+          <div className="flex flex-col items-center justify-center py-2 px-1">
+            <ArrowRight className="w-4 h-4 text-muted-foreground hidden md:block" />
+            {res.decision.evidence.confidenceScore > 0 ? (
+              <div className="text-[10px] text-emerald-500 font-mono font-semibold mt-1.5">{res.decision.evidence.confidenceScore}% Match</div>
+            ) : (
+              <div className="text-[10px] text-muted-foreground font-mono font-semibold mt-1.5">Unmatched</div>
+            )}
+          </div>
+
+          {/* Bank Side */}
+          <div className="flex-1 bg-muted/5 border border-border/50 p-4 rounded flex flex-col justify-between">
+            {res.bankRecord ? (
+              <>
+                <div>
+                  <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">Bank Statement Payout</div>
+                  <div className="text-xl font-mono font-semibold text-foreground mb-1">{getAmountStr(res.bankRecord)}</div>
+                  <div className="text-[10px] text-muted-foreground mb-3 font-mono">Date: {getDateStr(res.bankRecord)}</div>
+                </div>
+                <div className="text-[11px] break-all font-mono bg-muted/15 p-2.5 rounded border border-border/30 text-muted-foreground">{res.bankRecord.transaction.description}</div>
+              </>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-xs italic py-8 bg-muted/5 border border-dashed border-border/40 rounded">No bank ledger entry found</div>
+            )}
+          </div>
+        </div>
+
+        {/* Evidence / Audit Trail */}
+        <div className="bg-muted/5 border border-border/50 rounded p-4">
+          <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider mb-3">Audit Evidence Trail</div>
+          <div className="grid grid-cols-2 gap-4 text-xs mb-3 border-b border-border/30 pb-3">
+            <div><span className="text-muted-foreground font-medium">Ledger Status:</span> <span className="font-semibold text-foreground font-mono text-[11px]">{res.decision.status}</span></div>
+            <div><span className="text-muted-foreground font-medium">Reconciled Amount:</span> <span className="font-semibold text-foreground font-mono">{res.decision.evidence.amountExact ? 'Exact Match' : `Variance ₹${res.decision.evidence.amountDifference.toFixed(2)}`}</span></div>
+            <div><span className="text-muted-foreground font-medium">Settlement Date:</span> <span className="text-foreground">{res.decision.evidence.dateWithinWindow ? 'Within Control Window' : 'Variance Outside Window'}</span></div>
+            <div><span className="text-muted-foreground font-medium">Audit Outcome:</span> <span className="text-foreground font-medium">{res.decision.reason}</span></div>
+          </div>
+          <div className="text-[10px] text-muted-foreground space-y-1 bg-muted/15 p-3 rounded border border-border/30 font-mono max-h-32 overflow-y-auto">
+            {res.auditTrail.map((log, idx) => (
+              <div key={idx} className="flex gap-2 leading-relaxed">
+                <span className="text-muted-foreground/60 select-none">»</span>
+                <span>{log}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (workspaceLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -278,188 +382,279 @@ const Reconciliation: React.FC = () => {
     );
   }
 
+  // Get exceptions for the Exceptions Requiring Attention panel
+  const exceptions = result
+    ? result.results.filter(
+        r =>
+          r.decision.status === 'REVIEW' ||
+          r.decision.status === 'UNRESOLVED' ||
+          r.decision.status === 'DUPLICATE' ||
+          r.decision.status === 'CHARGEBACK'
+      )
+    : [];
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-12">
-      <PageHeader
-        title="Reconciliation Control"
-        description="Dual-source ledger matching and settlement verification"
-      />
+    <div className="space-y-6 animate-in fade-in duration-500 pb-12">
+      {/* Sophisticated compact header */}
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-border pb-4 mb-6">
+        <div>
+          <div className="flex items-center gap-3 flex-wrap mb-1">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Reconciliation Control</h1>
+            {result && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 border border-emerald-500/20 rounded">
+                <Check className="w-3 h-3" /> System Confirmed
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Dual-source ledger matching and settlement verification
+          </p>
+          {result && loadedRun && (
+            <div className="text-[10px] text-muted-foreground/85 font-mono mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="flex items-center gap-1 text-emerald-500 font-medium">
+                ✓ Reconciliation complete
+              </span>
+              <span>·</span>
+              <span>
+                Last run:{' '}
+                {new Date(loadedRun.created_at).toLocaleDateString(undefined, {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric'
+                })}{' '}
+                {new Date(loadedRun.created_at).toLocaleTimeString(undefined, {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </span>
+              <span>·</span>
+              <span className="truncate max-w-xs md:max-w-md" title={`${loadedRun.source_metadata?.bank_file_name} · ${loadedRun.source_metadata?.processor_file_name}`}>
+                Sources: {loadedRun.source_metadata?.bank_file_name || 'N/A'} ·{' '}
+                {loadedRun.source_metadata?.processor_file_name || 'N/A'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {result && (
+          <div className="flex items-center gap-2 flex-shrink-0 mt-2 md:mt-0">
+            <button
+              onClick={() => {
+                setResult(null);
+                setBankFile(null);
+                setProcessorFile(null);
+                setLoadedRun(null);
+                setActiveRunId(null);
+                setExpandedRow(null);
+                setExpandedExceptionIdx(null);
+              }}
+              className="px-3 py-1.5 text-xs font-semibold border border-border rounded bg-muted/10 text-muted-foreground hover:bg-muted/25 transition-colors cursor-pointer"
+            >
+              Start New
+            </button>
+            <button
+              onClick={downloadReport}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-muted/20 hover:bg-muted/35 text-foreground border border-border rounded transition-colors cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" /> Export Report (JSON)
+            </button>
+          </div>
+        )}
+      </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900 text-red-800 dark:text-red-300 px-4 py-3 rounded-lg flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-          <p className="text-sm font-medium">{error}</p>
+        <div className="rounded flex items-center gap-3 px-4 py-3" style={{ background: 'color-mix(in srgb, var(--danger) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--danger) 25%, transparent)', color: 'var(--danger)' }}>
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          <p className="text-xs font-medium">{error}</p>
         </div>
       )}
 
       {isLoadingLatest && !result ? (
-        <div className="flex flex-col items-center justify-center py-20 space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Restoring latest reconciliation run...</p>
+        <div className="flex flex-col items-center justify-center py-20 space-y-3">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <p className="text-xs text-muted-foreground font-mono">Restoring latest reconciliation run...</p>
         </div>
       ) : (
         <>
           {!result && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div
-                className="relative border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-muted/30 transition-colors cursor-pointer group bg-card shadow-sm"
+                className="relative border border-dashed border-border rounded p-6 flex flex-col items-center justify-center text-center hover:bg-muted/15 transition-all cursor-pointer group bg-card/25"
                 onClick={() => bankInputRef.current?.click()}
               >
                 <input type="file" ref={bankInputRef} onChange={handleBankUpload} accept=".csv,.xlsx" className="hidden" />
-                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <UploadCloud className="w-6 h-6" />
+                <div className="w-9 h-9 bg-muted/15 text-muted-foreground rounded-full flex items-center justify-center mb-3 group-hover:bg-muted/35 transition-colors">
+                  <UploadCloud className="w-4 h-4" />
                 </div>
-                <h3 className="text-lg font-medium mb-1">Bank Statement</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-0.5">Bank Statement</h3>
                 {bankFile ? (
-                  <div className="flex items-center gap-2 bg-gray-200 dark:bg-gray-700 px-3 py-1.5 rounded-full text-sm font-medium mt-2">
-                    <FileSpreadsheet className="w-4 h-4" /> {bankFile.name}
+                  <div className="flex items-center gap-1.5 bg-muted/30 border border-border/40 px-2.5 py-1 rounded text-xs font-mono text-foreground mt-2">
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-muted-foreground" /> {bankFile.name}
                   </div>
-                ) : <p className="text-sm text-muted-foreground mt-2">Click to upload bank ledger (CSV, XLSX)</p>}
+                ) : <p className="text-xs text-muted-foreground mt-1">Click to upload bank ledger (CSV, XLSX)</p>}
               </div>
 
               <div
-                className="relative border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-muted/30 transition-colors cursor-pointer group bg-card shadow-sm"
+                className="relative border border-dashed border-border rounded p-6 flex flex-col items-center justify-center text-center hover:bg-muted/15 transition-all cursor-pointer group bg-card/25"
                 onClick={() => processorInputRef.current?.click()}
               >
                 <input type="file" ref={processorInputRef} onChange={handleProcessorUpload} accept=".csv,.xlsx" className="hidden" />
-                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <UploadCloud className="w-6 h-6" />
+                <div className="w-9 h-9 bg-muted/15 text-muted-foreground rounded-full flex items-center justify-center mb-3 group-hover:bg-muted/35 transition-colors">
+                  <UploadCloud className="w-4 h-4" />
                 </div>
-                <h3 className="text-lg font-medium mb-1">Payment Processor Export</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-0.5">Payment Processor Export</h3>
                 {processorFile ? (
-                  <div className="flex items-center gap-2 bg-gray-200 dark:bg-gray-700 px-3 py-1.5 rounded-full text-sm font-medium mt-2">
-                    <FileSpreadsheet className="w-4 h-4" /> {processorFile.name}
+                  <div className="flex items-center gap-1.5 bg-muted/30 border border-border/40 px-2.5 py-1 rounded text-xs font-mono text-foreground mt-2">
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-muted-foreground" /> {processorFile.name}
                   </div>
-                ) : <p className="text-sm text-muted-foreground mt-2">Click to upload processor ledger (CSV, XLSX)</p>}
+                ) : <p className="text-xs text-muted-foreground mt-1">Click to upload processor ledger (CSV, XLSX)</p>}
               </div>
             </div>
           )}
 
           {!result && (
-            <div className="flex justify-center">
+            <div className="flex justify-center mt-4">
               <button
                 onClick={runReconciliation}
                 disabled={!bankFile || !processorFile || isReconciling}
-                className={`flex items-center gap-2 px-8 py-3 rounded-lg text-white font-medium transition-all transform hover:scale-105 active:scale-95 shadow-md ${!bankFile || !processorFile ? 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed shadow-none' : 'bg-gray-900 dark:bg-gray-100 dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-200'
-                  }`}
+                className={`flex items-center gap-1.5 px-6 py-2.5 rounded text-xs font-semibold tracking-wide transition-all shadow-xs border ${
+                  !bankFile || !processorFile
+                    ? 'bg-muted/10 border-border/30 text-muted-foreground cursor-not-allowed shadow-none'
+                    : 'bg-foreground text-background border-transparent hover:opacity-90 active:scale-[0.98] cursor-pointer'
+                }`}
               >
-                {isReconciling ? <><Loader2 className="w-5 h-5 animate-spin" /> Running Control...</> : <><ArrowRight className="w-5 h-5" /> Run Reconciliation Pipeline</>}
+                {isReconciling ? (
+                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running Pipeline...</>
+                ) : (
+                  <><ArrowRight className="w-3.5 h-3.5" /> Run Reconciliation Pipeline</>
+                )}
               </button>
             </div>
           )}
 
           {result && (
-            <div className="space-y-8 animate-in slide-in-from-bottom-8 duration-700">
-
-              <div className="flex justify-between items-start">
-                <div className="flex flex-col">
-                  <h2 className="text-xl font-semibold flex items-center gap-2">
-                    <CheckCircle className="w-6 h-6 text-teal-500" />
-                    Reconciliation Complete
-                  </h2>
-                  {loadedRun && (
-                    <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                      <span>
-                        Last run:{' '}
-                        {new Date(loadedRun.created_at).toLocaleDateString(undefined, {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        })}{' '}
-                        ·{' '}
-                        {new Date(loadedRun.created_at).toLocaleTimeString(undefined, {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                      <span>
-                        Sources: {loadedRun.source_metadata?.bank_file_name || 'N/A'} ·{' '}
-                        {loadedRun.source_metadata?.processor_file_name || 'N/A'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setResult(null);
-                      setBankFile(null);
-                      setProcessorFile(null);
-                      setLoadedRun(null);
-                      setActiveRunId(null);
-                    }}
-                    className="px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-muted transition-colors"
-                  >
-                    Start New
-                  </button>
-                  <button onClick={downloadReport} className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors">
-                    <Download className="w-4 h-4" /> Export Report (JSON)
-                  </button>
-                </div>
-              </div>
-
+            <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-700">
+              
               {/* Executive Summary */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-card rounded-xl p-5 shadow-sm border border-border flex flex-col justify-between">
-                  <span className="text-sm font-medium text-muted-foreground mb-2">Reconciled Value</span>
-                  <span className="text-3xl font-bold text-foreground">₹{result.summary.reconciledValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-card/45 border border-border/80 rounded-md p-3.5 flex flex-col justify-between shadow-xs">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Reconciled Value</span>
+                  <span className="text-xl font-semibold tracking-tight text-foreground font-mono">₹{result.summary.reconciledValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                 </div>
-                <div className="bg-card rounded-xl p-5 shadow-sm border border-border flex flex-col justify-between">
-                  <span className="text-sm font-medium text-muted-foreground mb-2">Eligible Settlements</span>
-                  <span className="text-3xl font-bold text-foreground">{result.summary.matchedSettlementCount} / {result.summary.eligibleSettlementCount}</span>
+                <div className="bg-card/45 border border-border/80 rounded-md p-3.5 flex flex-col justify-between shadow-xs">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Eligible Settlements</span>
+                  <span className="text-xl font-semibold tracking-tight text-foreground font-mono">{result.summary.matchedSettlementCount} <span className="text-muted-foreground font-sans text-xs">/ {result.summary.eligibleSettlementCount}</span></span>
                 </div>
-                <div className="bg-card rounded-xl p-5 shadow-sm border border-border flex flex-col justify-between">
-                  <span className="text-sm font-medium text-muted-foreground mb-2">Unresolved Discrepancies</span>
-                  <span className={`text-3xl font-bold ${result.summary.unresolvedExposure > 0 ? 'text-red-500' : 'text-teal-500'}`}>₹{result.summary.unresolvedExposure.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                <div className="bg-card/45 border border-border/80 rounded-md p-3.5 flex flex-col justify-between shadow-xs">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Unresolved Discrepancies</span>
+                  <span className={`text-xl font-semibold tracking-tight font-mono`} style={{ color: result.summary.unresolvedExposure > 0 ? 'var(--warning)' : 'var(--success)' }}>₹{result.summary.unresolvedExposure.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                 </div>
-                <div className="bg-card rounded-xl p-5 shadow-sm border border-border flex flex-col justify-between">
-                  <span className="text-sm font-medium text-muted-foreground mb-2">Eligible Match Rate</span>
-                  <span className="text-3xl font-bold text-foreground">{result.summary.matchRate.toFixed(1)}%</span>
+                <div className="bg-card/45 border border-border/80 rounded-md p-3.5 flex flex-col justify-between shadow-xs">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Eligible Match Rate</span>
+                  <span className="text-xl font-semibold tracking-tight text-foreground font-mono">{result.summary.matchRate.toFixed(1)}%</span>
                 </div>
               </div>
 
               {/* Reconciliation Ledger Distribution */}
-              <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
-                <h3 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">Reconciliation Ledger Distribution</h3>
-                <div className="w-full h-4 bg-muted rounded-full overflow-hidden flex mb-4">
-                  <div className="h-full bg-teal-500" style={{ width: `${(result.summary.matchedSettlementCount / result.summary.processorTotal) * 100}%` }}></div>
-                  <div className="h-full bg-yellow-500" style={{ width: `${(result.summary.reviewCount / result.summary.processorTotal) * 100}%` }}></div>
-                  <div className="h-full bg-orange-500" style={{ width: `${(result.summary.unresolvedSettlementCount / result.summary.processorTotal) * 100}%` }}></div>
-                  <div className="h-full bg-blue-500" style={{ width: `${(result.summary.pendingCount / result.summary.processorTotal) * 100}%` }}></div>
-                  <div className="h-full bg-purple-500" style={{ width: `${(result.summary.duplicateCount / result.summary.processorTotal) * 100}%` }}></div>
+              <div className="border border-border/80 rounded-md p-4 bg-muted/5 shadow-xs">
+                <h3 className="text-[10px] font-semibold text-muted-foreground mb-3 uppercase tracking-wider font-mono">Reconciliation Ledger Distribution</h3>
+                <div className="w-full h-1.5 bg-muted/30 rounded-none overflow-hidden flex mb-3.5">
+                  <div className="h-full" style={{ width: `${(result.summary.matchedSettlementCount / result.summary.processorTotal) * 100}%`, background: 'var(--accent)' }}></div>
+                  <div className="h-full" style={{ width: `${(result.summary.reviewCount / result.summary.processorTotal) * 100}%`, background: 'var(--warning)', opacity: 0.8 }}></div>
+                  <div className="h-full" style={{ width: `${(result.summary.unresolvedSettlementCount / result.summary.processorTotal) * 100}%`, background: 'var(--danger)', opacity: 0.8 }}></div>
+                  <div className="h-full" style={{ width: `${(result.summary.pendingCount / result.summary.processorTotal) * 100}%`, background: 'var(--info)', opacity: 0.6 }}></div>
+                  <div className="h-full" style={{ width: `${(result.summary.duplicateCount / result.summary.processorTotal) * 100}%`, background: 'var(--duplicate)', opacity: 0.6 }}></div>
                 </div>
-                <div className="flex flex-wrap gap-6 text-sm font-medium">
-                  <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-teal-500"></div> {result.summary.matchedSettlementCount} Reconciled</span>
-                  <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-yellow-500"></div> {result.summary.reviewCount} Under Review</span>
-                  <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-orange-500"></div> {result.summary.unresolvedSettlementCount} Exceptions</span>
-                  <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-blue-500"></div> {result.summary.pendingCount} Pending / Excluded</span>
-                  <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-purple-500"></div> {result.summary.duplicateCount} Duplicates</span>
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-[10px] uppercase font-mono tracking-wider text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--accent)' }} />
+                    Reconciled <span className="font-semibold text-foreground font-sans text-xs ml-0.5">{result.summary.matchedSettlementCount}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--warning)', opacity: 0.9 }} />
+                    Under Review <span className="font-semibold text-foreground font-sans text-xs ml-0.5">{result.summary.reviewCount}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--danger)', opacity: 0.9 }} />
+                    Exceptions <span className="font-semibold text-foreground font-sans text-xs ml-0.5">{result.summary.unresolvedSettlementCount}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--info)', opacity: 0.7 }} />
+                    Pending <span className="font-semibold text-foreground font-sans text-xs ml-0.5">{result.summary.pendingCount}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--duplicate)', opacity: 0.7 }} />
+                    Duplicates <span className="font-semibold text-foreground font-sans text-xs ml-0.5">{result.summary.duplicateCount}</span>
+                  </span>
                 </div>
               </div>
 
-              {/* Attention Required */}
-              {(result.summary.reviewCount > 0 || result.summary.unresolvedCount > 0 || result.summary.duplicateCount > 0) && (
-                <div className="bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-xl p-5">
-                  <h3 className="text-sm font-bold text-orange-800 dark:text-orange-400 mb-4 flex items-center gap-2 uppercase tracking-wider">
-                    <AlertTriangle className="w-4 h-4" /> Exceptions requiring attention
-                  </h3>
-                  <div className="space-y-3">
-                    {result.results.filter(r => r.decision.status === 'REVIEW' || r.decision.status === 'UNRESOLVED' || r.decision.status === 'DUPLICATE').slice(0, 8).map((r, i) => (
-                      <div key={i} className="flex items-center justify-between bg-white dark:bg-gray-900 p-3 rounded-lg border border-orange-100 dark:border-orange-850 shadow-xs">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-sm text-foreground">
-                            {r.processorRecord?.transaction?.description || 'Missing Processor Record'}
-                          </span>
-                          <span className="text-xs text-muted-foreground">{r.decision.reason}</span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <span className="font-semibold text-sm">
-                            {r.bankRecord ? getAmountStr(r.bankRecord) : getAmountStr(r.processorRecord)}
-                          </span>
-                          {renderStatusBadge(r.decision.status)}
-                        </div>
-                      </div>
-                    ))}
+              {/* Exceptions Requiring Attention */}
+              {exceptions.length > 0 && (
+                <div className="border border-border/80 rounded-md p-4 bg-muted/5 shadow-xs">
+                  <div className="flex flex-col mb-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: 'var(--warning)' }}>
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      Exceptions Requiring Attention
+                    </h3>
+                    <span className="text-[11px] text-muted-foreground mt-0.5 font-medium">
+                      {exceptions.length} {exceptions.length === 1 ? 'item' : 'items'} requiring review
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-border/50 text-muted-foreground font-mono text-[9px] uppercase tracking-wider">
+                          <th className="py-2 px-3 font-semibold w-24">Type</th>
+                          <th className="py-2 px-3 font-semibold">Description</th>
+                          <th className="py-2 px-3 font-semibold text-right w-36">Amount</th>
+                          <th className="py-2 px-3 font-semibold text-center w-28">Status</th>
+                          <th className="py-2 px-3 w-8"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/30">
+                        {exceptions.map((r, idx) => {
+                          const isExpanded = expandedExceptionIdx === idx;
+                          const typeStr = r.decision.status === 'DUPLICATE' ? 'Duplicate' : 'Settlement';
+                          const description = r.bankRecord?.transaction?.description || r.processorRecord?.transaction?.description || 'Missing Record Details';
+                          const amountStr = r.bankRecord ? getAmountStr(r.bankRecord) : getAmountStr(r.processorRecord);
+                          return (
+                            <React.Fragment key={idx}>
+                              <tr
+                                className="hover:bg-muted/10 transition-colors cursor-pointer"
+                                onClick={() => {
+                                  setExpandedExceptionIdx(isExpanded ? null : idx);
+                                  setExpandedRow(null); // Close main table selection
+                                }}
+                              >
+                                <td className="py-2.5 px-3 text-muted-foreground font-mono text-[10px] uppercase tracking-wider">{typeStr}</td>
+                                <td className="py-2.5 px-3 font-medium text-foreground max-w-xs truncate" title={description}>
+                                  {description}
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-mono font-semibold text-foreground tracking-tight tabular-nums">
+                                  {amountStr}
+                                </td>
+                                <td className="py-2.5 px-3 text-center">
+                                  <div className="inline-flex justify-center w-full">
+                                    {renderStatusBadge(r.decision.status)}
+                                  </div>
+                                </td>
+                                <td className="py-2.5 px-3 text-center text-muted-foreground/60">
+                                  {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                </td>
+                              </tr>
+                              {isExpanded && (
+                                <tr>
+                                  <td colSpan={5} className="py-3 px-3 bg-[var(--background)] border-t border-border/20">
+                                    {renderRecordDetails(r)}
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}
@@ -468,96 +663,49 @@ const Reconciliation: React.FC = () => {
               {(() => {
                 const auditResults = result.results.filter(r => r.decision.status !== 'OUT_OF_SCOPE');
                 return (
-                  <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-                    <div className="px-5 py-4 border-b border-border font-semibold flex items-center justify-between bg-muted/20">
+                  <div className="bg-card/45 border border-border/80 rounded-md shadow-xs overflow-hidden">
+                    <div className="px-4 py-2.5 border-b border-border font-semibold text-xs text-muted-foreground uppercase tracking-wider bg-muted/10 flex items-center justify-between">
                       <span>Settlement Audit Log ({auditResults.length} records processed)</span>
                     </div>
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-muted/50 text-muted-foreground text-xs uppercase font-semibold border-b border-border">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted/5 text-muted-foreground text-[9px] uppercase font-mono tracking-wider border-b border-border/50">
                           <tr>
-                            <th className="px-5 py-3 text-left">Status</th>
-                            <th className="px-5 py-3 text-left">Bank description</th>
-                            <th className="px-5 py-3 text-right">Settlement Amt (Processor)</th>
-                            <th className="px-5 py-3 text-right">Bank Amt (Ledger)</th>
-                            <th className="px-5 py-3 text-right">Date</th>
-                            <th className="px-5 py-3 w-10"></th>
+                            <th className="px-4 py-2 text-left w-32">Status</th>
+                            <th className="px-4 py-2 text-left">Bank description</th>
+                            <th className="px-4 py-2 text-right w-44">Settlement Amt (Processor)</th>
+                            <th className="px-4 py-2 text-right w-40">Bank Amt (Ledger)</th>
+                            <th className="px-4 py-2 text-right w-28">Date</th>
+                            <th className="px-4 py-2 w-8"></th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-border">
+                        <tbody className="divide-y divide-border/30">
                           {auditResults.map((res, i) => (
                             <React.Fragment key={i}>
                               <tr 
                                 className="hover:bg-muted/10 transition-colors cursor-pointer" 
-                                onClick={() => setExpandedRow(expandedRow === i ? null : i)}
+                                onClick={() => {
+                                  setExpandedRow(expandedRow === i ? null : i);
+                                  setExpandedExceptionIdx(null); // Close exceptions panel selection
+                                }}
                               >
-                                <td className="px-5 py-3">{renderStatusBadge(res.decision.status)}</td>
-                                <td className="px-5 py-3 font-medium text-foreground max-w-[200px] truncate" title={res.bankRecord?.transaction?.description || res.processorRecord?.transaction?.description}>
+                                <td className="px-4 py-2.5">{renderStatusBadge(res.decision.status)}</td>
+                                <td className="px-4 py-2.5 font-medium text-foreground max-w-[200px] truncate" title={res.bankRecord?.transaction?.description || res.processorRecord?.transaction?.description}>
                                   {res.bankRecord?.transaction?.description || res.processorRecord?.transaction?.description || 'Missing Ledger Item'}
                                 </td>
-                                <td className="px-5 py-3 text-right font-semibold text-foreground">{getAmountStr(res.processorRecord)}</td>
-                                <td className="px-5 py-3 text-right font-semibold text-muted-foreground">{getAmountStr(res.bankRecord)}</td>
-                                <td className="px-5 py-3 text-right text-muted-foreground">
+                                <td className="px-4 py-2.5 text-right font-mono font-semibold text-foreground tracking-tight tabular-nums">{getAmountStr(res.processorRecord)}</td>
+                                <td className="px-4 py-2.5 text-right font-mono font-medium text-muted-foreground tracking-tight tabular-nums">{getAmountStr(res.bankRecord)}</td>
+                                <td className="px-4 py-2.5 text-right text-muted-foreground font-mono text-[10px]">
                                   {res.bankRecord ? getDateStr(res.bankRecord) : getDateStr(res.processorRecord)}
                                 </td>
-                                <td className="px-5 py-3 text-right">
-                                  {expandedRow === i ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                                <td className="px-4 py-2.5 text-center text-muted-foreground/60">
+                                  {expandedRow === i ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                                 </td>
                               </tr>
                               {expandedRow === i && (
-                                <tr className="bg-muted/5">
-                                  <td colSpan={6} className="px-5 py-6">
-                                    <div className="flex flex-col md:flex-row gap-8 items-start justify-center max-w-4xl mx-auto">
-                                      {/* Processor Side */}
-                                      <div className="flex-1 bg-white dark:bg-gray-900 border border-border p-4 rounded-lg w-full shadow-xs">
-                                        <div className="text-xs text-muted-foreground font-semibold mb-2 uppercase tracking-wider">Processor Ledger Entry</div>
-                                        <div className="text-2xl font-bold mb-1">{getAmountStr(res.processorRecord)}</div>
-                                        <div className="text-xs text-muted-foreground mb-4">Date: {getDateStr(res.processorRecord)}</div>
-                                        <div className="text-sm break-all font-mono bg-muted/40 p-2.5 rounded border border-border">{res.processorRecord?.transaction?.description || 'No matching record'}</div>
-                                      </div>
-
-                                      <div className="flex flex-col items-center justify-center pt-8">
-                                        <ArrowRight className="w-6 h-6 text-muted-foreground hidden md:block" />
-                                        {res.decision.evidence.confidenceScore > 0 ? (
-                                          <div className="text-xs text-teal-600 dark:text-teal-400 font-bold mt-2">{res.decision.evidence.confidenceScore}% Match</div>
-                                        ) : (
-                                          <div className="text-xs text-muted-foreground font-bold mt-2">Unmatched</div>
-                                        )}
-                                      </div>
-
-                                      {/* Bank Side */}
-                                      <div className="flex-1 bg-white dark:bg-gray-900 border border-border p-4 rounded-lg w-full shadow-xs">
-                                        <div className="text-xs text-muted-foreground font-semibold mb-2 uppercase tracking-wider">Bank Statement Payout</div>
-                                        {res.bankRecord ? (
-                                          <>
-                                            <div className="text-2xl font-bold mb-1">{getAmountStr(res.bankRecord)}</div>
-                                            <div className="text-xs text-muted-foreground mb-4">Date: {getDateStr(res.bankRecord)}</div>
-                                            <div className="text-sm break-all font-mono bg-muted/40 p-2.5 rounded border border-border">{res.bankRecord.transaction.description}</div>
-                                          </>
-                                        ) : (
-                                          <div className="h-full flex items-center justify-center text-muted-foreground text-sm italic py-8 bg-muted/20 border border-dashed border-border rounded">No bank ledger entry found</div>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    {/* Evidence / Audit Trail */}
-                                    <div className="max-w-4xl mx-auto mt-6 bg-white dark:bg-gray-900 border border-border rounded-lg p-5 shadow-xs">
-                                      <div className="text-xs text-muted-foreground font-semibold mb-3 uppercase tracking-wider">Audit Evidence Trail</div>
-                                      <div className="grid grid-cols-2 gap-4 text-sm mb-4 border-b border-border pb-3">
-                                        <div><span className="text-muted-foreground font-medium">Ledger Status:</span> <span className="font-semibold text-foreground">{res.decision.status}</span></div>
-                                        <div><span className="text-muted-foreground font-medium">Reconciled Amount:</span> {res.decision.evidence.amountExact ? 'Exact Match' : `Variance ₹${res.decision.evidence.amountDifference.toFixed(2)}`}</div>
-                                        <div><span className="text-muted-foreground font-medium">Settlement Date:</span> {res.decision.evidence.dateWithinWindow ? 'Within Control Window' : 'Variance Outside Window'}</div>
-                                        <div><span className="text-muted-foreground font-medium">Audit Outcome:</span> <span className="font-semibold text-foreground">{res.decision.reason}</span></div>
-                                      </div>
-                                      <div className="text-xs text-muted-foreground space-y-1.5 bg-gray-50 dark:bg-gray-950 p-4 rounded border border-border font-mono max-h-40 overflow-y-auto">
-                                        {res.auditTrail.map((log, idx) => (
-                                          <div key={idx} className="flex gap-2">
-                                            <span className="text-teal-600 font-bold">»</span>
-                                            <span>{log}</span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
+                                <tr>
+                                  <td colSpan={6} className="px-4 py-3 bg-[var(--background)] border-t border-border/20">
+                                    {renderRecordDetails(res)}
                                   </td>
                                 </tr>
                               )}
@@ -572,37 +720,40 @@ const Reconciliation: React.FC = () => {
 
               {/* Out of Scope Activity */}
               {result.outOfScopeBankTxns.length > 0 && (
-                <div className="bg-muted/20 border border-border rounded-xl p-5 flex items-center justify-between shadow-xs">
+                <div className="bg-card/30 border border-border/80 rounded-md p-3.5 flex items-center justify-between shadow-xs text-xs">
                   <div>
-                    <h3 className="font-semibold text-foreground">Non-Processor Bank Activity (Out of Scope)</h3>
-                    <p className="text-sm text-muted-foreground">{result.summary.outOfScopeCount} bank ledger items outside current matching scope (e.g. general operating expenses, interest, unrelated transfers)</p>
+                    <h3 className="font-semibold text-foreground">Non-Processor Bank Activity</h3>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">{result.summary.outOfScopeCount} records outside reconciliation scope (general operations, operating expenses, transfers)</p>
                   </div>
                   <button 
-                    onClick={() => setExpandedRow(expandedRow === -1 ? null : -1)}
-                    className="text-sm font-semibold px-4 py-2 bg-white dark:bg-gray-800 border border-border rounded-lg shadow-xs hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    onClick={() => {
+                      setExpandedRow(expandedRow === -1 ? null : -1);
+                      setExpandedExceptionIdx(null);
+                    }}
+                    className="text-[11px] font-semibold text-muted-foreground hover:text-foreground underline transition-colors cursor-pointer"
                   >
-                    {expandedRow === -1 ? 'Hide Activity' : 'View Ledger Items'}
+                    {expandedRow === -1 ? 'Hide ledger items ↑' : 'View ledger items →'}
                   </button>
                 </div>
               )}
 
               {expandedRow === -1 && result.outOfScopeBankTxns.length > 0 && (
-                <div className="bg-card border border-border rounded-xl shadow-xs overflow-hidden">
+                <div className="bg-card/25 border border-border/80 rounded-md shadow-xs overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-muted/50 text-muted-foreground text-xs uppercase font-semibold">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-muted/5 text-muted-foreground text-[9px] uppercase font-mono tracking-wider border-b border-border/40">
                         <tr>
-                          <th className="px-5 py-3 text-left">Description</th>
-                          <th className="px-5 py-3 text-right">Amount</th>
-                          <th className="px-5 py-3 text-right">Date</th>
+                          <th className="py-2 px-4">Description</th>
+                          <th className="py-2 px-4 text-right w-44">Amount</th>
+                          <th className="py-2 px-4 text-right w-40">Date</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-border">
+                      <tbody className="divide-y divide-border/30">
                         {result.outOfScopeBankTxns.map((t, idx) => (
                           <tr key={idx} className="hover:bg-muted/10 transition-colors">
-                            <td className="px-5 py-3 font-mono text-muted-foreground">{t.description}</td>
-                            <td className="px-5 py-3 text-right font-semibold text-foreground">₹{Math.abs(t.amount || 0).toLocaleString()}</td>
-                            <td className="px-5 py-3 text-right text-muted-foreground">{t.transaction_date}</td>
+                            <td className="py-2 px-4 font-mono text-muted-foreground text-[11px] max-w-md truncate" title={t.description}>{t.description}</td>
+                            <td className="py-2 px-4 text-right font-mono font-semibold text-foreground tracking-tight tabular-nums">₹{Math.abs(t.amount || 0).toLocaleString()}</td>
+                            <td className="py-2 px-4 text-right text-muted-foreground font-mono text-[10px]">{t.transaction_date}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -616,12 +767,12 @@ const Reconciliation: React.FC = () => {
 
           {/* Reconciliation Run History Section */}
           {historyRuns.length > 0 && (
-            <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-4 mt-8">
-              <div className="flex items-center gap-2 border-b border-border pb-3">
-                <History className="w-5 h-5 text-muted-foreground" />
-                <h3 className="text-lg font-semibold text-foreground">Reconciliation Run History</h3>
+            <div className="border border-border/80 rounded-md p-4 bg-muted/5 shadow-xs space-y-3.5 mt-8">
+              <div className="flex items-center gap-1.5 border-b border-border/50 pb-2">
+                <History className="w-4 h-4 text-muted-foreground" />
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider font-mono">Reconciliation Run History</h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {historyRuns.map((run) => {
                   const isActive = activeRunId === run.id;
                   const runDate = new Date(run.created_at);
@@ -645,43 +796,43 @@ const Reconciliation: React.FC = () => {
                     <div
                       key={run.id}
                       onClick={() => loadHistoricalRun(run.id)}
-                      className={`p-4 border rounded-lg cursor-pointer transition-all hover:bg-muted/30 flex flex-col justify-between space-y-2 bg-card ${
+                      className={`p-3 border rounded cursor-pointer transition-all hover:bg-muted/10 flex flex-col justify-between space-y-2 bg-card/35 ${
                         isActive
-                          ? 'border-teal-500 ring-1 ring-teal-500 bg-teal-500/5'
-                          : 'border-border'
+                          ? 'border-emerald-600/70 ring-1 ring-emerald-600/25 bg-emerald-950/10'
+                          : 'border-border/60'
                       }`}
                     >
                       <div className="flex justify-between items-start">
-                        <span className="text-xs font-semibold text-muted-foreground">{formattedDate}</span>
+                        <span className="text-[10px] font-mono text-muted-foreground">{formattedDate}</span>
                         {isActive && (
-                          <span className="bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 px-2 py-0.5 rounded text-[10px] font-bold">Active</span>
+                          <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase tracking-wider">Active</span>
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
                         <div>
                           <span className="text-muted-foreground">Reconciled:</span>{' '}
-                          <span className="font-semibold text-foreground">₹{reconciledVal.toLocaleString()}</span>
+                          <span className="font-semibold text-foreground font-mono">₹{reconciledVal.toLocaleString()}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Settlements:</span>{' '}
-                          <span className="font-semibold text-foreground">{matchedCount} / {eligibleCount}</span>
+                          <span className="font-semibold text-foreground font-mono">{matchedCount}/{eligibleCount}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Match Rate:</span>{' '}
-                          <span className="font-semibold text-foreground">{matchRate.toFixed(1)}%</span>
+                          <span className="font-semibold text-foreground font-mono">{matchRate.toFixed(1)}%</span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Unresolved Exposure:</span>{' '}
-                          <span className={`font-semibold ${unresolvedExp > 0 ? 'text-red-500' : 'text-teal-500'}`}>
+                          <span className="text-muted-foreground">Unresolved:</span>{' '}
+                          <span className={`font-semibold font-mono ${unresolvedExp > 0 ? 'text-orange-500' : 'text-emerald-500'}`}>
                             ₹{unresolvedExp.toLocaleString()}
                           </span>
                         </div>
                       </div>
 
-                      <div className="text-[10px] text-muted-foreground truncate border-t border-border/50 pt-1.5 mt-1 flex justify-between">
-                        <span className="truncate mr-2">Bank: {run.source_metadata?.bank_file_name || 'N/A'}</span>
-                        <span className="truncate">Proc: {run.source_metadata?.processor_file_name || 'N/A'}</span>
+                      <div className="text-[9px] text-muted-foreground/80 font-mono truncate border-t border-border/30 pt-1.5 mt-1 flex justify-between gap-2">
+                        <span className="truncate">Bank: {run.source_metadata?.bank_file_name || 'N/A'}</span>
+                        <span className="truncate text-right">Proc: {run.source_metadata?.processor_file_name || 'N/A'}</span>
                       </div>
                     </div>
                   );

@@ -11,10 +11,10 @@ import {
   Moon,
   Building2,
   Inbox,
-  FileText,
   UploadCloud,
   User,
-  Upload,
+  Scale,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { useToast } from '../../hooks/useToast';
@@ -26,7 +26,7 @@ const primaryNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard',    path: '/dashboard' },
   { icon: UploadCloud,     label: 'Files',        path: '/files' },
   { icon: ArrowRightLeft,  label: 'Transactions', path: '/transactions' },
-  { icon: ArrowRightLeft,  label: 'Reconciliation', path: '/reconciliation' },
+  { icon: Scale,           label: 'Reconciliation', path: '/reconciliation' },
   { icon: Inbox,           label: 'Risk Inbox',   path: '/risk-inbox' },
   { icon: Building2,       label: 'Vendors',      path: '/vendors' },
   { icon: FileText,        label: 'Reports',      path: '/reports' },
@@ -108,7 +108,7 @@ const Sidebar: React.FC = () => {
 
   return (
     <aside
-      className="frosted-sidebar sidebar-base flex-shrink-0"
+      className="frosted-sidebar sidebar-base flex-shrink-0 relative z-10"
       style={{ width: sidebarWidth }}
     >
       {/* ── Logo ── */}
@@ -180,26 +180,6 @@ const Sidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* Secondary / Quick Actions Group */}
-        <div className="flex flex-col gap-0.5">
-          {!collapsed && (
-            <div className="px-3 mb-1.5 text-[10px] font-bold tracking-wider text-muted-foreground uppercase opacity-50">
-              Actions
-            </div>
-          )}
-          <div className="space-y-0.5">
-            <NavItem 
-              item={{ icon: Upload, label: 'Import Data', path: '/files' }} 
-              collapsed={collapsed} 
-              isSecondary 
-            />
-            <NavItem 
-              item={{ icon: FileText, label: 'Generate Report', path: '/reports' }} 
-              collapsed={collapsed} 
-              isSecondary 
-            />
-          </div>
-        </div>
 
       </div>
 

@@ -286,7 +286,7 @@ export default function ReportDetail() {
                 Staff &amp; Petty Expense Review
                 <AskLibbyButton query="Which staff/petty expenses need proof?" label="Ask Libby" variant="inline" />
                 {sections.staffExpenseSummary.missingProofCount > 0 && (
-                  <span className="text-xs font-medium bg-amber-500/10 text-amber-600 px-2 py-1 rounded-full flex items-center gap-1">
+                  <span className="text-xs font-medium px-2 py-1 rounded flex items-center gap-1" style={{ background: 'rgba(var(--warning), 0.10)', color: 'var(--warning)', backgroundColor: 'color-mix(in srgb, var(--warning) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 20%, transparent)' }}>
                     <AlertCircle className="h-3 w-3" />
                     {sections.staffExpenseSummary.missingProofCount} need proof
                   </span>
@@ -308,7 +308,7 @@ export default function ReportDetail() {
                     </div>
                     <div className="bg-muted/30 p-4 rounded-lg border">
                       <p className="text-muted-foreground text-xs font-medium mb-1">Missing Proof</p>
-                      <p className={`text-2xl font-bold ${sections.staffExpenseSummary.missingProofCount > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                      <p className="text-2xl font-bold" style={{ color: sections.staffExpenseSummary.missingProofCount > 0 ? 'var(--warning)' : 'var(--success)' }}>
                         {sections.staffExpenseSummary.missingProofCount}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -317,14 +317,14 @@ export default function ReportDetail() {
                     </div>
                     <div className="bg-muted/30 p-4 rounded-lg border">
                       <p className="text-muted-foreground text-xs font-medium mb-1">Unknown Payment Method</p>
-                      <p className={`text-2xl font-bold ${sections.staffExpenseSummary.unknownMethodCount > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                      <p className="text-2xl font-bold" style={{ color: sections.staffExpenseSummary.unknownMethodCount > 0 ? 'var(--warning)' : 'var(--success)' }}>
                         {sections.staffExpenseSummary.unknownMethodCount}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">payment method unset</p>
                     </div>
                     <div className="bg-muted/30 p-4 rounded-lg border">
                       <p className="text-muted-foreground text-xs font-medium mb-1">Needs Review</p>
-                      <p className="text-2xl font-bold text-amber-600">{formatReportCurrency(sections.staffExpenseSummary.reviewNeededAmount)}</p>
+                      <p className="text-2xl font-bold" style={{ color: 'var(--warning)' }}>{formatReportCurrency(sections.staffExpenseSummary.reviewNeededAmount)}</p>
                       <p className="text-xs text-muted-foreground mt-1">pending proof or method</p>
                     </div>
                   </div>
@@ -352,9 +352,9 @@ export default function ReportDetail() {
                       </div>
 
                       {sections.staffExpenseSummary.missingProofCount > 0 && (
-                        <div className="mt-4 bg-amber-500/5 border border-amber-500/20 rounded-lg p-4 flex items-start gap-3">
-                          <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                          <p className="text-sm text-amber-700 dark:text-amber-500">
+                        <div className="mt-4 rounded-lg p-4 flex items-start gap-3" style={{ background: 'color-mix(in srgb, var(--warning) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 18%, transparent)' }}>
+                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--warning)' }} />
+                          <p className="text-sm" style={{ color: 'var(--warning)' }}>
                             {sections.staffExpenseSummary.missingProofCount} staff expense{sections.staffExpenseSummary.missingProofCount !== 1 ? 's' : ''} ({formatReportCurrency(sections.staffExpenseSummary.reviewNeededAmount)}) may need receipts or invoices before this report is finalised.
                           </p>
                         </div>
@@ -396,7 +396,7 @@ export default function ReportDetail() {
           {/* DATA QUALITY & CAVEATS */}
           <section className="print-section print:break-inside-avoid text-sm">
             <h2 className="text-xl font-bold border-b pb-2 mb-4">Data Quality & Caveats</h2>
-            <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600/90 dark:text-amber-500 rounded-lg p-5">
+            <div className="rounded-lg p-5" style={{ background: 'color-mix(in srgb, var(--warning) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 18%, transparent)', color: 'var(--warning)' }}>
               <div className="flex items-start">
                 <Info className="h-5 w-5 mr-3 shrink-0 mt-0.5" />
                 <ul className="list-disc pl-4 space-y-1">

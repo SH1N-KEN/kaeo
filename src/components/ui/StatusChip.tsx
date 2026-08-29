@@ -24,20 +24,20 @@ interface StatusChipProps {
 }
 
 const chipConfig: Record<StatusChipVariant, { label: string; className: string; dotColor?: string }> = {
-  reviewed:       { label: 'Reviewed',         className: 'chip chip-reviewed',       dotColor: '#168A5B' },
-  needs_review:   { label: 'Needs Review',      className: 'chip chip-needs-review',   dotColor: '#B7791F' },
-  new:            { label: 'New',               className: 'chip chip-new',            dotColor: '#5D6B66' },
-  ignored:        { label: 'Ignored',           className: 'chip chip-ignored',        dotColor: '#8A9C97' },
-  resolved:       { label: 'Resolved',          className: 'chip chip-reviewed',       dotColor: '#0F766E' },
-  duplicate:      { label: 'Duplicate',         className: 'chip chip-duplicate',      dotColor: '#C2413A' },
-  mismatch:       { label: 'Invoice Mismatch',  className: 'chip chip-mismatch',       dotColor: '#B7791F' },
-  uncategorized:  { label: 'Uncategorized',     className: 'chip chip-uncategorized',  dotColor: '#5D6B66' },
-  high_risk:      { label: 'High Risk',         className: 'chip chip-high-risk',      dotColor: '#C2413A' },
-  medium_risk:    { label: 'Medium Risk',       className: 'chip chip-medium-risk',    dotColor: '#B7791F' },
-  low_risk:       { label: 'Low Risk',          className: 'chip chip-low-risk',       dotColor: '#168A5B' },
-  export_ready:   { label: 'Export Ready',      className: 'chip chip-export-ready',   dotColor: '#0F766E' },
-  synced:         { label: 'Synced',            className: 'chip chip-synced',         dotColor: '#2563EB' },
-  critical:       { label: 'Critical',          className: 'chip chip-critical',       dotColor: '#C2413A' },
+  reviewed:       { label: 'Reviewed',         className: 'chip chip-reviewed',       dotColor: '#168A68' },
+  needs_review:   { label: 'Needs Review',      className: 'chip chip-needs-review',   dotColor: '#B87516' },
+  new:            { label: 'New',               className: 'chip chip-new',            dotColor: '#52615D' },
+  ignored:        { label: 'Ignored',           className: 'chip chip-ignored',        dotColor: '#788581' },
+  resolved:       { label: 'Resolved',          className: 'chip chip-reviewed',       dotColor: '#0E9F91' },
+  duplicate:      { label: 'Duplicate',         className: 'chip chip-duplicate',      dotColor: '#7853AA' },
+  mismatch:       { label: 'Invoice Mismatch',  className: 'chip chip-mismatch',       dotColor: '#B87516' },
+  uncategorized:  { label: 'Uncategorized',     className: 'chip chip-uncategorized',  dotColor: '#52615D' },
+  high_risk:      { label: 'High Risk',         className: 'chip chip-high-risk',      dotColor: '#C83F45' },
+  medium_risk:    { label: 'Medium Risk',       className: 'chip chip-medium-risk',    dotColor: '#B87516' },
+  low_risk:       { label: 'Low Risk',          className: 'chip chip-low-risk',       dotColor: '#168A68' },
+  export_ready:   { label: 'Export Ready',      className: 'chip chip-export-ready',   dotColor: '#0E9F91' },
+  synced:         { label: 'Synced',            className: 'chip chip-synced',         dotColor: '#3979B9' },
+  critical:       { label: 'Critical',          className: 'chip chip-critical',       dotColor: '#C83F45' },
 };
 
 export const StatusChip: React.FC<StatusChipProps> = ({ variant, label, className = '', dot = false }) => {

@@ -309,10 +309,10 @@ const RiskInbox: React.FC = () => {
 
   const getSeverityColor = (sev: string) => {
     switch (sev) {
-      case 'critical': return 'bg-[rgba(224,84,80,0.15)] text-[#E05450] border-[rgba(224,84,80,0.25)]';
-      case 'high': return 'bg-[rgba(224,84,80,0.10)] text-[#E05450] border-[rgba(224,84,80,0.20)]';
-      case 'medium': return 'bg-[rgba(214,146,42,0.10)] text-[#D4922A] border-[rgba(214,146,42,0.20)]';
-      default: return 'bg-[rgba(93,107,102,0.08)] text-[#7E9C98] border-[rgba(93,107,102,0.16)]';
+      case 'critical': return 'bg-[var(--danger)]/15 text-[var(--danger)] border-[var(--danger)]/25';
+      case 'high': return 'bg-[var(--danger)]/10 text-[var(--danger)] border-[var(--danger)]/20';
+      case 'medium': return 'bg-[var(--warning)]/10 text-[var(--warning)] border-[var(--warning)]/20';
+      default: return 'bg-[var(--muted)] text-[var(--muted-foreground)] border-[var(--border)]';
     }
   };
 
@@ -366,7 +366,7 @@ const RiskInbox: React.FC = () => {
         <div>
           <div className="flex items-center gap-2.5 mb-1">
             <h1 className="page-title">Risk Inbox</h1>
-            <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full" style={{ background: 'rgba(194,65,58,0.10)', color: '#C2413A', border: '1px solid rgba(194,65,58,0.20)' }}>Live Monitoring</span>
+            <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20">Live Monitoring</span>
             <AskLibbyButton query="What risks need review?" label="Ask Libby" variant="inline" />
           </div>
           <p className="page-subtitle">Duplicate payments, risky vendors, uncategorized rows, and month-end blockers for <span style={{ color: 'var(--foreground)', fontWeight: 600 }}>{activeClient.name}</span>.</p>
@@ -377,7 +377,7 @@ const RiskInbox: React.FC = () => {
             <div className="hidden md:flex items-center gap-3 px-3.5 py-2 rounded-xl text-[11px] font-medium" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
               <span className="flex items-center gap-1.5"><Database className="w-3 h-3" /> {diagnostics.txLoaded} txns</span>
               <span className="w-px h-3" style={{ background: 'var(--border)' }} />
-              <span className="flex items-center gap-1.5" style={{ color: '#C2413A' }}><ShieldAlert className="w-3 h-3" /> {diagnostics.risksGenerated} risks</span>
+              <span className="flex items-center gap-1.5 text-[var(--danger)]"><ShieldAlert className="w-3 h-3" /> {diagnostics.risksGenerated} risks</span>
               <span className="w-px h-3" style={{ background: 'var(--border)' }} />
               <span>Last: {diagnostics.lastScan}</span>
             </div>
@@ -394,21 +394,21 @@ const RiskInbox: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl flex gap-3 items-start" style={{ background: 'rgba(194,65,58,0.06)', border: '1px solid rgba(194,65,58,0.20)' }}>
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#C2413A' }} />
+        <div className="p-4 rounded-xl flex gap-3 items-start bg-[var(--danger)]/5 border border-[var(--danger)]/20">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[var(--danger)]" />
           <div className="flex-1">
-            <p className="text-[12px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: '#C2413A' }}>Scan Error</p>
-            <p className="text-[12px]" style={{ color: '#C2413A', opacity: 0.8 }}>{error}</p>
+            <p className="text-[12px] font-semibold uppercase tracking-wide mb-0.5 text-[var(--danger)]">Scan Error</p>
+            <p className="text-[12px] text-[var(--danger)]/80">{error}</p>
           </div>
-          <button onClick={() => setError(null)} className="p-1 rounded-lg cursor-pointer transition-colors" style={{ color: '#C2413A' }}>
+          <button onClick={() => setError(null)} className="p-1 rounded-lg cursor-pointer transition-colors text-[var(--danger)]">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {loading && risks.length === 0 ? (
-        <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
-          <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#C2413A' }} />
+        <div className="flex flex-col items-center justify-center gap-4 min-h-[40vh]">
+          <Loader2 className="w-6 h-6 animate-spin text-[var(--primary)]" />
           <p className="text-[13px] font-medium" style={{ color: 'var(--muted-foreground)' }}>Scanning ledger for anomalies…</p>
         </div>
       ) : txCount === 0 ? (
@@ -428,11 +428,11 @@ const RiskInbox: React.FC = () => {
         </div>
       ) : risks.length === 0 ? (
         <div className="frosted-card py-20 flex flex-col items-center justify-center text-center gap-5">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(22,138,91,0.10)', border: '1px solid rgba(22,138,91,0.20)' }}>
-            <CheckCircle2 className="w-7 h-7" style={{ color: '#168A5B' }} />
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-[var(--success)]/10 border border-[var(--success)]/20">
+            <CheckCircle2 className="w-7 h-7 text-[var(--success)]" />
           </div>
           <div>
-            <h3 className="text-[17px] font-semibold mb-1" style={{ color: '#168A5B' }}>No open risks right now</h3>
+            <h3 className="text-[17px] font-semibold mb-1 text-[var(--success)]">No open risks right now</h3>
             <p className="text-[13px]" style={{ color: 'var(--muted-foreground)' }}>New risks will appear after uploads or rule checks.</p>
           </div>
         </div>
@@ -443,7 +443,7 @@ const RiskInbox: React.FC = () => {
             <MetricCard
               title="Open Risks"
               value={stats.open.toString()}
-              valueClassName="text-2xl font-bold text-[#C2413A]"
+              valueClassName="text-2xl font-bold text-[var(--danger)]"
               description="Awaiting review"
               icon={<ShieldAlert className="w-4 h-4" />}
               accentColor="danger"
@@ -451,7 +451,7 @@ const RiskInbox: React.FC = () => {
             <MetricCard
               title="Exposure"
               value={formatCurrency(stats.amount)}
-              valueClassName="text-2xl font-bold text-[#B7791F]"
+              valueClassName="text-2xl font-bold text-[var(--warning)]"
               description="Potential leakage"
               icon={<Zap className="w-4 h-4" />}
               accentColor="warning"
@@ -459,7 +459,7 @@ const RiskInbox: React.FC = () => {
             <MetricCard
               title="Critical Issues"
               value={stats.critical.toString()}
-              valueClassName={`text-2xl font-bold ${stats.critical > 0 ? 'text-[#C2413A]' : 'text-[#168A5B]'}`}
+              valueClassName={`text-2xl font-bold ${stats.critical > 0 ? 'text-[var(--danger)]' : 'text-[var(--success)]'}`}
               description="High / critical severity"
               icon={<AlertCircle className="w-4 h-4" />}
               accentColor={stats.critical > 0 ? 'danger' : 'success'}
@@ -488,17 +488,17 @@ const RiskInbox: React.FC = () => {
                     }`}
                   >
                     {risk.status !== 'open' && (
-                      <div className="absolute top-0 right-0 px-2.5 py-1 text-[10px] font-semibold rounded-bl-lg" style={{ background: 'rgba(22,138,91,0.10)', color: '#168A5B', borderLeft: '1px solid rgba(22,138,91,0.20)', borderBottom: '1px solid rgba(22,138,91,0.20)' }}>
+                      <div className="absolute top-0 right-0 px-2.5 py-1 text-[10px] font-semibold rounded-bl-lg bg-[var(--success)]/10 text-[var(--success)] border-l border-b border-[var(--success)]/20">
                         {risk.status.replace(/_/g, ' ')}
                       </div>
                     )}
 
                     <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{
-                          background: risk.severity === 'critical' || risk.severity === 'high' ? 'rgba(224,84,80,0.12)' : 'var(--muted)',
-                          color: risk.severity === 'critical' || risk.severity === 'high' ? '#E05450' : 'var(--muted-foreground)'
-                        }}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        risk.severity === 'critical' || risk.severity === 'high' 
+                          ? 'bg-[var(--danger)]/10 text-[var(--danger)]' 
+                          : 'bg-[var(--muted)] text-[var(--muted-foreground)]'
+                      }`}>
                         <ShieldAlert className="w-5 h-5" />
                       </div>
                       
@@ -541,19 +541,19 @@ const RiskInbox: React.FC = () => {
                           <div className="flex gap-2 flex-wrap">
                             <button
                               onClick={(e) => { e.stopPropagation(); updateStatus(risk.id, 'reviewed'); }}
-                              className="px-2.5 py-1 text-[10px] font-semibold rounded bg-[rgba(15,118,110,0.08)] text-[var(--primary)] hover:bg-[rgba(15,118,110,0.15)] transition-colors"
+                              className="px-2.5 py-1 text-[10px] font-semibold rounded bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/20 transition-colors"
                             >
                               Review
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); updateStatus(risk.id, 'resolved'); }}
-                              className="px-2.5 py-1 text-[10px] font-semibold rounded bg-[rgba(22,138,91,0.08)] text-[var(--success)] hover:bg-[rgba(22,138,91,0.15)] transition-colors"
+                              className="px-2.5 py-1 text-[10px] font-semibold rounded bg-[var(--success)]/10 text-[var(--success)] hover:bg-[var(--success)]/20 transition-colors"
                             >
                               Mark resolved
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); updateStatus(risk.id, 'ignored'); }}
-                              className="px-2.5 py-1 text-[10px] font-semibold rounded bg-[rgba(93,107,102,0.06)] text-[var(--muted-foreground)] hover:bg-[rgba(93,107,102,0.12)] transition-colors"
+                              className="px-2.5 py-1 text-[10px] font-semibold rounded bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--muted-foreground)]/10 transition-colors"
                             >
                               Ignore
                             </button>
@@ -768,7 +768,10 @@ const RiskInbox: React.FC = () => {
                           {(selectedRisk.risk_type === 'staff_expense_missing_proof' || selectedRisk.risk_type === 'mixed_payment_method_spend') && (
                             <button 
                               onClick={() => navigate('/transactions?filter=staff_petty')}
-                              className="px-3 py-2 rounded-lg text-[10px] font-bold border bg-amber-500/5 border-amber-500/20 hover:border-amber-500/40 text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
+                              className="px-3 py-2 rounded-lg text-[10px] font-bold border text-foreground transition-all cursor-pointer text-left flex justify-between items-center"
+                              style={{ background: 'color-mix(in srgb, var(--warning) 5%, transparent)', borderColor: 'color-mix(in srgb, var(--warning) 20%, transparent)' }}
+                              onMouseEnter={e => (e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--warning) 35%, transparent)')}
+                              onMouseLeave={e => (e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--warning) 20%, transparent)')}
                             >
                               <span>Review Staff Transactions</span>
                               <ArrowRight className="w-3 h-3 text-muted-foreground" />
