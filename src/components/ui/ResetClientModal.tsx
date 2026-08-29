@@ -39,7 +39,6 @@ const ResetClientModal: React.FC<ResetClientModalProps> = ({
 
     try {
       await resetClientFinanceData(orgId, clientId);
-      localStorage.removeItem(`kaeo:dismissedReconciliationRunId:${orgId}:${clientId}`);
       onSuccess();
       onClose();
     } catch (err: any) {

@@ -19,7 +19,6 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import { supabase } from '../lib/supabase';
 import {
   createReconciliationRun,
-  getLatestReconciliationRun,
   listReconciliationRuns,
   getReconciliationRecords,
   getReconciliationRun,
@@ -46,9 +45,9 @@ const Reconciliation: React.FC = () => {
   const bankInputRef = useRef<HTMLInputElement>(null);
   const processorInputRef = useRef<HTMLInputElement>(null);
 
-  // Load latest run and history list when activeOrg/activeClient changes
+  // Load history list when activeOrg/activeClient changes
   useEffect(() => {
-    const fetchLatestAndHistory = async () => {
+    const fetchHistory = async () => {
       if (!activeOrg) return;
       setIsLoadingLatest(true);
       setError(null);
@@ -57,36 +56,19 @@ const Reconciliation: React.FC = () => {
         const runs = await listReconciliationRuns(activeOrg.id, activeClient?.id || null);
         setHistoryRuns(runs);
 
-        // Fetch latest run
-        const latest = await getLatestReconciliationRun(activeOrg.id, activeClient?.id || null);
-        if (latest) {
-          const dismissedId = localStorage.getItem(`kaeo:dismissedReconciliationRunId:${activeOrg.id}:${activeClient?.id || 'default'}`);
-          if (dismissedId === latest.id) {
-            // This run was explicitly dismissed ("Start New"), so do not auto-load it
-            setResult(null);
-            setActiveRunId(null);
-            setLoadedRun(null);
-          } else {
-            const records = await getReconciliationRecords(latest.id);
-            const reconResult = reconstructReconciliationResult(latest, records);
-            setResult(reconResult);
-            setActiveRunId(latest.id);
-            setLoadedRun(latest);
-          }
-        } else {
-          setResult(null);
-          setActiveRunId(null);
-          setLoadedRun(null);
-        }
+        // Always start with a clean page (do not load latest run automatically)
+        setResult(null);
+        setActiveRunId(null);
+        setLoadedRun(null);
       } catch (err: any) {
-        console.error('Error loading latest run:', err);
-        setError('Failed to restore latest reconciliation run.');
+        console.error('Error loading history:', err);
+        setError('Failed to load reconciliation history.');
       } finally {
         setIsLoadingLatest(false);
       }
     };
 
-    fetchLatestAndHistory();
+    fetchHistory();
   }, [activeOrg?.id, activeClient?.id]);
 
   const loadHistoricalRun = async (runId: string) => {
@@ -99,11 +81,6 @@ const Reconciliation: React.FC = () => {
       setResult(reconResult);
       setActiveRunId(runId);
       setLoadedRun(run);
-
-      // Clear dismissed run ID from localStorage since we are explicitly loading a run
-      if (activeOrg) {
-        localStorage.removeItem(`kaeo:dismissedReconciliationRunId:${activeOrg.id}:${activeClient?.id || 'default'}`);
-      }
     } catch (err: any) {
       console.error('Error loading historical run:', err);
       setError('Failed to load historical run.');
@@ -228,9 +205,6 @@ const Reconciliation: React.FC = () => {
       setResult(runResult);
       setActiveRunId(newRunId);
       setLoadedRun(runDetails);
-
-      // Clear dismissed run ID from localStorage since we are now displaying an active run
-      localStorage.removeItem(`kaeo:dismissedReconciliationRunId:${activeOrg.id}:${activeClient?.id || 'default'}`);
 
       // 8. Refresh runs list history
       const runs = await listReconciliationRuns(activeOrg.id, activeClient?.id || null);
@@ -456,9 +430,6 @@ const Reconciliation: React.FC = () => {
           <div className="flex items-center gap-2 flex-shrink-0 mt-2 md:mt-0">
             <button
               onClick={() => {
-                if (activeOrg && activeRunId) {
-                  localStorage.setItem(`kaeo:dismissedReconciliationRunId:${activeOrg.id}:${activeClient?.id || 'default'}`, activeRunId);
-                }
                 setResult(null);
                 setBankFile(null);
                 setProcessorFile(null);
