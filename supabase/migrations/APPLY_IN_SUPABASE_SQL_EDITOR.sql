@@ -25,5 +25,11 @@ UPDATE public.spend_rules
 SET name = COALESCE(name, rule_name, rule_key, rule_type)
 WHERE name IS NULL;
 
--- 3. Reload PostgREST schema cache so changes take effect immediately
+-- 3. Add RLS Delete Policy on reconciliation_runs
+--    (needed because resetting client data deletes reconciliation runs)
+DROP POLICY IF EXISTS "reconciliation_runs_delete" ON public.reconciliation_runs;
+CREATE POLICY "reconciliation_runs_delete" ON public.reconciliation_runs
+    FOR DELETE TO authenticated USING (public.user_id_is_member(workspace_id));
+
+-- 4. Reload PostgREST schema cache so changes take effect immediately
 NOTIFY pgrst, 'reload schema';

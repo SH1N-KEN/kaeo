@@ -43,7 +43,6 @@ const AppShell: React.FC = () => {
         {/* Ambient lighting glows for glassmorphism */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
           <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-[var(--primary)]/8 dark:bg-[var(--primary)]/12 rounded-full blur-[140px]" />
-          <div className="absolute top-1/3 -right-40 w-[450px] h-[450px] bg-indigo-500/4 dark:bg-indigo-500/6 rounded-full blur-[140px]" />
           <div className="absolute -bottom-40 left-1/3 w-[500px] h-[500px] bg-emerald-500/4 dark:bg-emerald-500/6 rounded-full blur-[140px]" />
         </div>
 

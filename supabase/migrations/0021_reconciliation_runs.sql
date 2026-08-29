@@ -53,6 +53,10 @@ DROP POLICY IF EXISTS "reconciliation_runs_insert" ON public.reconciliation_runs
 CREATE POLICY "reconciliation_runs_insert" ON public.reconciliation_runs
     FOR INSERT TO authenticated WITH CHECK (public.user_id_is_member(workspace_id));
 
+DROP POLICY IF EXISTS "reconciliation_runs_delete" ON public.reconciliation_runs;
+CREATE POLICY "reconciliation_runs_delete" ON public.reconciliation_runs
+    FOR DELETE TO authenticated USING (public.user_id_is_member(workspace_id));
+
 -- reconciliation_records
 DROP POLICY IF EXISTS "reconciliation_records_select" ON public.reconciliation_records;
 CREATE POLICY "reconciliation_records_select" ON public.reconciliation_records

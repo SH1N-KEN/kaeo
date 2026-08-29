@@ -60,11 +60,19 @@ const Reconciliation: React.FC = () => {
         // Fetch latest run
         const latest = await getLatestReconciliationRun(activeOrg.id, activeClient?.id || null);
         if (latest) {
-          const records = await getReconciliationRecords(latest.id);
-          const reconResult = reconstructReconciliationResult(latest, records);
-          setResult(reconResult);
-          setActiveRunId(latest.id);
-          setLoadedRun(latest);
+          const dismissedId = localStorage.getItem(`kaeo:dismissedReconciliationRunId:${activeOrg.id}:${activeClient?.id || 'default'}`);
+          if (dismissedId === latest.id) {
+            // This run was explicitly dismissed ("Start New"), so do not auto-load it
+            setResult(null);
+            setActiveRunId(null);
+            setLoadedRun(null);
+          } else {
+            const records = await getReconciliationRecords(latest.id);
+            const reconResult = reconstructReconciliationResult(latest, records);
+            setResult(reconResult);
+            setActiveRunId(latest.id);
+            setLoadedRun(latest);
+          }
         } else {
           setResult(null);
           setActiveRunId(null);
@@ -91,6 +99,11 @@ const Reconciliation: React.FC = () => {
       setResult(reconResult);
       setActiveRunId(runId);
       setLoadedRun(run);
+
+      // Clear dismissed run ID from localStorage since we are explicitly loading a run
+      if (activeOrg) {
+        localStorage.removeItem(`kaeo:dismissedReconciliationRunId:${activeOrg.id}:${activeClient?.id || 'default'}`);
+      }
     } catch (err: any) {
       console.error('Error loading historical run:', err);
       setError('Failed to load historical run.');
@@ -215,6 +228,9 @@ const Reconciliation: React.FC = () => {
       setResult(runResult);
       setActiveRunId(newRunId);
       setLoadedRun(runDetails);
+
+      // Clear dismissed run ID from localStorage since we are now displaying an active run
+      localStorage.removeItem(`kaeo:dismissedReconciliationRunId:${activeOrg.id}:${activeClient?.id || 'default'}`);
 
       // 8. Refresh runs list history
       const runs = await listReconciliationRuns(activeOrg.id, activeClient?.id || null);
@@ -440,6 +456,9 @@ const Reconciliation: React.FC = () => {
           <div className="flex items-center gap-2 flex-shrink-0 mt-2 md:mt-0">
             <button
               onClick={() => {
+                if (activeOrg && activeRunId) {
+                  localStorage.setItem(`kaeo:dismissedReconciliationRunId:${activeOrg.id}:${activeClient?.id || 'default'}`, activeRunId);
+                }
                 setResult(null);
                 setBankFile(null);
                 setProcessorFile(null);
