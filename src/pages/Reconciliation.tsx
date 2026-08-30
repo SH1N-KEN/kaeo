@@ -446,7 +446,7 @@ const Reconciliation: React.FC = () => {
       setBatchReviewResult(batchResult);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'An error occurred during batch AI review.');
+      setError(err.message || 'An error occurred during batch Libby review.');
     } finally {
       setIsBatchReviewing(false);
     }
@@ -503,7 +503,7 @@ const Reconciliation: React.FC = () => {
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded border transition-all cursor-pointer ${
                 exceptions.length === 0
                   ? 'bg-muted/10 border-border/30 text-muted-foreground cursor-not-allowed shadow-none'
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white border-transparent active:scale-[0.98] shadow-xs'
+                  : 'bg-primary hover:bg-primary/90 text-white border-transparent active:scale-[0.98] shadow-xs'
               }`}
             >
               {isBatchReviewing ? (
@@ -514,7 +514,7 @@ const Reconciliation: React.FC = () => {
               ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5" />
-                  Review All with AI
+                  Review All with Libby
                 </>
               )}
             </button>
@@ -670,20 +670,20 @@ const Reconciliation: React.FC = () => {
                 </div>
               </div>
 
-              {/* AI Batch Review Card */}
+              {/* Libby Batch Review Card */}
               {batchReviewResult && (
-                <div className="border border-indigo-500/30 rounded-md p-5 bg-card/45 shadow-md space-y-5 animate-in slide-in-from-top-4 duration-500">
+                <div className="border border-primary/30 rounded-md p-5 bg-card/45 shadow-md space-y-5 animate-in slide-in-from-top-4 duration-500">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-border/50 pb-3">
                     <div>
                       <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-indigo-500 animate-pulse" />
-                        AI Batch Review Complete
+                        <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                        Libby Batch Review Complete
                       </h3>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         Batch assessment of unresolved discrepancies using LLM insights
                       </p>
                     </div>
-                    <div className="text-xs font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded">
+                    <div className="text-xs font-mono bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 rounded">
                       {batchReviewResult.totalReviewed} Exceptions Reviewed · ₹{batchReviewResult.totalExposure.toLocaleString()} Total Exposure
                     </div>
                   </div>
