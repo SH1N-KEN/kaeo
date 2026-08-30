@@ -4,6 +4,7 @@ import { useAuth } from '../components/auth/AuthProvider';
 import { KaeoLandingHeader } from '../components/landing/KaeoLandingHeader';
 import { KaeoHero } from '../components/landing/KaeoHero';
 import { SlidingSegmentControl } from '../components/landing/SlidingSegmentControl';
+import { ReconciliationShowcase } from '../components/landing/ReconciliationShowcase';
 import aeLogo from '../assets/kaeo-ae-logo.png';
 
 /* ═══════════════════════════════════════════════
@@ -2258,6 +2259,25 @@ export const Landing: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
 
+  // Force landing page to always render in Kaeo's dark theme
+  useEffect(() => {
+    const hadDark = document.documentElement.classList.contains('dark');
+    document.documentElement.classList.add('dark');
+    
+    return () => {
+      const savedTheme = localStorage.getItem('kaeo-theme');
+      if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        if (!hadDark) {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (location.state && (location.state as { scrollTo?: string }).scrollTo) {
       const targetId = (location.state as { scrollTo: string }).scrollTo;
@@ -2355,6 +2375,9 @@ export const Landing: React.FC = () => {
           <InteractiveRiskCards />
         </div>
       </section>
+
+      {/* ═══════ 003B — RECONCILIATION CONTROL ═══════ */}
+      <ReconciliationShowcase />
 
       {/* ═══════ 004 — BUILT FOR INDIA ═══════ */}
       <section style={S.section('#080A09')}>
