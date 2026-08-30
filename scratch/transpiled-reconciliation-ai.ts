@@ -27,6 +27,9 @@ export async function handleRequest(req: Request) {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  let isBatch = false;
+  let exceptions: any[] = [];
+
   try {
     const authHeader = req.headers.get("Authorization");
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -52,10 +55,11 @@ export async function handleRequest(req: Request) {
       });
     }
 
-    // Parse input body
     let body: any = {};
     try {
       body = await req.json();
+      isBatch = body.isBatch === true;
+      exceptions = body.exceptions || [];
     } catch (_err) {
       return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
         status: 400,
@@ -64,29 +68,58 @@ export async function handleRequest(req: Request) {
     }
 
     const { exceptionType, evidence } = body;
-    if (!exceptionType || !evidence) {
+    if (!isBatch && (!exceptionType || !evidence)) {
       return new Response(JSON.stringify({ error: "Missing required fields: exceptionType, evidence" }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Format prompt fields
-    const proc = evidence.processorTxn || {};
-    const bank = evidence.bankTxn;
+    if (isBatch && (!exceptions || !Array.isArray(exceptions))) {
+      return new Response(JSON.stringify({ error: "Missing exceptions array for batch review" }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
-    const procInfo = `${proc.description || 'N/A'} ₹${Math.abs(proc.amount ?? 0)} ${proc.transaction_date || 'N/A'}`;
-    const bankInfo = bank 
-      ? `${bank.description || 'N/A'} ₹${Math.abs(bank.amount ?? 0)} ${bank.transaction_date || 'N/A'}`
-      : 'MISSING';
+    let prompt = "";
+    if (isBatch) {
+      prompt = `Review these ${exceptions.length} reconciliation exceptions and for each provide:
+recommendedAction, confidence, priority (1-10), reasoning.
 
-    const prompt = `Exception Type: ${exceptionType}
+Exceptions:
+${exceptions.map((ex: any, idx: number) => `${idx + 1}. [${ex.type}] ₹${ex.amount} — ${ex.description} — ${ex.discrepancy}`).join('\n')}
+
+Return a JSON object containing a "results" array, where each element corresponds to the exception in order:
+{
+  "results": [
+    {
+      "recommendedAction": "APPROVE" | "INVESTIGATE" | "REJECT" | "REQUEST_DOCUMENTATION",
+      "confidence": number (0-100),
+      "priority": number (1-10),
+      "reasoning": string
+    },
+    ...
+  ]
+}`;
+    } else {
+      // Format prompt fields
+      const proc = evidence.processorTxn || {};
+      const bank = evidence.bankTxn;
+
+      const procInfo = `${proc.description || 'N/A'} ₹${Math.abs(proc.amount ?? 0)} ${proc.transaction_date || 'N/A'}`;
+      const bankInfo = bank 
+        ? `${bank.description || 'N/A'} ₹${Math.abs(bank.amount ?? 0)} ${bank.transaction_date || 'N/A'}`
+        : 'MISSING';
+
+      prompt = `Exception Type: ${exceptionType}
 Processor: ${procInfo}
 Bank: ${bankInfo}
 Discrepancy: ${evidence.discrepancy || 'N/A'}
 
 Assess likelihood this is a legitimate settlement variance. 
 Return JSON with assessment, likelihood, recommended action, confidence (0-100), reasoning.`;
+    }
 
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
     const openrouterKey = Deno.env.get("OPENROUTER_API_KEY");
@@ -155,6 +188,7 @@ Return JSON with assessment, likelihood, recommended action, confidence (0-100),
                 { role: 'user', content: prompt }
               ],
               temperature: 0.3,
+              max_tokens: 1000,
               response_format: { type: "json_object" }
             })
           });
@@ -174,7 +208,80 @@ Return JSON with assessment, likelihood, recommended action, confidence (0-100),
         }
 
         parsedJson = JSON.parse(cleaned);
-        AIResponseSchema.parse(parsedJson); // schema validation
+
+        if (isBatch) {
+          let arrayData: any[] = [];
+          if (Array.isArray(parsedJson)) {
+            arrayData = parsedJson;
+          } else if (parsedJson && Array.isArray(parsedJson.results)) {
+            arrayData = parsedJson.results;
+          } else if (parsedJson && Array.isArray(parsedJson.exceptions)) {
+            arrayData = parsedJson.exceptions;
+          } else {
+            throw new Error("Response is not a JSON array or object with results array");
+          }
+
+          if (arrayData.length !== exceptions.length) {
+            throw new Error(`Length mismatch: expected ${exceptions.length}, got ${arrayData.length}`);
+          }
+
+          const validated = arrayData.map((item: any) => {
+            const validActions = ['APPROVE', 'INVESTIGATE', 'REJECT', 'REQUEST_DOCUMENTATION'];
+            let recommendedAction = item.recommendedAction || item.recommended_action || item.action || 'INVESTIGATE';
+            if (typeof recommendedAction === 'string') {
+              recommendedAction = recommendedAction.toUpperCase().trim();
+            }
+            if (!validActions.includes(recommendedAction)) {
+              recommendedAction = 'INVESTIGATE';
+            }
+
+            let confidence = Number(item.confidence);
+            if (isNaN(confidence)) confidence = 50;
+            confidence = Math.min(100, Math.max(0, confidence));
+
+            let priority = Number(item.priority || item.priority_score || item.urgency);
+            if (isNaN(priority)) priority = 5;
+            priority = Math.min(10, Math.max(1, priority));
+
+            return {
+              recommendedAction,
+              confidence,
+              priority,
+              reasoning: item.reasoning || item.explanation || "No reasoning provided."
+            };
+          });
+
+          parsedJson = validated;
+        } else {
+          // ── Normalize LLM output before strict schema validation ──
+          // Some models return non-standard casing or omit optional fields.
+
+          // 1. Normalize likelihood: map verbose/cased strings → "high"|"medium"|"low"
+          if (parsedJson.likelihood) {
+            const l = String(parsedJson.likelihood).toLowerCase().trim();
+            if (l === 'high') parsedJson.likelihood = 'high';
+            else if (l === 'low') parsedJson.likelihood = 'low';
+            else parsedJson.likelihood = 'medium'; // "moderate", "medium", unknown → medium
+          } else {
+            parsedJson.likelihood = 'medium';
+          }
+
+          // 2. Normalize recommendedAction: fill default if missing or unrecognised
+          const validActions = ['APPROVE', 'INVESTIGATE', 'REJECT', 'REQUEST_DOCUMENTATION'];
+          if (!parsedJson.recommendedAction || !validActions.includes(parsedJson.recommendedAction)) {
+            // Try to infer from a recommended_action or action field some models emit
+            const raw = (parsedJson.recommendedAction || parsedJson.recommended_action || parsedJson.action || '').toUpperCase().trim();
+            parsedJson.recommendedAction = validActions.includes(raw) ? raw : 'INVESTIGATE';
+          }
+
+          // 3. Ensure confidence is a number 0-100
+          if (typeof parsedJson.confidence !== 'number') {
+            parsedJson.confidence = Number(parsedJson.confidence) || 50;
+          }
+          parsedJson.confidence = Math.min(100, Math.max(0, parsedJson.confidence));
+
+          AIResponseSchema.parse(parsedJson); // schema validation
+        }
         break; // Success!
       } catch (err) {
         console.warn(`[reconciliation-ai] Attempt ${attempts} failed:`, err);
@@ -192,14 +299,24 @@ Return JSON with assessment, likelihood, recommended action, confidence (0-100),
   } catch (err: any) {
     console.error("[reconciliation-ai] Processing exception:", err.message);
     
-    // Resilient fallback payload on failure
-    const fallbackResponse = {
-      assessment: "LLM unavailable",
-      likelihood: "low",
-      recommendedAction: "INVESTIGATE",
-      confidence: 0,
-      reasoning: `An error occurred while calling the LLM: ${err.message}`
-    };
+    let fallbackResponse: any;
+    if (isBatch && Array.isArray(exceptions)) {
+      fallbackResponse = exceptions.map((ex: any) => ({
+        recommendedAction: "INVESTIGATE",
+        confidence: 50,
+        priority: 5,
+        reasoning: `LLM unavailable: ${err.message}`
+      }));
+    } else {
+      // Resilient fallback payload on failure
+      fallbackResponse = {
+        assessment: "LLM unavailable",
+        likelihood: "low",
+        recommendedAction: "INVESTIGATE",
+        confidence: 0,
+        reasoning: `An error occurred while calling the LLM: ${err.message}`
+      };
+    }
 
     return new Response(JSON.stringify(fallbackResponse), {
       status: 200,

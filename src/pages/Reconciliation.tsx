@@ -9,7 +9,8 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
-  History
+  History,
+  Sparkles
 } from 'lucide-react';
 import AskLibbyButton from '../components/libby/AskLibbyButton';
 import { parseFinancialFile } from '../lib/fileParser';
@@ -26,6 +27,8 @@ import {
   reconstructReconciliationResult
 } from '../lib/reconciliation/reconciliationRepository';
 import type { ReconciliationRunDb } from '../lib/reconciliation/reconciliationRepository';
+import { batchReviewExceptions } from '../lib/ai/reconciliation/batchReviewer';
+import type { BatchReviewResult } from '../lib/ai/reconciliation/batchReviewer';
 
 const Reconciliation: React.FC = () => {
   const { activeOrg, activeClient, loading: workspaceLoading } = useWorkspace();
@@ -42,6 +45,9 @@ const Reconciliation: React.FC = () => {
   const [isLoadingLatest, setIsLoadingLatest] = useState(false);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [loadedRun, setLoadedRun] = useState<ReconciliationRunDb | null>(null);
+
+  const [isBatchReviewing, setIsBatchReviewing] = useState(false);
+  const [batchReviewResult, setBatchReviewResult] = useState<BatchReviewResult | null>(null);
 
   const bankInputRef = useRef<HTMLInputElement>(null);
   const processorInputRef = useRef<HTMLInputElement>(null);
@@ -66,6 +72,7 @@ const Reconciliation: React.FC = () => {
         setResult(null);
         setActiveRunId(null);
         setLoadedRun(null);
+        setBatchReviewResult(null);
       } catch (err: any) {
         console.error('Error loading history:', err);
         setError('Failed to load reconciliation history.');
@@ -80,6 +87,7 @@ const Reconciliation: React.FC = () => {
   const loadHistoricalRun = async (runId: string) => {
     setIsLoadingLatest(true);
     setError(null);
+    setBatchReviewResult(null);
     try {
       const run = await getReconciliationRun(runId);
       const records = await getReconciliationRecords(runId);
@@ -116,6 +124,7 @@ const Reconciliation: React.FC = () => {
     setError(null);
     setLoadedRun(null);
     setActiveRunId(null);
+    setBatchReviewResult(null);
 
     try {
       // 1. Parse files
@@ -417,6 +426,32 @@ const Reconciliation: React.FC = () => {
       )
     : [];
 
+  const handleBatchReview = async () => {
+    if (exceptions.length === 0) return;
+    setIsBatchReviewing(true);
+    setError(null);
+    try {
+      const mappedExceptions = exceptions.map(r => {
+        const description = r.bankRecord?.transaction?.description || r.processorRecord?.transaction?.description || 'Missing Record Details';
+        const amount = r.bankRecord?.transaction?.amount ?? r.processorRecord?.transaction?.amount ?? 0;
+        return {
+          type: r.decision.status,
+          amount,
+          description,
+          discrepancy: r.decision.reason
+        };
+      });
+
+      const batchResult = await batchReviewExceptions(mappedExceptions);
+      setBatchReviewResult(batchResult);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An error occurred during batch AI review.');
+    } finally {
+      setIsBatchReviewing(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-12">
       {/* Sophisticated compact header */}
@@ -463,6 +498,27 @@ const Reconciliation: React.FC = () => {
         {result && (
           <div className="flex items-center gap-2 flex-shrink-0 mt-2 md:mt-0">
             <button
+              onClick={handleBatchReview}
+              disabled={exceptions.length === 0 || isBatchReviewing}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded border transition-all cursor-pointer ${
+                exceptions.length === 0
+                  ? 'bg-muted/10 border-border/30 text-muted-foreground cursor-not-allowed shadow-none'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white border-transparent active:scale-[0.98] shadow-xs'
+              }`}
+            >
+              {isBatchReviewing ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Reviewing {exceptions.length} exceptions...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Review All with AI
+                </>
+              )}
+            </button>
+            <button
               onClick={() => {
                 setResult(null);
                 setBankFile(null);
@@ -471,6 +527,7 @@ const Reconciliation: React.FC = () => {
                 setActiveRunId(null);
                 setExpandedRow(null);
                 setExpandedExceptionIdx(null);
+                setBatchReviewResult(null);
               }}
               className="px-3 py-1.5 text-xs font-semibold border border-border rounded bg-muted/10 text-muted-foreground hover:bg-muted/25 transition-colors cursor-pointer"
             >
@@ -612,6 +669,104 @@ const Reconciliation: React.FC = () => {
                   </span>
                 </div>
               </div>
+
+              {/* AI Batch Review Card */}
+              {batchReviewResult && (
+                <div className="border border-indigo-500/30 rounded-md p-5 bg-card/45 shadow-md space-y-5 animate-in slide-in-from-top-4 duration-500">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-border/50 pb-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-indigo-500 animate-pulse" />
+                        AI Batch Review Complete
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Batch assessment of unresolved discrepancies using LLM insights
+                      </p>
+                    </div>
+                    <div className="text-xs font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded">
+                      {batchReviewResult.totalReviewed} Exceptions Reviewed · ₹{batchReviewResult.totalExposure.toLocaleString()} Total Exposure
+                    </div>
+                  </div>
+
+                  {/* Summary Breakdown Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-card/30 border border-border/60 rounded-md p-3 flex flex-col justify-between">
+                      <span className="text-[10px] text-emerald-500 font-semibold uppercase tracking-wider font-mono">APPROVE</span>
+                      <span className="text-sm font-semibold font-mono text-foreground mt-1">{batchReviewResult.breakdown.APPROVE.count} exceptions</span>
+                      <span className="text-xs text-muted-foreground font-mono">₹{batchReviewResult.breakdown.APPROVE.amount.toLocaleString()}</span>
+                      <span className="text-[9px] text-muted-foreground/80 mt-1">Probable fees / temporal shifts</span>
+                    </div>
+                    <div className="bg-card/30 border border-border/60 rounded-md p-3 flex flex-col justify-between">
+                      <span className="text-[10px] text-yellow-500 font-semibold uppercase tracking-wider font-mono">INVESTIGATE</span>
+                      <span className="text-sm font-semibold font-mono text-foreground mt-1">{batchReviewResult.breakdown.INVESTIGATE.count} exceptions</span>
+                      <span className="text-xs text-muted-foreground font-mono">₹{batchReviewResult.breakdown.INVESTIGATE.amount.toLocaleString()}</span>
+                      <span className="text-[9px] text-muted-foreground/80 mt-1">Needs human audit / review</span>
+                    </div>
+                    <div className="bg-card/30 border border-border/60 rounded-md p-3 flex flex-col justify-between">
+                      <span className="text-[10px] text-red-500 font-semibold uppercase tracking-wider font-mono">REJECT</span>
+                      <span className="text-sm font-semibold font-mono text-foreground mt-1">{batchReviewResult.breakdown.REJECT.count} exceptions</span>
+                      <span className="text-xs text-muted-foreground font-mono">₹{batchReviewResult.breakdown.REJECT.amount.toLocaleString()}</span>
+                      <span className="text-[9px] text-muted-foreground/80 mt-1">Likely duplicates or errors</span>
+                    </div>
+                    <div className="bg-card/30 border border-border/60 rounded-md p-3 flex flex-col justify-between">
+                      <span className="text-[10px] text-blue-500 font-semibold uppercase tracking-wider font-mono">REQ DOCS</span>
+                      <span className="text-sm font-semibold font-mono text-foreground mt-1">{batchReviewResult.breakdown.REQUEST_DOCUMENTATION.count} exceptions</span>
+                      <span className="text-xs text-muted-foreground font-mono">₹{batchReviewResult.breakdown.REQUEST_DOCUMENTATION.amount.toLocaleString()}</span>
+                      <span className="text-[9px] text-muted-foreground/80 mt-1">Missing statement evidence</span>
+                    </div>
+                  </div>
+
+                  {/* Prioritized List */}
+                  <div className="overflow-x-auto border border-border/60 rounded-md">
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead>
+                        <tr className="bg-muted/15 border-b border-border/50 text-muted-foreground font-mono text-[9px] uppercase tracking-wider">
+                          <th className="py-2.5 px-3 w-12 text-center">Rank</th>
+                          <th className="py-2.5 px-3">Exception Details</th>
+                          <th className="py-2.5 px-3 text-right w-32">Amount</th>
+                          <th className="py-2.5 px-3 text-center w-36">Recommendation</th>
+                          <th className="py-2.5 px-3 text-center w-24">Confidence</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/30 bg-card/10">
+                        {batchReviewResult.items.map((item, idx) => (
+                          <tr key={item.id} className="hover:bg-muted/10 transition-colors">
+                            <td className="py-3 px-3 text-center font-mono font-semibold text-muted-foreground/80">{idx + 1}</td>
+                            <td className="py-3 px-3">
+                              <div className="font-semibold text-foreground flex items-center gap-1.5">
+                                <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider bg-muted/20 px-1.5 py-0.5 rounded">
+                                  {item.type}
+                                </span>
+                                <span className="truncate max-w-xs sm:max-w-md">{item.description}</span>
+                              </div>
+                              <div className="text-[11px] text-muted-foreground/90 mt-1 leading-relaxed max-w-2xl">
+                                {item.reasoning}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono font-semibold text-foreground tracking-tight tabular-nums">
+                              ₹{Math.abs(item.amount).toLocaleString()}
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold font-mono border ${
+                                item.recommendedAction === 'APPROVE'
+                                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                  : item.recommendedAction === 'INVESTIGATE'
+                                  ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                                  : item.recommendedAction === 'REJECT'
+                                  ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                  : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                              }`}>
+                                {item.recommendedAction}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-center font-mono font-semibold text-foreground">{item.confidence}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* Exceptions Requiring Attention */}
               {exceptions.length > 0 && (
