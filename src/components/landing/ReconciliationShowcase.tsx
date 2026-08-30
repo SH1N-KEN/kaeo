@@ -173,9 +173,12 @@ export const ReconciliationShowcase: React.FC = () => {
                           {/* SVG Flow Lines */}
                           <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
                             {/* Left to center line */}
-                            <path
-                              d="M 0, 32 L 28, 32"
-                              className={`transition-all duration-300 stroke-[1.5px] fill-none ${
+                            <line
+                              x1="0%"
+                              y1="50%"
+                              x2="35%"
+                              y2="50%"
+                              className={`transition-all duration-300 stroke-[1.5px] ${
                                 isRowActive
                                   ? isException
                                     ? 'stroke-[var(--danger)]'
@@ -188,9 +191,12 @@ export const ReconciliationShowcase: React.FC = () => {
                               }}
                             />
                             {/* Right to center line */}
-                            <path
-                              d="M 100%, 32 L calc(100% - 28px), 32"
-                              className={`transition-all duration-300 stroke-[1.5px] fill-none ${
+                            <line
+                              x1="65%"
+                              y1="50%"
+                              x2="100%"
+                              y2="50%"
+                              className={`transition-all duration-300 stroke-[1.5px] ${
                                 isRowActive
                                   ? isException
                                     ? 'stroke-[var(--danger)]'
