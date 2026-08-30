@@ -9,7 +9,8 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
-  History
+  History,
+  Sparkles
 } from 'lucide-react';
 import { parseFinancialFile } from '../lib/fileParser';
 import { normalizeIngestedRows } from '../lib/ingestion/transactionNormalizer';
@@ -44,6 +45,248 @@ const Reconciliation: React.FC = () => {
 
   const bankInputRef = useRef<HTMLInputElement>(null);
   const processorInputRef = useRef<HTMLInputElement>(null);
+
+  // AI Exception Resolver State
+  const [aiProviderName, setAiProviderName] = useState<'mock' | 'supabase'>('mock');
+  const [aiInvestigations, setAiInvestigations] = useState<Record<string, {
+    loading: boolean;
+    result?: {
+      aiProvider: string;
+      aiOutput: {
+        diagnosis: string;
+        explanation: string;
+        evidence: Array<{ type: string; value: any }>;
+        recommendation: string;
+        confidence: number;
+        required_human_action: boolean;
+        reasoning_summary: string;
+        risk_flags: string[];
+      };
+      verification: {
+        status: 'VERIFIED_REVIEW' | 'VERIFICATION_FAILED';
+        passed: boolean;
+        errors: string[];
+      };
+    };
+    error?: string;
+  }>>({});
+
+  const runAiInvestigation = async (res: ReconciliationMatchResult) => {
+    const procTx = res.processorRecord?.transaction;
+    if (!procTx || !procTx.id) return;
+
+    setAiInvestigations(prev => ({
+      ...prev,
+      [procTx.id]: { loading: true }
+    }));
+
+    try {
+      const candidates: ReconciliationRecord[] = [];
+      if (result) {
+        const procAmt = Math.abs(procTx.amount);
+        const procDate = new Date(procTx.transaction_date);
+
+        result.results.forEach(other => {
+          if (other.processorRecord?.transaction?.id === procTx.id) return;
+          
+          const otherTx = other.processorRecord?.transaction || other.bankRecord?.transaction;
+          if (!otherTx) return;
+
+          const otherAmt = Math.abs(otherTx.amount);
+          const otherDate = new Date(otherTx.transaction_date);
+
+          const amtDiff = Math.abs(procAmt - otherAmt);
+          const dateDiff = Math.abs(otherDate.getTime() - procDate.getTime()) / (1000 * 60 * 60 * 24);
+
+          if (amtDiff <= 1000 || dateDiff <= 7) {
+            candidates.push(other.processorRecord);
+            if (other.bankRecord) {
+              candidates.push(other.bankRecord);
+            }
+          }
+        });
+      }
+
+      const resolverInput = {
+        reconciliationRecord: res,
+        processorRecord: res.processorRecord,
+        bankRecord: res.bankRecord,
+        candidateMatches: candidates,
+        evidence: res.decision.evidence,
+        deterministicStatus: res.decision.status,
+        deterministicConfidence: res.decision.evidence.confidenceScore || 0
+      };
+
+      const { investigateException } = await import('../lib/ai/reconciliation/aiExceptionResolver');
+      const investigationResult = await investigateException(resolverInput, { providerName: aiProviderName });
+
+      setAiInvestigations(prev => ({
+        ...prev,
+        [procTx.id]: {
+          loading: false,
+          result: investigationResult
+        }
+      }));
+    } catch (err: any) {
+      console.error('AI investigation failed:', err);
+      setAiInvestigations(prev => ({
+        ...prev,
+        [procTx.id]: {
+          loading: false,
+          error: err.message || 'An error occurred during AI investigation.'
+        }
+      }));
+    }
+  };
+
+  const handleAIVerifiedAction = async (
+    res: ReconciliationMatchResult,
+    action: 'APPROVE' | 'REQUEST_EVIDENCE' | 'DISMISS'
+  ) => {
+    const procTx = res.processorRecord?.transaction;
+    if (!procTx || !procTx.id) return;
+
+    const investigation = aiInvestigations[procTx.id];
+    if (!investigation || !investigation.result) return;
+
+    const { aiOutput, verification, aiProvider } = investigation.result;
+
+    if (action === 'APPROVE' && verification.status !== 'VERIFIED_REVIEW') {
+      alert('AI recommendation could not be verified automatically.');
+      return;
+    }
+
+    try {
+      let newStatus = res.decision.status;
+      let finalDisposition = 'PENDING';
+      let humanAction = '';
+
+      if (action === 'APPROVE') {
+        newStatus = 'MATCHED';
+        finalDisposition = 'APPROVED';
+        humanAction = 'Approved AI recommendation (Verified Review). Marked exception as resolved.';
+      } else if (action === 'REQUEST_EVIDENCE') {
+        newStatus = 'REVIEW';
+        finalDisposition = 'EVIDENCE_REQUESTED';
+        humanAction = 'Requested additional evidence from user.';
+      } else if (action === 'DISMISS') {
+        finalDisposition = 'DISMISSED';
+        humanAction = 'Dismissed AI investigation recommendations.';
+      }
+
+      if (activeRunId && activeOrg) {
+        let recordQuery = supabase
+          .from('reconciliation_records')
+          .select('id')
+          .eq('run_id', activeRunId);
+        
+        if (procTx && !procTx.id.startsWith('virtual-')) {
+          recordQuery = recordQuery.eq('processor_transaction_id', procTx.id);
+        } else if (res.bankRecord?.transaction && !res.bankRecord.transaction.id.startsWith('virtual-')) {
+          recordQuery = recordQuery.eq('bank_transaction_id', res.bankRecord.transaction.id);
+        } else {
+          const virtualId = procTx.id.startsWith('virtual-') ? procTx.id : (res.bankRecord?.transaction?.id || '');
+          const parts = virtualId.split('-');
+          if (parts.length >= 3) {
+            const recordUuid = parts.slice(1, 6).join('-');
+            recordQuery = recordQuery.eq('id', recordUuid);
+          }
+        }
+
+        const { data: recordData } = await recordQuery.limit(1);
+        const recordId = recordData && recordData.length > 0 ? recordData[0].id : null;
+
+        if (recordId) {
+          const { updateReconciliationRecord } = await import('../lib/reconciliation/reconciliationRepository');
+          await updateReconciliationRecord(recordId, {
+            status: newStatus,
+            reason: action === 'APPROVE' ? `Reconciled via AI Investigation (Approved). ${aiOutput.explanation}` : res.decision.reason,
+            audit_log: [
+              ...res.auditTrail,
+              `AI Investigation completed by provider: ${aiProvider}.`,
+              `Diagnosis: ${aiOutput.diagnosis} | Rec: ${aiOutput.recommendation} | Confidence: ${aiOutput.confidence}%`,
+              `Verification Gate Result: ${verification.status}`,
+              `Human Action taken: ${humanAction} at ${new Date().toISOString()}`
+            ]
+          });
+
+          const { recordAIEvaluationAudit } = await import('../lib/ai/reconciliation/aiAudit');
+          await recordAIEvaluationAudit(activeOrg.id, {
+            timestamp: new Date().toISOString(),
+            reconciliationRecordId: recordId,
+            aiProvider,
+            inputEvidenceIdentifiers: {
+              processorTxId: procTx.id.startsWith('virtual-') ? null : procTx.id,
+              bankTxId: res.bankRecord?.transaction?.id.startsWith('virtual-') ? null : res.bankRecord?.transaction?.id,
+              processorAmount: procTx.amount,
+              bankAmount: res.bankRecord?.transaction?.amount
+            },
+            deterministicResult: {
+              status: res.decision.status,
+              reason: res.decision.reason,
+              confidenceScore: res.decision.evidence.confidenceScore || 0
+            },
+            aiDiagnosis: aiOutput.diagnosis,
+            aiRecommendation: aiOutput.recommendation,
+            aiConfidence: aiOutput.confidence,
+            verificationResult: verification.status,
+            finalDisposition,
+            humanAction
+          });
+        }
+      }
+
+      if (result) {
+        const updatedResults = result.results.map(item => {
+          if (item.processorRecord?.transaction?.id === procTx.id) {
+            return {
+              ...item,
+              decision: {
+                ...item.decision,
+                status: newStatus,
+                reason: action === 'APPROVE' 
+                  ? `Reconciled via AI Investigation (Approved). ${aiOutput.explanation}` 
+                  : item.decision.reason
+              },
+              auditTrail: [
+                ...item.auditTrail,
+                `AI Investigation: Action ${action} executed. Status updated to ${newStatus}.`
+              ]
+            };
+          }
+          return item;
+        });
+
+        const matchedCount = updatedResults.filter(r => r.decision.status === 'MATCHED').length;
+        const reviewCount = updatedResults.filter(r => r.decision.status === 'REVIEW').length;
+        const unresolvedCount = updatedResults.filter(r => r.decision.status === 'UNRESOLVED').length;
+
+        setResult({
+          ...result,
+          results: updatedResults,
+          summary: {
+            ...result.summary,
+            matchedCount,
+            reviewCount,
+            unresolvedCount,
+            matchedSettlementCount: matchedCount,
+            unresolvedSettlementCount: unresolvedCount
+          }
+        });
+      }
+
+      setAiInvestigations(prev => {
+        const next = { ...prev };
+        delete next[procTx.id];
+        return next;
+      });
+
+    } catch (err: any) {
+      console.error('Failed to complete AI action:', err);
+      alert(`Action could not be persisted: ${err.message || err}`);
+    }
+  };
+
 
   // Load history list when activeOrg/activeClient changes
   useEffect(() => {
@@ -360,6 +603,185 @@ const Reconciliation: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* AI Exception Resolver Panel */}
+        {(() => {
+          const procTxId = res.processorRecord?.transaction?.id;
+          const isException = res.decision.status === 'REVIEW' || res.decision.status === 'UNRESOLVED' || res.decision.status === 'DUPLICATE' || res.decision.status === 'CHARGEBACK';
+          const aiState = procTxId ? aiInvestigations[procTxId] : null;
+
+          if (!isException || !procTxId) return null;
+
+          return (
+            <div className="border-t border-border/30 pt-4 mt-4 text-left">
+              {!aiState ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => runAiInvestigation(res)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 rounded transition-colors cursor-pointer animate-in fade-in duration-200"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" /> Investigate with Kaeo AI
+                  </button>
+                  <select
+                    value={aiProviderName}
+                    onChange={(e) => setAiProviderName(e.target.value as 'mock' | 'supabase')}
+                    className="bg-[#121214] border border-border/40 text-muted-foreground text-[10px] rounded px-2 py-1.5 font-mono cursor-pointer outline-none hover:border-border/80 focus:border-emerald-500/50"
+                  >
+                    <option value="mock">Mock AI (Local)</option>
+                    <option value="supabase">Supabase Edge Function (Live)</option>
+                  </select>
+                </div>
+              ) : (
+                <div className="bg-card/45 border border-border/60 rounded-md p-4 space-y-4">
+                  <div className="flex items-center justify-between border-b border-border/30 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-500 animate-pulse animate-duration-1000" />
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-foreground font-mono">
+                        Kaeo AI Investigation
+                      </h4>
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        ({aiState.result?.aiProvider || 'Analyzing...'})
+                      </span>
+                    </div>
+                    {aiState.loading && (
+                      <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-mono">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Resolving exceptions...
+                      </div>
+                    )}
+                  </div>
+
+                  {aiState.error && (
+                    <div className="text-xs text-rose-500 bg-rose-500/10 border border-rose-500/20 rounded p-3 font-mono">
+                      Failed to run exception resolver: {aiState.error}
+                    </div>
+                  )}
+
+                  {aiState.result && (
+                    <div className="space-y-4 text-xs animate-in fade-in duration-300">
+                      {/* Diagnosis, Confidence & Recommendation */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-left">
+                        <div className="bg-muted/10 border border-border/40 p-2.5 rounded">
+                          <span className="text-[9px] text-muted-foreground font-mono uppercase block mb-1">AI Diagnosis</span>
+                          <span className="font-semibold text-foreground font-mono text-[11px]">
+                            {aiState.result.aiOutput.diagnosis}
+                          </span>
+                        </div>
+                        <div className="bg-muted/10 border border-border/40 p-2.5 rounded">
+                          <span className="text-[9px] text-muted-foreground font-mono uppercase block mb-1">AI Confidence</span>
+                          <span className="font-semibold text-foreground font-mono">
+                            {aiState.result.aiOutput.confidence}%
+                          </span>
+                        </div>
+                        <div className="bg-muted/10 border border-border/40 p-2.5 rounded">
+                          <span className="text-[9px] text-muted-foreground font-mono uppercase block mb-1">Recommendation</span>
+                          <span className="font-semibold text-foreground font-mono">
+                            {aiState.result.aiOutput.recommendation}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Explanation & Reasoning */}
+                      <div className="space-y-2 text-left">
+                        <div className="font-medium text-foreground">Likely Reason:</div>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">
+                          {aiState.result.aiOutput.explanation}
+                        </p>
+                        <div className="text-[10px] text-muted-foreground italic bg-muted/5 p-2 rounded border border-border/30">
+                          <span className="font-semibold">Reasoning Summary:</span> {aiState.result.aiOutput.reasoning_summary}
+                        </div>
+                      </div>
+
+                      {/* AI Evidence List */}
+                      {aiState.result.aiOutput.evidence && aiState.result.aiOutput.evidence.length > 0 && (
+                        <div className="space-y-2 text-left">
+                          <div className="font-medium text-foreground text-[11px] uppercase tracking-wider font-mono">AI Discovered Evidence:</div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono">
+                            {aiState.result.aiOutput.evidence.map((ev, i) => (
+                              <div key={i} className="bg-muted/15 p-2 rounded border border-border/20 flex justify-between">
+                                <span className="text-muted-foreground">{ev.type}:</span>
+                                <span className="font-semibold text-foreground">{String(ev.value)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Verification Status */}
+                      <div className="border-t border-border/30 pt-3 text-left">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Verification Status:</span>
+                          {aiState.result.verification.status === 'VERIFIED_REVIEW' ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 border border-emerald-500/20 rounded font-mono">
+                              ✓ VERIFIED_REVIEW
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-500 bg-rose-500/10 px-2 py-0.5 border border-rose-500/20 rounded font-mono">
+                              ✗ VERIFICATION_FAILED
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Show gate failures if any */}
+                        {aiState.result.verification.status === 'VERIFICATION_FAILED' && (
+                          <div className="mt-2 text-rose-500 bg-rose-500/5 border border-rose-500/10 rounded p-2.5 font-mono text-[10px] space-y-1">
+                            <div className="font-bold text-rose-400">Deterministic Gate Rejections:</div>
+                            {aiState.result.verification.errors.map((err, i) => (
+                              <div key={i} className="flex gap-1.5 leading-normal">
+                                <span>•</span>
+                                <span>{err}</span>
+                              </div>
+                            ))}
+                            <div className="mt-2 text-rose-400/80 text-[10px] font-semibold border-t border-rose-500/10 pt-1.5">
+                              AI recommendation could not be verified automatically.
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Risk flags if present */}
+                      {aiState.result.aiOutput.risk_flags && aiState.result.aiOutput.risk_flags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-mono">
+                          {aiState.result.aiOutput.risk_flags.map((flag, idx) => (
+                            <span key={idx} className="bg-rose-950/20 text-rose-400 border border-rose-900/40 px-1.5 py-0.5 rounded uppercase">
+                              ⚠️ {flag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 pt-2">
+                        <button
+                          onClick={() => handleAIVerifiedAction(res, 'APPROVE')}
+                          disabled={aiState.result.verification.status !== 'VERIFIED_REVIEW'}
+                          className={`px-3 py-1.5 rounded text-[11px] font-semibold tracking-wide transition-all shadow-xs border ${
+                            aiState.result.verification.status !== 'VERIFIED_REVIEW'
+                              ? 'bg-muted/10 border-border/30 text-muted-foreground cursor-not-allowed shadow-none'
+                              : 'bg-emerald-600 text-white border-transparent hover:bg-emerald-500 active:scale-[0.98] cursor-pointer'
+                          }`}
+                        >
+                          Approve Recommendation
+                        </button>
+                        <button
+                          onClick={() => handleAIVerifiedAction(res, 'REQUEST_EVIDENCE')}
+                          className="px-3 py-1.5 rounded text-[11px] font-semibold bg-muted/20 hover:bg-muted/30 text-foreground border border-border transition-colors cursor-pointer"
+                        >
+                          Request More Evidence
+                        </button>
+                        <button
+                          onClick={() => handleAIVerifiedAction(res, 'DISMISS')}
+                          className="px-3 py-1.5 rounded text-[11px] font-semibold bg-transparent hover:bg-muted/15 text-muted-foreground transition-colors cursor-pointer"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     );
   };

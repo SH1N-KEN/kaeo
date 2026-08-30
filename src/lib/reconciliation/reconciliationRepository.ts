@@ -325,3 +325,22 @@ export function reconstructReconciliationResult(
     outOfScopeBankTxns
   };
 }
+
+/**
+ * Updates an individual reconciliation record.
+ */
+export async function updateReconciliationRecord(
+  recordId: string,
+  updates: Partial<ReconciliationRecordDb>
+): Promise<void> {
+  const { error } = await supabase
+    .from('reconciliation_records')
+    .update(updates)
+    .eq('id', recordId);
+
+  if (error) {
+    console.error(`Error updating reconciliation record ${recordId}:`, error);
+    throw new Error(`Failed to update reconciliation record: ${error.message}`);
+  }
+}
+
