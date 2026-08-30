@@ -1,3 +1,4 @@
+// @ts-nocheck
 // import xhr
 // import serve
 import { z } from 'zod';
