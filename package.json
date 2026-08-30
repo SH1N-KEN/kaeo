@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "benchmark": "npx tsx scripts/run-benchmark.ts"
+    "benchmark": "npx tsx scripts/run-benchmark.ts",
+    "regression-test": "npx tsx scripts/regression-test.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
