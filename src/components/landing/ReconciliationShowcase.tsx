@@ -47,7 +47,7 @@ export const ReconciliationShowcase: React.FC = () => {
   return (
     <section 
       id="reconciliation-control"
-      className="py-24 px-6 md:px-12 border-y border-[var(--border-subtle)] bg-[#F8F6F2] dark:bg-[#0A0F0E] transition-colors duration-300 relative overflow-hidden"
+      className="py-24 px-6 md:px-12 border-y border-[var(--border-subtle)] bg-[var(--background)] transition-colors duration-300 relative overflow-hidden"
     >
       {/* CSS Keyframes for pulse flow and styles */}
       <style>{`
@@ -105,7 +105,7 @@ export const ReconciliationShowcase: React.FC = () => {
                 <span className="font-semibold uppercase tracking-wider text-[var(--text-tertiary)] text-[10px]">RECONCILIATION ENGINE</span>
               </div>
               <div className="flex items-center gap-4">
-                <span className="flex items-center gap-1 bg-[#138C7E]/10 text-[#138C7E] dark:text-[#20B486] dark:bg-[#20B486]/10 px-2 py-1 rounded text-[11px] font-bold">
+                <span className="flex items-center gap-1 bg-[var(--success)]/10 text-[var(--success)] px-2 py-1 rounded text-[11px] font-bold">
                   ✓ 5 RECONCILED
                 </span>
                 <span className="flex items-center gap-1 bg-[var(--warning)]/10 text-[var(--warning)] px-2 py-1 rounded text-[11px] font-bold">
