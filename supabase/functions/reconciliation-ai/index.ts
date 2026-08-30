@@ -149,6 +149,7 @@ Return JSON with assessment, likelihood, recommended action, confidence (0-100),
                 { role: 'user', content: prompt }
               ],
               temperature: 0.3,
+              max_tokens: 1000,
               response_format: { type: "json_object" }
             })
           });
@@ -168,6 +169,34 @@ Return JSON with assessment, likelihood, recommended action, confidence (0-100),
         }
 
         parsedJson = JSON.parse(cleaned);
+
+        // ── Normalize LLM output before strict schema validation ──
+        // Some models return non-standard casing or omit optional fields.
+
+        // 1. Normalize likelihood: map verbose/cased strings → "high"|"medium"|"low"
+        if (parsedJson.likelihood) {
+          const l = String(parsedJson.likelihood).toLowerCase().trim();
+          if (l === 'high') parsedJson.likelihood = 'high';
+          else if (l === 'low') parsedJson.likelihood = 'low';
+          else parsedJson.likelihood = 'medium'; // "moderate", "medium", unknown → medium
+        } else {
+          parsedJson.likelihood = 'medium';
+        }
+
+        // 2. Normalize recommendedAction: fill default if missing or unrecognised
+        const validActions = ['APPROVE', 'INVESTIGATE', 'REJECT', 'REQUEST_DOCUMENTATION'];
+        if (!parsedJson.recommendedAction || !validActions.includes(parsedJson.recommendedAction)) {
+          // Try to infer from a recommended_action or action field some models emit
+          const raw = (parsedJson.recommendedAction || parsedJson.recommended_action || parsedJson.action || '').toUpperCase().trim();
+          parsedJson.recommendedAction = validActions.includes(raw) ? raw : 'INVESTIGATE';
+        }
+
+        // 3. Ensure confidence is a number 0-100
+        if (typeof parsedJson.confidence !== 'number') {
+          parsedJson.confidence = Number(parsedJson.confidence) || 50;
+        }
+        parsedJson.confidence = Math.min(100, Math.max(0, parsedJson.confidence));
+
         AIResponseSchema.parse(parsedJson); // schema validation
         break; // Success!
       } catch (err) {

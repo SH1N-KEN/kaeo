@@ -167,7 +167,7 @@ serve(async (req) => {
         { role: "user", content: JSON.stringify(context) }
       ],
       temperature: 0.3,
-      max_tokens: 2000,
+      max_tokens: 1000,
       response_format: { type: "json_object" }
     };
 
@@ -218,6 +218,30 @@ serve(async (req) => {
     }
 
     const parsedJson = JSON.parse(aiContent);
+
+    // ── Normalize before strict schema validation ──
+    // Coerce confidence casing ("Medium" → "medium", "High" → "high", "Low" → "low")
+    if (parsedJson.confidence) {
+      const c = String(parsedJson.confidence).toLowerCase().trim();
+      parsedJson.confidence = c === 'high' ? 'high' : c === 'low' ? 'low' : 'medium';
+    }
+    // Ensure array fields exist
+    if (!Array.isArray(parsedJson.recommended_actions)) parsedJson.recommended_actions = [];
+    if (!Array.isArray(parsedJson.caveats)) parsedJson.caveats = [];
+    // Ensure needs_external_research is boolean
+    if (typeof parsedJson.needs_external_research !== 'boolean') {
+      parsedJson.needs_external_research = false;
+    }
+    // Ensure source_summary exists with numeric fields
+    if (!parsedJson.source_summary || typeof parsedJson.source_summary !== 'object') {
+      parsedJson.source_summary = { transactions_used: 0, vendors_used: 0, risks_used: 0, reports_used: 0, notes_used: 0 };
+    } else {
+      const ss = parsedJson.source_summary;
+      for (const k of ['transactions_used','vendors_used','risks_used','reports_used','notes_used']) {
+        if (typeof ss[k] !== 'number') ss[k] = 0;
+      }
+    }
+
     const validated = AskKaeoAIResponseSchema.parse(parsedJson);
 
     return new Response(JSON.stringify(validated), {

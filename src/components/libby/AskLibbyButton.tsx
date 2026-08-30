@@ -2,13 +2,26 @@
  * AskLibbyButton — Reusable entry point button for Ask Libby.
  *
  * Dispatches the `open-ask-libby` CustomEvent that FloatingAskKaeo listens for.
- * Used across Dashboard, RiskInbox, Vendors, Reports pages.
+ * Used across Dashboard, RiskInbox, Vendors, Reports, and Reconciliation pages.
+ *
+ * When `reconciliationContext` is provided the Libby panel will call the
+ * `reconciliation-ai` Edge Function instead of `ask-kaeo-ai`, giving
+ * page-appropriate agentic behaviour while keeping the same UI surface.
  *
  * No state. No hooks. Pure UI + event dispatch.
  */
 
 import React from 'react';
 import { Sparkles } from 'lucide-react';
+
+export interface ReconciliationContext {
+  exceptionType: 'REVIEW' | 'UNRESOLVED' | 'AMBIGUOUS' | 'DISCREPANCY' | 'UNUSUAL_PATTERN' | string;
+  processorTxn: Record<string, any> | null;
+  bankTxn: Record<string, any> | null;
+  discrepancy: string;
+  amount: number;
+  dateGap: number;
+}
 
 interface AskLibbyButtonProps {
   /** The query that will be pre-sent to Libby when the panel opens. */
@@ -18,6 +31,11 @@ interface AskLibbyButtonProps {
   /** Visual variant. 'inline' = icon+text, 'icon' = icon only. */
   variant?: 'inline' | 'icon';
   className?: string;
+  /**
+   * When provided, Libby will call the reconciliation-ai Edge Function
+   * instead of ask-kaeo-ai, then display the structured result as a chat message.
+   */
+  reconciliationContext?: ReconciliationContext;
 }
 
 const AskLibbyButton: React.FC<AskLibbyButtonProps> = ({
@@ -25,10 +43,15 @@ const AskLibbyButton: React.FC<AskLibbyButtonProps> = ({
   label = 'Ask Libby',
   variant = 'inline',
   className = '',
+  reconciliationContext,
 }) => {
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.dispatchEvent(new CustomEvent('open-ask-libby', { detail: { query } }));
+    window.dispatchEvent(
+      new CustomEvent('open-ask-libby', {
+        detail: { query, reconciliation_context: reconciliationContext ?? null },
+      })
+    );
   };
 
   if (variant === 'icon') {

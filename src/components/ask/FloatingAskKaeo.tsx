@@ -21,6 +21,7 @@ import GroundingStatusCard from '../libby/GroundingStatusCard';
 import FinanceInsightCard, { parseInsightSections } from '../libby/FinanceInsightCard';
 import { buildWorkspaceContext } from '../../lib/libby/contextEngine';
 import { buildWorkspaceBrief, type WorkspaceBriefData } from '../../lib/libby/workspaceBriefEngine';
+import { supabase } from '../../lib/supabase';
 
 const cleanUserMessage = (content: string): string => {
   if (!content) return content;
@@ -139,8 +140,42 @@ const FloatingAskKaeo: React.FC = () => {
   const [briefLoading, setBriefLoading] = useState(false);
   const briefLoadedRef = useRef<string | null>(null);
 
+  // ── Unified insertion-order message list ──
+  // Both regular Libby messages and reconciliation AI messages are appended
+  // here in the order they actually arrived — no sorting needed.
+  type UnifiedMessage = {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    source_json?: Record<string, any>;
+    _source: 'chat' | 'recon';
+  };
+  const [unifiedMessages, setUnifiedMessages] = useState<UnifiedMessage[]>([]);
+  const prevChatCountRef = useRef(0);
+  const [reconLoading, setReconLoading] = useState(false);
+
+  // Sync NEW chat messages into the unified list as they arrive (diff-based)
+  useEffect(() => {
+    if (messages.length < prevChatCountRef.current) {
+      // Messages were cleared — reset unified list entirely
+      prevChatCountRef.current = 0;
+      setUnifiedMessages([]);
+      return;
+    }
+    const newMsgs = messages.slice(prevChatCountRef.current);
+    if (newMsgs.length > 0) {
+      prevChatCountRef.current = messages.length;
+      setUnifiedMessages(prev => [
+        ...prev,
+        ...newMsgs.map(m => ({ ...m, _source: 'chat' as const })),
+      ]);
+    }
+  }, [messages]);
+
+  const isLoadingAny = loading || reconLoading;
+
   // Has any non-greeting messages
-  const hasRealMessages = messages.some(
+  const hasRealMessages = unifiedMessages.some(
     (m) => m.source_json?.mode !== 'greeting' || m.role === 'user'
   );
 
@@ -150,7 +185,7 @@ const FloatingAskKaeo: React.FC = () => {
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
+  }, [unifiedMessages, isLoadingAny]);
 
   // Focus input when panel opens
   useEffect(() => {
@@ -168,15 +203,110 @@ const FloatingAskKaeo: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen]);
 
-  // Listen to open-ask-libby event to open widget and send query
+  // Listen to open-ask-libby event — handles both general queries and reconciliation investigations
   useEffect(() => {
-    const handleOpenAsk = (e: Event) => {
-      const customEvent = e as CustomEvent<{ query?: string }>;
+    const handleOpenAsk = async (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        query?: string;
+        reconciliation_context?: {
+          exceptionType: string;
+          processorTxn: Record<string, any> | null;
+          bankTxn: Record<string, any> | null;
+          discrepancy: string;
+          amount: number;
+          dateGap: number;
+        } | null;
+      }>;
+
       setIsOpen(true);
-      if (customEvent.detail?.query) {
+      const reconCtx = customEvent.detail?.reconciliation_context;
+
+      if (reconCtx) {
+        // ── Reconciliation path: call reconciliation-ai edge function ──
+        const userQuery = customEvent.detail?.query ?? 'Investigate this reconciliation exception.';
+        const userMsgId = `recon-user-${Date.now()}`;
+        const asstMsgId = `recon-asst-${Date.now() + 1}`;
+
+        // Push user message directly into the unified list
+        setUnifiedMessages(prev => [
+          ...prev,
+          { id: userMsgId, role: 'user', content: userQuery, _source: 'recon' as const },
+        ]);
+        setReconLoading(true);
+
+        try {
+          const payload = {
+            exceptionType: reconCtx.exceptionType,
+            evidence: {
+              processorTxn: reconCtx.processorTxn,
+              bankTxn: reconCtx.bankTxn,
+              discrepancy: reconCtx.discrepancy,
+              amount: reconCtx.amount,
+              dateGap: reconCtx.dateGap,
+            },
+          };
+
+          const { data, error } = await supabase.functions.invoke('reconciliation-ai', {
+            body: payload,
+          });
+
+          let assistantText: string;
+          if (error || !data) {
+            assistantText =
+              'I couldn\'t reach the reconciliation analysis service right now. Please try again shortly.';
+          } else {
+            // Format the structured response as a readable Libby message
+            const likelihood = data.likelihood ?? 'unknown';
+            const confidence = data.confidence ?? 0;
+            const action = data.recommendedAction ?? 'INVESTIGATE';
+            const assessment = data.assessment ?? 'Unable to assess.';
+            const reasoning = data.reasoning ?? '';
+
+            assistantText =
+              `### Summary\n` +
+              `${assessment}\n\n` +
+              `### Why\n` +
+              `${reasoning}\n\n` +
+              `### Evidence\n` +
+              `• Likelihood: ${likelihood}\n` +
+              `• Confidence: ${confidence}%\n\n` +
+              `### Suggested Actions\n` +
+              `• ${action === 'APPROVE' ? 'Mark as resolved — variance is within expected processor fee range.' :
+                  action === 'REJECT' ? 'Escalate to finance team — discrepancy exceeds acceptable threshold.' :
+                  action === 'REQUEST_DOCUMENTATION' ? 'Request supporting documentation from the payment processor.' :
+                  'Investigate further — review processor and bank statements manually.'}`;
+          }
+
+          setUnifiedMessages(prev => [
+            ...prev,
+            {
+              id: asstMsgId,
+              role: 'assistant',
+              content: assistantText,
+              source_json: { intent: 'reconciliation_investigation', mode: 'reconciliation' },
+              _source: 'recon' as const,
+            },
+          ]);
+        } catch (err: any) {
+          setUnifiedMessages(prev => [
+            ...prev,
+            {
+              id: asstMsgId,
+              role: 'assistant',
+              content: `I couldn't investigate this exception right now. Please try again. ${err.message}`,
+              source_json: { mode: 'error' },
+              _source: 'recon' as const,
+            },
+          ]);
+        } finally {
+          setReconLoading(false);
+        }
+      } else if (customEvent.detail?.query) {
+        // ── General Libby path ──
         sendMessage(customEvent.detail.query);
       }
     };
+
     window.addEventListener('open-ask-libby', handleOpenAsk);
     return () => window.removeEventListener('open-ask-libby', handleOpenAsk);
   }, [sendMessage]);
@@ -195,10 +325,17 @@ const FloatingAskKaeo: React.FC = () => {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || isLoadingAny) return;
     const text = input;
     setInput('');
     await sendMessage(text);
+  };
+
+  const handleClearAll = () => {
+    clearMessages();
+    // Reset unified list; the useEffect will re-sync from the cleared messages array
+    setUnifiedMessages([]);
+    prevChatCountRef.current = 0;
   };
 
   return (
@@ -293,7 +430,7 @@ const FloatingAskKaeo: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-0.5">
                 <Link
                   to="/libby"
                   onClick={() => setIsOpen(false)}
@@ -304,7 +441,7 @@ const FloatingAskKaeo: React.FC = () => {
                 </Link>
                 {hasRealMessages && (
                   <button
-                    onClick={clearMessages}
+                    onClick={handleClearAll}
                     className="p-1.5 rounded-lg hover:bg-[var(--muted)] text-muted-foreground hover:text-foreground transition-all duration-150 cursor-pointer"
                     title="Clear chat"
                   >
@@ -348,7 +485,7 @@ const FloatingAskKaeo: React.FC = () => {
                     Go to Files
                   </button>
                 </div>
-              ) : messages.length === 0 ? (
+              ) : unifiedMessages.length === 0 ? (
                 <div className="flex flex-col justify-center py-4 px-1 gap-3">
                   <WorkspaceBrief
                     brief={workspaceBrief}
@@ -358,7 +495,7 @@ const FloatingAskKaeo: React.FC = () => {
                   />
                 </div>
               ) : (
-                messages.map((msg, idx) => {
+                unifiedMessages.map((msg, idx) => {
                   const isUser = msg.role === 'user';
                   const isLimitExceeded = msg.source_json?.mode === 'limit_exceeded';
                   const isGreeting = msg.source_json?.mode === 'greeting';
@@ -379,7 +516,7 @@ const FloatingAskKaeo: React.FC = () => {
                       <div className="flex flex-col gap-1.5 max-w-[80%] w-full">
                         <div
                           className={`rounded-2xl text-[13px] leading-relaxed whitespace-pre-wrap w-full ${
-                            isUser
+                            msg.role === 'user'
                               ? 'bg-primary text-primary-foreground rounded-tr-sm px-4 py-3 font-medium'
                               : parseInsightSections(msg.content)
                                 ? 'bg-transparent border-none p-0'
@@ -387,11 +524,14 @@ const FloatingAskKaeo: React.FC = () => {
                           }`}
                         >
                           {isUser ? (
-                            cleanUserMessage(msg.content)
+                            // Truncate long reconciliation queries to a clean label
+                            cleanUserMessage(msg.content).length > 120
+                              ? cleanUserMessage(msg.content).slice(0, 80).trimEnd() + '…'
+                              : cleanUserMessage(msg.content)
                           ) : parseInsightSections(msg.content) ? (
                             <FinanceInsightCard content={msg.content} intent={msg.source_json?.intent} />
                           ) : (
-                            shortenMessage(msg.content, idx > 0 ? messages[idx - 1].content : '')
+                            shortenMessage(msg.content, idx > 0 ? unifiedMessages[idx - 1].content : '')
                           )}
 
                           {/* Limit exceeded CTA */}
@@ -472,12 +612,15 @@ const FloatingAskKaeo: React.FC = () => {
                             </div>
                           )}
 
-                          {/* Grounded badge */}
-                          {!isUser && !isGreeting && !isLimitExceeded && !isError && (
+                          {/* Grounded badge — skip for reconciliation results */}
+                          {!isUser && !isGreeting && !isLimitExceeded && !isError
+                            && msg.source_json?.mode !== 'reconciliation'
+                            && (
                             <GroundingStatusCard sourceJson={msg.source_json} />
                           )}
                         </div>
-                        {!isUser && (
+                        {/* Suggested action chips — skip for reconciliation results */}
+                        {!isUser && msg.source_json?.mode !== 'reconciliation' && (
                           <SuggestedActionChips actions={extractSuggestedActions(msg.content)} />
                         )}
                       </div>
@@ -487,7 +630,7 @@ const FloatingAskKaeo: React.FC = () => {
               )}
 
               {/* Typing indicator */}
-              {loading && (
+              {isLoadingAny && (
                 <div className="flex gap-2.5 justify-start">
                   <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: 'rgba(15,118,110,0.10)' }}>
                     <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--primary)', boxShadow: '0 0 6px rgba(15,118,110,0.35)' }} />
@@ -520,12 +663,12 @@ const FloatingAskKaeo: React.FC = () => {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Ask Libby what to review…"
-                    disabled={loading}
+                    disabled={isLoadingAny}
                     className="flex-1 frosted-input border-border/30 placeholder:text-muted-foreground/45"
                   />
                   <button
                     type="submit"
-                    disabled={!input.trim() || loading}
+                    disabled={!input.trim() || isLoadingAny}
                     className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:opacity-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
                   >
                     <Send className="w-3.5 h-3.5" />

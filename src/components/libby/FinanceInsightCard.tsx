@@ -7,6 +7,7 @@ import {
   ShieldAlert,
   FileText,
   ArrowRight,
+  GitMerge,
 } from 'lucide-react';
 
 interface FinanceInsightCardProps {
@@ -73,10 +74,17 @@ const FinanceInsightCard: React.FC<FinanceInsightCardProps> = ({ content, intent
   const lowercaseContent = content.toLowerCase();
 
   // 1. Determine Card Type
-  let cardType: 'Spend Trend' | 'Vendor Summary' | 'Cash Flow Summary' | 'Risk Summary' | 'Report Summary' = 'Cash Flow Summary';
+  let cardType: 'Spend Trend' | 'Vendor Summary' | 'Cash Flow Summary' | 'Risk Summary' | 'Report Summary' | 'Reconciliation Analysis' = 'Cash Flow Summary';
   let cardIcon = <ArrowRightLeft className="w-4.5 h-4.5 text-[var(--primary)]" />;
 
   if (
+    lowercaseIntent === 'reconciliation_investigation' ||
+    lowercaseContent.includes('reconciliation exception') ||
+    lowercaseContent.includes('processor') && lowercaseContent.includes('bank statement')
+  ) {
+    cardType = 'Reconciliation Analysis';
+    cardIcon = <GitMerge className="w-4.5 h-4.5 text-[var(--primary)]" />;
+  } else if (
     lowercaseIntent === 'spend_trend' ||
     lowercaseContent.includes('spend changed') ||
     lowercaseContent.includes('expenses changed')
