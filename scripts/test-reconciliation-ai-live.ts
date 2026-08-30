@@ -39,8 +39,8 @@ function transpileDenoFunction() {
     });`
   );
 
-  // Convert serve(async (req) => { ... }) to an exportable function
-  code = code.replace(/serve\(async\s*\(req\)\s*=>\s*\{/g, 'export async function handleRequest(req: Request) {');
+  // Convert serve(async (req: Request) => { ... }) to an exportable function
+  code = code.replace(/serve\(async\s*\(req[^)]*\)\s*=>\s*\{/g, 'export async function handleRequest(req: Request) {');
   code = code.replace(/\}\);\s*$/g, '}');
 
   const transpiledPath = path.join(scratchDir, 'transpiled-reconciliation-ai.ts');
