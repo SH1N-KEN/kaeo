@@ -1,0 +1,11 @@
+{
+  "expectedMatches": 115,
+  "expectedMatchRate": "76.7%",
+  "expectedExceptions": {
+    "feeAdjusted": 25,
+    "missingBank": 10,
+    "failedSettlements": 10
+  },
+  "expectedDuplicates": 5,
+  "expectedOutOfScope": 20
+}
